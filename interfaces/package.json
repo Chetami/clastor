@@ -10,6 +10,9 @@
     "clean": "rm -rf dist"
   },
   "devDependencies": {
+    "openapi-typescript": "^7.4.0",
+    "js-yaml": "^4.1.0",
+    "tsx": "^4.19.0",
     "typescript": "^5.5.0"
   }
 }
