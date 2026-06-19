@@ -12,6 +12,12 @@ A monorepo with React SPA (Vite + React Router + shadcn) frontend and Node.js ba
 
 ```
 examify-tms/
+├── interfaces/               # Shared TypeScript types/interfaces
+│   └── src/
+│       ├── user.ts          # User, Role types
+│       ├── auth.ts          # Auth-related types (JWT payload, etc.)
+│       └── index.ts         # Barrel export
+│
 ├── frontend/                 # React SPA (Vite + React Router + shadcn)
 │   ├── src/
 │   │   ├── features/
@@ -19,7 +25,7 @@ examify-tms/
 │   │   ├── components/       # Shared components (shadcn)
 │   │   ├── services/         # API clients, Firebase config
 │   │   ├── hooks/            # Custom hooks (useAuth)
-│   │   ├── types/            # TypeScript types
+│   │   ├── types/            # Frontend-specific types
 │   │   └── config/           # Routes, constants
 │   ├── package.json
 │   └── vite.config.ts
@@ -30,7 +36,6 @@ examify-tms/
 │   │   ├── middleware/       # auth middleware (JWT verify)
 │   │   ├── services/         # authService, userService
 │   │   ├── routes/          # authRoutes
-│   │   ├── models/          # User types
 │   │   ├── config/          # Firebase Admin setup
 │   │   └── utils/           # JWT utilities
 │   ├── package.json
@@ -83,31 +88,39 @@ examify-tms/
 
 ## Data Model
 
-**Firestore Collection: `users`**
+**Shared Types (`interfaces/src/`):**
 
 ```typescript
-{
-  id: string              // Firebase Auth UID
-  name: string
-  email: string
-  role: "system_admin" | "tutor"
-  avatarUrl?: string
-  createdAt: Timestamp
-  updatedAt: Timestamp
-  lastActive?: Timestamp
+// user.ts
+export type Role = "system_admin" | "tutor";
+
+export interface User {
+  id: string;              // Firebase Auth UID
+  name: string;
+  email: string;
+  role: Role;
+  avatarUrl?: string;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+  lastActive?: Timestamp;
+}
+
+// auth.ts
+export interface JWTPayload {
+  uid: string;
+  email: string;
+  role: Role;
+  iat: number;
+  exp: number;  // 1 hour from issuance
 }
 ```
+
+**Firestore Collection: `users`**
+- Follows the `User` interface above
+- Document ID = Firebase Auth UID
 
 **JWT Payload:**
-```typescript
-{
-  uid: string
-  email: string
-  role: "system_admin" | "tutor"
-  iat: number
-  exp: number  // 1 hour from issuance
-}
-```
+- Follows the `JWTPayload` interface above
 
 ## Backend Components
 
@@ -118,7 +131,24 @@ examify-tms/
 | userService | `backend/src/services/userService.ts` | User CRUD, JWT generation |
 | auth middleware | `backend/src/middleware/auth.ts` | JWT verification, role authorization |
 | authRoutes | `backend/src/routes/authRoutes.ts` | POST /api/auth/login |
-| User model | `backend/src/models/server/user.ts` | TypeScript types for User, Role |
+
+**Note:** User and Role types are imported from the shared `interfaces/` package.
+
+## Interfaces Package
+
+The `interfaces/` directory is a shared TypeScript package containing types used by both frontend and backend:
+
+| File | Purpose |
+|------|---------|
+| `interfaces/src/user.ts` | User interface, Role type |
+| `interfaces/src/auth.ts` | JWTPayload interface |
+| `interfaces/src/index.ts` | Barrel export for all types |
+
+**Usage:**
+- Backend: `import { User, Role } from '@examify-tms/interfaces';`
+- Frontend: `import { User, Role } from '@examify-tms/interfaces';`
+
+This ensures type consistency across the monorepo and reduces duplication.
 
 ## Frontend Components
 
@@ -191,6 +221,7 @@ VITE_FIREBASE_APP_ID=<app-id>
 
 | Layer | Technology |
 |-------|------------|
+| Shared | TypeScript interfaces package (monorepo workspace) |
 | Frontend | React 18, Vite, React Router, shadcn/ui, TypeScript |
 | Backend | Node.js, Express, TypeScript, Firebase Admin SDK |
 | Auth | Firebase Authentication, JWT (jsonwebtoken) |
@@ -214,26 +245,6 @@ VITE_FIREBASE_APP_ID=<app-id>
 3. **HTTPS**: Required in production for all API calls
 4. **Firebase Rules**: Firestore rules should restrict users collection access to admin SDK only
 5. **CORS**: Backend CORS configured to allow frontend origin only
-
-## Testing Approach
-
-### Unit Tests
-- authService: Firebase token verification
-- userService: JWT generation, user CRUD
-- auth middleware: JWT validation, role checks
-
-### Integration Tests
-- POST /api/auth/login: Successful login flow
-- POST /api/auth/login: Invalid Firebase token
-- POST /api/auth/login: Non-existent user
-- Protected routes: JWT verification
-
-### Manual Testing
-1. Create test user in Firestore manually
-2. Login with email/password via Firebase Auth
-3. Verify JWT is returned and stored
-4. Make authenticated API request
-5. Verify middleware attaches user to request
 
 ## OpenAPI Documentation
 
