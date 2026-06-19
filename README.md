@@ -6,12 +6,12 @@ A monorepo application with React SPA frontend and Node.js backend, using Fireba
 
 ```
 examify-tms/
-├── interfaces/               # Shared TypeScript types/interfaces + OpenAPI spec
+├── interfaces/               # Shared TypeScript types (YAML source)
 │   └── src/
-│       ├── user.ts           # User, Role types
-│       ├── auth.ts           # Auth-related types (JWT payload, etc.)
-│       ├── openapi.yaml      # API specification (OpenAPI 3.0)
-│       └── index.ts          # Barrel export
+│       ├── auth/            # Auth-related schemas (YAML)
+│       ├── user/            # User-related schemas (YAML)
+│       ├── openapi.yaml     # Generated complete spec (not committed)
+│   └── dist/               # Generated type declarations (not committed)
 ├── frontend/                 # React SPA (Vite + React Router + shadcn/ui)
 │   └── src/
 │       ├── features/auth/    # Login page, auth services
@@ -33,7 +33,7 @@ examify-tms/
 
 | Layer | Technology |
 |-------|------------|
-| Shared | TypeScript interfaces package (npm workspaces) |
+| Shared | YAML-based TypeScript interfaces (auto-generated via build script) |
 | Frontend | React 18, Vite, React Router, shadcn/ui, TypeScript |
 | Backend | Node.js, Express, TypeScript, Firebase Admin SDK |
 | Auth | Firebase Authentication, JWT (jsonwebtoken) |
@@ -141,7 +141,7 @@ The backend includes interactive API documentation powered by Swagger UI:
 - **Swagger UI**: `http://localhost:3001/api/docs`
 - **OpenAPI Spec (JSON)**: `http://localhost:3001/api/docs.json`
 
-The API specification is defined in [interfaces/src/openapi.yaml](interfaces/src/openapi.yaml) using the OpenAPI 3.0 standard. This single source of truth defines:
+The API specification is defined in OpenAPI 3.0 format. Type definitions are generated from YAML schemas in the interfaces package using a custom build script that merges individual schema files and produces TypeScript declarations.
 - All API endpoints and methods
 - Request/response schemas
 - Authentication requirements
