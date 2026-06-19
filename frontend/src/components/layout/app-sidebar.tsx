@@ -26,13 +26,13 @@ export function AppSidebar() {
   const initials = user?.email?.slice(0, 2).toUpperCase() ?? "?";
 
   return (
-    <Sidebar collapsible="icon">
+    <Sidebar variant="inset" collapsible="icon">
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
               <Link to="/dashboard">
-                <div className="flex size-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
+                <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground">
                   <GraduationCap className="size-4" />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
@@ -76,11 +76,8 @@ export function AppSidebar() {
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton
-              size="lg"
-              tooltip={user?.email}
-            >
-              <div className="flex size-8 items-center justify-center rounded-md bg-muted text-xs font-medium">
+            <SidebarMenuButton size="lg" tooltip={user?.email}>
+              <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-xs font-medium">
                 {initials}
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
