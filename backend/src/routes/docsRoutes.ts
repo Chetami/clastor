@@ -7,7 +7,8 @@ import YAML from "yaml";
 const router = Router();
 
 // Load the OpenAPI spec from the interfaces package
-const openApiPath = resolve(__dirname, "../../interfaces/src/openapi.yaml");
+// npm workspaces run commands from the package directory, so we need to go up one level to reach root
+const openApiPath = resolve(process.cwd(), "../interfaces/src/openapi.yaml");
 const fileContents = readFileSync(openApiPath, "utf8");
 const openApiSpec = YAML.parse(fileContents);
 

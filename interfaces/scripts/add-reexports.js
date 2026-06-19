@@ -1,6 +1,11 @@
 const fs = require('fs');
+const path = require('path');
 
-const content = fs.readFileSync('dist/index.d.ts', 'utf8');
+// Use __dirname to get the script's directory (interfaces/scripts/)
+// Then navigate to dist/index.d.ts from there
+const distPath = path.join(__dirname, '..', 'dist', 'index.d.ts');
+
+const content = fs.readFileSync(distPath, 'utf8');
 
 const types = ['ApiError', 'JwtPayload', 'LoginRequest', 'LoginResponse', 'UserInfo', 'Role', 'User'];
 
@@ -9,6 +14,6 @@ const reexports =
   types.map(t => `export type ${t} = components['schemas']['${t}']`).join(';\n') +
   ';\n';
 
-fs.writeFileSync('dist/index.d.ts', content + reexports);
+fs.writeFileSync(distPath, content + reexports);
 
 console.log('✓ Added type re-exports for backward compatibility');
