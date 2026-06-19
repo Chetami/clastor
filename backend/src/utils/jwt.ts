@@ -1,5 +1,5 @@
 import jwt from "jsonwebtoken";
-import { JWTPayload, Role } from "@examify-tms/interfaces";
+import { JwtPayload, Role } from "@examify-tms/interfaces";
 
 /**
  * JWT utility functions
@@ -12,7 +12,7 @@ const JWT_EXPIRY = "1h";
  * Generate a JWT token for a user
  */
 export function generateToken(uid: string, email: string, role: Role): string {
-  const payload: Omit<JWTPayload, "iat" | "exp"> = {
+  const payload: Omit<JwtPayload, "iat" | "exp"> = {
     uid,
     email,
     role,
@@ -26,9 +26,9 @@ export function generateToken(uid: string, email: string, role: Role): string {
 /**
  * Verify and decode a JWT token
  */
-export function verifyToken(token: string): JWTPayload {
+export function verifyToken(token: string): JwtPayload {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as JWTPayload;
+    const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
     return decoded;
   } catch (error) {
     throw new Error("Invalid or expired token");

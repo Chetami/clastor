@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { verifyToken, extractToken } from "../utils/jwt";
-import { JWTPayload, Role } from "@examify-tms/interfaces";
+import { JwtPayload, Role } from "@examify-tms/interfaces";
 
 /**
  * Extend Express Request to include user information
@@ -8,7 +8,7 @@ import { JWTPayload, Role } from "@examify-tms/interfaces";
 declare global {
   namespace Express {
     interface Request {
-      user?: JWTPayload;
+      user?: JwtPayload;
     }
   }
 }
