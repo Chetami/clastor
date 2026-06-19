@@ -173,33 +173,8 @@ function processReferences(schema: any, currentPath: string): any {
 
 // Generate TypeScript declarations from OpenAPI spec
 async function generateTypeScriptDeclarations(openApiSpec: any): Promise<void> {
-  const { default: openapiTypescript } = await import("openapi-typescript");
-
-  // Create a temporary schema string for openapi-typescript
-  const schemaString = yaml.dump(openApiSpec);
-
-  // Generate types using openapi-typescript
-  // This returns a string of TypeScript type definitions
-  const generatedTypes = await openapiTypescript(schemaString, {
-    strict: false,
-    exportType: true,
-  });
-
-  // Split the generated types by directory using tracked paths
-  const moduleTypes = splitByDirectory(generatedTypes, openApiSpec);
-
-  // Verify all schemas were extracted successfully
-  const expectedSchemas = SchemaDirectoryMap.size;
-  const extractedCount = Object.values(moduleTypes).reduce(
-    (sum, content) => sum + (content.match(/export (?:interface|type)/g) || []).length,
-    0
-  );
-
-  if (extractedCount < expectedSchemas) {
-    throw new Error(
-      `Failed to extract all type definitions: expected ${expectedSchemas}, got ${extractedCount}`
-    );
-  }
+  // Generate types directly from schemas instead of parsing openapi-typescript output
+  const moduleTypes = generateTypesFromSchemas(openApiSpec);
 
   // Write each module to dist/
   Object.entries(moduleTypes).forEach(([moduleName, content]) => {
@@ -212,9 +187,8 @@ async function generateTypeScriptDeclarations(openApiSpec: any): Promise<void> {
   createBarrelExport(Object.keys(moduleTypes));
 }
 
-// Split generated types into separate module files using tracked directory map
-// Uses brace counting to properly match nested type definitions
-function splitByDirectory(generatedTypes: string, openApiSpec: any): Record<string, string> {
+// Generate TypeScript types directly from OpenAPI schemas
+function generateTypesFromSchemas(openApiSpec: any): Record<string, string> {
   const modules: Record<string, string> = {};
   const directoryGroups: Record<string, string[]> = {};
 
@@ -226,31 +200,28 @@ function splitByDirectory(generatedTypes: string, openApiSpec: any): Record<stri
     directoryGroups[directory].push(schemaName);
   }
 
-  // Extract type definitions for each module
+  // Generate type definitions for each module
   for (const [directory, schemaNames] of Object.entries(directoryGroups)) {
     const typeDefinitions: string[] = [];
 
     for (const schemaName of schemaNames) {
-      // Extract the interface/type definition using brace counting
-      // This handles nested objects better than simple regex
-      const extracted = extractTypeDefinition(generatedTypes, schemaName);
-
-      if (!extracted) {
-        throw new Error(`Failed to extract type definition for ${schemaName}`);
-      }
-
-      // Add JSDoc comment from the schema description
       const schema = openApiSpec.components?.schemas?.[schemaName];
-      if (schema?.description) {
-        // Convert description lines to JSDoc format
-        const descLines = schema.description.split("\n");
-        typeDefinitions.push("/**");
-        descLines.forEach((line: string) => {
-          typeDefinitions.push(` * ${line}`);
-        });
-        typeDefinitions.push(" */");
+      if (!schema) {
+        throw new Error(`Schema ${schemaName} not found in OpenAPI spec`);
       }
-      typeDefinitions.push(extracted);
+
+      // Generate JSDoc from description
+      let jsDoc = "";
+      if (schema.description) {
+        const descLines = schema.description.split("\n").filter((line: string) => line.trim());
+        if (descLines.length > 0) {
+          jsDoc = "/**\n" + descLines.map((line: string) => ` * ${line}`).join("\n") + "\n */\n";
+        }
+      }
+
+      // Generate type definition based on schema type
+      const typeDef = generateTypeDefinition(schemaName, schema);
+      typeDefinitions.push(jsDoc + typeDef);
     }
 
     if (typeDefinitions.length > 0) {
@@ -261,47 +232,97 @@ function splitByDirectory(generatedTypes: string, openApiSpec: any): Record<stri
   return modules;
 }
 
-// Extract a type definition by name using brace counting for robustness
-function extractTypeDefinition(generatedTypes: string, schemaName: string): string | null {
-  // Find the "export interface Name {" or "export type Name {" line
-  const exportPattern = new RegExp(`export (?:interface|type) ${schemaName}(?:<[^>]+>)? \\{`, "g");
-  const match = exportPattern.exec(generatedTypes);
-
-  if (!match) {
-    return null;
+// Generate a TypeScript type definition from an OpenAPI schema
+function generateTypeDefinition(name: string, schema: any): string {
+  // Handle enum types
+  if (schema.enum) {
+    const enumValues = schema.enum.map((v: string) => `'${v}'`).join(" | ");
+    return `export type ${name} = ${enumValues};`;
   }
 
-  const startIndex = match.index;
-  let braceCount = 0;
-  let inDefinition = false;
-  let endIndex = startIndex;
+  // Handle object types
+  if (schema.type === "object" || schema.properties) {
+    let interfaceDef = `export interface ${name} {\n`;
 
-  // Count braces to find the matching closing brace
-  for (let i = startIndex; i < generatedTypes.length; i++) {
-    const char = generatedTypes[i];
-
-    if (char === "{") {
-      braceCount++;
-      inDefinition = true;
-    } else if (char === "}") {
-      braceCount--;
-      if (inDefinition && braceCount === 0) {
-        endIndex = i + 1;
-        break;
+    if (schema.properties) {
+      for (const [propName, propSchema] of Object.entries(schema.properties)) {
+        const prop = propSchema as any;
+        const isRequired = schema.required?.includes(propName);
+        const propType = schemaToTypeString(prop);
+        const optional = isRequired ? "" : "?";
+        interfaceDef += `  ${propName}${optional}: ${propType};\n`;
       }
     }
+
+    interfaceDef += "}";
+    return interfaceDef;
   }
 
-  if (endIndex <= startIndex) {
-    return null;
+  // Handle primitive types
+  if (schema.type) {
+    return `export type ${name} = ${schema.type};`;
   }
 
-  // Extract including the preceding JSDoc if present
-  const beforeStart = generatedTypes.slice(0, startIndex);
-  const jsDocMatch = beforeStart.match(/\/\*\*[\s\S]*?\*\/\s*$/);
-  const actualStart = jsDocMatch ? startIndex - jsDocMatch[0].length : startIndex;
+  // Fallback
+  return `export interface ${name} {\n  [key: string]: any;\n}`;
+}
 
-  return generatedTypes.slice(actualStart, endIndex).trim();
+// Convert an OpenAPI schema to TypeScript type string
+function schemaToTypeString(schema: any): string {
+  if (!schema || typeof schema !== "object") {
+    return "any";
+  }
+
+  // Handle references
+  if (schema.$ref) {
+    const refName = schema.$ref.replace(/^.+\//, "").replace(/^["']|["']$/g, "");
+    return toPascalCase(refName);
+  }
+
+  // Handle array types
+  if (schema.type === "array" || schema.items) {
+    const items = schema.items || {};
+    return `${schemaToTypeString(items)}[]`;
+  }
+
+  // Handle nullable types
+  if (schema.nullable) {
+    return `${schemaToTypeString({...schema, nullable: undefined})} | null`;
+  }
+
+  // Handle allOf (extension)
+  if (schema.allOf && Array.isArray(schema.allOf)) {
+    const types = schema.allOf.map((s: any) => schemaToTypeString(s));
+    return types.join(" & ");
+  }
+
+  // Handle primitive types
+  const typeMap: Record<string, string> = {
+    string: "string",
+    number: "number",
+    integer: "number",
+    boolean: "boolean",
+    array: "any[]",
+    object: "any",
+  };
+
+  if (schema.type && typeMap[schema.type]) {
+    let result = typeMap[schema.type];
+
+    // Add format annotations as comments for special string formats
+    if (schema.type === "string" && schema.format) {
+      return result; // Could add format info as comment
+    }
+
+    return result;
+  }
+
+  // Handle enum (inline)
+  if (schema.enum) {
+    return schema.enum.map((v: string) => `'${v}'`).join(" | ");
+  }
+
+  return "any";
 }
 
 // Create barrel export file
