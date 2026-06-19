@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { verifyToken, extractToken } from "../utils/jwt";
-import { JwtPayload, Role } from "@examify-tms/interfaces";
+import { JwtPayload, Role, ApiError } from "@examify-tms/interfaces";
 
 /**
  * Extend Express Request to include user information
@@ -17,7 +17,7 @@ declare global {
  * Authentication middleware
  * Verifies JWT token and attaches user info to request
  */
-export function authenticateJWT(req: Request, res: Response, next: NextFunction) {
+export function authenticateJWT(req: Request, res: Response<ApiError>, next: NextFunction) {
   try {
     const token = extractToken(req.headers.authorization);
     const decoded = verifyToken(token);
@@ -35,7 +35,7 @@ export function authenticateJWT(req: Request, res: Response, next: NextFunction)
  * Creates middleware that checks if user has required role
  */
 export function requireRole(...allowedRoles: Role[]) {
-  return (req: Request, res: Response, next: NextFunction) => {
+  return (req: Request, res: Response<ApiError>, next: NextFunction) => {
     if (!req.user) {
       return res.status(401).json({ message: "Access Denied. No token provided." });
     }
