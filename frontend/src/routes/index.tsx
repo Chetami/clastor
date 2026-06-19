@@ -2,6 +2,7 @@ import { createBrowserRouter, Navigate } from "react-router-dom";
 import { RootLayout } from "./__root";
 import { ProtectedRoute } from "./protected";
 import { NotFound } from "./not-found";
+import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import LoginPage from "@/features/auth/login/LoginPage";
 import SignUpPage from "@/features/auth/signup/SignUpPage";
 import Dashboard from "@/features/dashboard/Dashboard";
@@ -13,8 +14,13 @@ export const router = createBrowserRouter([
       {
         element: <ProtectedRoute />,
         children: [
-          { index: true, element: <Navigate to="/dashboard" replace /> },
-          { path: "dashboard", element: <Dashboard /> },
+          {
+            element: <DashboardLayout />,
+            children: [
+              { index: true, element: <Navigate to="/dashboard" replace /> },
+              { path: "dashboard", element: <Dashboard /> },
+            ],
+          },
         ],
       },
       {
