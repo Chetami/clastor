@@ -7,6 +7,7 @@ interface AuthContextType {
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  setAuthState: (user: UserInfo, token: string) => void;
   isAuthenticated: boolean;
 }
 
@@ -48,6 +49,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem("jwtToken");
   };
 
+  const setAuthState = (user: UserInfo, token: string) => {
+    setUser(user);
+    localStorage.setItem("jwtToken", token);
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -55,6 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loading,
         login: handleLogin,
         logout: handleLogout,
+        setAuthState,
         isAuthenticated: !!user,
       }}
     >
