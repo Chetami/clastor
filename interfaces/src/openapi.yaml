@@ -17,5 +17,7 @@ components:
       $ref: './schemas/auth/LoginResponse.yaml'
     UserInfo:
       $ref: './schemas/auth/UserInfo.yaml'
+    RegisterRequest:
+      $ref: './schemas/auth/RegisterRequest.yaml'
     User:
       $ref: './schemas/users/User.yaml'
