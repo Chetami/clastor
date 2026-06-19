@@ -1,0 +1,7 @@
+# User role definitions
+# Roles determine user permissions within the system
+type: string
+enum:
+  - system_admin
+  - tutor
+description: User role determining permissions
