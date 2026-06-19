@@ -65,32 +65,37 @@ export async function createUserInFirestore(
   name: string,
   role: Role = 'tutor'
 ): Promise<User> {
-  const firestore = getFirebaseFirestore();
-  const now = admin.firestore.Timestamp.now();
+  try {
+    const firestore = getFirebaseFirestore();
+    const now = admin.firestore.Timestamp.now();
 
-  const userData = {
-    name,
-    email,
-    role,
-    avatarUrl: null,
-    createdAt: now,
-    updatedAt: now,
-    lastActive: now,
-  };
+    const userData = {
+      name,
+      email,
+      role,
+      avatarUrl: null,
+      createdAt: now,
+      updatedAt: now,
+      lastActive: now,
+    };
 
-  await firestore.collection('users').doc(id).set(userData);
+    await firestore.collection('users').doc(id).set(userData);
 
-  // Return User object with ISO string timestamps (matching User type)
-  return {
-    id,
-    name,
-    email,
-    role,
-    avatarUrl: null,
-    createdAt: now.toDate().toISOString(),
-    updatedAt: now.toDate().toISOString(),
-    lastActive: now.toDate().toISOString(),
-  };
+    // Return User object with Date objects (matching getUserFromFirestore pattern)
+    return {
+      id,
+      name,
+      email,
+      role,
+      avatarUrl: null,
+      createdAt: now.toDate() as any,
+      updatedAt: now.toDate() as any,
+      lastActive: now.toDate() as any,
+    };
+  } catch (error) {
+    console.error("Failed to create user in Firestore:", error);
+    throw new Error("Failed to create user in Firestore");
+  }
 }
 
 /**
