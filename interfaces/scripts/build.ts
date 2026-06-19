@@ -93,3 +93,80 @@ function scanYamlFiles(dir: string, baseDir: string = dir): Map<string, SchemaMe
 
   return schemas;
 }
+
+// Tracks which directory each schema belongs to for module splitting
+const SchemaDirectoryMap = new Map<string, string>();
+
+// Merge individual schemas into complete OpenAPI spec
+function mergeToOpenApiSpec(schemas: Map<string, SchemaMetadata>): any {
+  const components: any = { schemas: {} };
+
+  schemas.forEach((metadata, key) => {
+    // Convert path to PascalCase for schema name
+    // e.g., "auth/login-request" -> "LoginRequest"
+    const parts = key.split("/");
+    const schemaName = toPascalCase(parts[parts.length - 1]);
+
+    // Track which directory this schema belongs to
+    SchemaDirectoryMap.set(schemaName, metadata.directory);
+
+    // Process references in the schema
+    const processedSchema = processReferences(metadata.schema, key);
+
+    // Build JSDoc from YAML comments
+    const jsDoc = buildJSDoc(metadata.comments, metadata.schema);
+
+    components.schemas[schemaName] = {
+      ...processedSchema,
+      // Use YAML comments as description, fallback to schema's description
+      description: jsDoc || processedSchema.description || `Auto-generated from ${key}.yaml`,
+    };
+  });
+
+  return {
+    openapi: "3.0.3",
+    info: {
+      title: "Examify TMS API - Type Definitions",
+      description: "Auto-generated OpenAPI spec from YAML schema files",
+      version: "1.0.0",
+    },
+    components,
+  };
+}
+
+// Build JSDoc comment from YAML comment lines
+function buildJSDoc(comments: string[], schema: any): string {
+  if (!comments || comments.length === 0) {
+    return schema.description || "";
+  }
+  // Join multiple comment lines with newlines
+  return comments.join("\n");
+}
+
+// Process $ref values to use proper OpenAPI format
+function processReferences(schema: any, currentPath: string): any {
+  if (!schema || typeof schema !== "object") {
+    return schema;
+  }
+
+  if (Array.isArray(schema)) {
+    return schema.map((item) => processReferences(item, currentPath));
+  }
+
+  const result: any = {};
+  for (const [key, value] of Object.entries(schema)) {
+    if (key === "$ref" && typeof value === "string") {
+      // Convert filename references to proper OpenAPI references
+      // e.g., 'role.yaml' -> '#/components/schemas/Role'
+      // e.g., '../user/role.yaml' -> '#/components/schemas/Role'
+      const refName = toPascalCase(value.replace(/^.+\//, "").replace(/\.(yaml|yml)$/, ""));
+      result[key] = `#/components/schemas/${refName}`;
+    } else if (key === "allOf" && Array.isArray(value)) {
+      result[key] = value.map((item) => processReferences(item, currentPath));
+    } else {
+      result[key] = processReferences(value, currentPath);
+    }
+  }
+
+  return result;
+}
