@@ -1,0 +1,8 @@
+type: string
+enum:
+  - active
+  - past
+description: |-
+  Student status
+  active - currently receiving tutoring
+  past - no longer active

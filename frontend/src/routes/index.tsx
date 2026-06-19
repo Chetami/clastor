@@ -7,6 +7,7 @@ import LoginPage from "@/features/auth/login/LoginPage";
 import SignUpPage from "@/features/auth/signup/SignUpPage";
 import Dashboard from "@/features/dashboard/Dashboard";
 import Students from "@/features/students/Students";
+import StudentDetail from "@/features/students/StudentDetail";
 import Exams from "@/features/exams/Exams";
 import Schedule from "@/features/schedule/Schedule";
 import Settings from "@/features/settings/Settings";
@@ -24,6 +25,7 @@ export const router = createBrowserRouter([
               { index: true, element: <Navigate to="/dashboard" replace /> },
               { path: "dashboard", element: <Dashboard /> },
               { path: "students", element: <Students /> },
+              { path: "students/:studentId", element: <StudentDetail /> },
               { path: "exams", element: <Exams /> },
               { path: "schedule", element: <Schedule /> },
               { path: "settings", element: <Settings /> },

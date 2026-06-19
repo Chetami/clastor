@@ -1,0 +1,8 @@
+type: string
+enum:
+  - hourly
+  - per_lesson
+description: |-
+  Student rate type
+  hourly - charged per hour of tutoring
+  per_lesson - charged per lesson/session

@@ -72,3 +72,9 @@ components:
       $ref: './schemas/auth/RegisterRequest.yaml'
     User:
       $ref: './schemas/users/User.yaml'
+    RateType:
+      $ref: './schemas/students/RateType.yaml'
+    StudentStatus:
+      $ref: './schemas/students/StudentStatus.yaml'
+    Student:
+      $ref: './schemas/students/Student.yaml'

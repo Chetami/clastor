@@ -10,6 +10,24 @@ export {
 export { Input } from "./input";
 export { Label } from "./label";
 export { Separator } from "./separator";
+export { Checkbox } from "./checkbox";
+export {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "./collapsible";
+export {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogOverlay,
+  DialogPortal,
+  DialogTitle,
+  DialogTrigger,
+} from "./dialog";
 export {
   Sidebar,
   SidebarContent,
