@@ -1,9 +1,8 @@
 import admin from "firebase-admin";
-import { ServiceAccount } from "firebase-admin";
 
 /**
  * Firebase Admin SDK configuration
- * Initialized from environment variables
+ * Initialized from service account JSON file path
  */
 let firebaseApp: admin.app.App | null = null;
 
@@ -12,15 +11,13 @@ export function initializeFirebase(): admin.app.App {
     return firebaseApp;
   }
 
-  const serviceAccount: ServiceAccount = {
-    projectId: process.env.FIREBASE_PROJECT_ID || "",
-    clientEmail: process.env.FIREBASE_CLIENT_EMAIL || "",
-    privateKey: (process.env.FIREBASE_PRIVATE_KEY || "").replace(/\\n/g, "\n"),
-  };
+  const serviceAccountKeyPath = process.env.FIREBASE_SERVICE_ACCOUNT_KEY_PATH;
+  if (!serviceAccountKeyPath) {
+    throw new Error("FIREBASE_SERVICE_ACCOUNT_KEY_PATH environment variable is not set");
+  }
 
   firebaseApp = admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-    databaseURL: process.env.FIREBASE_DATABASE_URL,
+    credential: admin.credential.cert(require(serviceAccountKeyPath)),
   });
 
   return firebaseApp;
