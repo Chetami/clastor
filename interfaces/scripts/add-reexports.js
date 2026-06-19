@@ -7,7 +7,7 @@ const distPath = path.join(__dirname, '..', 'dist', 'index.d.ts');
 
 const content = fs.readFileSync(distPath, 'utf8');
 
-const types = ['ApiError', 'JwtPayload', 'LoginRequest', 'LoginResponse', 'UserInfo', 'Role', 'User'];
+const types = ['ApiError', 'JwtPayload', 'LoginRequest', 'LoginResponse', 'UserInfo', 'Role', 'User', 'RegisterRequest'];
 
 const reexports =
   '\n// Re-export types at top level for backward compatibility\n' +
