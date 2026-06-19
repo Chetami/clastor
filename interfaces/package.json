@@ -1,0 +1,15 @@
+{
+  "name": "@examify-tms/interfaces",
+  "version": "1.0.0",
+  "description": "Shared TypeScript interfaces for Examify TMS",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "clean": "rm -rf dist"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0"
+  }
+}

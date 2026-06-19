@@ -1,0 +1,28 @@
+{
+  "name": "examify-tms",
+  "version": "1.0.0",
+  "description": "Tutor Management System - Monorepo",
+  "private": true,
+  "workspaces": [
+    "interfaces",
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "install:all": "npm install",
+    "dev:backend": "npm run dev --workspace=backend",
+    "dev:frontend": "npm run dev --workspace=frontend",
+    "build:all": "npm run build --workspace=interfaces && npm run build --workspace=backend && npm run build --workspace=frontend",
+    "build:interfaces": "npm run build --workspace=interfaces",
+    "build:backend": "npm run build --workspace=backend",
+    "build:frontend": "npm run build --workspace=frontend"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "typescript": "^5.5.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}
