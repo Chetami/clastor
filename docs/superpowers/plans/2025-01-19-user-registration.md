@@ -30,53 +30,77 @@
 
 ## Chunk 1: OpenAPI Types and Interfaces Package
 
-### Task 1: Add RegisterRequest Schema to OpenAPI
+### Task 1: Create RegisterRequest Schema File
+
+**Files:**
+- Create: `interfaces/src/schemas/auth/RegisterRequest.yaml`
+
+- [ ] **Step 1: Create RegisterRequest.yaml schema file**
+
+Create the file `interfaces/src/schemas/auth/RegisterRequest.yaml` with this content:
+
+```yaml
+type: object
+required:
+  - name
+properties:
+  name:
+    type: string
+    description: User's display name
+description: |-
+  Register Request interface
+  Sent from frontend to backend /api/auth/register endpoint
+  Only contains name since email/password are handled by Firebase Auth
+```
+
+- [ ] **Step 2: Verify the file was created**
+
+Run: `cat interfaces/src/schemas/auth/RegisterRequest.yaml`
+
+Expected: Shows the schema content above
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add interfaces/src/schemas/auth/RegisterRequest.yaml
+git commit -m "feat(interfaces): add RegisterRequest schema file"
+```
+
+---
+
+### Task 2: Add RegisterRequest Reference to OpenAPI
 
 **Files:**
 - Modify: `interfaces/src/openapi.yaml`
 
-- [ ] **Step 1: Add RegisterRequest schema**
+- [ ] **Step 1: Add RegisterRequest reference**
 
-Add this schema after the `LoginRequest` schema (around line 68):
+Add this line in the `components.schemas` section, after `UserInfo` (around line 19):
 
 ```yaml
     RegisterRequest:
-      type: object
-      required:
-        - name
-      properties:
-        name:
-          type: string
-          description: User's display name
-      description: |-
-        Register Request interface
-        Sent from frontend to backend /api/auth/register endpoint
-        Only contains name since email/password are handled by Firebase Auth
+      $ref: './schemas/auth/RegisterRequest.yaml'
 ```
 
-- [ ] **Step 2: Verify the file is valid YAML**
+Note: The file uses `$ref` references to external schema files in the `schemas/` directory.
 
-Run: `cd interfaces && npx yaml-validator src/openapi.yaml 2>/dev/null || echo "No yaml-validator, checking syntax manually..."`
-
-Expected: No YAML syntax errors
-
-- [ ] **Step 3: Build interfaces to generate TypeScript types**
+- [ ] **Step 2: Build interfaces to generate TypeScript types**
 
 Run: `cd interfaces && npm run build`
 
 Expected: Output shows types generated successfully, no errors
 
-- [ ] **Step 4: Verify RegisterRequest type was generated**
+- [ ] **Step 3: Verify RegisterRequest type was generated**
 
 Run: `cat interfaces/dist/index.d.ts | grep -A 5 "RegisterRequest"`
 
 Expected: Shows exported RegisterRequest type with name property
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 4: Commit**
 
 ```bash
 git add interfaces/src/openapi.yaml interfaces/dist/
-git commit -m "feat(interfaces): add RegisterRequest schema for user registration"
+git commit -m "feat(interfaces): add RegisterRequest reference to OpenAPI"
 ```
 
 ---
@@ -86,9 +110,11 @@ git commit -m "feat(interfaces): add RegisterRequest schema for user registratio
 **Files:**
 - Modify: `interfaces/src/openapi.yaml`
 
-- [ ] **Step 1: Add paths section with /api/auth/register endpoint**
+- [ ] **Step 1: Add paths section at root level**
 
-Add this at the end of the file (after components section):
+The `openapi.yaml` file currently has `components` at the root. We need to add a `paths` section at the root level (same level as `components`).
+
+Add this section before the `components:` section (around line 6):
 
 ```yaml
 paths:
@@ -146,13 +172,13 @@ components:
       bearerFormat: Firebase ID Token
 ```
 
-Note: We're adding the `paths` and `components.securitySchemes` sections to the OpenAPI file. These may not exist yet.
+Important: This adds `paths` at the root level AND `components.securitySchemes` within the existing `components` section. The existing `components.schemas` section should remain unchanged.
 
 - [ ] **Step 2: Verify YAML syntax**
 
-Run: `cd interfaces && npx yaml-validator src/openapi.yaml 2>/dev/null || cat src/openapi.yaml | head -100`
+Run: `cat interfaces/src/openapi.yaml | head -50`
 
-Expected: Valid YAML structure
+Expected: Shows valid YAML with `paths:` section followed by `components:` section
 
 - [ ] **Step 3: Rebuild interfaces package**
 
@@ -160,7 +186,11 @@ Run: `cd interfaces && npm run build`
 
 Expected: Types regenerated successfully
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 4: Verify no YAML errors**
+
+Check for any YAML parsing errors in the output
+
+- [ ] **Step 5: Commit**
 
 ```bash
 git add interfaces/
@@ -176,12 +206,19 @@ git commit -m "feat(interfaces): add /api/auth/register endpoint to OpenAPI spec
 **Files:**
 - Modify: `backend/src/services/userService.ts`
 
-- [ ] **Step 1: Add imports for User, Role types and firebase-admin**
+- [ ] **Step 1: Add imports for Role type and firebase-admin**
 
-Add these imports at the top of the file (after existing imports):
+Note: `getFirebaseFirestore` is already imported from `../config/firebase` in the existing file. Add these imports:
+
+Update the existing `import { User } from "@examify-tms/interfaces";` line to:
 
 ```typescript
 import { User, Role } from "@examify-tms/interfaces";
+```
+
+And add this import after the existing imports:
+
+```typescript
 import admin from "firebase-admin";
 ```
 
@@ -257,12 +294,14 @@ git commit -m "feat(backend): add createUserInFirestore function"
 
 - [ ] **Step 1: Add imports for register handler types**
 
-Add these imports at the top of the file:
+Add these imports at the top of the file (after existing imports):
 
 ```typescript
 import { RegisterRequest } from "@examify-tms/interfaces";
-import { createUserInFirestore, getUserFromFirestore } from "../services/userService";
+import { createUserInFirestore, getUserFromFirestore, updateLastActive } from "../services/userService";
 ```
+
+Note: `updateLastActive` is added to the imports since it's used in the register handler.
 
 - [ ] **Step 2: Add register handler function**
 
@@ -412,8 +451,10 @@ Add these imports at the top of the file (after existing imports):
 
 ```typescript
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { ApiError } from "@examify-tms/interfaces";
+import { LoginResponse, ApiError } from "@examify-tms/interfaces";
 ```
+
+Note: `getFirebaseAuth` is already imported from `../config/firebase` in the existing file.
 
 - [ ] **Step 2: Add register function**
 
