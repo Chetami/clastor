@@ -2,17 +2,15 @@
   "name": "@examify-tms/interfaces",
   "version": "1.0.0",
   "description": "Shared TypeScript interfaces for Examify TMS",
-  "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsx scripts/build.ts",
+    "build": "npm run build:types && npm run build:reexports",
+    "build:types": "openapi-typescript src/openapi.yaml -o dist/index.d.ts",
+    "build:reexports": "node scripts/add-reexports.js",
     "postinstall": "npm run build",
-    "clean": "rm -rf dist src/openapi.yaml"
+    "clean": "rm -rf dist"
   },
   "devDependencies": {
-    "openapi-typescript": "^7.4.0",
-    "js-yaml": "^4.1.0",
-    "tsx": "^4.19.0",
-    "typescript": "^5.5.0"
+    "openapi-typescript": "^7.4.0"
   }
 }

@@ -1,123 +1,28 @@
 openapi: 3.0.3
 info:
-  title: Examify TMS API
-  description: API for Examify Tutor Management System
+  title: Examify TMS API - Type Definitions
+  description: Auto-generated OpenAPI spec from YAML schema files
   version: 1.0.0
-  contact:
-    name: Examify TMS Team
-
-servers:
-  - url: http://localhost:3001/api
-    description: Local development server
-  - url: https://api.examify-tms.com/api
-    description: Production server
-
-tags:
-  - name: auth
-    description: Authentication endpoints
-
-paths:
-  /auth/login:
-    post:
-      tags:
-        - auth
-      summary: Login with Firebase token
-      description: |
-        Authenticates a user by verifying their Firebase ID token and
-        returning a custom JWT token for subsequent API calls.
-      operationId: login
-      security:
-        - BearerAuth: []
-      requestBody: null
-      responses:
-        '200':
-          description: Successful login
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/LoginResponse'
-        '401':
-          description: Authentication failed
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-              examples:
-                invalidToken:
-                  summary: Invalid Firebase token
-                  value:
-                    message: Invalid Firebase token
-                userNotFound:
-                  summary: User not found in Firestore
-                  value:
-                    message: User not found
-
-  /auth/verify:
-    get:
-      tags:
-        - auth
-      summary: Verify JWT token
-      description: |
-        Verifies a custom JWT token and returns the associated user information.
-        Use this to check if a token is still valid and get the current user info.
-      operationId: verifyToken
-      security:
-        - BearerAuth: []
-      responses:
-        '200':
-          description: Token is valid
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/VerifyResponse'
-        '401':
-          description: Invalid or expired token
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
 components:
-  securitySchemes:
-    BearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
-      description: |
-        Firebase ID token for /auth/login endpoint.
-        Custom JWT token for /auth/verify and other protected endpoints.
-
   schemas:
-    Role:
-      type: string
-      enum:
-        - system_admin
-        - tutor
-      description: User role determining permissions
-
-    UserInfo:
+    ApiError:
       type: object
-      description: Basic user information returned by the API
       required:
-        - uid
-        - email
-        - role
+        - message
       properties:
-        uid:
+        message:
           type: string
-          description: Firebase Auth UID
-          example: abc123xyz456
-        email:
+          description: Human-readable error message
+          example: Invalid Firebase token
+        code:
           type: string
-          format: email
-          description: User's email address
-          example: admin@example.com
-        role:
-          $ref: '#/components/schemas/Role'
-
-    JWTPayload:
+          description: Optional error code for programmatic handling
+          example: AUTH_INVALID_TOKEN
+      description: |-
+        API Error response interface
+        Standard error response format for all API endpoints
+    JwtPayload:
       type: object
-      description: Full JWT payload including timestamps
       required:
         - uid
         - email
@@ -144,10 +49,25 @@ components:
           type: integer
           description: Expiration timestamp (Unix epoch, 1 hour after iat)
           example: 1718784000
-
+      description: |-
+        JWT Payload interface
+        Represents the payload stored in the custom JWT token
+    LoginRequest:
+      type: object
+      required:
+        - firebaseToken
+      properties:
+        firebaseToken:
+          type: string
+          description: Firebase ID token from client authentication
+          example: eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
+      description: |-
+        Login Request interface
+        Sent from frontend to backend /api/auth/login endpoint
+        The Firebase token is sent in Authorization header, not request body
+        This schema exists for documentation purposes only
     LoginResponse:
       type: object
-      description: Response from successful login
       required:
         - jwtToken
         - user
@@ -158,27 +78,80 @@ components:
           example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
         user:
           $ref: '#/components/schemas/UserInfo'
-
-    VerifyResponse:
+      description: |-
+        Login Response interface
+        Returned from backend /api/auth/login endpoint
+    UserInfo:
       type: object
-      description: Response from token verification
       required:
-        - user
+        - uid
+        - email
+        - role
       properties:
-        user:
-          $ref: '#/components/schemas/JWTPayload'
-
-    Error:
+        uid:
+          type: string
+          description: Firebase Auth UID
+          example: abc123xyz456
+        email:
+          type: string
+          format: email
+          description: User's email address
+          example: admin@example.com
+        role:
+          $ref: '#/components/schemas/Role'
+      description: |-
+        User info returned from API (without JWT timestamps)
+        Basic user information returned by authentication endpoints
+    Role:
+      type: string
+      enum:
+        - system_admin
+        - tutor
+      description: |-
+        User role definitions
+        Roles determine user permissions within the system
+    User:
       type: object
-      description: Error response
       required:
-        - message
+        - id
+        - name
+        - email
+        - role
+        - createdAt
+        - updatedAt
       properties:
-        message:
+        id:
           type: string
-          description: Human-readable error message
-          example: Invalid Firebase token
-        code:
+          description: Firebase Auth UID
+          example: abc123xyz456
+        name:
           type: string
-          description: Optional error code for programmatic handling
-          example: AUTH_INVALID_TOKEN
+          description: User's full name
+          example: John Doe
+        email:
+          type: string
+          format: email
+          description: User's email address
+          example: user@example.com
+        role:
+          $ref: '#/components/schemas/Role'
+        avatarUrl:
+          type: string
+          nullable: true
+          description: Optional profile picture URL
+        createdAt:
+          type: string
+          format: date-time
+          description: Account creation timestamp
+        updatedAt:
+          type: string
+          format: date-time
+          description: Last profile update timestamp
+        lastActive:
+          type: string
+          format: date-time
+          nullable: true
+          description: Last activity timestamp
+      description: |-
+        User interface
+        Represents a user in the Firestore users collection
