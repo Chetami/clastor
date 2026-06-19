@@ -13,7 +13,7 @@ export default function SignUpPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
-  const [loading] = useState(false);
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { setAuthState } = useAuth();
 
@@ -24,6 +24,7 @@ export default function SignUpPage() {
       return;
     }
 
+    setLoading(true);
     try {
       setError("");
       const { jwtToken, user } = await register(name, email, password);
@@ -31,6 +32,8 @@ export default function SignUpPage() {
       navigate('/dashboard');
     } catch (err: any) {
       setError(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
