@@ -1,0 +1,14 @@
+type: object
+required:
+  - jwtToken
+  - user
+properties:
+  jwtToken:
+    type: string
+    description: Custom JWT token (expires in 1 hour)
+    example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+  user:
+    $ref: '../auth/UserInfo.yaml'
+description: |-
+  Login Response interface
+  Returned from backend /api/auth/login endpoint

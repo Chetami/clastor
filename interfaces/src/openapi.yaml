@@ -6,152 +6,16 @@ info:
 components:
   schemas:
     ApiError:
-      type: object
-      required:
-        - message
-      properties:
-        message:
-          type: string
-          description: Human-readable error message
-          example: Invalid Firebase token
-        code:
-          type: string
-          description: Optional error code for programmatic handling
-          example: AUTH_INVALID_TOKEN
-      description: |-
-        API Error response interface
-        Standard error response format for all API endpoints
-    JwtPayload:
-      type: object
-      required:
-        - uid
-        - email
-        - role
-        - iat
-        - exp
-      properties:
-        uid:
-          type: string
-          description: Firebase Auth UID
-          example: abc123xyz456
-        email:
-          type: string
-          format: email
-          description: User's email address
-          example: admin@example.com
-        role:
-          $ref: '#/components/schemas/Role'
-        iat:
-          type: integer
-          description: Issued at timestamp (Unix epoch)
-          example: 1718780400
-        exp:
-          type: integer
-          description: Expiration timestamp (Unix epoch, 1 hour after iat)
-          example: 1718784000
-      description: |-
-        JWT Payload interface
-        Represents the payload stored in the custom JWT token
-    LoginRequest:
-      type: object
-      required:
-        - firebaseToken
-      properties:
-        firebaseToken:
-          type: string
-          description: Firebase ID token from client authentication
-          example: eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
-      description: |-
-        Login Request interface
-        Sent from frontend to backend /api/auth/login endpoint
-        The Firebase token is sent in Authorization header, not request body
-        This schema exists for documentation purposes only
-    LoginResponse:
-      type: object
-      required:
-        - jwtToken
-        - user
-      properties:
-        jwtToken:
-          type: string
-          description: Custom JWT token (expires in 1 hour)
-          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-        user:
-          $ref: '#/components/schemas/UserInfo'
-      description: |-
-        Login Response interface
-        Returned from backend /api/auth/login endpoint
-    UserInfo:
-      type: object
-      required:
-        - uid
-        - email
-        - role
-      properties:
-        uid:
-          type: string
-          description: Firebase Auth UID
-          example: abc123xyz456
-        email:
-          type: string
-          format: email
-          description: User's email address
-          example: admin@example.com
-        role:
-          $ref: '#/components/schemas/Role'
-      description: |-
-        User info returned from API (without JWT timestamps)
-        Basic user information returned by authentication endpoints
+      $ref: './schemas/common/ApiError.yaml'
     Role:
-      type: string
-      enum:
-        - system_admin
-        - tutor
-      description: |-
-        User role definitions
-        Roles determine user permissions within the system
+      $ref: './schemas/common/Role.yaml'
+    JwtPayload:
+      $ref: './schemas/auth/JwtPayload.yaml'
+    LoginRequest:
+      $ref: './schemas/auth/LoginRequest.yaml'
+    LoginResponse:
+      $ref: './schemas/auth/LoginResponse.yaml'
+    UserInfo:
+      $ref: './schemas/auth/UserInfo.yaml'
     User:
-      type: object
-      required:
-        - id
-        - name
-        - email
-        - role
-        - createdAt
-        - updatedAt
-      properties:
-        id:
-          type: string
-          description: Firebase Auth UID
-          example: abc123xyz456
-        name:
-          type: string
-          description: User's full name
-          example: John Doe
-        email:
-          type: string
-          format: email
-          description: User's email address
-          example: user@example.com
-        role:
-          $ref: '#/components/schemas/Role'
-        avatarUrl:
-          type: string
-          nullable: true
-          description: Optional profile picture URL
-        createdAt:
-          type: string
-          format: date-time
-          description: Account creation timestamp
-        updatedAt:
-          type: string
-          format: date-time
-          description: Last profile update timestamp
-        lastActive:
-          type: string
-          format: date-time
-          nullable: true
-          description: Last activity timestamp
-      description: |-
-        User interface
-        Represents a user in the Firestore users collection
+      $ref: './schemas/users/User.yaml'

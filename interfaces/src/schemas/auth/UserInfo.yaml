@@ -1,0 +1,20 @@
+type: object
+required:
+  - uid
+  - email
+  - role
+properties:
+  uid:
+    type: string
+    description: Firebase Auth UID
+    example: abc123xyz456
+  email:
+    type: string
+    format: email
+    description: User's email address
+    example: admin@example.com
+  role:
+    $ref: '../common/Role.yaml'
+description: |-
+  User info returned from API (without JWT timestamps)
+  Basic user information returned by authentication endpoints

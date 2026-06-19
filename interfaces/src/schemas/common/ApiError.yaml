@@ -1,0 +1,15 @@
+type: object
+required:
+  - message
+properties:
+  message:
+    type: string
+    description: Human-readable error message
+    example: Invalid Firebase token
+  code:
+    type: string
+    description: Optional error code for programmatic handling
+    example: AUTH_INVALID_TOKEN
+description: |-
+  API Error response interface
+  Standard error response format for all API endpoints

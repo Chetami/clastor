@@ -8,13 +8,23 @@ Examify TMS is a monorepo Tutor Management System with a React SPA frontend and 
 
 ### Key Design Pattern: YAML-Based Type Generation
 
-The `interfaces` package contains a single OpenAPI 3.0 spec file (`src/openapi.yaml`) that defines all shared types. The build process:
+The `interfaces` package uses OpenAPI 3.0 specs to define all shared types. Schemas are organized across multiple YAML files under `src/schemas/`, with a main `src/openapi.yaml` that references them using `$ref` imports. The build process:
 
 1. `npm run build:types` - Runs `openapi-typescript` to generate `dist/index.d.ts` with types nested under `components['schemas']['TypeName']`
 2. `npm run build:reexports` - Post-process script adds top-level re-exports for backward compatibility (`export type TypeName = components['schemas']['TypeName']`)
 3. Other packages import from `@examify-tms/interfaces`
 
-**When adding new types:** Edit `interfaces/src/openapi.yaml`, then run `npm run build:interfaces` from the root. The generated types will be available as both `components['schemas']['TypeName']` and `TypeName`.
+**Schema organization:**
+- `interfaces/src/openapi.yaml` - Main entry point with schema references
+- `interfaces/src/schemas/common/` - Shared types (ApiError, Role)
+- `interfaces/src/schemas/auth/` - Authentication types (LoginRequest, LoginResponse, JwtPayload, UserInfo)
+- `interfaces/src/schemas/users/` - User domain types (User)
+
+**When adding new types:**
+1. Create a new YAML file in the appropriate `schemas/` subdirectory
+2. Add a `$ref` entry in `src/openapi.yaml` under `components.schemas`
+3. Run `npm run build:interfaces` from the root
+4. The generated types will be available as both `components['schemas']['TypeName']` and `TypeName`
 
 ## Common Commands
 
@@ -79,7 +89,17 @@ npm run clean        # Remove dist/
 
 ### Type Safety
 
-All API request/response types and domain models are defined in `interfaces/src/openapi.yaml` and imported from `@examify-tms/interfaces`. Never duplicate these definitions—add to the OpenAPI spec instead.
+All API request/response types and domain models are defined in the OpenAPI specs under `interfaces/src/schemas/` and imported from `@examify-tms/interfaces`. Never duplicate these definitions—add to the appropriate schema YAML file instead.
+
+**File structure:**
+```
+interfaces/src/
+├── openapi.yaml              # Main entry point with $refs
+└── schemas/
+    ├── common/               # Shared types
+    ├── auth/                 # Authentication types
+    └── users/                # User domain types
+```
 
 ## Firestore Schema
 
