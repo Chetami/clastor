@@ -1,0 +1,7 @@
+# Generated files
+dist/
+src/openapi.yaml
+
+# Node
+node_modules/
+*.log
