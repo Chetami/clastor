@@ -45,8 +45,15 @@ interfaces/
 
 Each YAML file contains a **pure OpenAPI 3.0 schema object** (the contents of what would go under `components.schemas.{Name}`). The build script wraps these into a complete OpenAPI spec.
 
-Example `src/auth/login-request.yaml`:
+**Schema naming**: Filename determines the TypeScript interface name via camelCase conversion:
+- `login-request.yaml` → `LoginRequest`
+- `jwt-payload.yaml` → `JWTPayload`
+- `user-info.yaml` → `UserInfo`
+
+**Example**: `src/auth/login-request.yaml`
 ```yaml
+# Login Request interface
+# Sent from frontend to backend /api/auth/login endpoint
 type: object
 required:
   - firebaseToken
@@ -56,7 +63,30 @@ properties:
     description: Firebase ID token from client authentication
 ```
 
+**Documentation**: Use YAML comments (`#`) above the schema for JSDoc-style documentation. The build script preserves these as JSDoc comments in the generated TypeScript.
+
 **Reference handling**: Use filename-based references. To reference another schema, use `$ref: 'filename.yaml'` (relative path). The build script converts these to proper OpenAPI `#/components/schemas/{CamelCaseName}` references during merging.
+
+**Optional properties**: Properties not in the `required` array become optional (with `?`) in TypeScript.
+
+**Nullable properties**: Use `nullable: true` on a property to make it `T | null` in TypeScript.
+```yaml
+properties:
+  avatarUrl:
+    type: string
+    nullable: true
+    # Generates: avatarUrl?: string | null
+```
+
+**Interface extension**: Use `allOf` to extend another interface:
+```yaml
+allOf:
+  - $ref: 'base-entity.yaml'
+  - type: object
+    properties:
+      specificField:
+        type: string
+```
 
 **Type mapping**:
 - `string` → `string`
@@ -66,7 +96,9 @@ properties:
 - `array` → `T[]`
 - `object` → interface with properties
 - `format: date-time` → `string` (ISO 8601 timestamp)
-- Nullable → `T | null`
+- `nullable: true` → `T | null`
+- `enum: [a, b]` → `'a' | 'b'`
+- `allOf` → interface extension
 
 ### Build Script
 
@@ -76,10 +108,15 @@ properties:
 1. Clean `dist/` and generated `src/openapi.yaml`
 2. Recursively scan `src/` for `*.yaml` files
 3. Merge into complete OpenAPI spec with `components.schemas` wrapper
-4. Write merged spec to `src/openapi.yaml` (for reference)
+4. Write merged spec to `src/openapi.yaml` (for reference/Swagger UI)
 5. Run `openapi-typescript` to generate type definitions
-6. Split output into per-feature `.d.ts` files
-7. Create `dist/index.d.ts` barrel export
+6. **Split by directory**: Group schemas by their parent directory (e.g., `auth/*.yaml` → `auth.d.ts`, `user/*.yaml` → `user.d.ts`)
+7. Create `dist/index.d.ts` barrel export that re-exports all modules
+
+**File-to-module splitting logic**:
+- Each directory in `src/` becomes a `.d.ts` file in `dist/`
+- Filename determines the interface name via camelCase conversion
+- Comments at the top of each YAML file become JSDoc comments
 
 **Root usage**:
 ```bash
@@ -94,14 +131,19 @@ npm run build:interfaces
     "openapi-typescript": "^7.4.0",
     "js-yaml": "^4.1.0",
     "typescript": "^5.5.0",
-    "tsx": "^4.19.0"
+    "tsx": "^4.19.0",
+    "chokidar": "^4.0.0"
   },
   "scripts": {
     "build": "tsx scripts/build.ts",
-    "clean": "rm -rf dist src/openapi.yaml"
+    "postinstall": "npm run build",
+    "clean": "rm -rf dist src/openapi.yaml",
+    "dev": "tsx scripts/watch.ts"
   }
 }
 ```
+
+**postinstall**: Ensures types are regenerated when developers run `npm install`, so `dist/` doesn't need to be committed.
 
 ### TypeScript Output
 
@@ -135,7 +177,11 @@ interfaces/dist/
 interfaces/src/openapi.yaml
 ```
 
-**Note**: The `dist/` directory is not committed to git. The `interfaces` package includes a `postinstall` script that runs the build automatically when other developers run `npm install`. This ensures generated types are always available without committing build artifacts.
+**Note**:
+- `dist/` is not committed. The `postinstall` script regenerates it on `npm install`.
+- `src/openapi.yaml` is the merged OpenAPI spec generated from individual schema files. It's useful for local Swagger UI reference but doesn't need to be committed since the source YAML files are the true source.
+
+**For API documentation**: The backend can serve the generated `openapi.yaml` for Swagger UI, or a separate full OpenAPI spec can be maintained in `interfaces/src/api-spec.yaml` (with paths, servers, etc.) if needed for documentation purposes.
 
 ### Optional: Watch Mode
 
