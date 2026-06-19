@@ -1,0 +1,11 @@
+type: object
+required:
+  - name
+properties:
+  name:
+    type: string
+    description: User's display name
+description: |-
+  Register Request interface
+  Sent from frontend to backend /api/auth/register endpoint
+  Only contains name since email/password are handled by Firebase Auth
