@@ -8,6 +8,7 @@ export {
   CardContent,
 } from "./card";
 export { Input } from "./input";
+export { PhoneInput, type PhoneInputProps } from "./phone-input";
 export { Label } from "./label";
 export { Separator } from "./separator";
 export { Checkbox } from "./checkbox";

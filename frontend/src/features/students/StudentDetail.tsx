@@ -14,6 +14,7 @@ import {
   Users,
 } from "lucide-react";
 import type { Student } from "@examify-tms/interfaces";
+import { formatPhoneNumberIntl } from "react-phone-number-input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -162,7 +163,9 @@ export default function StudentDetail() {
             <DetailRow
               icon={<Phone className="h-4 w-4" />}
               label="Phone"
-              value={student.phone ?? "—"}
+              value={
+                student.phone ? formatPhoneNumberIntl(student.phone) : "\u2014"
+              }
               muted={!student.phone}
             />
             <DetailRow

@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PhoneInput } from "@/components/ui/phone-input";
 import {
   EMPTY_STUDENT_FORM,
   studentFormSchema,
@@ -108,12 +109,11 @@ export function StudentForm({
               (optional)
             </span>
           </Label>
-          <Input
+          <PhoneInput
             id="phone"
-            placeholder="+1 555 0100"
-            aria-invalid={!!errors.phone}
+            invalid={!!errors.phone}
             value={values.phone}
-            onChange={(e) => update("phone", e.target.value)}
+            onChange={(v) => update("phone", v)}
           />
           {errors.phone && (
             <p className="text-xs text-destructive">{errors.phone}</p>

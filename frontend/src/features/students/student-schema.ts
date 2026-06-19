@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isPossiblePhoneNumber } from "react-phone-number-input";
 
 export const rateTypeSchema = z.enum(["hourly", "per_lesson"]);
 export const studentStatusSchema = z.enum(["active", "past"]);
@@ -11,7 +12,11 @@ export const studentFormSchema = z
       .string()
       .trim()
       .optional()
-      .or(z.literal("")),
+      .or(z.literal(""))
+      .refine(
+        (v) => !v || isPossiblePhoneNumber(v),
+        "Enter a valid phone number",
+      ),
     parentEmail: z
       .string()
       .trim()
