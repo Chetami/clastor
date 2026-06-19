@@ -1,9 +1,11 @@
-import { useState, FormEvent } from "react";
+import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "../../components/ui/card";
+import { register } from "../../services/authService";
+import { useAuth } from "../../contexts/AuthContext";
 
 export default function SignUpPage() {
   const [name, setName] = useState("");
@@ -11,36 +13,26 @@ export default function SignUpPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loading] = useState(false);
   const navigate = useNavigate();
+  const { setAuthState } = useAuth();
 
-  async function handleSubmit(e: FormEvent) {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
-
     if (password !== confirmPassword) {
-      setError("Passwords do not match");
+      setError('Passwords do not match');
       return;
     }
-
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters");
-      return;
-    }
-
-    setLoading(true);
 
     try {
-      // TODO: Implement actual signup logic with Firebase and backend
-      // For now, simulate signup and redirect to login
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      navigate("/login");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Signup failed");
-    } finally {
-      setLoading(false);
+      setError("");
+      const { jwtToken, user } = await register(name, email, password);
+      setAuthState(user, jwtToken); // Update AuthContext with new user
+      navigate('/dashboard');
+    } catch (err: any) {
+      setError(err.message);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen flex noise-overlay bg-gradient-to-br from-amber-50 via-white to-indigo-50">
