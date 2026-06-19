@@ -43,7 +43,7 @@ interfaces/
 
 ### YAML File Format
 
-Each YAML file contains a **pure OpenAPI 3.0 schema object** (no wrapper).
+Each YAML file contains a **pure OpenAPI 3.0 schema object** (the contents of what would go under `components.schemas.{Name}`). The build script wraps these into a complete OpenAPI spec.
 
 Example `src/auth/login-request.yaml`:
 ```yaml
@@ -56,7 +56,17 @@ properties:
     description: Firebase ID token from client authentication
 ```
 
-References use relative paths: `$ref: 'role.yaml'`
+**Reference handling**: Use filename-based references. To reference another schema, use `$ref: 'filename.yaml'` (relative path). The build script converts these to proper OpenAPI `#/components/schemas/{CamelCaseName}` references during merging.
+
+**Type mapping**:
+- `string` → `string`
+- `number` → `number`
+- `integer` → `number`
+- `boolean` → `boolean`
+- `array` → `T[]`
+- `object` → interface with properties
+- `format: date-time` → `string` (ISO 8601 timestamp)
+- Nullable → `T | null`
 
 ### Build Script
 
@@ -125,6 +135,32 @@ interfaces/dist/
 interfaces/src/openapi.yaml
 ```
 
+**Note**: The `dist/` directory is not committed to git. The `interfaces` package includes a `postinstall` script that runs the build automatically when other developers run `npm install`. This ensures generated types are always available without committing build artifacts.
+
+### Optional: Watch Mode
+
+For development, a watch script can rebuild automatically on YAML changes:
+
+```json
+{
+  "scripts": {
+    "dev": "tsx scripts/watch.ts"
+  }
+}
+```
+
+The watch script uses a file watcher (like `chokidar`) to trigger rebuilds when `src/**/*.yaml` files change.
+
+### Validation
+
+The build script validates YAML syntax and structure before generation. It checks:
+- Valid YAML syntax
+- Required properties for schema objects
+- Reference file existence
+- Proper OpenAPI schema typing
+
+Errors are reported with file path and line numbers for easy debugging.
+
 ## Migration Plan
 
 1. Create new folder structure in `src/`
@@ -140,3 +176,5 @@ interfaces/src/openapi.yaml
 - [ ] Generated types match current `interfaces` package exports
 - [ ] Root `npm run build:interfaces` works
 - [ ] Backend/frontend can import from generated types
+- [ ] `npm install` regenerates types via postinstall
+- [ ] YAML validation catches errors before generation
