@@ -1,48 +1,45 @@
 import { useAuth } from "../../contexts/AuthContext";
+import { Button } from "../../components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 
 export default function Dashboard() {
   const { user, logout } = useAuth();
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <nav className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center">
-              <h1 className="text-xl font-bold">Examify TMS</h1>
-            </div>
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-600">
-                {user?.email} ({user?.role})
-              </span>
-              <button
-                onClick={() => logout()}
-                className="px-3 py-2 text-sm text-red-600 hover:text-red-800"
-              >
-                Logout
-              </button>
-            </div>
+    <div className="min-h-screen bg-background">
+      <nav className="border-b">
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+          <span className="text-lg font-semibold">Examify TMS</span>
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-muted-foreground">
+              {user?.email} ({user?.role})
+            </span>
+            <Button variant="outline" size="sm" onClick={() => logout()}>
+              Logout
+            </Button>
           </div>
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
-          <div className="bg-white shadow rounded-lg p-6">
-            <h2 className="text-2xl font-bold mb-4">Welcome to the Dashboard</h2>
-            <p className="text-gray-600 mb-4">
-              You are logged in as <span className="font-semibold">{user?.role}</span>
+      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>Welcome to the Dashboard</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              You are logged in as <span className="font-medium text-foreground">{user?.role}</span>
             </p>
-            <div className="bg-blue-50 border border-blue-200 rounded p-4">
-              <h3 className="font-semibold text-blue-900 mb-2">User Information</h3>
-              <ul className="text-sm text-blue-800 space-y-1">
-                <li><strong>UID:</strong> {user?.uid}</li>
-                <li><strong>Email:</strong> {user?.email}</li>
-                <li><strong>Role:</strong> {user?.role}</li>
+            <div className="rounded-md border bg-muted/50 p-4">
+              <p className="mb-2 font-medium">User Information</p>
+              <ul className="space-y-1 text-sm text-muted-foreground">
+                <li><span className="font-medium text-foreground">UID:</span> {user?.uid}</li>
+                <li><span className="font-medium text-foreground">Email:</span> {user?.email}</li>
+                <li><span className="font-medium text-foreground">Role:</span> {user?.role}</li>
               </ul>
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </main>
     </div>
   );
