@@ -154,9 +154,10 @@ paths:
 | File | Change |
 |------|--------|
 | `interfaces/src/openapi.yaml` | Add RegisterRequest schema + /register endpoint |
-| `backend/src/services/userService.ts` | Add createUserInFirestore(uid, email, name, role) |
+| `backend/src/services/userService.ts` | Add createUserInFirestore(id, email, name, role) |
 | `backend/src/controllers/authController.ts` | Add register(req, res) handler |
 | `backend/src/routes/authRoutes.ts` | Add POST /api/auth/register route |
+| `frontend/src/contexts/AuthContext.tsx` | Add setAuthState(user, token) method |
 | `frontend/src/services/authService.ts` | Add register(name, email, password) function |
 | `frontend/src/features/auth/SignUpPage.tsx` | Call authService.register() instead of mock |
 
@@ -165,17 +166,30 @@ paths:
 **`backend/src/services/userService.ts` - New function:**
 
 ```typescript
+import { User, Role } from "@examify-tms/interfaces";
+import { getFirebaseFirestore } from "../config/firebase";
+import admin from "firebase-admin";
+
+/**
+ * Create user document in Firestore
+ * @param id - User ID (Firebase Auth UID)
+ * @param email - User email
+ * @param name - User display name
+ * @param role - User role (defaults to 'tutor')
+ * @returns Created user object
+ */
 export async function createUserInFirestore(
-  uid: string,
+  id: string,
   email: string,
   name: string,
   role: Role = 'tutor'
 ): Promise<User> {
-  const now = new Date();
-  const user: User = {
-    uid,
-    email,
+  const firestore = getFirebaseFirestore();
+  const now = admin.firestore.Timestamp.now();
+
+  const userData = {
     name,
+    email,
     role,
     avatarUrl: null,
     createdAt: now,
@@ -183,14 +197,34 @@ export async function createUserInFirestore(
     lastActive: now,
   };
 
-  await firestore.collection('users').doc(uid).set(user);
-  return user;
+  await firestore.collection('users').doc(id).set(userData);
+
+  // Return User object with Date objects (matching getUserFromFirestore pattern)
+  return {
+    id,
+    name,
+    email,
+    role,
+    avatarUrl: null,
+    createdAt: now.toDate(),
+    updatedAt: now.toDate(),
+    lastActive: now.toDate(),
+  };
 }
 ```
 
 **`backend/src/controllers/authController.ts` - New handler:**
 
 ```typescript
+import { Request, Response } from "express";
+import { RegisterRequest, LoginResponse, ApiError, UserInfo } from "@examify-tms/interfaces";
+import { verifyFirebaseToken } from "../services/authService";
+import { createUserInFirestore, generateJWTForUser, getUserFromFirestore } from "../services/userService";
+
+/**
+ * Register controller
+ * Creates Firestore document for Firebase-authenticated user and issues custom JWT
+ */
 export async function register(
   req: Request<{}, {}, RegisterRequest>,
   res: Response<LoginResponse | ApiError>
@@ -206,26 +240,43 @@ export async function register(
     const firebaseToken = authHeader.substring(7);
     const decodedToken = await verifyFirebaseToken(firebaseToken);
 
-    // 2. Check if user already exists in Firestore
-    const existingUser = await getUserFromFirestore(decodedToken.uid);
+    // 2. Validate name field
+    const name = req.body.name?.trim();
+    if (!name) {
+      res.status(400).json({ message: 'Name is required' });
+      return;
+    }
+    if (name.length > 100) {
+      res.status(400).json({ message: 'Name must be 100 characters or less' });
+      return;
+    }
+
+    // 3. Check if user already exists in Firestore
+    const existingUser = await getUserFromFirestore(decodedToken.uid).catch(() => null);
     if (existingUser) {
       res.status(409).json({ message: 'User already exists' });
       return;
     }
 
-    // 3. Create Firestore document
+    // 4. Create Firestore document
     const user = await createUserInFirestore(
       decodedToken.uid,
       decodedToken.email || '',
-      req.body.name,
+      name,
       'tutor' // Default role for new users
     );
 
-    // 4. Generate custom JWT
+    // 5. Generate custom JWT
     const jwtToken = generateJWTForUser(user);
 
-    // 5. Return response
-    res.json({ jwtToken, user });
+    // 6. Return UserInfo (not full User, consistent with login endpoint)
+    const userInfo: UserInfo = {
+      uid: user.id,
+      email: user.email,
+      role: user.role,
+    };
+
+    res.status(200).json({ jwtToken, user: userInfo });
   } catch (error) {
     console.error('Registration error:', error);
     res.status(500).json({ message: 'Registration failed' });
@@ -236,11 +287,14 @@ export async function register(
 **`backend/src/routes/authRoutes.ts` - New route:**
 
 ```typescript
-router.post(
-  '/register',
-  authenticateJWT,
-  registerController
-);
+import { register } from "../controllers/authController";
+
+/**
+ * POST /api/auth/register
+ * Register endpoint - creates Firestore document for Firebase user, returns custom JWT
+ * Note: Does NOT use authenticateJWT middleware because it receives a Firebase ID token
+ */
+router.post('/register', register);
 ```
 
 ### Frontend Implementation Details
@@ -248,21 +302,38 @@ router.post(
 **`frontend/src/services/authService.ts` - New function:**
 
 ```typescript
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { firebaseAuth } from "../config/firebase";
+import { LoginResponse, ApiError } from "@examify-tms/interfaces";
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+
+/**
+ * Register a new user
+ * Creates Firebase Auth user, then calls backend to create Firestore document
+ * @param name - User's display name
+ * @param email - User's email
+ * @param password - User's password (min 6 characters)
+ * @returns LoginResponse with JWT token and user info
+ * @throws Error with user-friendly message on failure
+ */
 export async function register(
   name: string,
   email: string,
   password: string
 ): Promise<LoginResponse> {
+  let firebaseUser: ReturnType<typeof createUserWithEmailAndPassword> | null = null;
+
   try {
     // 1. Create user in Firebase Auth
-    const userCredential = await createUserWithEmailAndPassword(
+    firebaseUser = await createUserWithEmailAndPassword(
       firebaseAuth,
       email,
       password
     );
 
     // 2. Get Firebase ID token
-    const firebaseToken = await userCredential.user.getIdToken();
+    const firebaseToken = await firebaseUser.user.getIdToken();
 
     // 3. Call backend to create Firestore document and get custom JWT
     const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
@@ -281,22 +352,69 @@ export async function register(
 
     return await response.json();
   } catch (error: any) {
-    // Map Firebase errors
+    // Map Firebase Auth errors
     if (error.code === 'auth/email-already-in-use') {
       throw new Error('Email already registered');
     } else if (error.code === 'auth/weak-password') {
       throw new Error('Password must be at least 6 characters');
     } else if (error.code === 'auth/invalid-email') {
       throw new Error('Invalid email address');
+    } else if (error.code === 'auth/network-request-failed') {
+      throw new Error('Network error. Please check your connection and try again.');
     }
+
+    // Handle backend errors - rollback Firebase user creation
+    if (firebaseUser && error.message !== 'Email already registered') {
+      try {
+        await firebaseUser.user.delete();
+      } catch (deleteError) {
+        console.error('Failed to rollback Firebase user:', deleteError);
+      }
+    }
+
     throw error;
   }
 }
 ```
 
+**AuthContext Modification - Add method to set user state:**
+
+**`frontend/src/contexts/AuthContext.tsx` - Add to interface and provider:**
+
+```typescript
+interface AuthContextType {
+  user: UserInfo | null;
+  loading: boolean;
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
+  setAuthState: (user: UserInfo, token: string) => void; // NEW
+  isAuthenticated: boolean;
+}
+
+// In AuthProvider component:
+const setAuthState = (user: UserInfo, token: string) => {
+  setUser(user);
+  localStorage.setItem('jwtToken', token);
+};
+
+// In context value:
+<AuthContext.Provider
+  value={{
+    user,
+    loading,
+    login: handleLogin,
+    logout: handleLogout,
+    setAuthState, // NEW
+    isAuthenticated: !!user,
+  }}
+>
+```
+
 **`frontend/src/features/auth/SignUpPage.tsx` - Replace mock:**
 
 ```typescript
+const { setAuthState } = useAuth(); // Add this to hook calls
+
 const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
   if (password !== confirmPassword) {
@@ -307,7 +425,7 @@ const handleSubmit = async (e: React.FormEvent) => {
   try {
     setError(null);
     const { jwtToken, user } = await register(name, email, password);
-    login(user, jwtToken); // Update AuthContext
+    setAuthState(user, jwtToken); // Update AuthContext with new user
     navigate('/dashboard');
   } catch (err: any) {
     setError(err.message);
@@ -321,20 +439,27 @@ const handleSubmit = async (e: React.FormEvent) => {
 - `auth/email-already-in-use` - "Email already registered"
 - `auth/weak-password` - "Password must be at least 6 characters"
 - `auth/invalid-email` - "Invalid email address"
-- `auth/network-request-failed` - "Network error, try again"
+- `auth/network-request-failed` - "Network error. Please check your connection and try again."
 
 ### Backend Errors
+- `400 Bad Request` - Invalid name (empty or too long)
 - `401 Unauthorized` - Invalid/expired Firebase token
-- `409 Conflict` - Firestore document already exists (race condition)
+- `409 Conflict` - User already exists in Firestore
 - `500 Internal Server Error` - Firestore/Firebase error
+
+### Rollback Strategy
+If backend registration fails after successful Firebase user creation (e.g., network error, 500 error), the frontend deletes the Firebase Auth user to prevent leaving orphaned accounts. This keeps the system in a consistent state.
 
 ## Testing Considerations
 
-1. **Happy path:** User registers successfully and is logged in
-2. **Email already exists:** Firebase returns error before backend call
-3. **Weak password:** Firebase returns error (less than 6 chars)
-4. **Race condition:** If two requests create same Firebase user, backend handles 409
-5. **Network failure:** Frontend shows appropriate error message
+1. **Happy path:** User registers successfully, JWT is stored in localStorage, AuthContext state is updated, user is redirected to dashboard
+2. **Email already exists:** Firebase returns error before backend call, shows "Email already registered"
+3. **Weak password:** Firebase returns error (less than 6 chars), shows appropriate message
+4. **Invalid name:** Backend validates name is not empty and not too long
+5. **Race condition:** If two requests create same Firebase user, backend handles 409 gracefully
+6. **Network failure:** Frontend shows appropriate error message
+7. **Rollback on backend error:** Firebase user is deleted if backend registration fails after successful Firebase user creation
+8. **Auto-login:** User is immediately logged in (JWT stored, AuthContext updated, redirected to dashboard)
 
 ## Implementation Order
 
@@ -351,4 +476,5 @@ const handleSubmit = async (e: React.FormEvent) => {
 - Firebase token is verified on backend via Firebase Admin SDK
 - User email comes from verified token, not request body (prevents spoofing)
 - UID comes from verified token (prevents privilege escalation)
-- Name is only user-provided field (safe to store as-is)
+- Name is only user-provided field (validated for length, safe to store)
+- **Rate limiting consideration:** The `/api/auth/register` endpoint should have rate limiting applied (e.g., express-rate-limit middleware) to prevent automated account creation attacks. This can be added in a future iteration.
