@@ -1,59 +1,66 @@
-import { useState, FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Button } from "../../components/ui/button";
-import { Input } from "../../components/ui/input";
-import { Label } from "../../components/ui/label";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "../../components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { useRegister } from "@/features/auth/api";
 
 export default function SignUpPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [validationError, setValidationError] = useState("");
   const navigate = useNavigate();
+
+  const register = useRegister();
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    setError("");
+    setValidationError("");
 
     if (password !== confirmPassword) {
-      setError("Passwords do not match");
+      setValidationError("Passwords do not match");
       return;
     }
 
     if (password.length < 6) {
-      setError("Password must be at least 6 characters");
+      setValidationError("Password must be at least 6 characters");
       return;
     }
 
-    setLoading(true);
-
     try {
-      // TODO: Implement actual signup logic with Firebase and backend
-      // For now, simulate signup and redirect to login
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      navigate("/login");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Signup failed");
-    } finally {
-      setLoading(false);
+      await register.mutateAsync({ name, email, password });
+      navigate("/dashboard");
+    } catch {
+      // error is surfaced via mutation state
     }
   }
+
+  const errorMessage = validationError || register.error?.message;
 
   return (
     <div className="flex min-h-screen items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>Create account</CardTitle>
-          <CardDescription>Enter your information to get started</CardDescription>
+          <CardDescription>
+            Enter your information to get started
+          </CardDescription>
         </CardHeader>
 
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            {error && (
-              <p className="text-sm text-destructive">{error}</p>
+            {errorMessage && (
+              <p className="text-sm text-destructive">{errorMessage}</p>
             )}
 
             <div className="space-y-2">
@@ -102,8 +109,12 @@ export default function SignUpPage() {
               />
             </div>
 
-            <Button type="submit" disabled={loading} className="w-full">
-              {loading ? "Creating account..." : "Create account"}
+            <Button
+              type="submit"
+              disabled={register.isPending}
+              className="w-full"
+            >
+              {register.isPending ? "Creating account..." : "Create account"}
             </Button>
           </form>
         </CardContent>
@@ -111,7 +122,10 @@ export default function SignUpPage() {
         <CardFooter className="flex justify-center">
           <p className="text-sm text-muted-foreground">
             Already have an account?{" "}
-            <Link to="/login" className="font-medium text-primary hover:underline">
+            <Link
+              to="/login"
+              className="font-medium text-primary hover:underline"
+            >
               Sign in
             </Link>
           </p>
