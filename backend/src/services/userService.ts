@@ -1,6 +1,7 @@
 import { getFirebaseFirestore } from "../config/firebase";
-import { User } from "@examify-tms/interfaces";
+import { User, Role } from "@examify-tms/interfaces";
 import { generateToken } from "../utils/jwt";
+import admin from "firebase-admin";
 
 /**
  * Get user document from Firestore
@@ -48,6 +49,48 @@ export async function updateLastActive(uid: string): Promise<void> {
     console.error("Failed to update last active:", error);
     // Don't throw - this is a non-critical update
   }
+}
+
+/**
+ * Create user document in Firestore
+ * @param id - User ID (Firebase Auth UID)
+ * @param email - User email
+ * @param name - User display name
+ * @param role - User role (defaults to 'tutor')
+ * @returns Created user object
+ */
+export async function createUserInFirestore(
+  id: string,
+  email: string,
+  name: string,
+  role: Role = 'tutor'
+): Promise<User> {
+  const firestore = getFirebaseFirestore();
+  const now = admin.firestore.Timestamp.now();
+
+  const userData = {
+    name,
+    email,
+    role,
+    avatarUrl: null,
+    createdAt: now,
+    updatedAt: now,
+    lastActive: now,
+  };
+
+  await firestore.collection('users').doc(id).set(userData);
+
+  // Return User object with ISO string timestamps (matching User type)
+  return {
+    id,
+    name,
+    email,
+    role,
+    avatarUrl: null,
+    createdAt: now.toDate().toISOString(),
+    updatedAt: now.toDate().toISOString(),
+    lastActive: now.toDate().toISOString(),
+  };
 }
 
 /**
