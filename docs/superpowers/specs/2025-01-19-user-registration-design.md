@@ -269,7 +269,10 @@ export async function register(
     // 5. Generate custom JWT
     const jwtToken = generateJWTForUser(user);
 
-    // 6. Return UserInfo (not full User, consistent with login endpoint)
+    // 6. Update last active timestamp (consistent with login endpoint)
+    await updateLastActive(user.id);
+
+    // 7. Return UserInfo (not full User, consistent with login endpoint)
     const userInfo: UserInfo = {
       uid: user.id,
       email: user.email,
@@ -302,11 +305,12 @@ router.post('/register', register);
 **`frontend/src/services/authService.ts` - New function:**
 
 ```typescript
+import axios from "axios";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { firebaseAuth } from "../config/firebase";
+import { getFirebaseAuth } from "../config/firebase";
 import { LoginResponse, ApiError } from "@examify-tms/interfaces";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
 /**
  * Register a new user
@@ -322,35 +326,32 @@ export async function register(
   email: string,
   password: string
 ): Promise<LoginResponse> {
-  let firebaseUser: ReturnType<typeof createUserWithEmailAndPassword> | null = null;
+  let firebaseUserCredential: ReturnType<typeof createUserWithEmailAndPassword> | null = null;
 
   try {
     // 1. Create user in Firebase Auth
-    firebaseUser = await createUserWithEmailAndPassword(
+    const firebaseAuth = getFirebaseAuth();
+    firebaseUserCredential = await createUserWithEmailAndPassword(
       firebaseAuth,
       email,
       password
     );
 
     // 2. Get Firebase ID token
-    const firebaseToken = await firebaseUser.user.getIdToken();
+    const firebaseToken = await firebaseUserCredential.user.getIdToken();
 
     // 3. Call backend to create Firestore document and get custom JWT
-    const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${firebaseToken}`,
-      },
-      body: JSON.stringify({ name }),
-    });
+    const response = await axios.post<LoginResponse>(
+      `${API_URL}/api/auth/register`,
+      { name },
+      {
+        headers: {
+          Authorization: `Bearer ${firebaseToken}`,
+        },
+      }
+    );
 
-    if (!response.ok) {
-      const error: ApiError = await response.json();
-      throw new Error(error.message);
-    }
-
-    return await response.json();
+    return response.data;
   } catch (error: any) {
     // Map Firebase Auth errors
     if (error.code === 'auth/email-already-in-use') {
@@ -364,12 +365,20 @@ export async function register(
     }
 
     // Handle backend errors - rollback Firebase user creation
-    if (firebaseUser && error.message !== 'Email already registered') {
+    // Only rollback if error is NOT from Firebase Auth (meaning Firebase user was created but backend call failed)
+    if (firebaseUserCredential && !error.code?.startsWith('auth/')) {
       try {
-        await firebaseUser.user.delete();
+        await firebaseUserCredential.user.delete();
+        console.log('Rolled back Firebase user due to backend error');
       } catch (deleteError) {
         console.error('Failed to rollback Firebase user:', deleteError);
       }
+    }
+
+    // Handle axios errors from backend
+    if (axios.isAxiosError(error)) {
+      const apiError: ApiError = error.response?.data || { message: "Registration failed" };
+      throw new Error(apiError.message);
     }
 
     throw error;
