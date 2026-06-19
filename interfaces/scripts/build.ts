@@ -315,3 +315,44 @@ function createBarrelExport(moduleNames: string[]): void {
   writeFileSync(resolve(DIST_DIR, "index.d.ts"), exports);
   console.log(`  ✓ Generated index.d.ts`);
 }
+
+// Clear the directory map before each build
+SchemaDirectoryMap.clear();
+
+// Main build function
+async function build(): Promise<void> {
+  console.log("🧹 Cleaning dist/ and generated files...");
+
+  // Clean dist/
+  if (existsSync(DIST_DIR)) {
+    rmSync(DIST_DIR, { recursive: true, force: true });
+  }
+  mkdirSync(DIST_DIR, { recursive: true });
+
+  // Clean generated openapi.yaml
+  if (existsSync(GENERATED_OPENAPI_PATH)) {
+    rmSync(GENERATED_OPENAPI_PATH);
+  }
+
+  console.log("📂 Scanning src/ for YAML files...");
+  const schemas = scanYamlFiles(SRC_DIR);
+  console.log(`  Found ${schemas.size} schema files`);
+
+  console.log("🔗 Merging schemas into OpenAPI spec...");
+  const openApiSpec = mergeToOpenApiSpec(schemas);
+
+  console.log("💾 Writing generated openapi.yaml...");
+  writeFileSync(GENERATED_OPENAPI_PATH, yaml.dump(openApiSpec));
+  console.log(`  ✓ Generated ${relative(ROOT, GENERATED_OPENAPI_PATH)}`);
+
+  console.log("📝 Generating TypeScript type definitions...");
+  await generateTypeScriptDeclarations(openApiSpec);
+
+  console.log("\n✅ Build complete!");
+}
+
+// Run build
+build().catch((err) => {
+  console.error("❌ Build failed:", err);
+  process.exit(1);
+});
