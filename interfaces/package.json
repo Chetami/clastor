@@ -5,9 +5,9 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc",
-    "watch": "tsc --watch",
-    "clean": "rm -rf dist"
+    "build": "tsx scripts/build.ts",
+    "postinstall": "npm run build",
+    "clean": "rm -rf dist src/openapi.yaml"
   },
   "devDependencies": {
     "openapi-typescript": "^7.4.0",
