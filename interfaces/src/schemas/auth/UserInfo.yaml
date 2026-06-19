@@ -8,6 +8,10 @@ properties:
     type: string
     description: Firebase Auth UID
     example: abc123xyz456
+  name:
+    type: string
+    description: User's display name
+    example: John Doe
   email:
     type: string
     format: email
@@ -15,6 +19,11 @@ properties:
     example: admin@example.com
   role:
     $ref: '../common/Role.yaml'
+  avatarUrl:
+    type: string
+    nullable: true
+    description: Optional profile picture URL
+    example: https://example.com/avatar.jpg
 description: |-
   User info returned from API (without JWT timestamps)
   Basic user information returned by authentication endpoints

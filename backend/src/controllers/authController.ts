@@ -32,8 +32,10 @@ export async function login(req: Request, res: Response<LoginResponse | ApiError
 
     const userInfo: UserInfo = {
       uid: user.id,
+      name: user.name,
       email: user.email,
       role: user.role,
+      avatarUrl: user.avatarUrl,
     };
 
     return res.status(200).json({
@@ -58,15 +60,24 @@ export async function verifyToken(req: Request, res: Response<{ user: UserInfo }
     return res.status(401).json({ message: "Invalid token" });
   }
 
-  const userInfo: UserInfo = {
-    uid: req.user.uid,
-    email: req.user.email,
-    role: req.user.role,
-  };
+  try {
+    const user = await getUserFromFirestore(req.user.uid);
 
-  return res.status(200).json({
-    user: userInfo,
-  });
+    const userInfo: UserInfo = {
+      uid: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      avatarUrl: user.avatarUrl,
+    };
+
+    return res.status(200).json({
+      user: userInfo,
+    });
+  } catch (error) {
+    console.error("Token verification failed:", error);
+    return res.status(404).json({ message: "User not found" });
+  }
 }
 
 /**
@@ -123,8 +134,10 @@ export async function register(
     // 7. Return UserInfo (not full User, consistent with login endpoint)
     const userInfo: UserInfo = {
       uid: user.id,
+      name: user.name,
       email: user.email,
       role: user.role,
+      avatarUrl: user.avatarUrl,
     };
 
     res.status(200).json({ jwtToken, user: userInfo });
