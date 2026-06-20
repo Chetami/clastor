@@ -67,6 +67,18 @@ export function getNotifyCooldownMs(): number {
 }
 
 /**
+ * The publicly-reachable base URL of this backend, used to build RSVP links
+ * embedded in the invite email (the student clicks Accept/Decline outside
+ * any authenticated session). Defaults to the local dev origin.
+ */
+export function getPublicApiUrl(): string {
+  return (process.env.PUBLIC_API_URL || "http://localhost:3001").replace(
+    /\/$/,
+    ""
+  );
+}
+
+/**
  * Lazily build and cache the nodemailer SMTP transporter.
  */
 export function getEmailTransporter(): nodemailer.Transporter {
