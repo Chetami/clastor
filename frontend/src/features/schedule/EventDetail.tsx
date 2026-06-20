@@ -12,10 +12,19 @@ import {
   Loader2,
   Repeat,
   Ban,
+  Mail,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useGetLesson, useRecordAttendance, useCancelLesson } from "./api";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { useGetLesson, useRecordAttendance, useCancelLesson, useNotifyStudent } from "./api";
 import { useListStudents } from "@/features/students/api";
 import {
   ACCEPTANCE_LABELS,
@@ -49,6 +58,10 @@ const STATUS_TONE: Record<string, string> = {
   cancelled: "bg-rose-100 text-rose-700",
 };
 
+/** Mirrors the backend NOTIFY_COOLDOWN_MS default (24h). Used for the
+ *  optimistic button state; the server remains the source of truth. */
+const NOTIFY_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+
 export default function EventDetail() {
   const { eventId } = useParams<{ eventId: string }>();
   const navigate = useNavigate();
@@ -56,7 +69,10 @@ export default function EventDetail() {
   const { data: students = [] } = useListStudents();
   const recordAttendance = useRecordAttendance(eventId!);
   const cancelLesson = useCancelLesson(eventId!);
+  const notifyStudent = useNotifyStudent(eventId!);
   const [pickerError, setPickerError] = useState<string | null>(null);
+  const [notifyOpen, setNotifyOpen] = useState(false);
+  const [notifyMessage, setNotifyMessage] = useState("");
 
   if (isLoading) {
     return (
@@ -94,6 +110,40 @@ export default function EventDetail() {
     lesson.attendanceStatus,
     lesson.isCancelled,
   );
+
+  const notifiedAt = lesson.lastStudentNotifiedAt
+    ? new Date(lesson.lastStudentNotifiedAt)
+    : null;
+  const nextAllowedAt = notifiedAt
+    ? new Date(notifiedAt.getTime() + NOTIFY_COOLDOWN_MS)
+    : null;
+  const cooldownActive = nextAllowedAt
+    ? Date.now() < nextAllowedAt.getTime()
+    : false;
+
+  const defaultNotifyMessage = (() => {
+    const when = formatDateTime(lesson.startDateTime);
+    const loc = lesson.location ? `\nLocation: ${lesson.location}` : "";
+    return `Hi ${studentName},\n\nThis is a reminder about our upcoming ${lesson.subject} lesson on ${when}.${loc}\n\nLooking forward to seeing you!`;
+  })();
+
+  function openNotifyDialog() {
+    setNotifyMessage(defaultNotifyMessage);
+    setPickerError(null);
+    setNotifyOpen(true);
+  }
+
+  async function handleNotify() {
+    try {
+      await notifyStudent.mutateAsync(notifyMessage);
+      setNotifyOpen(false);
+    } catch {
+      setPickerError(
+        notifyStudent.error?.message ?? "Failed to notify student",
+      );
+      setNotifyOpen(false);
+    }
+  }
 
   async function handleAttendanceChange(value: AttendanceStatus) {
     if (!eventId) return;
@@ -249,21 +299,90 @@ export default function EventDetail() {
                   This occurrence has been cancelled.
                 </p>
               ) : (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleCancel}
-                  disabled={cancelLesson.isPending}
-                  className="text-destructive hover:text-destructive"
-                >
-                  <Ban className="h-4 w-4" />
-                  {cancelLesson.isPending ? "Cancelling…" : "Cancel this occurrence"}
-                </Button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={openNotifyDialog}
+                    disabled={cooldownActive}
+                    title={
+                      cooldownActive && nextAllowedAt
+                        ? `Already notified — can resend after ${nextAllowedAt.toLocaleString("en-US", {
+                            dateStyle: "medium",
+                            timeStyle: "short",
+                          })}`
+                        : "Send a reminder email to the student"
+                    }
+                  >
+                    <Mail className="h-4 w-4" />
+                    {notifiedAt ? "Notify student again" : "Notify student"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCancel}
+                    disabled={cancelLesson.isPending}
+                    className="text-destructive hover:text-destructive"
+                  >
+                    <Ban className="h-4 w-4" />
+                    {cancelLesson.isPending ? "Cancelling…" : "Cancel this occurrence"}
+                  </Button>
+                </div>
+              )}
+              {notifiedAt && (
+                <p className="mt-1.5 text-xs text-muted-foreground">
+                  Last notified{" "}
+                  {notifiedAt.toLocaleString("en-US", {
+                    dateStyle: "medium",
+                    timeStyle: "short",
+                  })}
+                  {lesson.studentNotifiedCount
+                    ? ` · ${lesson.studentNotifiedCount} sent`
+                    : ""}
+                </p>
               )}
             </div>
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={notifyOpen} onOpenChange={setNotifyOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Notify {studentName}</DialogTitle>
+            <DialogDescription>
+              Send a reminder email to the student. Lesson details are
+              appended automatically. You can resend once every 24 hours.
+            </DialogDescription>
+          </DialogHeader>
+          <textarea
+            value={notifyMessage}
+            onChange={(e) => setNotifyMessage(e.target.value)}
+            rows={6}
+            className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          />
+          {pickerError && (
+            <p className="text-xs text-destructive">{pickerError}</p>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setNotifyOpen(false)}
+              disabled={notifyStudent.isPending}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleNotify} disabled={notifyStudent.isPending}>
+              {notifyStudent.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Mail className="mr-2 h-4 w-4" />
+              )}
+              {notifyStudent.isPending ? "Sending…" : "Send email"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

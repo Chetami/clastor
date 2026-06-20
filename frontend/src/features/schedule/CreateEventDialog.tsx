@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Video, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -12,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useListStudents } from "@/features/students/api";
 import { useCreateLesson, useCreateRecurringLesson } from "./api";
+import { generateMeetLinkRequest } from "./api/requests";
 import {
   DAYS,
   DAY_LABELS,
@@ -85,6 +87,8 @@ export function CreateEventDialog({
   const createRecurring = useCreateRecurringLesson();
   const [values, setValues] = useState<EventFormData>(emptyValues);
   const [errors, setErrors] = useState<FieldErrors>({});
+  const [meetLoading, setMeetLoading] = useState(false);
+  const [meetError, setMeetError] = useState<string | null>(null);
 
   const isRecurring = values.repeat !== "none";
   const pending = createLesson.isPending || createRecurring.isPending;
@@ -93,6 +97,8 @@ export function CreateEventDialog({
   useEffect(() => {
     if (!open) return;
     setErrors({});
+    setMeetError(null);
+    setMeetLoading(false);
     setValues({
       ...emptyValues(),
       date: start ? toDateStr(start) : "",
@@ -104,6 +110,39 @@ export function CreateEventDialog({
   function update<K extends keyof EventFormData>(key: K, value: EventFormData[K]) {
     setValues((prev) => ({ ...prev, [key]: value }));
     setErrors((prev) => ({ ...prev, [key]: undefined }));
+  }
+
+  async function handleGenerateMeet() {
+    setMeetLoading(true);
+    setMeetError(null);
+    try {
+      // Time the backing calendar event to the chosen slot when available.
+      const hasStart = values.date && values.startTime;
+      const startDateTime = hasStart
+        ? new Date(`${values.date}T${values.startTime}:00`).toISOString()
+        : undefined;
+      const durationMinutes =
+        values.startTime && values.endTime
+          ? Math.max(
+              1,
+              Math.round(
+                (new Date(`${values.date}T${values.endTime}:00`).getTime() -
+                  new Date(`${values.date}T${values.startTime}:00`).getTime()) /
+                  60000,
+              ),
+            )
+          : undefined;
+
+      const { meetingLink } = await generateMeetLinkRequest({
+        startDateTime,
+        durationMinutes,
+      });
+      update("location", meetingLink);
+    } catch (err) {
+      setMeetError(err instanceof Error ? err.message : "Failed to generate link");
+    } finally {
+      setMeetLoading(false);
+    }
   }
 
   function handleStudentChange(id: string) {
@@ -430,12 +469,35 @@ export function CreateEventDialog({
                 (optional)
               </span>
             </Label>
-            <Input
-              id="location"
-              placeholder="Online — Zoom"
-              value={values.location}
-              onChange={(e) => update("location", e.target.value)}
-            />
+            <div className="flex gap-2">
+              <Input
+                id="location"
+                placeholder="Online — Zoom"
+                value={values.location}
+                onChange={(e) => update("location", e.target.value)}
+                className="flex-1"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                className="shrink-0"
+                disabled={meetLoading}
+                onClick={handleGenerateMeet}
+                title="Generate a Google Meet link"
+              >
+                {meetLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Video className="h-4 w-4" />
+                )}
+                <span className="ml-1.5 hidden sm:inline">
+                  {meetLoading ? "Generating…" : "Meet link"}
+                </span>
+              </Button>
+            </div>
+            {meetError && (
+              <p className="text-xs text-destructive">{meetError}</p>
+            )}
           </div>
 
           <div className="space-y-2">

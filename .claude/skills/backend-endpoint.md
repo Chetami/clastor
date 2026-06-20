@@ -1,9 +1,9 @@
 name: backend-endpoint
-description: Implement a new backend endpoint following the Examify TMS pattern. Use when creating new API endpoints for students, users, or any domain. Includes: checking interfaces, creating service/controller/routes layers, updating server.ts, and building interfaces.
+description: Implement a new backend endpoint following the Clastor pattern. Use when creating new API endpoints for students, users, or any domain. Includes: checking interfaces, creating service/controller/routes layers, updating server.ts, and building interfaces.
 
 ## Pattern Overview
 
-Examify TMS backend follows a consistent 3-layer architecture:
+Clastor backend follows a consistent 3-layer architecture:
 
 1. **Service Layer** (`backend/src/services/`) - Business logic, Firestore operations, ID generation
 2. **Controller Layer** (`backend/src/controllers/`) - Request/response handling, validation, role checks

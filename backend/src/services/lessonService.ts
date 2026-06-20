@@ -37,6 +37,10 @@ function mapLesson(id: string, data: admin.firestore.DocumentData): Lesson {
     isCancelled: data.isCancelled ?? false,
     isException: data.isException ?? false,
     remindersEnabled: data.remindersEnabled,
+    lastStudentNotifiedAt: data.lastStudentNotifiedAt
+      ? data.lastStudentNotifiedAt.toDate()
+      : (null as any),
+    studentNotifiedCount: data.studentNotifiedCount ?? 0,
     createdAt: data.createdAt ? data.createdAt.toDate() : (null as any),
     updatedAt: data.updatedAt ? data.updatedAt.toDate() : (null as any),
   };
@@ -171,6 +175,8 @@ export async function createLessonInFirestore(
       isCancelled: false,
       isException: false,
       remindersEnabled: data.remindersEnabled ?? true,
+      lastStudentNotifiedAt: null,
+      studentNotifiedCount: 0,
       createdAt: now,
       updatedAt: now,
     };
@@ -192,6 +198,8 @@ export async function createLessonInFirestore(
       isCancelled: false,
       isException: false,
       remindersEnabled: data.remindersEnabled ?? true,
+      lastStudentNotifiedAt: null,
+      studentNotifiedCount: 0,
       createdAt: now.toDate() as any,
       updatedAt: now.toDate() as any,
     };
@@ -283,5 +291,31 @@ export async function cancelLessonInFirestore(
   } catch (error) {
     console.error("Failed to cancel lesson in Firestore:", error);
     throw new Error("Failed to cancel lesson");
+  }
+}
+
+/**
+ * Record that a "Notify Student" email was sent for this lesson.
+ * Stamps lastStudentNotifiedAt and increments the running counter.
+ * Called only after the email is confirmed delivered.
+ */
+export async function markStudentNotifiedInFirestore(
+  lessonId: string
+): Promise<void> {
+  try {
+    const firestore = getFirebaseFirestore();
+    const now = admin.firestore.Timestamp.now();
+
+    await firestore
+      .collection("lessons")
+      .doc(lessonId)
+      .update({
+        lastStudentNotifiedAt: now,
+        studentNotifiedCount: admin.firestore.FieldValue.increment(1),
+        updatedAt: now,
+      });
+  } catch (error) {
+    console.error("Failed to mark student notified in Firestore:", error);
+    throw new Error("Failed to record notification");
   }
 }

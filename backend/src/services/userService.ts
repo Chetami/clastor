@@ -52,6 +52,30 @@ export async function updateLastActive(uid: string): Promise<void> {
 }
 
 /**
+ * Update a user's avatar URL and bump updatedAt.
+ * @param uid - User UID
+ * @param avatarUrl - New avatar URL (data URL or remote URL), or null to clear
+ * @returns Updated User object
+ */
+export async function updateUserAvatar(
+  uid: string,
+  avatarUrl: string | null
+): Promise<User> {
+  try {
+    const firestore = getFirebaseFirestore();
+    await firestore.collection("users").doc(uid).update({
+      avatarUrl,
+      updatedAt: admin.firestore.Timestamp.now(),
+    });
+
+    return getUserFromFirestore(uid);
+  } catch (error) {
+    console.error("Failed to update user avatar:", error);
+    throw new Error("Failed to update avatar");
+  }
+}
+
+/**
  * Create user document in Firestore
  * @param id - User ID (Firebase Auth UID)
  * @param email - User email

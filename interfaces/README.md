@@ -1,6 +1,6 @@
 # @examify-tms/interfaces
 
-Shared TypeScript type definitions for Examify TMS, generated from YAML schema files.
+Shared TypeScript type definitions for Clastor, generated from YAML schema files.
 
 ## How It Works
 

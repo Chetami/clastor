@@ -1,0 +1,17 @@
+type: object
+properties:
+  startDateTime:
+    type: string
+    format: date-time
+    description: >-
+      When the lesson starts (ISO 8601). Used to time the backing Google
+      Calendar event. If omitted, the event is created for the near term.
+    example: "2026-06-20T09:00:00.000Z"
+  durationMinutes:
+    type: integer
+    minimum: 1
+    description: Lesson duration in minutes. Defaults to 30 when omitted.
+    example: 60
+description: |-
+  Request body for generating a Google Meet link. All fields are optional;
+  the link is created via a backing Google Calendar event.

@@ -6,6 +6,7 @@ import {
   updateLesson,
   recordAttendance,
   cancelLesson,
+  notifyStudent,
 } from "../controllers/lessonController";
 import {
   createRecurringLesson,
@@ -113,6 +114,18 @@ router.patch(
   authenticateJWT,
   requireRole("tutor", "system_admin"),
   cancelLesson
+);
+
+/**
+ * POST /api/lessons/:id/notify-student
+ * Send a reminder email to the student for this lesson. Subject to a
+ * cooldown to prevent spamming / accidental double-sends.
+ */
+router.post(
+  "/:id/notify-student",
+  authenticateJWT,
+  requireRole("tutor", "system_admin"),
+  notifyStudent
 );
 
 export default router;

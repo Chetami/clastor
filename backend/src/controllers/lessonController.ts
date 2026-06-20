@@ -6,12 +6,18 @@ import {
   updateLessonInFirestore,
   recordAttendanceInFirestore,
   cancelLessonInFirestore,
+  markStudentNotifiedInFirestore,
   LessonFilters,
 } from "../services/lessonService";
+import { getStudentByIdFromFirestore } from "../services/studentService";
+import { getUserFromFirestore } from "../services/userService";
+import { sendLessonNotification } from "../services/emailService";
+import { getNotifyCooldownMs } from "../config/email";
 import {
   CreateLessonRequest,
   UpdateLessonRequest,
   RecordAttendanceRequest,
+  NotifyStudentRequest,
   Lesson,
   LessonResponse,
   LessonListResponse,
@@ -40,6 +46,10 @@ function toLessonResponse(lesson: Lesson): LessonResponse {
     isCancelled: lesson.isCancelled ?? false,
     isException: lesson.isException ?? false,
     remindersEnabled: lesson.remindersEnabled,
+    lastStudentNotifiedAt: lesson.lastStudentNotifiedAt
+      ? toIso(lesson.lastStudentNotifiedAt)
+      : null,
+    studentNotifiedCount: lesson.studentNotifiedCount ?? 0,
     createdAt: toIso(lesson.createdAt),
     updatedAt: toIso(lesson.updatedAt),
   };
@@ -279,6 +289,88 @@ export async function cancelLesson(
   } catch (error) {
     console.error("Cancel lesson failed:", error);
     const message = error instanceof Error ? error.message : "Failed to cancel lesson";
+    res.status(500).json({ message });
+  }
+}
+
+/**
+ * Notify student controller
+ *
+ * Sends a reminder email to the student linked to the lesson. Enforces a
+ * cooldown (default 24h) so the student can't be spammed or notified twice
+ * by accident. The lesson document is stamped with the send timestamp only
+ * after the email is confirmed delivered.
+ */
+export async function notifyStudent(
+  req: Request<{ id: string }, {}, NotifyStudentRequest>,
+  res: Response<LessonResponse | ApiError>
+): Promise<void> {
+  try {
+    if (!req.user) {
+      res.status(401).json({ message: "Unauthorized" });
+      return;
+    }
+
+    const lesson = await getLessonByIdFromFirestore(req.params.id);
+    if (!lesson) {
+      res.status(404).json({ message: "Lesson not found" });
+      return;
+    }
+
+    if (!canEditLesson(lesson, req)) {
+      res
+        .status(403)
+        .json({ message: "Forbidden: You do not have permission to notify for this lesson" });
+      return;
+    }
+
+    // Cooldown check — prevents spamming / accidental double-sends.
+    if (lesson.lastStudentNotifiedAt) {
+      const cooldownMs = getNotifyCooldownMs();
+      const elapsed = Date.now() - new Date(lesson.lastStudentNotifiedAt as any).getTime();
+      if (elapsed < cooldownMs) {
+        const nextAllowedAt = new Date(
+          new Date(lesson.lastStudentNotifiedAt as any).getTime() + cooldownMs
+        ).toISOString();
+        res.status(409).json({
+          message: `This student was already notified. You can send another reminder after ${nextAllowedAt}.`,
+        });
+        return;
+      }
+    }
+
+    const student = await getStudentByIdFromFirestore(lesson.studentId);
+    if (!student || !student.email) {
+      res.status(400).json({ message: "This student has no email address on file" });
+      return;
+    }
+
+    const tutor = await getUserFromFirestore(lesson.tutorId);
+
+    await sendLessonNotification({
+      to: student.email,
+      studentName: student.name,
+      tutorName: tutor.name,
+      tutorEmail: tutor.email,
+      subject: lesson.subject,
+      startDateTime: new Date(lesson.startDateTime as any),
+      durationMinutes: lesson.durationMinutes,
+      location: lesson.location,
+      message: req.body?.message,
+    });
+
+    await markStudentNotifiedInFirestore(req.params.id);
+
+    const updated = await getLessonByIdFromFirestore(req.params.id);
+    if (!updated) {
+      res.status(404).json({ message: "Lesson not found" });
+      return;
+    }
+
+    res.status(200).json(toLessonResponse(updated));
+  } catch (error) {
+    console.error("Notify student failed:", error);
+    const message = error instanceof Error ? error.message : "Failed to notify student";
     res.status(500).json({ message });
   }
 }

@@ -79,6 +79,20 @@ properties:
       Whether the student should receive reminder notifications for this
       lesson. The dispatch of reminders is handled separately.
     example: true
+  lastStudentNotifiedAt:
+    type: string
+    format: date-time
+    nullable: true
+    description: >-
+      Timestamp of the most recent manual "Notify Student" email sent for
+      this lesson, or null if one has never been sent. Used to enforce a
+      cooldown that prevents spamming the student.
+    example: "2026-06-20T09:00:00.000Z"
+  studentNotifiedCount:
+    type: integer
+    minimum: 0
+    description: How many "Notify Student" emails have been sent for this lesson.
+    example: 0
   createdAt:
     type: string
     format: date-time
