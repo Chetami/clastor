@@ -53,6 +53,7 @@ export default function Schedule() {
           center: "title",
           right: "timeGridWeek,timeGridFourDay,timeGridDay",
         }}
+        titleFormat={{ month: "long", year: "numeric" }}
         dayHeaderContent={(arg) => (
           <button
             type="button"
