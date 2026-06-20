@@ -100,6 +100,24 @@ properties:
       Whether this lesson has been paid for. Defaults to false on creation;
       toggled true once payment is recorded.
     example: false
+  icsUid:
+    type: string
+    nullable: true
+    description: >-
+      Stable iCalendar UID (e.g. "lesson_abc@examify-tms") assigned the first
+      time a calendar invite is sent for this lesson. Reusing the same UID
+      across resends lets calendar clients treat them as updates
+      (SEQUENCE bumps) to the same event rather than new duplicates.
+      Null until the first notify-student send.
+    example: lesson_a1b2c3d4e5f6@examify-tms
+  rsvpTokenVersion:
+    type: integer
+    minimum: 0
+    description: >-
+      Monotonic version stamped into the RSVP link token. Bumped on each
+      notify-student send so that resending invalidates the Accept/Decline
+      links from all previous emails.
+    example: 0
   createdAt:
     type: string
     format: date-time

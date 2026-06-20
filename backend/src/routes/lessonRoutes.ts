@@ -7,6 +7,7 @@ import {
   recordAttendance,
   cancelLesson,
   notifyStudent,
+  rsvpLesson,
 } from "../controllers/lessonController";
 import {
   createRecurringLesson,
@@ -24,6 +25,14 @@ const router = Router();
  * acceptanceStatus and attendanceStatus filters.
  */
 router.get("/", authenticateJWT, listLessons);
+
+/**
+ * GET /api/lessons/rsvp?token=...&status=accepted|declined
+ * Public one-click RSVP, reached from the Accept/Decline buttons in the
+ * invite email. Registered before /:id so "rsvp" isn't captured as an id.
+ * Returns a confirmation HTML page.
+ */
+router.get("/rsvp", rsvpLesson);
 
 /**
  * GET /api/lessons/series/:id

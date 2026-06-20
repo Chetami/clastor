@@ -143,8 +143,7 @@ export default function EventDetail() {
 
   const defaultNotifyMessage = (() => {
     const when = formatDateTime(lesson.startDateTime);
-    const loc = lesson.location ? `\nLocation: ${lesson.location}` : "";
-    return `Hi ${studentName},\n\nThis is a reminder about our upcoming ${lesson.subject} lesson on ${when}.${loc}\n\nLooking forward to seeing you!`;
+    return `Hi ${studentName},\n\nThis is a reminder about our upcoming ${lesson.subject} lesson on ${when}.\n\nLooking forward to seeing you!`;
   })();
 
   function openNotifyDialog() {
