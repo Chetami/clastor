@@ -176,12 +176,24 @@ The backend endpoint returns `StudentResponse` which excludes the `tutorId` fiel
 - **Note**: This means if a user views the list, then immediately clicks a student, the detail view might be slightly stale
 - **Future enhancement**: Consider shorter stale time (1-2 minutes) for detail views if freshness becomes an issue
 
+**Mutation Invalidation (Future Work):**
+When student mutations are implemented (create, update, delete), they should:
+- `useCreateStudent`: Already invalidates `["students"]` list query
+- `useUpdateStudent` (when implemented): Should invalidate both `["students"]` and `["students", id]`
+- `useDeleteStudent` (when implemented): Should invalidate both `["students"]` and remove `["students", id]` from cache
+- The `useQueryClient` hook can be used to invalidate queries:
+  ```typescript
+  queryClient.invalidateQueries({ queryKey: ["students"] });
+  queryClient.invalidateQueries({ queryKey: ["students", studentId] });
+  ```
+
 **Refetch Behavior:**
-- Rely on React Query defaults:
-  - Refetch on window focus (enabled globally)
+- Rely on React Query defaults from `query-client.ts`:
+  - **Refetch on window focus: DISABLED** (globally disabled in config)
   - 5-minute stale time
   - No automatic interval refetching
 - Manual refetch available via `refetch()` returned by hook (can be exposed later if needed)
+- **Implication**: Once a student is loaded, the data won't refresh unless the user manually refreshes or the 5-minute stale time expires
 
 ## Implementation Notes
 
