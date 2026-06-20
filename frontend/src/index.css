@@ -47,7 +47,7 @@
     --secondary-foreground: 0 0% 98%;
     --muted: 0 0% 14.9%;
     --muted-foreground: 0 0% 63.9%;
-    --accent: 0 0% 14.9%;
+    --accent: 0 0% 7.9%;
     --accent-foreground: 0 0% 98%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
@@ -86,7 +86,9 @@
   color: hsl(var(--foreground));
   font-size: 0.875rem;
   box-shadow: 0 1px 2px 0 hsl(0 0% 0% / 0.05);
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
 }
 
 .gi-phone-input.PhoneInput--focus,
@@ -135,4 +137,317 @@
 
 .gi-phone-input .PhoneInputInput::placeholder {
   color: hsl(var(--muted-foreground));
+}
+
+/* FullCalendar theming (mapped to shadcn tokens) */
+.gi-calendar .fc {
+  --fc-border-color: hsl(var(--border));
+  --fc-page-bg-color: hsl(var(--background));
+  --fc-neutral-bg-color: hsl(var(--muted));
+  --fc-today-bg-color: hsl(var(--accent));
+  --fc-button-bg-color: hsl(var(--primary));
+  --fc-button-border-color: hsl(var(--primary));
+  --fc-button-text-color: hsl(var(--primary-foreground));
+  --fc-button-hover-bg-color: hsl(var(--primary));
+  --fc-button-hover-border-color: hsl(var(--primary));
+  --fc-button-active-bg-color: hsl(var(--primary));
+  --fc-button-active-border-color: hsl(var(--primary));
+
+  font-family: inherit;
+  color: hsl(var(--foreground));
+}
+
+.gi-calendar .fc .fc-toolbar-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: hsl(var(--foreground));
+}
+
+.gi-calendar .fc .fc-button {
+  border-radius: calc(var(--radius) - 2px);
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-transform: none;
+  text-shadow: none;
+  box-shadow: none;
+  padding: 0.375rem 0.75rem;
+  background-color: hsl(var(--primary));
+  border-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  transition: opacity 0.15s;
+}
+
+.gi-calendar .fc .fc-button:hover {
+  opacity: 0.9;
+}
+
+.gi-calendar .fc .fc-button:disabled {
+  opacity: 0.5;
+}
+
+.gi-calendar .fc .fc-button-primary:not(:disabled).fc-button-active {
+  background-color: hsl(var(--secondary));
+  border-color: transparent;
+  color: hsl(var(--secondary-foreground));
+}
+
+.gi-calendar .fc .fc-button:focus {
+  box-shadow: 0 0 0 2px hsl(var(--ring));
+  outline: none;
+}
+
+/* Google Calendar-style circular prev/next icon buttons */
+.gi-calendar .fc .fc-prev-button,
+.gi-calendar .fc .fc-next-button {
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: transparent;
+  border-color: transparent;
+  color: hsl(var(--foreground));
+}
+
+.gi-calendar .fc .fc-prev-button:hover,
+.gi-calendar .fc .fc-next-button:hover {
+  background-color: hsl(var(--accent));
+  opacity: 1;
+}
+
+.gi-calendar .fc .fc-prev-button .fc-icon,
+.gi-calendar .fc .fc-next-button .fc-icon {
+  font-size: 1.125rem;
+}
+
+.gi-calendar .fc .fc-col-header-cell-cushion,
+.gi-calendar .fc .fc-daygrid-day-number,
+.gi-calendar .fc .fc-timegrid-slot-label,
+.gi-calendar .fc .fc-timegrid-axis-cushion,
+.gi-calendar .fc .fc-more-link,
+.gi-calendar .fc .fc-daygrid-more-link,
+.gi-calendar .fc .fc-list-day-text,
+.gi-calendar .fc .fc-list-event-title {
+  color: hsl(var(--foreground));
+  text-decoration: none;
+}
+
+.gi-calendar .fc .fc-timegrid-slot-label-cushion,
+.gi-calendar .fc .fc-timegrid-slot-label {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: hsl(var(--muted-foreground));
+}
+
+.gi-calendar .fc .fc-timegrid-slot-label-cushion {
+  text-transform: lowercase;
+}
+
+.gi-calendar .fc .fc-header-toolbar {
+  position: relative;
+  z-index: 20;
+}
+
+.gi-calendar .fc .fc-timezoneLabel-button {
+  position: relative;
+  z-index: 21;
+  background-color: hsl(var(--secondary));
+  border-color: hsl(var(--secondary));
+  color: hsl(var(--secondary-foreground));
+  font-size: 0.6875rem;
+  font-weight: 500;
+  padding: 0.375rem 0.625rem;
+  cursor: not-allowed;
+  opacity: 1;
+}
+
+.gi-calendar .fc .fc-timezoneLabel-button:hover {
+  opacity: 0.85;
+}
+
+.gi-calendar .fc .fc-timezoneLabel-button:focus {
+  box-shadow: none;
+  outline: none;
+}
+
+.gi-calendar .fc .fc-timezoneLabel-button::after {
+  content: "Timezone selection isn't available yet";
+  position: absolute;
+  top: calc(100% + 0.375rem);
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: hsl(var(--foreground));
+  color: hsl(var(--background));
+  font-size: 0.6875rem;
+  font-weight: 500;
+  white-space: nowrap;
+  padding: 0.25rem 0.5rem;
+  border-radius: calc(var(--radius) - 2px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+  z-index: 9999;
+}
+
+.gi-calendar .fc .fc-timezoneLabel-button:hover::after,
+.gi-calendar .fc .fc-timezoneLabel-button:focus-visible::after {
+  opacity: 1;
+}
+
+.gi-calendar .fc .fc-more-link:hover {
+  opacity: 0.7;
+}
+
+.gi-calendar .fc-daygrid-day.fc-day-today,
+.gi-calendar .fc .fc-timegrid-col.fc-day-today {
+  background-color: hsl(var(--accent)) !important;
+}
+
+.gi-calendar .fc-daygrid-day.fc-day-today .fc-daygrid-day-number {
+  color: hsl(var(--accent-foreground));
+  font-weight: 600;
+}
+
+.gi-calendar .fc-daygrid-day.fc-day-non,
+.gi-calendar .fc-daygrid-day.fc-day-non .fc-daygrid-day-number {
+  color: hsl(var(--muted-foreground));
+}
+
+.gi-calendar .fc-event {
+  background-color: hsl(var(--primary));
+  border: none;
+  border-radius: calc(var(--radius) - 2px);
+  color: hsl(var(--primary-foreground));
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0 0.375rem;
+}
+
+.gi-calendar .fc-event .fc-event-main,
+.gi-calendar .fc-event .fc-event-title,
+.gi-calendar .fc-event .fc-event-time {
+  color: inherit;
+}
+
+.gi-calendar .fc-event:hover {
+  opacity: 0.9;
+}
+
+.gi-calendar .fc-theme-standard td,
+.gi-calendar .fc-theme-standard th {
+  border-color: hsl(var(--border));
+}
+
+/* Google Calendar-style now indicator */
+.gi-calendar .fc .fc-timegrid-now-indicator-container {
+  overflow: visible;
+  z-index: 10;
+}
+
+.gi-calendar .fc .fc-timegrid-now-indicator-line {
+  border-color: #ea4335;
+  border-top-width: 2px;
+  border-top-style: solid;
+  position: relative;
+  overflow: visible;
+  z-index: 10;
+}
+
+.gi-calendar .fc .fc-timegrid-now-indicator-line::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform: translate(-50%, -50%);
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 9999px;
+  background-color: #ea4335;
+  z-index: 20;
+  pointer-events: none;
+}
+
+.gi-calendar .fc .fc-timegrid-now-indicator-arrow {
+  display: none;
+}
+
+/* Round the grid (dates, weekdays, events) — excludes the toolbar */
+.gi-calendar .fc .fc-scrollgrid {
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1px solid hsl(var(--border));
+}
+
+.gi-calendar .fc .fc-scrollgrid-section > td,
+.gi-calendar .fc .fc-scrollgrid-section > th {
+  border-radius: 0;
+}
+
+/* Google Calendar-style day header (number over weekday) */
+.gi-calendar .fc .fc-col-header-cell {
+  height: 3.75rem;
+  vertical-align: middle;
+  text-align: center;
+}
+
+.gi-calendar .fc .fc-col-header-cell-cushion {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  padding: 0.25rem 0;
+  text-align: center;
+}
+
+.gi-calendar-header {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.125rem;
+  height: 100%;
+  padding: 0.25rem 1rem;
+  background: transparent;
+  border: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  border-radius: 9999px;
+  transition: background-color 0.15s;
+}
+
+.gi-calendar-header:hover {
+  background-color: hsl(var(--accent));
+}
+
+.gi-calendar-header__day {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 1.75rem;
+  min-width: 1.75rem;
+  padding: 0 0.5rem;
+  font-size: 1.125rem;
+  font-weight: 500;
+  line-height: 1;
+  color: hsl(var(--foreground));
+}
+
+.gi-calendar-header__weekday {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  color: hsl(var(--muted-foreground));
+}
+
+.gi-calendar .fc-col-header-cell.fc-day-today .gi-calendar-header__day {
+  border-radius: 9999px;
+  background-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
 }
