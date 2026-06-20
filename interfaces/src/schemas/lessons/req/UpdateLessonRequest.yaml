@@ -32,6 +32,10 @@ properties:
     type: boolean
     nullable: true
     description: Whether reminder notifications should be sent for this lesson
+  isPaid:
+    type: boolean
+    nullable: true
+    description: Whether this lesson has been paid for
 description: |-
   Request body for updating a lesson
   All fields are optional. attendanceStatus is updated via the dedicated

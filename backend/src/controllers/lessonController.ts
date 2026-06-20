@@ -50,6 +50,7 @@ function toLessonResponse(lesson: Lesson): LessonResponse {
       ? toIso(lesson.lastStudentNotifiedAt)
       : null,
     studentNotifiedCount: lesson.studentNotifiedCount ?? 0,
+    isPaid: lesson.isPaid ?? false,
     createdAt: toIso(lesson.createdAt),
     updatedAt: toIso(lesson.updatedAt),
   };

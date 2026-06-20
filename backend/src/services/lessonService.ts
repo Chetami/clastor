@@ -41,6 +41,7 @@ function mapLesson(id: string, data: admin.firestore.DocumentData): Lesson {
       ? data.lastStudentNotifiedAt.toDate()
       : (null as any),
     studentNotifiedCount: data.studentNotifiedCount ?? 0,
+    isPaid: data.isPaid ?? false,
     createdAt: data.createdAt ? data.createdAt.toDate() : (null as any),
     updatedAt: data.updatedAt ? data.updatedAt.toDate() : (null as any),
   };
@@ -177,6 +178,7 @@ export async function createLessonInFirestore(
       remindersEnabled: data.remindersEnabled ?? true,
       lastStudentNotifiedAt: null,
       studentNotifiedCount: 0,
+      isPaid: false,
       createdAt: now,
       updatedAt: now,
     };
@@ -200,6 +202,7 @@ export async function createLessonInFirestore(
       remindersEnabled: data.remindersEnabled ?? true,
       lastStudentNotifiedAt: null,
       studentNotifiedCount: 0,
+      isPaid: false,
       createdAt: now.toDate() as any,
       updatedAt: now.toDate() as any,
     };
@@ -238,6 +241,7 @@ export async function updateLessonInFirestore(
       updateData.acceptanceStatus = data.acceptanceStatus;
     if (data.remindersEnabled !== undefined)
       updateData.remindersEnabled = data.remindersEnabled;
+    if (data.isPaid !== undefined) updateData.isPaid = data.isPaid;
 
     await firestore.collection("lessons").doc(lessonId).update(updateData);
   } catch (error) {

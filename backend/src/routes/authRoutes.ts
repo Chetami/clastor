@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { login, verifyToken, register } from "../controllers/authController";
+import { login, verifyToken, register, googleAuth } from "../controllers/authController";
 import { authenticateJWT } from "../middleware/auth";
 
 const router = Router();
@@ -9,6 +9,13 @@ const router = Router();
  * Login endpoint - accepts Firebase token, returns custom JWT
  */
 router.post("/login", login);
+
+/**
+ * POST /api/auth/google
+ * Google sign-in endpoint - accepts Firebase token obtained via Google sign-in.
+ * Logs in an existing user or creates a new account from the Google profile.
+ */
+router.post("/google", googleAuth);
 
 /**
  * POST /api/auth/register

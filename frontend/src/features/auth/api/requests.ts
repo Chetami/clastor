@@ -2,6 +2,8 @@ import {
   signInWithEmailAndPassword,
   signOut as firebaseSignOut,
   createUserWithEmailAndPassword,
+  signInWithPopup,
+  GoogleAuthProvider,
 } from "firebase/auth";
 import { api } from "@/lib/api";
 import { getFirebaseAuth } from "@/config/firebase";
@@ -14,6 +16,10 @@ const firebaseAuthErrorMap: Record<string, string> = {
   "auth/invalid-credential": "Invalid email or password",
   "auth/network-request-failed": "Network error. Please check your connection and try again.",
   "auth/too-many-requests": "Too many attempts. Please try again later.",
+  "auth/popup-closed-by-user": "Sign-in popup was closed before completing.",
+  "auth/cancelled-popup-request": "Sign-in popup was cancelled.",
+  "auth/popup-blocked": "Sign-in popup was blocked by the browser.",
+  "auth/account-exists-with-different-credential": "An account already exists with this email using a different sign-in method.",
 };
 
 function mapFirebaseError(error: unknown): Error {
@@ -104,4 +110,29 @@ export async function verifyRequest(): Promise<UserInfo> {
 export async function logoutRequest(): Promise<void> {
   const firebaseAuth = getFirebaseAuth();
   await firebaseSignOut(firebaseAuth);
+}
+
+export async function googleSignInRequest(): Promise<LoginResponse> {
+  try {
+    const firebaseAuth = getFirebaseAuth();
+    const provider = new GoogleAuthProvider();
+    const userCredential = await signInWithPopup(firebaseAuth, provider);
+    const firebaseToken = await userCredential.user.getIdToken();
+
+    const response = await api.post<LoginResponse>(
+      "/api/auth/google",
+      {},
+      {
+        headers: { Authorization: `Bearer ${firebaseToken}` },
+      },
+    );
+
+    return response.data;
+  } catch (error) {
+    const code = (error as { code?: string }).code ?? "";
+    if (code.startsWith("auth/")) {
+      throw mapFirebaseError(error);
+    }
+    throw error;
+  }
 }
