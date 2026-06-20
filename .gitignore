@@ -41,6 +41,9 @@ tmp/
 temp/
 *.tmp
 
+# Git worktrees
+.worktrees/
+
 # Testing
 coverage/
 .nyc_output/
