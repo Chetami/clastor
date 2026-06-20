@@ -8,17 +8,19 @@ import {
   Repeat,
   Search,
 } from "lucide-react";
-import type { LessonResponse } from "@examify-tms/interfaces";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useListLessons } from "@/features/schedule/api";
 import { useListStudents } from "@/features/students/api";
+import { deriveLessonStatus } from "@/features/schedule/lesson-utils";
 import {
-  ATTENDANCE_LABELS,
-  attendanceTone,
-  deriveLessonStatus,
-} from "@/features/schedule/lesson-utils";
+  getInitials,
+  formatLessonDate,
+  formatLessonTime,
+  lessonBadge,
+} from "@/features/lessons/lesson-display";
+import { ImportantLessons } from "@/features/lessons/ImportantLessons";
 
 type FilterTab = "upcoming" | "past" | "cancelled" | "all";
 type SortKey = "upcoming" | "date-desc" | "student-az" | "student-za" | "updated";
@@ -30,60 +32,6 @@ const SORT_OPTIONS: { value: SortKey; label: string }[] = [
   { value: "student-za", label: "Student (Z–A)" },
   { value: "updated", label: "Recently updated" },
 ];
-
-function getInitials(name: string): string {
-  return name
-    .split(" ")
-    .map((p) => p[0])
-    .filter(Boolean)
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
-}
-
-function formatLessonDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  });
-}
-
-function formatLessonTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
-
-function lessonBadge(
-  lesson: LessonResponse,
-): { label: string; tone: string } {
-  const status = deriveLessonStatus(lesson.attendanceStatus, lesson.isCancelled);
-  const future = new Date(lesson.startDateTime).getTime() >= Date.now();
-  if (status === "cancelled") {
-    return {
-      label: "Cancelled",
-      tone: attendanceTone(lesson.attendanceStatus, lesson.isCancelled),
-    };
-  }
-  if (future) {
-    return {
-      label: "Upcoming",
-      tone: "bg-sky-500/15 text-sky-600 dark:text-sky-400",
-    };
-  }
-  if (lesson.attendanceStatus === "unrecorded") {
-    return {
-      label: "Not recorded",
-      tone: "bg-amber-500/15 text-amber-600 dark:text-amber-400",
-    };
-  }
-  return {
-    label: ATTENDANCE_LABELS[lesson.attendanceStatus],
-    tone: attendanceTone(lesson.attendanceStatus),
-  };
-}
 
 export default function Lessons() {
   const navigate = useNavigate();
@@ -191,6 +139,13 @@ export default function Lessons() {
           </p>
         </div>
       )}
+
+      {!isLoading &&
+        !error &&
+        filter === "all" &&
+        search.trim().length === 0 && (
+          <ImportantLessons lessons={lessons} studentMap={studentMap} />
+        )}
 
       {!isLoading && !error && (
         <Card>

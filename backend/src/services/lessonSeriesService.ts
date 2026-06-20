@@ -216,6 +216,7 @@ export async function createLessonSeriesInFirestore(
           isCancelled: false,
           isException: false,
           remindersEnabled,
+          isPaid: false,
           createdAt: now,
           updatedAt: now,
         });

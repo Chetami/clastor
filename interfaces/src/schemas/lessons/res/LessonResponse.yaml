@@ -8,6 +8,7 @@ required:
   - acceptanceStatus
   - attendanceStatus
   - remindersEnabled
+  - isPaid
   - createdAt
   - updatedAt
 properties:
@@ -63,6 +64,10 @@ properties:
     type: boolean
     description: Whether reminder notifications should be sent for this lesson
     example: true
+  isPaid:
+    type: boolean
+    description: Whether this lesson has been paid for
+    example: false
   createdAt:
     type: string
     format: date-time

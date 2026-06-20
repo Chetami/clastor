@@ -40,6 +40,7 @@ function toLessonResponse(lesson: Lesson): LessonResponse {
     isCancelled: lesson.isCancelled ?? false,
     isException: lesson.isException ?? false,
     remindersEnabled: lesson.remindersEnabled,
+    isPaid: lesson.isPaid ?? false,
     createdAt: toIso(lesson.createdAt),
     updatedAt: toIso(lesson.updatedAt),
   };

@@ -9,6 +9,7 @@ required:
   - acceptanceStatus
   - attendanceStatus
   - remindersEnabled
+  - isPaid
   - createdAt
   - updatedAt
 properties:
@@ -79,6 +80,12 @@ properties:
       Whether the student should receive reminder notifications for this
       lesson. The dispatch of reminders is handled separately.
     example: true
+  isPaid:
+    type: boolean
+    description: >-
+      Whether this lesson has been paid for. Defaults to false on creation;
+      toggled true once payment is recorded.
+    example: false
   createdAt:
     type: string
     format: date-time
