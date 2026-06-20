@@ -64,6 +64,19 @@ properties:
     type: boolean
     description: Whether reminder notifications should be sent for this lesson
     example: true
+  lastStudentNotifiedAt:
+    type: string
+    format: date-time
+    nullable: true
+    description: >-
+      Timestamp of the most recent manual "Notify Student" email for this
+      lesson, or null if never sent. Drives the resend cooldown in the UI.
+    example: "2026-06-20T09:00:00.000Z"
+  studentNotifiedCount:
+    type: integer
+    minimum: 0
+    description: How many "Notify Student" emails have been sent for this lesson.
+    example: 0
   isPaid:
     type: boolean
     description: Whether this lesson has been paid for

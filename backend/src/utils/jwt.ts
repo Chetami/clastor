@@ -49,3 +49,66 @@ export function extractToken(authHeader: string | undefined): string {
 
   return authHeader.substring(7);
 }
+
+/**
+ * Sign a short-lived, opaque state token tying an OAuth redirect to a user.
+ * Used for the Google Calendar OAuth flow: the browser can't send the auth
+ * header on the redirect, so we pass this signed token through the `state`
+ * param and verify it in the callback to recover the uid.
+ */
+export function signStateToken(uid: string): string {
+  return jwt.sign({ uid }, JWT_SECRET, { expiresIn: "10m" });
+}
+
+/** Verify a state token and return the embedded uid, or null if invalid. */
+export function verifyStateToken(token: string | undefined): string | null {
+  if (!token) return null;
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as { uid?: string };
+    return decoded.uid ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Sign a short-lived RSVP token for a lesson invite email. Students aren't
+ * users in the system (no auth), so the Accept/Decline buttons in the email
+ * carry this signed token instead. It binds the link to a specific lesson
+ * and a version; bumping the version on resend invalidates old links.
+ *
+ * Expiry is generous (30 days) so a student can respond well after the
+ * initial reminder; a resend always supersedes prior links via the version.
+ */
+export function signRsvpToken(lessonId: string, version: number): string {
+  return jwt.sign({ lid: lessonId, v: version }, JWT_SECRET, {
+    expiresIn: "30d",
+  });
+}
+
+/** RSVP token payload returned by {@link verifyRsvpToken}. */
+export interface RsvpTokenPayload {
+  lessonId: string;
+  version: number;
+}
+
+/**
+ * Verify an RSVP token. Returns the lesson id + version, or null if the
+ * token is missing, malformed, or expired. The caller must additionally
+ * check that `version` matches the lesson's current `rsvpTokenVersion`.
+ */
+export function verifyRsvpToken(
+  token: string | undefined
+): RsvpTokenPayload | null {
+  if (!token) return null;
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as {
+      lid?: string;
+      v?: number;
+    };
+    if (!decoded.lid || typeof decoded.v !== "number") return null;
+    return { lessonId: decoded.lid, version: decoded.v };
+  } catch {
+    return null;
+  }
+}

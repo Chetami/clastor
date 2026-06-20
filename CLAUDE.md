@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Examify TMS is a monorepo Tutor Management System with a React SPA frontend and Node.js backend, using Firebase Authentication with a custom JWT-based auth layer. The project uses npm workspaces with three packages: `interfaces`, `backend`, and `frontend`.
+Clastor is a monorepo Tutor Management System with a React SPA frontend and Node.js backend, using Firebase Authentication with a custom JWT-based auth layer. The project uses npm workspaces with three packages: `interfaces`, `backend`, and `frontend`.
 
 ### Key Design Pattern: YAML-Based Type Generation
 

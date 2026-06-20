@@ -18,6 +18,7 @@ function AuthBoot({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (isError) {
+      queryClient.clear();
       clearAuth();
     }
   }, [isError, clearAuth]);

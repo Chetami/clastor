@@ -7,6 +7,7 @@ import {
   Clock,
   Repeat,
   Search,
+  Video,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -19,6 +20,7 @@ import {
   formatLessonDate,
   formatLessonTime,
   lessonBadge,
+  meetUrl,
 } from "@/features/lessons/lesson-display";
 import { ImportantLessons } from "@/features/lessons/ImportantLessons";
 
@@ -220,6 +222,7 @@ export default function Lessons() {
                   const name =
                     studentMap[lesson.studentId] ?? "Unknown student";
                   const badge = lessonBadge(lesson);
+                  const meet = meetUrl(lesson.location);
                   return (
                     <li
                       key={lesson.id}
@@ -252,6 +255,25 @@ export default function Lessons() {
                       </div>
 
                       <div className="flex items-center gap-3">
+                        {meet && (
+                          <Button
+                            asChild
+                            variant="outline"
+                            size="sm"
+                            className="shrink-0"
+                          >
+                            <a
+                              href={meet}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              title="Open Google Meet"
+                            >
+                              <Video className="h-4 w-4" />
+                              <span className="hidden sm:inline">Meet</span>
+                            </a>
+                          </Button>
+                        )}
                         <span
                           className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${badge.tone}`}
                         >

@@ -3,6 +3,7 @@ import {
   CreateLessonRequest,
   UpdateLessonRequest,
   AttendanceStatus,
+  LessonAcceptance,
   Lesson,
   ListLessonsQuery,
 } from "@examify-tms/interfaces";
@@ -37,7 +38,13 @@ function mapLesson(id: string, data: admin.firestore.DocumentData): Lesson {
     isCancelled: data.isCancelled ?? false,
     isException: data.isException ?? false,
     remindersEnabled: data.remindersEnabled,
+    lastStudentNotifiedAt: data.lastStudentNotifiedAt
+      ? data.lastStudentNotifiedAt.toDate()
+      : (null as any),
+    studentNotifiedCount: data.studentNotifiedCount ?? 0,
     isPaid: data.isPaid ?? false,
+    icsUid: data.icsUid ?? null,
+    rsvpTokenVersion: data.rsvpTokenVersion ?? 0,
     createdAt: data.createdAt ? data.createdAt.toDate() : (null as any),
     updatedAt: data.updatedAt ? data.updatedAt.toDate() : (null as any),
   };
@@ -172,7 +179,11 @@ export async function createLessonInFirestore(
       isCancelled: false,
       isException: false,
       remindersEnabled: data.remindersEnabled ?? true,
+      lastStudentNotifiedAt: null,
+      studentNotifiedCount: 0,
       isPaid: false,
+      icsUid: null,
+      rsvpTokenVersion: 0,
       createdAt: now,
       updatedAt: now,
     };
@@ -194,7 +205,11 @@ export async function createLessonInFirestore(
       isCancelled: false,
       isException: false,
       remindersEnabled: data.remindersEnabled ?? true,
+      lastStudentNotifiedAt: null,
+      studentNotifiedCount: 0,
       isPaid: false,
+      icsUid: null,
+      rsvpTokenVersion: 0,
       createdAt: now.toDate() as any,
       updatedAt: now.toDate() as any,
     };
@@ -287,5 +302,89 @@ export async function cancelLessonInFirestore(
   } catch (error) {
     console.error("Failed to cancel lesson in Firestore:", error);
     throw new Error("Failed to cancel lesson");
+  }
+}
+
+/**
+ * Record that a "Notify Student" email was sent for this lesson.
+ * Stamps lastStudentNotifiedAt and increments the running counter.
+ * Called only after the email is confirmed delivered.
+ */
+export async function markStudentNotifiedInFirestore(
+  lessonId: string
+): Promise<void> {
+  try {
+    const firestore = getFirebaseFirestore();
+    const now = admin.firestore.Timestamp.now();
+
+    await firestore
+      .collection("lessons")
+      .doc(lessonId)
+      .update({
+        lastStudentNotifiedAt: now,
+        studentNotifiedCount: admin.firestore.FieldValue.increment(1),
+        updatedAt: now,
+      });
+  } catch (error) {
+    console.error("Failed to mark student notified in Firestore:", error);
+    throw new Error("Failed to record notification");
+  }
+}
+
+/**
+ * Ensure the lesson has a stable iCalendar UID. Generates and persists one
+ * (derived from the lesson id) on first call; subsequent calls reuse it so
+ * resends produce updates to the same calendar event rather than duplicates.
+ * Returns the UID.
+ */
+export async function ensureLessonIcsUid(lessonId: string): Promise<string> {
+  const icsUid = `${lessonId}@examify-tms`;
+  const firestore = getFirebaseFirestore();
+  await firestore
+    .collection("lessons")
+    .doc(lessonId)
+    .set({ icsUid }, { merge: true });
+  return icsUid;
+}
+
+/**
+ * Bump the RSVP token version, invalidating Accept/Decline links from all
+ * previously-sent emails. Returns the new version (to stamp into the fresh
+ * token). Call once per notify-student send.
+ */
+export async function bumpRsvpTokenVersion(lessonId: string): Promise<number> {
+  const firestore = getFirebaseFirestore();
+  const now = admin.firestore.Timestamp.now();
+  const ref = firestore.collection("lessons").doc(lessonId);
+  const next = admin.firestore.FieldValue.increment(1);
+  await ref.update({ rsvpTokenVersion: next, updatedAt: now });
+
+  const updated = await ref.get();
+  return (updated.data()?.rsvpTokenVersion as number) ?? 0;
+}
+
+/**
+ * Update a lesson's student acceptance status. Used by the public RSVP
+ * endpoint when a student clicks Accept/Decline in the invite email.
+ * Also re-stamps updatedAt.
+ */
+export async function setLessonAcceptanceInFirestore(
+  lessonId: string,
+  acceptanceStatus: LessonAcceptance
+): Promise<void> {
+  try {
+    const firestore = getFirebaseFirestore();
+    const now = admin.firestore.Timestamp.now();
+
+    await firestore
+      .collection("lessons")
+      .doc(lessonId)
+      .update({
+        acceptanceStatus,
+        updatedAt: now,
+      });
+  } catch (error) {
+    console.error("Failed to set lesson acceptance in Firestore:", error);
+    throw new Error("Failed to update acceptance status");
   }
 }

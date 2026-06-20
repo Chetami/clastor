@@ -1,4 +1,4 @@
-# Examify TMS - Tutor Management System
+# Clastor - Tutor Management System
 
 A monorepo application with React SPA frontend and Node.js backend, using Firebase Authentication and a custom JWT-based auth system.
 

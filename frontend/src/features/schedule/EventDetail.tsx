@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -12,10 +12,26 @@ import {
   Loader2,
   Repeat,
   Ban,
+  Mail,
+  Video,
+  ExternalLink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useGetLesson, useRecordAttendance, useCancelLesson } from "./api";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { useGetLesson, useRecordAttendance, useCancelLesson, useNotifyStudent, useUpdateLesson } from "./api";
+import {
+  generateMeetLinkRequest,
+  getGoogleConnectionStatus,
+  getGoogleAuthUrl,
+} from "./api/requests";
 import { useListStudents } from "@/features/students/api";
 import {
   ACCEPTANCE_LABELS,
@@ -25,6 +41,7 @@ import {
   lessonEndDate,
 } from "./lesson-utils";
 import type { AttendanceStatus } from "@examify-tms/interfaces";
+import { meetUrl } from "@/features/lessons/lesson-display";
 
 function formatDateTime(iso: string) {
   return new Date(iso).toLocaleString("en-US", {
@@ -49,6 +66,10 @@ const STATUS_TONE: Record<string, string> = {
   cancelled: "bg-rose-100 text-rose-700",
 };
 
+/** Mirrors the backend NOTIFY_COOLDOWN_MS default (24h). Used for the
+ *  optimistic button state; the server remains the source of truth. */
+const NOTIFY_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+
 export default function EventDetail() {
   const { eventId } = useParams<{ eventId: string }>();
   const navigate = useNavigate();
@@ -56,7 +77,21 @@ export default function EventDetail() {
   const { data: students = [] } = useListStudents();
   const recordAttendance = useRecordAttendance(eventId!);
   const cancelLesson = useCancelLesson(eventId!);
+  const notifyStudent = useNotifyStudent(eventId!);
+  const updateLesson = useUpdateLesson(eventId!);
   const [pickerError, setPickerError] = useState<string | null>(null);
+  const [notifyOpen, setNotifyOpen] = useState(false);
+  const [notifyMessage, setNotifyMessage] = useState("");
+  const [meetLoading, setMeetLoading] = useState(false);
+  const [meetError, setMeetError] = useState<string | null>(null);
+  // null = unknown, true = connected, false = not connected
+  const [googleConnected, setGoogleConnected] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    getGoogleConnectionStatus()
+      .then((s) => setGoogleConnected(s.connected))
+      .catch(() => setGoogleConnected(false));
+  }, []);
 
   if (isLoading) {
     return (
@@ -88,12 +123,72 @@ export default function EventDetail() {
   }
 
   const end = lessonEndDate(lesson);
+  const existingMeet = meetUrl(lesson.location);
   const studentName =
     students.find((s) => s.id === lesson.studentId)?.name ?? "Unknown student";
   const status = deriveLessonStatus(
     lesson.attendanceStatus,
     lesson.isCancelled,
   );
+
+  const notifiedAt = lesson.lastStudentNotifiedAt
+    ? new Date(lesson.lastStudentNotifiedAt)
+    : null;
+  const nextAllowedAt = notifiedAt
+    ? new Date(notifiedAt.getTime() + NOTIFY_COOLDOWN_MS)
+    : null;
+  const cooldownActive = nextAllowedAt
+    ? Date.now() < nextAllowedAt.getTime()
+    : false;
+
+  const defaultNotifyMessage = (() => {
+    const when = formatDateTime(lesson.startDateTime);
+    return `Hi ${studentName},\n\nThis is a reminder about our upcoming ${lesson.subject} lesson on ${when}.\n\nLooking forward to seeing you!`;
+  })();
+
+  function openNotifyDialog() {
+    setNotifyMessage(defaultNotifyMessage);
+    setPickerError(null);
+    setNotifyOpen(true);
+  }
+
+  async function handleGenerateMeet() {
+    if (!eventId || !lesson) return;
+    setMeetLoading(true);
+    setMeetError(null);
+    try {
+      if (!googleConnected) {
+        // Not connected yet — kick off the Google Calendar OAuth flow.
+        const { authUrl } = await getGoogleAuthUrl();
+        window.location.href = authUrl;
+        return;
+      }
+      // Time the backing calendar event to this lesson's slot.
+      const { meetingLink } = await generateMeetLinkRequest({
+        startDateTime: lesson.startDateTime,
+        durationMinutes: lesson.durationMinutes,
+      });
+      await updateLesson.mutateAsync({ location: meetingLink });
+    } catch (err) {
+      setMeetError(
+        err instanceof Error ? err.message : "Failed to generate Meet link",
+      );
+    } finally {
+      setMeetLoading(false);
+    }
+  }
+
+  async function handleNotify() {
+    try {
+      await notifyStudent.mutateAsync(notifyMessage);
+      setNotifyOpen(false);
+    } catch {
+      setPickerError(
+        notifyStudent.error?.message ?? "Failed to notify student",
+      );
+      setNotifyOpen(false);
+    }
+  }
 
   async function handleAttendanceChange(value: AttendanceStatus) {
     if (!eventId) return;
@@ -173,12 +268,76 @@ export default function EventDetail() {
               label="Student"
               value={studentName}
             />
-            <DetailRow
-              icon={<MapPin className="h-4 w-4" />}
-              label="Location"
-              value={lesson.location ?? "Not specified"}
-              muted={!lesson.location}
-            />
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 text-muted-foreground">
+                {existingMeet ? (
+                  <Video className="h-4 w-4" />
+                ) : (
+                  <MapPin className="h-4 w-4" />
+                )}
+              </div>
+              <div className="min-w-0 space-y-1.5">
+                <p className="text-xs text-muted-foreground">Location</p>
+                {existingMeet ? (
+                  <a
+                    href={existingMeet}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+                  >
+                    Open Google Meet
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </a>
+                ) : (
+                  <p
+                    className={
+                      lesson.location
+                        ? "break-words text-sm font-medium"
+                        : "text-sm text-muted-foreground"
+                    }
+                  >
+                    {lesson.location ?? "Not specified"}
+                  </p>
+                )}
+                {!existingMeet && (
+                  <div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8"
+                      disabled={
+                        meetLoading ||
+                        googleConnected === null ||
+                        updateLesson.isPending
+                      }
+                      onClick={handleGenerateMeet}
+                      title={
+                        googleConnected
+                          ? "Generate a Google Meet link and save it to this lesson"
+                          : "Connect your Google account to generate Meet links"
+                      }
+                    >
+                      {meetLoading || updateLesson.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Video className="h-4 w-4" />
+                      )}
+                      <span className="ml-1.5">
+                        {meetLoading || updateLesson.isPending
+                          ? "Generating…"
+                          : googleConnected
+                            ? "Generate Meet link"
+                            : "Connect Google"}
+                      </span>
+                    </Button>
+                    {meetError && (
+                      <p className="mt-1 text-xs text-destructive">{meetError}</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
           </CardContent>
         </Card>
 
@@ -249,21 +408,90 @@ export default function EventDetail() {
                   This occurrence has been cancelled.
                 </p>
               ) : (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleCancel}
-                  disabled={cancelLesson.isPending}
-                  className="text-destructive hover:text-destructive"
-                >
-                  <Ban className="h-4 w-4" />
-                  {cancelLesson.isPending ? "Cancelling…" : "Cancel this occurrence"}
-                </Button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={openNotifyDialog}
+                    disabled={cooldownActive}
+                    title={
+                      cooldownActive && nextAllowedAt
+                        ? `Already notified — can resend after ${nextAllowedAt.toLocaleString("en-US", {
+                            dateStyle: "medium",
+                            timeStyle: "short",
+                          })}`
+                        : "Send a reminder email to the student"
+                    }
+                  >
+                    <Mail className="h-4 w-4" />
+                    {notifiedAt ? "Notify student again" : "Notify student"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCancel}
+                    disabled={cancelLesson.isPending}
+                    className="text-destructive hover:text-destructive"
+                  >
+                    <Ban className="h-4 w-4" />
+                    {cancelLesson.isPending ? "Cancelling…" : "Cancel this occurrence"}
+                  </Button>
+                </div>
+              )}
+              {notifiedAt && (
+                <p className="mt-1.5 text-xs text-muted-foreground">
+                  Last notified{" "}
+                  {notifiedAt.toLocaleString("en-US", {
+                    dateStyle: "medium",
+                    timeStyle: "short",
+                  })}
+                  {lesson.studentNotifiedCount
+                    ? ` · ${lesson.studentNotifiedCount} sent`
+                    : ""}
+                </p>
               )}
             </div>
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={notifyOpen} onOpenChange={setNotifyOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Notify {studentName}</DialogTitle>
+            <DialogDescription>
+              Send a reminder email to the student. Lesson details are
+              appended automatically. You can resend once every 24 hours.
+            </DialogDescription>
+          </DialogHeader>
+          <textarea
+            value={notifyMessage}
+            onChange={(e) => setNotifyMessage(e.target.value)}
+            rows={6}
+            className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          />
+          {pickerError && (
+            <p className="text-xs text-destructive">{pickerError}</p>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setNotifyOpen(false)}
+              disabled={notifyStudent.isPending}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleNotify} disabled={notifyStudent.isPending}>
+              {notifyStudent.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Mail className="mr-2 h-4 w-4" />
+              )}
+              {notifyStudent.isPending ? "Sending…" : "Send email"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -273,23 +501,40 @@ interface DetailRowProps {
   label: string;
   value: string;
   muted?: boolean;
+  /** When set (e.g. a Meet URL), render the value as a clickable link. */
+  href?: string | null;
 }
 
-function DetailRow({ icon, label, value, muted }: DetailRowProps) {
+function DetailRow({ icon, label, value, muted, href }: DetailRowProps) {
+  const isMeet = !!href;
   return (
     <div className="flex items-start gap-3">
-      <div className="mt-0.5 text-muted-foreground">{icon}</div>
+      <div className="mt-0.5 text-muted-foreground">
+        {isMeet ? <Video className="h-4 w-4" /> : icon}
+      </div>
       <div className="min-w-0">
         <p className="text-xs text-muted-foreground">{label}</p>
-        <p
-          className={
-            muted
-              ? "truncate text-sm text-muted-foreground"
-              : "truncate text-sm font-medium"
-          }
-        >
-          {value}
-        </p>
+        {href ? (
+          <a
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+          >
+            Open Google Meet
+            <ExternalLink className="h-3.5 w-3.5" />
+          </a>
+        ) : (
+          <p
+            className={
+              muted
+                ? "truncate text-sm text-muted-foreground"
+                : "truncate text-sm font-medium"
+            }
+          >
+            {value}
+          </p>
+        )}
       </div>
     </div>
   );

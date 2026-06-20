@@ -6,6 +6,8 @@ import {
   updateLesson,
   recordAttendance,
   cancelLesson,
+  notifyStudent,
+  rsvpLesson,
 } from "../controllers/lessonController";
 import {
   createRecurringLesson,
@@ -23,6 +25,14 @@ const router = Router();
  * acceptanceStatus and attendanceStatus filters.
  */
 router.get("/", authenticateJWT, listLessons);
+
+/**
+ * GET /api/lessons/rsvp?token=...&status=accepted|declined
+ * Public one-click RSVP, reached from the Accept/Decline buttons in the
+ * invite email. Registered before /:id so "rsvp" isn't captured as an id.
+ * Returns a confirmation HTML page.
+ */
+router.get("/rsvp", rsvpLesson);
 
 /**
  * GET /api/lessons/series/:id
@@ -113,6 +123,18 @@ router.patch(
   authenticateJWT,
   requireRole("tutor", "system_admin"),
   cancelLesson
+);
+
+/**
+ * POST /api/lessons/:id/notify-student
+ * Send a reminder email to the student for this lesson. Subject to a
+ * cooldown to prevent spamming / accidental double-sends.
+ */
+router.post(
+  "/:id/notify-student",
+  authenticateJWT,
+  requireRole("tutor", "system_admin"),
+  notifyStudent
 );
 
 export default router;

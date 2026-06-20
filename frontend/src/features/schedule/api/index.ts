@@ -6,6 +6,7 @@ export { useUpdateLesson } from "./use-update-lesson";
 export { useRecordAttendance } from "./use-record-attendance";
 export { useCancelLesson } from "./use-cancel-lesson";
 export { useCancelLessonSeries } from "./use-cancel-lesson-series";
+export { useNotifyStudent } from "./use-notify-student";
 export {
   createLessonRequest,
   createRecurringLessonRequest,
@@ -14,5 +15,6 @@ export {
   updateLessonRequest,
   recordAttendanceRequest,
   cancelLessonRequest,
+  notifyStudentRequest,
   cancelLessonSeriesRequest,
 } from "./requests";

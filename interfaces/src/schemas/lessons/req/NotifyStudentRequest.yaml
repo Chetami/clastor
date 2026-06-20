@@ -1,0 +1,13 @@
+type: object
+properties:
+  message:
+    type: string
+    nullable: true
+    description: |-
+      Optional custom message body for the notification email. If omitted
+      or empty, the backend generates a default reminder from the lesson
+      details. Lesson details are always appended as a footer.
+description: |-
+  Request body for POST /api/lessons/:id/notify-student.
+  Sends a reminder/notification email to the student linked to the lesson.
+  Subject to a cooldown to prevent spamming.

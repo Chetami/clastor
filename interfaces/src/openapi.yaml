@@ -31,6 +31,8 @@ components:
       $ref: './schemas/auth/res/RegisterResponse.yaml'
     VerifyTokenResponse:
       $ref: './schemas/auth/res/VerifyTokenResponse.yaml'
+    GoogleConnectionStatus:
+      $ref: './schemas/auth/res/GoogleConnectionStatus.yaml'
     UserInfo:
       $ref: './schemas/auth/res/UserInfo.yaml'
     User:
@@ -80,6 +82,8 @@ components:
       $ref: './schemas/lessons/req/UpdateLessonRequest.yaml'
     RecordAttendanceRequest:
       $ref: './schemas/lessons/req/RecordAttendanceRequest.yaml'
+    NotifyStudentRequest:
+      $ref: './schemas/lessons/req/NotifyStudentRequest.yaml'
     ListLessonsQuery:
       $ref: './schemas/lessons/req/ListLessonsQuery.yaml'
     LessonResponse:
@@ -101,3 +105,8 @@ components:
       $ref: './schemas/lessons/res/LessonSeriesResponse.yaml'
     CreateRecurringLessonResponse:
       $ref: './schemas/lessons/res/CreateRecurringLessonResponse.yaml'
+    # Meeting (Google Meet) Schemas
+    GenerateMeetLinkRequest:
+      $ref: './schemas/meetings/req/GenerateMeetLinkRequest.yaml'
+    GenerateMeetLinkResponse:
+      $ref: './schemas/meetings/res/GenerateMeetLinkResponse.yaml'

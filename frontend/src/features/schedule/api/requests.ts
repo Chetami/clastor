@@ -3,9 +3,13 @@ import type {
   CreateLessonRequest,
   UpdateLessonRequest,
   RecordAttendanceRequest,
+  NotifyStudentRequest,
   AttendanceStatus,
   CreateRecurringLessonRequest,
   CreateRecurringLessonResponse,
+  GenerateMeetLinkRequest,
+  GenerateMeetLinkResponse,
+  GoogleConnectionStatus,
   LessonResponse,
   LessonListResponse,
 } from "@examify-tms/interfaces";
@@ -70,11 +74,45 @@ export async function cancelLessonRequest(
   return response.data;
 }
 
+export async function notifyStudentRequest(
+  id: string,
+  message?: string,
+): Promise<LessonResponse> {
+  const body: NotifyStudentRequest = { message: message ?? null };
+  const response = await api.post<LessonResponse>(
+    `/api/lessons/${id}/notify-student`,
+    body,
+  );
+  return response.data;
+}
+
 export async function cancelLessonSeriesRequest(
   seriesId: string,
 ): Promise<{ cancelled: number }> {
   const response = await api.delete<{ cancelled: number }>(
     `/api/lessons/series/${seriesId}`,
   );
+  return response.data;
+}
+
+export async function generateMeetLinkRequest(
+  data?: GenerateMeetLinkRequest,
+): Promise<GenerateMeetLinkResponse> {
+  const response = await api.post<GenerateMeetLinkResponse>(
+    "/api/meetings",
+    data,
+  );
+  return response.data;
+}
+
+export async function getGoogleConnectionStatus(): Promise<GoogleConnectionStatus> {
+  const response = await api.get<GoogleConnectionStatus>(
+    "/api/auth/google/status",
+  );
+  return response.data;
+}
+
+export async function getGoogleAuthUrl(): Promise<{ authUrl: string }> {
+  const response = await api.get<{ authUrl: string }>("/api/auth/google/url");
   return response.data;
 }

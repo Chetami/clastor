@@ -1,7 +1,7 @@
 {
   "name": "@examify-tms/frontend",
   "version": "1.0.0",
-  "description": "Frontend for Examify TMS",
+  "description": "Frontend for Clastor",
   "type": "module",
   "scripts": {
     "dev": "vite",

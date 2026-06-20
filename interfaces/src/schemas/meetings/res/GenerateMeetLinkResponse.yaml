@@ -1,0 +1,15 @@
+type: object
+required:
+  - meetingLink
+  - calendarEventId
+properties:
+  meetingLink:
+    type: string
+    description: The generated Google Meet URL.
+    example: "https://meet.google.com/abc-mnop-xyz"
+  calendarEventId:
+    type: string
+    description: >-
+      ID of the backing Google Calendar event (owned by the service account).
+      Useful for future update/cancel sync.
+description: Response returned after generating a Google Meet link.
