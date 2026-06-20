@@ -332,6 +332,16 @@
   color: inherit;
 }
 
+.gi-calendar .fc-event .fc-event-title-container {
+  min-width: 0;
+}
+
+.gi-calendar .fc-event .fc-event-title {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
 .gi-calendar .fc-event:hover {
   opacity: 0.9;
 }

@@ -9,7 +9,22 @@ export interface ScheduleEvent {
   notes?: string;
 }
 
-function buildEvents(todayStr: string, tomorrowStr: string, plusTwoStr: string): ScheduleEvent[] {
+export interface NewScheduleEventInput {
+  studentId: string;
+  studentName: string;
+  subject: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  location?: string;
+  notes?: string;
+}
+
+function buildSeedEvents(
+  todayStr: string,
+  tomorrowStr: string,
+  plusTwoStr: string,
+): ScheduleEvent[] {
   return [
     {
       id: "evt-1",
@@ -61,7 +76,7 @@ function buildEvents(todayStr: string, tomorrowStr: string, plusTwoStr: string):
   ];
 }
 
-export function getEvents(): ScheduleEvent[] {
+function seedEvents(): ScheduleEvent[] {
   const now = new Date();
   const toStr = (d: Date) => d.toISOString().slice(0, 10);
   const todayStr = toStr(now);
@@ -69,14 +84,41 @@ export function getEvents(): ScheduleEvent[] {
   tomorrow.setDate(now.getDate() + 1);
   const plusTwo = new Date(now);
   plusTwo.setDate(now.getDate() + 2);
-  return buildEvents(todayStr, toStr(tomorrow), toStr(plusTwo));
+  return buildSeedEvents(todayStr, toStr(tomorrow), toStr(plusTwo));
+}
+
+const store: ScheduleEvent[] = seedEvents();
+
+export function getEvents(): ScheduleEvent[] {
+  return store;
 }
 
 export function getEventById(id: string | undefined): ScheduleEvent | undefined {
   if (!id) return undefined;
-  return getEvents().find((e) => e.id === id);
+  return store.find((e) => e.id === id);
+}
+
+export function addEvent(input: NewScheduleEventInput): ScheduleEvent {
+  const event: ScheduleEvent = {
+    id: `local_${Date.now()}`,
+    title: `${input.subject} — ${input.studentName}`,
+    subject: input.subject,
+    student: input.studentName,
+    start: `${input.date}T${input.startTime}:00`,
+    end: `${input.date}T${input.endTime}:00`,
+    location: input.location || undefined,
+    notes: input.notes || undefined,
+  };
+  store.push(event);
+  return event;
 }
 
 export function toFullCalendarEvents(events: ScheduleEvent[]) {
-  return events.map(({ id, title, start, end }) => ({ id, title, start, end }));
+  return events.map(({ id, title, start, end, student }) => ({
+    id,
+    title,
+    start,
+    end,
+    extendedProps: { student },
+  }));
 }
