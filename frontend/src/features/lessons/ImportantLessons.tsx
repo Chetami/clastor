@@ -15,8 +15,10 @@ import {
   getInitials,
   isToday,
   lessonBadge,
+  meetUrl,
 } from "@/features/lessons/lesson-display";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Video } from "lucide-react";
 
 interface ImportantLessonsProps {
   lessons: LessonResponse[];
@@ -156,6 +158,7 @@ export function ImportantLessons({ lessons, studentMap }: ImportantLessonsProps)
                       studentMap[lesson.studentId] ?? "Unknown student";
                     const badge = lessonBadge(lesson);
                     const showDate = group.key === "unpaid";
+                    const meet = meetUrl(lesson.location);
                     return (
                       <li
                         key={lesson.id}
@@ -182,6 +185,18 @@ export function ImportantLessons({ lessons, studentMap }: ImportantLessonsProps)
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
+                          {meet && (
+                            <a
+                              href={meet}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              title="Open Google Meet"
+                              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-input bg-background text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                            >
+                              <Video className="h-4 w-4" />
+                            </a>
+                          )}
                           <span
                             className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${badge.tone}`}
                           >

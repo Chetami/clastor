@@ -13,7 +13,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useListStudents } from "@/features/students/api";
 import { useCreateLesson, useCreateRecurringLesson } from "./api";
-import { generateMeetLinkRequest } from "./api/requests";
+import {
+  generateMeetLinkRequest,
+  getGoogleConnectionStatus,
+  getGoogleAuthUrl,
+} from "./api/requests";
 import {
   DAYS,
   DAY_LABELS,
@@ -89,6 +93,8 @@ export function CreateEventDialog({
   const [errors, setErrors] = useState<FieldErrors>({});
   const [meetLoading, setMeetLoading] = useState(false);
   const [meetError, setMeetError] = useState<string | null>(null);
+  // null = unknown, true = connected, false = not connected
+  const [googleConnected, setGoogleConnected] = useState<boolean | null>(null);
 
   const isRecurring = values.repeat !== "none";
   const pending = createLesson.isPending || createRecurring.isPending;
@@ -99,12 +105,17 @@ export function CreateEventDialog({
     setErrors({});
     setMeetError(null);
     setMeetLoading(false);
+    setGoogleConnected(null);
     setValues({
       ...emptyValues(),
       date: start ? toDateStr(start) : "",
       startTime: start ? toTimeStr(start) : "",
       endTime: end ? toTimeStr(end) : "",
     });
+    // Check Google connection status when the dialog opens.
+    getGoogleConnectionStatus()
+      .then((s) => setGoogleConnected(s.connected))
+      .catch(() => setGoogleConnected(false));
   }, [open, start, end]);
 
   function update<K extends keyof EventFormData>(key: K, value: EventFormData[K]) {
@@ -116,6 +127,12 @@ export function CreateEventDialog({
     setMeetLoading(true);
     setMeetError(null);
     try {
+      if (!googleConnected) {
+        // Not connected yet — kick off the Google Calendar OAuth flow.
+        const { authUrl } = await getGoogleAuthUrl();
+        window.location.href = authUrl;
+        return;
+      }
       // Time the backing calendar event to the chosen slot when available.
       const hasStart = values.date && values.startTime;
       const startDateTime = hasStart
@@ -124,13 +141,13 @@ export function CreateEventDialog({
       const durationMinutes =
         values.startTime && values.endTime
           ? Math.max(
-              1,
-              Math.round(
-                (new Date(`${values.date}T${values.endTime}:00`).getTime() -
-                  new Date(`${values.date}T${values.startTime}:00`).getTime()) /
-                  60000,
-              ),
-            )
+            1,
+            Math.round(
+              (new Date(`${values.date}T${values.endTime}:00`).getTime() -
+                new Date(`${values.date}T${values.startTime}:00`).getTime()) /
+              60000,
+            ),
+          )
           : undefined;
 
       const { meetingLink } = await generateMeetLinkRequest({
@@ -481,9 +498,13 @@ export function CreateEventDialog({
                 type="button"
                 variant="outline"
                 className="shrink-0"
-                disabled={meetLoading}
+                disabled={meetLoading || googleConnected === null}
                 onClick={handleGenerateMeet}
-                title="Generate a Google Meet link"
+                title={
+                  googleConnected
+                    ? "Generate a Google Meet link"
+                    : "Connect your Google account to generate Meet links"
+                }
               >
                 {meetLoading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -491,7 +512,11 @@ export function CreateEventDialog({
                   <Video className="h-4 w-4" />
                 )}
                 <span className="ml-1.5 hidden sm:inline">
-                  {meetLoading ? "Generating…" : "Meet link"}
+                  {meetLoading
+                    ? "Generating…"
+                    : googleConnected
+                      ? "Meet link"
+                      : "Connect Google"}
                 </span>
               </Button>
             </div>

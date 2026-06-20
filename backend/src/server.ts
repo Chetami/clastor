@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import authRoutes from "./routes/authRoutes";
+import googleAuthRoutes from "./routes/googleAuthRoutes";
 import studentRoutes from "./routes/studentRoutes";
 import lessonRoutes from "./routes/lessonRoutes";
 import meetingRoutes from "./routes/meetingRoutes";
@@ -32,6 +33,7 @@ app.get("/health", (req, res) => {
 
 // API routes
 app.use("/api/auth", authRoutes);
+app.use("/api/auth/google", googleAuthRoutes);
 app.use("/api/students", studentRoutes);
 app.use("/api/lessons", lessonRoutes);
 app.use("/api/meetings", meetingRoutes);

@@ -9,6 +9,7 @@ import type {
   CreateRecurringLessonResponse,
   GenerateMeetLinkRequest,
   GenerateMeetLinkResponse,
+  GoogleConnectionStatus,
   LessonResponse,
   LessonListResponse,
 } from "@examify-tms/interfaces";
@@ -101,5 +102,17 @@ export async function generateMeetLinkRequest(
     "/api/meetings",
     data,
   );
+  return response.data;
+}
+
+export async function getGoogleConnectionStatus(): Promise<GoogleConnectionStatus> {
+  const response = await api.get<GoogleConnectionStatus>(
+    "/api/auth/google/status",
+  );
+  return response.data;
+}
+
+export async function getGoogleAuthUrl(): Promise<{ authUrl: string }> {
+  const response = await api.get<{ authUrl: string }>("/api/auth/google/url");
   return response.data;
 }

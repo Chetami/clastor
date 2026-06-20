@@ -49,3 +49,24 @@ export function extractToken(authHeader: string | undefined): string {
 
   return authHeader.substring(7);
 }
+
+/**
+ * Sign a short-lived, opaque state token tying an OAuth redirect to a user.
+ * Used for the Google Calendar OAuth flow: the browser can't send the auth
+ * header on the redirect, so we pass this signed token through the `state`
+ * param and verify it in the callback to recover the uid.
+ */
+export function signStateToken(uid: string): string {
+  return jwt.sign({ uid }, JWT_SECRET, { expiresIn: "10m" });
+}
+
+/** Verify a state token and return the embedded uid, or null if invalid. */
+export function verifyStateToken(token: string | undefined): string | null {
+  if (!token) return null;
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as { uid?: string };
+    return decoded.uid ?? null;
+  } catch {
+    return null;
+  }
+}

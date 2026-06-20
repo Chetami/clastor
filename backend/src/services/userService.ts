@@ -131,3 +131,65 @@ export async function createUserInFirestore(
 export function generateJWTForUser(user: User): string {
   return generateToken(user.id, user.email, user.role);
 }
+
+export interface GoogleConnection {
+  refreshToken: string;
+  googleEmail: string | null;
+  connectedAt: Date;
+}
+
+/**
+ * Persist a tutor's Google OAuth connection (refresh token + account email)
+ * onto their user document.
+ */
+export async function setGoogleConnection(
+  uid: string,
+  data: { refreshToken: string; googleEmail: string },
+): Promise<void> {
+  const firestore = getFirebaseFirestore();
+  await firestore.collection("users").doc(uid).set(
+    {
+      googleConnection: {
+        refreshToken: data.refreshToken,
+        googleEmail: data.googleEmail,
+        connectedAt: admin.firestore.Timestamp.now(),
+      },
+      updatedAt: admin.firestore.Timestamp.now(),
+    },
+    { merge: true },
+  );
+}
+
+/**
+ * Read a tutor's Google OAuth connection, or null if they haven't connected.
+ * (Never exposes this to the client — used server-side only for Meet generation.)
+ */
+export async function getGoogleConnection(
+  uid: string,
+): Promise<GoogleConnection | null> {
+  const firestore = getFirebaseFirestore();
+  const snap = await firestore.collection("users").doc(uid).get();
+  const conn = snap.data()?.googleConnection;
+  if (!conn?.refreshToken) {
+    return null;
+  }
+  return {
+    refreshToken: conn.refreshToken,
+    googleEmail: conn.googleEmail ?? null,
+    connectedAt: conn.connectedAt?.toDate?.() ?? new Date(0),
+  };
+}
+
+/**
+ * Remove a tutor's Google OAuth connection (disconnect).
+ */
+export async function clearGoogleConnection(uid: string): Promise<void> {
+  const firestore = getFirebaseFirestore();
+  await firestore
+    .collection("users")
+    .doc(uid)
+    .set(
+      { googleConnection: admin.firestore.FieldValue.delete() },
+      { merge: true },
+    );
+}

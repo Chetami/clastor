@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowDownUp,
-  CheckCircle2,
   ChevronRight,
   Mail,
   MoreHorizontal,
@@ -150,7 +149,7 @@ export default function Students() {
         </p>
       </div>
 
-      {outstanding > 0 ? (
+      {outstanding > 0 && (
         <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-sm">
           <Wallet className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-500" />
           <span className="font-semibold text-amber-700 dark:text-amber-400">
@@ -159,13 +158,6 @@ export default function Students() {
           <span className="text-muted-foreground">
             outstanding across {owingCount} active{" "}
             {owingCount === 1 ? "student" : "students"}
-          </span>
-        </div>
-      ) : (
-        <div className="flex items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-4 py-3 text-sm">
-          <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-500" />
-          <span className="text-muted-foreground">
-            All settled — no outstanding balances.
           </span>
         </div>
       )}
@@ -184,180 +176,180 @@ export default function Students() {
 
       {!isLoading && !error && (
         <Card>
-        <CardHeader className="flex flex-col gap-4 space-y-0 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-1 rounded-md border bg-muted/40 p-1">
-            <FilterOption
-              checked={statusFilter === "active"}
-              label="Active"
-              count={activeCount}
-              onSelect={() => setStatusFilter("active")}
-            />
-            <FilterOption
-              checked={statusFilter === "past"}
-              label="Past"
-              count={pastCount}
-              onSelect={() => setStatusFilter("past")}
-            />
-            <FilterOption
-              checked={statusFilter === "all"}
-              label="All"
-              count={activeCount + pastCount}
-              onSelect={() => setStatusFilter("all")}
-            />
-          </div>
-
-          <div className="flex items-center gap-2">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search students..."
-                className="w-full pl-8 sm:w-56"
+          <CardHeader className="flex flex-col gap-4 space-y-0 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-1 rounded-md border bg-muted/40 p-1">
+              <FilterOption
+                checked={statusFilter === "active"}
+                label="Active"
+                count={activeCount}
+                onSelect={() => setStatusFilter("active")}
+              />
+              <FilterOption
+                checked={statusFilter === "past"}
+                label="Past"
+                count={pastCount}
+                onSelect={() => setStatusFilter("past")}
+              />
+              <FilterOption
+                checked={statusFilter === "all"}
+                label="All"
+                count={activeCount + pastCount}
+                onSelect={() => setStatusFilter("all")}
               />
             </div>
-            <div className="relative">
-              <ArrowDownUp className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <select
-                value={sortKey}
-                onChange={(e) => setSortKey(e.target.value as SortKey)}
-                aria-label="Sort students"
-                className="h-9 w-full rounded-md border border-input bg-transparent pl-8 pr-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring sm:w-44"
-              >
-                {SORT_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <Dialog open={addOpen} onOpenChange={setAddOpen}>
-              <DialogTrigger asChild>
-                <Button size="sm" disabled={createStudent.isPending}>
-                  <Plus className="h-4 w-4" />
-                  Add Student
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Add Student</DialogTitle>
-                  <DialogDescription>
-                    Enter the student's details below. Click save when you're
-                    done.
-                  </DialogDescription>
-                </DialogHeader>
-                <StudentForm
-                  submitLabel={createStudent.isPending ? "Creating..." : "Save Student"}
-                  onCancel={() => setAddOpen(false)}
-                  onSubmit={handleAdd}
-                  disabled={createStudent.isPending}
+
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search students..."
+                  className="w-full pl-8 sm:w-56"
                 />
-              </DialogContent>
-            </Dialog>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {visibleStudents.length === 0 ? (
-            <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
-              <Users className="h-8 w-8 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">
-                {search.trim()
-                  ? "No students match your search."
-                  : `No ${statusFilter === "all" ? "" : statusFilter} students yet. Click "Add Student" to get started.`}
-              </p>
-            </div>
-          ) : (
-            <ul className="-mx-6 divide-y">
-              {visibleStudents.map((student) => (
-                <li
-                  key={student.id}
-                  className="group flex cursor-pointer items-center justify-between gap-4 px-6 py-3 transition-colors hover:bg-accent/40"
-                  onClick={() => navigate(`/students/${student.id}`)}
+              </div>
+              <div className="relative">
+                <ArrowDownUp className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <select
+                  value={sortKey}
+                  onChange={(e) => setSortKey(e.target.value as SortKey)}
+                  aria-label="Sort students"
+                  className="h-9 w-full rounded-md border border-input bg-transparent pl-8 pr-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring sm:w-44"
                 >
-                  <div className="flex min-w-0 flex-1 items-center gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-medium text-primary">
-                      {getInitials(student.name)}
-                    </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="truncate font-medium">{student.name}</p>
-                        <span
-                          className={
-                            student.status === "active"
-                              ? "shrink-0 rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400"
-                              : "shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground"
-                          }
-                        >
-                          {student.status === "active" ? "Active" : "Past"}
-                        </span>
+                  {SORT_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <Dialog open={addOpen} onOpenChange={setAddOpen}>
+                <DialogTrigger asChild>
+                  <Button size="sm" disabled={createStudent.isPending}>
+                    <Plus className="h-4 w-4" />
+                    Add Student
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Add Student</DialogTitle>
+                    <DialogDescription>
+                      Enter the student's details below. Click save when you're
+                      done.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <StudentForm
+                    submitLabel={createStudent.isPending ? "Creating..." : "Save Student"}
+                    onCancel={() => setAddOpen(false)}
+                    onSubmit={handleAdd}
+                    disabled={createStudent.isPending}
+                  />
+                </DialogContent>
+              </Dialog>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {visibleStudents.length === 0 ? (
+              <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
+                <Users className="h-8 w-8 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">
+                  {search.trim()
+                    ? "No students match your search."
+                    : `No ${statusFilter === "all" ? "" : statusFilter} students yet. Click "Add Student" to get started.`}
+                </p>
+              </div>
+            ) : (
+              <ul className="-mx-6 divide-y">
+                {visibleStudents.map((student) => (
+                  <li
+                    key={student.id}
+                    className="group flex cursor-pointer items-center justify-between gap-4 px-6 py-3 transition-colors hover:bg-accent/40"
+                    onClick={() => navigate(`/students/${student.id}`)}
+                  >
+                    <div className="flex min-w-0 flex-1 items-center gap-3">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-medium text-primary">
+                        {getInitials(student.name)}
                       </div>
-                      <p className="flex items-center gap-1 truncate text-sm text-muted-foreground">
-                        <Mail className="h-3 w-3 shrink-0" />
-                        {student.email}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="hidden text-right sm:block">
-                      <p className="font-medium">
-                        {compactCurrency(student.expectedAmount)}
-                        <span className="ml-0.5 text-xs font-normal text-muted-foreground">
-                          {rateUnit(student.rateType)}
-                        </span>
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatFrequency(
-                          student.frequencyPerWeek,
-                          student.rateType,
-                        )}
-                      </p>
-                    </div>
-                    {student.amountOwed > 0 && (
-                      <div className="hidden text-right lg:block">
-                        <p className="font-medium text-destructive">
-                          {formatCurrency(student.amountOwed)}
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="truncate font-medium">{student.name}</p>
+                          <span
+                            className={
+                              student.status === "active"
+                                ? "shrink-0 rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400"
+                                : "shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground"
+                            }
+                          >
+                            {student.status === "active" ? "Active" : "Past"}
+                          </span>
+                        </div>
+                        <p className="flex items-center gap-1 truncate text-sm text-muted-foreground">
+                          <Mail className="h-3 w-3 shrink-0" />
+                          {student.email}
                         </p>
-                        <p className="text-xs text-muted-foreground">owed</p>
                       </div>
-                    )}
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="hidden text-right sm:block">
+                        <p className="font-medium">
+                          {compactCurrency(student.expectedAmount)}
+                          <span className="ml-0.5 text-xs font-normal text-muted-foreground">
+                            {rateUnit(student.rateType)}
+                          </span>
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatFrequency(
+                            student.frequencyPerWeek,
+                            student.rateType,
+                          )}
+                        </p>
+                      </div>
+                      {student.amountOwed > 0 && (
+                        <div className="hidden text-right lg:block">
+                          <p className="font-medium text-destructive">
+                            {formatCurrency(student.amountOwed)}
+                          </p>
+                          <p className="text-xs text-muted-foreground">owed</p>
+                        </div>
+                      )}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <MoreHorizontal className="h-4 w-4" />
+                            <span className="sr-only">Open menu</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent
+                          align="end"
                           onClick={(e) => e.stopPropagation()}
                         >
-                          <MoreHorizontal className="h-4 w-4" />
-                          <span className="sr-only">Open menu</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent
-                        align="end"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <DropdownMenuItem
-                          onSelect={() => setEditing(student)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onSelect={() =>
-                            navigate(`/students/${student.id}`)
-                          }
-                        >
-                          <ChevronRight className="h-4 w-4" />
-                          View Details
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
+                          <DropdownMenuItem
+                            onSelect={() => setEditing(student)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onSelect={() =>
+                              navigate(`/students/${student.id}`)
+                            }
+                          >
+                            <ChevronRight className="h-4 w-4" />
+                            View Details
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
       )}
 
 

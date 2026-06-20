@@ -1,5 +1,6 @@
-import { calendar } from "../config/google";
-import { calendar_v3 } from "googleapis";
+import { google, calendar_v3 } from "googleapis";
+import { getOAuth2ClientForUser } from "../config/googleOAuth";
+import { getGoogleConnection } from "./userService";
 
 export interface GenerateMeetLinkOptions {
   /** ISO 8601 start. Defaults to "now" when omitted. */
@@ -10,33 +11,41 @@ export interface GenerateMeetLinkOptions {
 
 export interface GeneratedMeeting {
   meetingLink: string;
-  /** ID of the backing Google Calendar event (owned by the service account). */
+  /** ID of the backing Google Calendar event in the tutor's own calendar. */
   calendarEventId: string;
 }
 
+/** Thrown when a tutor hasn't connected their Google account yet. */
+export class GoogleNotConnectedError extends Error {
+  constructor() {
+    super("Connect your Google account first to generate a meeting link.");
+    this.name = "GoogleNotConnectedError";
+  }
+}
+
 /**
- * Create a Google Calendar event with a Hangouts/Meet conference and return
- * the generated Meet URL. The event is created in the service account's own
- * calendar (or GOOGLE_CALENDAR_ID), so the Meet room is fully usable but the
- * event itself isn't visible in the tutor's personal calendar.
+ * Create a Google Calendar event (with a Meet conference) in the tutor's OWN
+ * calendar, using their stored OAuth refresh token, and return the Meet URL.
  *
- * Conference provisioning is asynchronous, so if the insert response comes
- * back "pending" we re-fetch the event once before giving up.
+ * Meet provisioning is asynchronous, so if the insert response doesn't yet
+ * carry a link we re-fetch the event once before giving up.
  */
-export async function generateMeetLink(
+export async function generateMeetLinkForUser(
+  uid: string,
   opts: GenerateMeetLinkOptions = {},
 ): Promise<GeneratedMeeting> {
+  const connection = await getGoogleConnection(uid);
+  if (!connection) {
+    throw new GoogleNotConnectedError();
+  }
+
   const start = opts.startDateTime ? new Date(opts.startDateTime) : new Date();
   const durationMinutes = opts.durationMinutes ?? 30;
   const end = new Date(start.getTime() + durationMinutes * 60_000);
 
-  const cal = calendar();
-  const calendarId = process.env.GOOGLE_CALENDAR_ID || "primary";
-
-  // The valid conference types differ per account/calendar. Ask the calendar
-  // which solutions it supports and prefer a Meet/video one; otherwise let
-  // Google pick its default (omit conferenceSolutionKey).
-  const solutionType = await pickConferenceSolutionType(cal, calendarId);
+  const auth = getOAuth2ClientForUser(connection.refreshToken);
+  const cal = google.calendar({ version: "v3", auth });
+  const calendarId = "primary"; // the tutor's own calendar
 
   const requestBody: calendar_v3.Schema$Event = {
     summary: "Examify lesson",
@@ -46,9 +55,7 @@ export async function generateMeetLink(
     conferenceData: {
       createRequest: {
         requestId: `examify-${start.getTime()}`,
-        ...(solutionType
-          ? { conferenceSolutionKey: { type: solutionType } }
-          : {}),
+        conferenceSolutionKey: { type: "hangoutsMeet" },
       },
     },
   };
@@ -66,8 +73,6 @@ export async function generateMeetLink(
 
   let event = insert.data;
 
-  // Conference provisioning is asynchronous — if no link resolved yet, wait a
-  // moment and re-fetch the event once.
   if (!extractMeetLink(event.conferenceData)) {
     await delay(1500);
     const refetch = await cal.events.get({ calendarId, eventId });
@@ -82,33 +87,6 @@ export async function generateMeetLink(
   }
 
   return { meetingLink, calendarEventId: eventId };
-}
-
-const MEET_SOLUTION_TYPES = ["hangoutsMeet", "eventHangout"];
-
-/**
- * Look up the conference solutions the calendar allows and return a type that
- * yields a Google Meet room. Prefers an explicit Meet solution, falls back to
- * any allowed solution, and returns undefined if none are listed (letting
- * Google apply its default — which for Meet-enabled accounts is Meet).
- */
-async function pickConferenceSolutionType(
-  cal: ReturnType<typeof calendar>,
-  calendarId: string,
-): Promise<string | undefined> {
-  try {
-    const { data } = await cal.calendars.get({ calendarId });
-    const types = (data.conferenceProperties?.allowedConferenceSolutionTypes ?? []).filter(
-      (t): t is string => Boolean(t),
-    );
-
-    const meet = types.find((t) => MEET_SOLUTION_TYPES.includes(t));
-    if (meet) return meet;
-    return types[0];
-  } catch {
-    // If we can't read calendar settings, let Google pick its default.
-    return undefined;
-  }
 }
 
 /** Pull the Meet (video) entry point URI out of the conference data, if present. */

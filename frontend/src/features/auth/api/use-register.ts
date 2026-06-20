@@ -1,6 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { registerRequest } from "./requests";
 import { useAuthStore } from "@/store/auth-store";
+import { queryClient } from "@/lib/query-client";
 
 export function useRegister() {
   const setAuth = useAuthStore((s) => s.setAuth);
@@ -16,6 +17,7 @@ export function useRegister() {
       password: string;
     }) => registerRequest(name, email, password),
     onSuccess: (data) => {
+      queryClient.clear();
       setAuth(data.user, data.jwtToken);
     },
   });

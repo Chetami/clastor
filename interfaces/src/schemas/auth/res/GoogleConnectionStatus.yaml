@@ -1,0 +1,18 @@
+type: object
+required:
+  - connected
+  - googleEmail
+properties:
+  connected:
+    type: boolean
+    description: Whether the tutor has connected a Google account (for Meet/email).
+    example: true
+  googleEmail:
+    type: string
+    nullable: true
+    description: The connected Google account email, or null if not connected.
+    example: tutor@gmail.com
+description: |-
+  Status of the authenticated user's Google Calendar connection. The refresh
+  token itself is never exposed; only whether a connection exists and its
+  account email.

@@ -31,6 +31,8 @@ components:
       $ref: './schemas/auth/res/RegisterResponse.yaml'
     VerifyTokenResponse:
       $ref: './schemas/auth/res/VerifyTokenResponse.yaml'
+    GoogleConnectionStatus:
+      $ref: './schemas/auth/res/GoogleConnectionStatus.yaml'
     UserInfo:
       $ref: './schemas/auth/res/UserInfo.yaml'
     User:
