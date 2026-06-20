@@ -1,0 +1,18 @@
+type: object
+required:
+  - data
+  - total
+properties:
+  data:
+    type: array
+    items:
+      $ref: './StudentResponse.yaml'
+    description: Array of student records
+  total:
+    type: integer
+    minimum: 0
+    description: Total number of students returned
+    example: 42
+description: |-
+  List response for students
+  Returns all matching students without pagination

@@ -3,52 +3,6 @@ info:
   title: Examify TMS API - Type Definitions
   description: Auto-generated OpenAPI spec from YAML schema files
   version: 1.0.0
-paths:
-  /api/auth/register:
-    post:
-      summary: Register a new user
-      description: Creates a Firestore document for a Firebase-authenticated user and issues a custom JWT
-      tags:
-        - auth
-      security:
-        - BearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RegisterRequest'
-      responses:
-        '200':
-          description: Registration successful
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/LoginResponse'
-        '400':
-          description: Bad request (invalid name)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-        '401':
-          description: Invalid Firebase token
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-        '409':
-          description: User already exists
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-        '500':
-          description: Server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
 components:
   securitySchemes:
     BearerAuth:
@@ -60,21 +14,54 @@ components:
       $ref: './schemas/common/ApiError.yaml'
     Role:
       $ref: './schemas/common/Role.yaml'
+    # Auth Common Schemas
     JwtPayload:
       $ref: './schemas/auth/JwtPayload.yaml'
+    # Auth Request Schemas
     LoginRequest:
-      $ref: './schemas/auth/LoginRequest.yaml'
-    LoginResponse:
-      $ref: './schemas/auth/LoginResponse.yaml'
-    UserInfo:
-      $ref: './schemas/auth/UserInfo.yaml'
+      $ref: './schemas/auth/req/LoginRequest.yaml'
     RegisterRequest:
-      $ref: './schemas/auth/RegisterRequest.yaml'
+      $ref: './schemas/auth/req/RegisterRequest.yaml'
+    VerifyTokenRequest:
+      $ref: './schemas/auth/req/VerifyTokenRequest.yaml'
+    # Auth Response Schemas
+    LoginResponse:
+      $ref: './schemas/auth/res/LoginResponse.yaml'
+    RegisterResponse:
+      $ref: './schemas/auth/res/RegisterResponse.yaml'
+    VerifyTokenResponse:
+      $ref: './schemas/auth/res/VerifyTokenResponse.yaml'
+    UserInfo:
+      $ref: './schemas/auth/res/UserInfo.yaml'
     User:
       $ref: './schemas/users/User.yaml'
+    # User Request/Response Schemas
+    CreateUserRequest:
+      $ref: './schemas/users/req/CreateUserRequest.yaml'
+    UpdateUserRequest:
+      $ref: './schemas/users/req/UpdateUserRequest.yaml'
+    ListUsersQuery:
+      $ref: './schemas/users/req/ListUsersQuery.yaml'
+    UserResponse:
+      $ref: './schemas/users/res/UserResponse.yaml'
+    UserListResponse:
+      $ref: './schemas/users/res/UserListResponse.yaml'
+    # Student Enums
     RateType:
       $ref: './schemas/students/RateType.yaml'
     StudentStatus:
       $ref: './schemas/students/StudentStatus.yaml'
+    # Student Request/Response Schemas
+    CreateStudentRequest:
+      $ref: './schemas/students/req/CreateStudentRequest.yaml'
+    UpdateStudentRequest:
+      $ref: './schemas/students/req/UpdateStudentRequest.yaml'
+    ListStudentsQuery:
+      $ref: './schemas/students/req/ListStudentsQuery.yaml'
+    StudentResponse:
+      $ref: './schemas/students/res/StudentResponse.yaml'
+    StudentListResponse:
+      $ref: './schemas/students/res/StudentListResponse.yaml'
+    # Legacy Student Schema (kept for compatibility)
     Student:
       $ref: './schemas/students/Student.yaml'

@@ -1,0 +1,15 @@
+type: object
+required:
+  - valid
+  - user
+properties:
+  valid:
+    type: boolean
+    description: Whether the token is valid
+    example: true
+  user:
+    $ref: './UserInfo.yaml'
+description: |-
+  Verify token response body
+  Returned from backend /api/auth/verify endpoint
+  Contains token validity status and user information

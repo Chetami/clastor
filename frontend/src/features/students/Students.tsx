@@ -36,13 +36,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { StudentForm } from "./StudentForm";
 import type { StudentFormData } from "./student-schema";
+import { useCreateStudent, useListStudents } from "./api";
 import {
   compactCurrency,
   formatCurrency,
   formatFrequency,
   getInitials,
   rateUnit,
-  SAMPLE_STUDENTS,
   studentToFormValues,
 } from "./student-utils";
 
@@ -59,12 +59,14 @@ const SORT_OPTIONS: { value: SortKey; label: string }[] = [
 
 export default function Students() {
   const navigate = useNavigate();
-  const [students, setStudents] = useState<Student[]>(SAMPLE_STUDENTS);
+  const { data: students = [], isLoading, error } = useListStudents();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("active");
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("name-asc");
   const [addOpen, setAddOpen] = useState(false);
   const [editing, setEditing] = useState<Student | null>(null);
+
+  const createStudent = useCreateStudent();
 
   const activeCount = students.filter((s) => s.status === "active").length;
   const pastCount = students.filter((s) => s.status === "past").length;
@@ -110,51 +112,32 @@ export default function Students() {
     return sorted;
   }, [students, statusFilter, search, sortKey]);
 
-  function handleAdd(values: StudentFormData) {
-    const newStudent: Student = {
-      id: `stu_${Date.now()}`,
-      name: values.name,
-      email: values.email,
-      phone: values.phone?.trim() || null,
-      parentEmail: values.parentEmail?.trim() || null,
-      subject: values.subject,
-      expectedAmount: values.expectedAmount,
-      rateType: values.rateType,
-      frequencyPerWeek: values.frequencyPerWeek,
-      status: values.status,
-      timezone: values.timezoneEnabled ? values.timezone ?? null : null,
-      notes: values.notes?.trim() || null,
-      amountOwed: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    setStudents((prev) => [newStudent, ...prev]);
-    setAddOpen(false);
+  async function handleAdd(values: StudentFormData) {
+    try {
+      await createStudent.mutateAsync({
+        name: values.name,
+        email: values.email,
+        phone: values.phone?.trim() || undefined,
+        parentEmail: values.parentEmail?.trim() || undefined,
+        subject: values.subject,
+        expectedAmount: values.expectedAmount,
+        rateType: values.rateType,
+        frequencyPerWeek: values.frequencyPerWeek,
+        status: values.status,
+        timezone: values.timezoneEnabled ? values.timezone ?? undefined : undefined,
+        notes: values.notes?.trim() || undefined,
+      });
+
+      setAddOpen(false);
+    } catch (error) {
+      console.error("Failed to create student:", error);
+      // Error will be handled by react-query automatically
+    }
   }
 
   function handleEdit(values: StudentFormData) {
-    if (!editing) return;
-    setStudents((prev) =>
-      prev.map((s) =>
-        s.id === editing.id
-          ? {
-              ...s,
-              name: values.name,
-              email: values.email,
-              phone: values.phone?.trim() || null,
-              parentEmail: values.parentEmail?.trim() || null,
-              subject: values.subject,
-              expectedAmount: values.expectedAmount,
-              rateType: values.rateType,
-              frequencyPerWeek: values.frequencyPerWeek,
-              status: values.status,
-              timezone: values.timezoneEnabled ? values.timezone ?? null : null,
-              notes: values.notes?.trim() || null,
-              updatedAt: new Date().toISOString(),
-            }
-          : s,
-      ),
-    );
+    // TODO: Implement update endpoint
+    // For now, just close the dialog
     setEditing(null);
   }
 
@@ -187,7 +170,20 @@ export default function Students() {
         </div>
       )}
 
-      <Card>
+      {isLoading && (
+        <div className="flex items-center justify-center py-12">
+          <p className="text-sm text-muted-foreground">Loading students...</p>
+        </div>
+      )}
+
+      {error && (
+        <div className="flex items-center justify-center py-12">
+          <p className="text-sm text-destructive">Failed to load students. Please try again.</p>
+        </div>
+      )}
+
+      {!isLoading && !error && (
+        <Card>
         <CardHeader className="flex flex-col gap-4 space-y-0 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-1 rounded-md border bg-muted/40 p-1">
             <FilterOption
@@ -237,7 +233,7 @@ export default function Students() {
             </div>
             <Dialog open={addOpen} onOpenChange={setAddOpen}>
               <DialogTrigger asChild>
-                <Button size="sm">
+                <Button size="sm" disabled={createStudent.isPending}>
                   <Plus className="h-4 w-4" />
                   Add Student
                 </Button>
@@ -251,9 +247,10 @@ export default function Students() {
                   </DialogDescription>
                 </DialogHeader>
                 <StudentForm
-                  submitLabel="Save Student"
+                  submitLabel={createStudent.isPending ? "Creating..." : "Save Student"}
                   onCancel={() => setAddOpen(false)}
                   onSubmit={handleAdd}
+                  disabled={createStudent.isPending}
                 />
               </DialogContent>
             </Dialog>
@@ -361,6 +358,8 @@ export default function Students() {
           )}
         </CardContent>
       </Card>
+      )}
+
 
       <Dialog
         open={editing !== null}

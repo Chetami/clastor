@@ -8,7 +8,8 @@ properties:
     description: Custom JWT token (expires in 1 hour)
     example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
   user:
-    $ref: '../auth/UserInfo.yaml'
+    $ref: './UserInfo.yaml'
 description: |-
-  Login Response interface
+  Login response body
   Returned from backend /api/auth/login endpoint
+  Contains JWT token and user information

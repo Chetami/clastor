@@ -5,7 +5,8 @@ properties:
   name:
     type: string
     description: User's display name
+    example: John Doe
 description: |-
-  Register Request interface
+  Register request body
   Sent from frontend to backend /api/auth/register endpoint
   Only contains name since email/password are handled by Firebase Auth

@@ -18,12 +18,13 @@ properties:
     description: User's email address
     example: admin@example.com
   role:
-    $ref: '../common/Role.yaml'
+    $ref: '../../common/Role.yaml'
   avatarUrl:
     type: string
     nullable: true
     description: Optional profile picture URL
     example: https://example.com/avatar.jpg
 description: |-
-  User info returned from API (without JWT timestamps)
+  User info response object
   Basic user information returned by authentication endpoints
+  Used in LoginResponse, RegisterResponse, and VerifyTokenResponse

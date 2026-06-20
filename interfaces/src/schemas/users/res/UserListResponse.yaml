@@ -1,0 +1,30 @@
+type: object
+required:
+  - data
+  - total
+  - limit
+  - offset
+properties:
+  data:
+    type: array
+    items:
+      $ref: './UserResponse.yaml'
+    description: Array of user records
+  total:
+    type: integer
+    minimum: 0
+    description: Total number of users matching the query
+    example: 15
+  limit:
+    type: integer
+    minimum: 1
+    description: Maximum number of users returned in this page
+    example: 20
+  offset:
+    type: integer
+    minimum: 0
+    description: Number of users skipped (pagination offset)
+    example: 0
+description: |-
+  Paginated list response for users
+  Includes metadata for pagination and total count

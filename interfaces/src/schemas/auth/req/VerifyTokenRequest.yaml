@@ -1,0 +1,12 @@
+type: object
+required:
+  - token
+properties:
+  token:
+    type: string
+    description: Custom JWT token to verify
+    example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+description: |-
+  Verify token request body
+  The token can also be sent in Authorization header instead
+  Sent from frontend to backend /api/auth/verify endpoint

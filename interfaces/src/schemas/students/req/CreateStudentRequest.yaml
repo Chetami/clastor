@@ -1,0 +1,67 @@
+type: object
+required:
+  - name
+  - email
+  - subject
+  - expectedAmount
+  - rateType
+  - frequencyPerWeek
+properties:
+  name:
+    type: string
+    description: Student's full name
+    example: Alice Johnson
+  email:
+    type: string
+    format: email
+    description: Student's email address
+    example: alice.johnson@example.com
+  phone:
+    type: string
+    nullable: true
+    description: Optional contact phone number
+    example: "+1 555 0100"
+  parentEmail:
+    type: string
+    format: email
+    nullable: true
+    description: >-
+      Linked parent/guardian email. Temporary field until a dedicated
+      parent object relationship is introduced.
+    example: parent.johnson@example.com
+  subject:
+    type: string
+    description: Subject(s) the student is being tutored in
+    example: Mathematics
+  expectedAmount:
+    type: number
+    format: double
+    minimum: 0
+    description: Expected charge amount
+    example: 45
+  rateType:
+    $ref: '../RateType.yaml'
+  frequencyPerWeek:
+    type: integer
+    minimum: 0
+    description: >-
+      How often the student is seen per week. Interpreted as hours per
+      week when rateType is hourly, or lessons per week when per_lesson.
+    example: 4
+  status:
+    $ref: '../StudentStatus.yaml'
+    default: active
+  timezone:
+    type: string
+    nullable: true
+    description: >-
+      IANA timezone identifier (e.g. America/New_York). Nullable; null
+      means no timezone is specified (checkbox unchecked in the UI).
+    example: America/New_York
+  notes:
+    type: string
+    nullable: true
+    description: Free-form notes about the student
+description: |-
+  Request body for creating a new student
+  All required fields must be provided; id and timestamps are generated server-side

@@ -1,0 +1,21 @@
+type: object
+properties:
+  name:
+    type: string
+    description: User's full name
+    example: John Doe
+  email:
+    type: string
+    format: email
+    description: User's email address
+    example: user@example.com
+  role:
+    $ref: '../../common/Role.yaml'
+    description: User's role in the system
+  avatarUrl:
+    type: string
+    nullable: true
+    description: Optional profile picture URL
+description: |-
+  Request body for updating a user
+  All fields are optional; only provided fields will be updated

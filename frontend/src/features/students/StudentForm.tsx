@@ -23,6 +23,7 @@ interface StudentFormProps {
   submitLabel: string;
   onCancel: () => void;
   onSubmit: (values: StudentFormData) => void;
+  disabled?: boolean;
 }
 
 function toFormData(
@@ -38,6 +39,7 @@ export function StudentForm({
   submitLabel,
   onCancel,
   onSubmit,
+  disabled = false,
 }: StudentFormProps) {
   const [values, setValues] = useState<StudentFormData>(
     toFormData(defaultValues),
@@ -314,10 +316,10 @@ export function StudentForm({
       </div>
 
       <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
-        <Button type="button" variant="outline" onClick={onCancel}>
+        <Button type="button" variant="outline" onClick={onCancel} disabled={disabled}>
           Cancel
         </Button>
-        <Button type="submit">{submitLabel}</Button>
+        <Button type="submit" disabled={disabled}>{submitLabel}</Button>
       </div>
     </form>
   );
