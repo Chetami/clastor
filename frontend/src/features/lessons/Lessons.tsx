@@ -1,14 +1,14 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-export default function Exams() {
+export default function Lessons() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Exams</CardTitle>
+        <CardTitle>Lessons</CardTitle>
       </CardHeader>
       <CardContent>
         <p className="text-sm text-muted-foreground">
-          Manage your exams here.
+          View and manage your lessons here.
         </p>
       </CardContent>
     </Card>

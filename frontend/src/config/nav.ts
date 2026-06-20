@@ -1,8 +1,9 @@
 import {
   LayoutDashboard,
   Users,
-  FileText,
   CalendarDays,
+  CreditCard,
+  BookOpen,
   Settings,
   type LucideIcon,
 } from "lucide-react";
@@ -16,7 +17,8 @@ export type NavItem = {
 export const navItems: NavItem[] = [
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { title: "Students", href: "/students", icon: Users },
-  { title: "Exams", href: "/exams", icon: FileText },
   { title: "Schedule", href: "/schedule", icon: CalendarDays },
+  { title: "Payments", href: "/payments", icon: CreditCard },
+  { title: "Lessons", href: "/lessons", icon: BookOpen },
   { title: "Settings", href: "/settings", icon: Settings },
 ];
