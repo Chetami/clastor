@@ -9,6 +9,7 @@ required:
   - frequencyPerWeek
   - status
   - amountOwed
+  - tutorId
   - createdAt
   - updatedAt
 properties:
@@ -16,6 +17,10 @@ properties:
     type: string
     description: Unique student identifier
     example: stu_123
+  tutorId:
+    type: string
+    description: ID of the tutor assigned to this student
+    example: tutor_abc123
   name:
     type: string
     description: Student's full name

@@ -13,7 +13,6 @@ import {
   StickyNote,
   Users,
 } from "lucide-react";
-import type { Student } from "@examify-tms/interfaces";
 import { formatPhoneNumberIntl } from "react-phone-number-input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,23 +24,27 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { StudentForm } from "./StudentForm";
+import { useGetStudent } from "./api";
 import {
   formatCurrency,
   getInitials,
   rateTypeLabel,
-  SAMPLE_STUDENTS,
   studentToFormValues,
 } from "./student-utils";
 
 export default function StudentDetail() {
   const { studentId } = useParams<{ studentId: string }>();
   const navigate = useNavigate();
-  const [students, setStudents] = useState<Student[]>(SAMPLE_STUDENTS);
+  const { data: student, isLoading, error } = useGetStudent(studentId);
   const [editing, setEditing] = useState(false);
   const [notesEditing, setNotesEditing] = useState(false);
   const [notesDraft, setNotesDraft] = useState("");
 
-  const student = students.find((s) => s.id === studentId);
+  function handleEdit(_values: any) {
+    // TODO: Implement update endpoint
+    // For now, just close the dialog
+    setEditing(false);
+  }
 
   function startEditNotes() {
     if (!student) return;
@@ -52,21 +55,21 @@ export default function StudentDetail() {
   function saveNotes() {
     if (!student) return;
     const trimmed = notesDraft.trim();
-    setStudents((prev) =>
-      prev.map((s) =>
-        s.id === student.id
-          ? {
-              ...s,
-              notes: trimmed.length > 0 ? trimmed : null,
-              updatedAt: new Date().toISOString(),
-            }
-          : s,
-      ),
-    );
+    // Notes editing is now local-only - updates to notes won't persist to backend
+    // This will be implemented when the update endpoint is available
+    console.log("Notes saved locally:", trimmed);
     setNotesEditing(false);
   }
 
-  if (!student) {
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <p className="text-sm text-muted-foreground">Loading students...</p>
+      </div>
+    );
+  }
+
+  if (error || !student) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-20 text-center">
         <Users className="h-10 w-10 text-muted-foreground" />
@@ -306,7 +309,7 @@ export default function StudentDetail() {
             defaultValues={studentToFormValues(student)}
             submitLabel="Save Changes"
             onCancel={() => setEditing(false)}
-            onSubmit={() => setEditing(false)}
+            onSubmit={handleEdit}
           />
         </DialogContent>
       </Dialog>

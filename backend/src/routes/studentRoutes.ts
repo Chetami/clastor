@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { createStudent, listStudents } from "../controllers/studentController";
+import { createStudent, listStudents, getStudentById } from "../controllers/studentController";
 import { authenticateJWT, requireRole } from "../middleware/auth";
 
 const router = Router();
@@ -13,6 +13,17 @@ router.get(
   "/",
   authenticateJWT,
   listStudents
+);
+
+/**
+ * GET /api/students/id/:id
+ * Get student by ID endpoint - returns a specific student if the user has permission
+ * System admins can view any student, tutors can only view their own students
+ */
+router.get(
+  "/id/:id",
+  authenticateJWT,
+  getStudentById
 );
 
 /**

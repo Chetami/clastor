@@ -12,7 +12,7 @@ import {
   Users,
   Wallet,
 } from "lucide-react";
-import type { Student } from "@examify-tms/interfaces";
+import type { StudentResponse } from "@examify-tms/interfaces";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -46,7 +46,7 @@ import {
   studentToFormValues,
 } from "./student-utils";
 
-type StatusFilter = Student["status"] | "all";
+type StatusFilter = StudentResponse["status"] | "all";
 type SortKey = "name-asc" | "name-desc" | "amount-high" | "amount-low" | "updated";
 
 const SORT_OPTIONS: { value: SortKey; label: string }[] = [
@@ -64,7 +64,7 @@ export default function Students() {
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("name-asc");
   const [addOpen, setAddOpen] = useState(false);
-  const [editing, setEditing] = useState<Student | null>(null);
+  const [editing, setEditing] = useState<StudentResponse | null>(null);
 
   const createStudent = useCreateStudent();
 
@@ -135,7 +135,7 @@ export default function Students() {
     }
   }
 
-  function handleEdit(values: StudentFormData) {
+  function handleEdit(_values: StudentFormData) {
     // TODO: Implement update endpoint
     // For now, just close the dialog
     setEditing(null);

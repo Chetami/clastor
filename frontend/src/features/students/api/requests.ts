@@ -16,3 +16,8 @@ export async function listStudentsRequest(): Promise<StudentListResponse> {
   const response = await api.get<StudentListResponse>("/api/students");
   return response.data;
 }
+
+export async function getStudentRequest(id: string): Promise<StudentResponse> {
+  const response = await api.get<StudentResponse>(`/api/students/id/${id}`);
+  return response.data;
+}

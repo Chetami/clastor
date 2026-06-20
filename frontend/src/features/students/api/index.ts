@@ -1,3 +1,4 @@
 export { useCreateStudent } from "./use-create-student";
 export { useListStudents } from "./use-list-students";
-export { createStudentRequest, listStudentsRequest } from "./requests";
+export { useGetStudent } from "./use-get-student";
+export { createStudentRequest, listStudentsRequest, getStudentRequest } from "./requests";

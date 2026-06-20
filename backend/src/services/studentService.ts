@@ -46,6 +46,7 @@ export async function listStudentsFromFirestore(
       const data = doc.data();
       students.push({
         id: doc.id,
+        tutorId: data.tutorId,
         name: data.name,
         email: data.email,
         phone: data.phone || null,
@@ -67,6 +68,51 @@ export async function listStudentsFromFirestore(
   } catch (error) {
     console.error("Failed to list students from Firestore:", error);
     throw new Error("Failed to list students");
+  }
+}
+
+/**
+ * Get a specific student by ID from Firestore
+ * @param studentId - ID of the student to retrieve
+ * @returns Student object or null if not found
+ */
+export async function getStudentByIdFromFirestore(
+  studentId: string
+): Promise<Student | null> {
+  try {
+    const firestore = getFirebaseFirestore();
+    const doc = await firestore.collection("students").doc(studentId).get();
+
+    if (!doc.exists) {
+      return null;
+    }
+
+    const data = doc.data();
+    if (!data) {
+      return null;
+    }
+
+    return {
+      id: doc.id,
+      tutorId: data.tutorId,
+      name: data.name,
+      email: data.email,
+      phone: data.phone || null,
+      parentEmail: data.parentEmail || null,
+      subject: data.subject,
+      expectedAmount: data.expectedAmount,
+      rateType: data.rateType,
+      frequencyPerWeek: data.frequencyPerWeek,
+      status: data.status,
+      timezone: data.timezone || null,
+      notes: data.notes || null,
+      amountOwed: data.amountOwed,
+      createdAt: data.createdAt ? data.createdAt.toDate() : (null as any),
+      updatedAt: data.updatedAt ? data.updatedAt.toDate() : (null as any),
+    };
+  } catch (error) {
+    console.error("Failed to get student from Firestore:", error);
+    throw new Error("Failed to get student");
   }
 }
 
@@ -108,6 +154,7 @@ export async function createStudentInFirestore(
     // Return Student object with Date objects (matching getUserFromFirestore pattern)
     return {
       id: studentId,
+      tutorId,
       name: data.name,
       email: data.email,
       phone: data.phone || null,

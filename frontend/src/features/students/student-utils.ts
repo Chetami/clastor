@@ -1,4 +1,4 @@
-import type { Student } from "@examify-tms/interfaces";
+import type { Student, StudentResponse } from "@examify-tms/interfaces";
 import type { StudentFormData } from "./student-schema";
 
 export const rateTypeLabel: Record<Student["rateType"], string> = {
@@ -50,7 +50,7 @@ export function formatFrequency(
 }
 
 export function studentToFormValues(
-  student: Student,
+  student: StudentResponse,
 ): Partial<StudentFormData> {
   return {
     name: student.name,
@@ -77,6 +77,7 @@ export function generateId(): string {
 export const SAMPLE_STUDENTS: Student[] = [
   {
     id: "1",
+    tutorId: "tutor_1",
     name: "Alice Johnson",
     email: "alice.johnson@example.com",
     phone: null,
@@ -94,6 +95,7 @@ export const SAMPLE_STUDENTS: Student[] = [
   },
   {
     id: "2",
+    tutorId: "tutor_1",
     name: "Marcus Chen",
     email: "marcus.chen@example.com",
     phone: "+15551234567",
@@ -111,6 +113,7 @@ export const SAMPLE_STUDENTS: Student[] = [
   },
   {
     id: "3",
+    tutorId: "tutor_1",
     name: "Priya Patel",
     email: "priya.patel@example.com",
     phone: null,
@@ -128,6 +131,7 @@ export const SAMPLE_STUDENTS: Student[] = [
   },
   {
     id: "4",
+    tutorId: "tutor_1",
     name: "Liam O'Brien",
     email: "liam.obrien@example.com",
     phone: "+15559876543",
