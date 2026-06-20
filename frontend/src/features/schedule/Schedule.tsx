@@ -1,21 +1,16 @@
 import { useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
+import { getEvents, toFullCalendarEvents } from "./events";
 
 export default function Schedule() {
   const calendarRef = useRef<FullCalendar>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
   const now = new Date();
-  const toStr = (d: Date) => d.toISOString().slice(0, 10);
-  const todayStr = toStr(now);
-  const tomorrow = new Date(now);
-  tomorrow.setDate(now.getDate() + 1);
-  const tomorrowStr = toStr(tomorrow);
-  const plusTwo = new Date(now);
-  plusTwo.setDate(now.getDate() + 2);
-  const plusTwoStr = toStr(plusTwo);
 
   const tzOffset = -now.getTimezoneOffset();
   const tzSign = tzOffset >= 0 ? "+" : "-";
@@ -83,33 +78,10 @@ export default function Schedule() {
             buttonText: "4 Day",
           },
         }}
-        events={[
-          {
-            title: "Math — Sarah",
-            start: `${todayStr}T09:00:00`,
-            end: `${todayStr}T10:00:00`,
-          },
-          {
-            title: "Physics — James",
-            start: `${todayStr}T13:00:00`,
-            end: `${todayStr}T14:30:00`,
-          },
-          {
-            title: "Chemistry — Aisha",
-            start: `${tomorrowStr}T11:00:00`,
-            end: `${tomorrowStr}T12:00:00`,
-          },
-          {
-            title: "English — Liam",
-            start: `${tomorrowStr}T16:00:00`,
-            end: `${tomorrowStr}T17:00:00`,
-          },
-          {
-            title: "Biology — Noor",
-            start: `${plusTwoStr}T10:30:00`,
-            end: `${plusTwoStr}T11:30:00`,
-          },
-        ]}
+        events={toFullCalendarEvents(getEvents())}
+        eventClick={(info) => {
+          if (info.event.id) navigate(`/schedule/${info.event.id}`);
+        }}
         height="calc(100vh - 8rem)"
       />
     </div>

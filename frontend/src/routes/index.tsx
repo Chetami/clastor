@@ -9,6 +9,7 @@ import Dashboard from "@/features/dashboard/Dashboard";
 import Students from "@/features/students/Students";
 import StudentDetail from "@/features/students/StudentDetail";
 import Schedule from "@/features/schedule/Schedule";
+import EventDetail from "@/features/schedule/EventDetail";
 import Payments from "@/features/payments/Payments";
 import Lessons from "@/features/lessons/Lessons";
 import Settings from "@/features/settings/Settings";
@@ -28,6 +29,7 @@ export const router = createBrowserRouter([
               { path: "students", element: <Students /> },
               { path: "students/:studentId", element: <StudentDetail /> },
               { path: "schedule", element: <Schedule /> },
+              { path: "schedule/:eventId", element: <EventDetail /> },
               { path: "payments", element: <Payments /> },
               { path: "lessons", element: <Lessons /> },
               { path: "settings", element: <Settings /> },
