@@ -1,0 +1,80 @@
+import { api } from "@/lib/api";
+import type {
+  CreateLessonRequest,
+  UpdateLessonRequest,
+  RecordAttendanceRequest,
+  AttendanceStatus,
+  CreateRecurringLessonRequest,
+  CreateRecurringLessonResponse,
+  LessonResponse,
+  LessonListResponse,
+} from "@examify-tms/interfaces";
+
+export async function createLessonRequest(
+  data: CreateLessonRequest,
+): Promise<LessonResponse> {
+  const response = await api.post<LessonResponse>("/api/lessons", data);
+  return response.data;
+}
+
+export async function createRecurringLessonRequest(
+  data: CreateRecurringLessonRequest,
+): Promise<CreateRecurringLessonResponse> {
+  const response = await api.post<CreateRecurringLessonResponse>(
+    "/api/lessons/recurring",
+    data,
+  );
+  return response.data;
+}
+
+export async function listLessonsRequest(params?: {
+  from?: string;
+  to?: string;
+  studentId?: string;
+}): Promise<LessonListResponse> {
+  const response = await api.get<LessonListResponse>("/api/lessons", {
+    params,
+  });
+  return response.data;
+}
+
+export async function getLessonRequest(id: string): Promise<LessonResponse> {
+  const response = await api.get<LessonResponse>(`/api/lessons/${id}`);
+  return response.data;
+}
+
+export async function updateLessonRequest(
+  id: string,
+  data: UpdateLessonRequest,
+): Promise<LessonResponse> {
+  const response = await api.patch<LessonResponse>(`/api/lessons/${id}`, data);
+  return response.data;
+}
+
+export async function recordAttendanceRequest(
+  id: string,
+  attendanceStatus: AttendanceStatus,
+): Promise<LessonResponse> {
+  const body: RecordAttendanceRequest = { attendanceStatus };
+  const response = await api.patch<LessonResponse>(
+    `/api/lessons/${id}/attendance`,
+    body,
+  );
+  return response.data;
+}
+
+export async function cancelLessonRequest(
+  id: string,
+): Promise<LessonResponse> {
+  const response = await api.patch<LessonResponse>(`/api/lessons/${id}/cancel`);
+  return response.data;
+}
+
+export async function cancelLessonSeriesRequest(
+  seriesId: string,
+): Promise<{ cancelled: number }> {
+  const response = await api.delete<{ cancelled: number }>(
+    `/api/lessons/series/${seriesId}`,
+  );
+  return response.data;
+}

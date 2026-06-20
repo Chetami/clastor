@@ -1,0 +1,12 @@
+type: string
+enum:
+  - monday
+  - tuesday
+  - wednesday
+  - thursday
+  - friday
+  - saturday
+  - sunday
+description: |-
+  Day of the week (ISO order, Monday first). Used by LessonSlot to
+  define on which day a recurring lesson slot falls.

@@ -1,0 +1,109 @@
+type: object
+required:
+  - id
+  - tutorId
+  - studentId
+  - subject
+  - durationMinutes
+  - intervalWeeks
+  - slots
+  - timezone
+  - startDate
+  - acceptanceStatus
+  - remindersEnabled
+  - createdAt
+  - updatedAt
+properties:
+  id:
+    type: string
+    description: Unique series identifier
+    example: series_a1b2c3d4e5f6
+  tutorId:
+    type: string
+    description: ID of the tutor who owns this series
+    example: tutor_abc123
+  studentId:
+    type: string
+    description: ID of the student this series is linked to
+    example: student_123
+  subject:
+    type: string
+    description: Subject of the lessons in this series
+    example: Mathematics
+  durationMinutes:
+    type: integer
+    minimum: 1
+    description: Duration in minutes of every occurrence (shared across slots)
+    example: 60
+  location:
+    type: string
+    nullable: true
+    description: Where the lessons take place
+    example: Online — Zoom
+  notes:
+    type: string
+    nullable: true
+    description: Free-form tutor notes shared across occurrences
+  intervalWeeks:
+    type: integer
+    minimum: 1
+    description: >-
+      Cadence in weeks. 1 = weekly, 2 = biweekly (every two weeks).
+      Extensible to larger intervals later.
+    example: 1
+  slots:
+    type: array
+    minItems: 1
+    maxItems: 7
+    items:
+      $ref: './LessonSlot.yaml'
+    description: >-
+      The weekly slots that make up this arrangement (e.g. Mon/Wed/Fri).
+      Each slot carries its own day-of-week and start time.
+  timezone:
+    type: string
+    description: IANA timezone for the slot wall-clock times (e.g. America/New_York)
+    example: America/New_York
+  startDate:
+    type: string
+    format: date
+    description: >-
+      Anchor date (YYYY-MM-DD). Week 0 is the week containing this date;
+      occurrences begin from this date. For biweekly series this anchors
+      which weeks are "on".
+    example: "2026-06-23"
+  until:
+    type: string
+    format: date
+    nullable: true
+    description: >-
+      Inclusive end date (YYYY-MM-DD). Exactly one of `until` or `count`
+      must be set to bound the series.
+    example: "2026-08-29"
+  count:
+    type: integer
+    minimum: 1
+    nullable: true
+    description: >-
+      Total number of lessons (occurrences across all slots) to generate.
+      Exactly one of `until` or `count` must be set.
+    example: 12
+  acceptanceStatus:
+    $ref: './LessonAcceptance.yaml'
+  remindersEnabled:
+    type: boolean
+    description: Whether reminder notifications should be sent for occurrences
+    example: true
+  createdAt:
+    type: string
+    format: date-time
+    description: When the series was created
+  updatedAt:
+    type: string
+    format: date-time
+    description: When the series was last updated
+description: |-
+  Lesson series interface
+  A recurring lesson arrangement that expands into individual lesson
+  occurrences. Holds the shared template plus the recurrence rule
+  (intervalWeeks + slots + timezone + startDate + until/count).

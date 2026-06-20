@@ -1,0 +1,16 @@
+type: object
+required:
+  - dayOfWeek
+  - timeOfDay
+properties:
+  dayOfWeek:
+    $ref: './DayOfWeek.yaml'
+  timeOfDay:
+    type: string
+    description: >-
+      Local start time of the slot in 24-hour "HH:mm" notation, in the
+      series timezone. The end time is derived (start + durationMinutes).
+    example: "16:00"
+description: |-
+  A single weekly slot within a recurring lesson series.
+  A series has one or more slots (e.g. Mon 16:00, Wed 17:00, Fri 16:00).

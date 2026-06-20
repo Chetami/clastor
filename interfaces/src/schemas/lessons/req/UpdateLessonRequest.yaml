@@ -1,0 +1,38 @@
+type: object
+properties:
+  studentId:
+    type: string
+    nullable: true
+    description: ID of the student to link this lesson to
+  subject:
+    type: string
+    nullable: true
+    description: Subject of the lesson
+  startDateTime:
+    type: string
+    format: date-time
+    nullable: true
+    description: When the lesson starts (ISO 8601)
+  durationMinutes:
+    type: integer
+    minimum: 1
+    nullable: true
+    description: Lesson duration in minutes
+  location:
+    type: string
+    nullable: true
+    description: Where the lesson takes place
+  notes:
+    type: string
+    nullable: true
+    description: Free-form tutor notes about the lesson
+  acceptanceStatus:
+    $ref: '../LessonAcceptance.yaml'
+  remindersEnabled:
+    type: boolean
+    nullable: true
+    description: Whether reminder notifications should be sent for this lesson
+description: |-
+  Request body for updating a lesson
+  All fields are optional. attendanceStatus is updated via the dedicated
+  RecordAttendanceRequest endpoint.

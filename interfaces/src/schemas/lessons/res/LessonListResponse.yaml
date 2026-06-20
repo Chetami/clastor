@@ -1,0 +1,19 @@
+type: object
+required:
+  - data
+  - total
+properties:
+  data:
+    type: array
+    items:
+      $ref: './LessonResponse.yaml'
+    description: Array of lesson records
+  total:
+    type: integer
+    minimum: 0
+    description: Total number of lessons returned
+    example: 12
+description: |-
+  List response for lessons
+  Returns all matching lessons within the requested window without
+  pagination.

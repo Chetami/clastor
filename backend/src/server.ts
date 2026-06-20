@@ -3,6 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import authRoutes from "./routes/authRoutes";
 import studentRoutes from "./routes/studentRoutes";
+import lessonRoutes from "./routes/lessonRoutes";
 import docsRoutes from "./routes/docsRoutes";
 import { initializeFirebase } from "./config/firebase";
 import { ApiError } from "@examify-tms/interfaces";
@@ -31,6 +32,7 @@ app.get("/health", (req, res) => {
 // API routes
 app.use("/api/auth", authRoutes);
 app.use("/api/students", studentRoutes);
+app.use("/api/lessons", lessonRoutes);
 app.use("/api/docs", docsRoutes);
 
 // 404 handler

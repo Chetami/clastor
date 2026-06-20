@@ -1,0 +1,59 @@
+type: object
+properties:
+  subject:
+    type: string
+    nullable: true
+    description: Subject of the lessons
+  durationMinutes:
+    type: integer
+    minimum: 1
+    nullable: true
+    description: Duration in minutes of every occurrence
+  location:
+    type: string
+    nullable: true
+    description: Where the lessons take place
+  notes:
+    type: string
+    nullable: true
+    description: Free-form tutor notes shared across occurrences
+  remindersEnabled:
+    type: boolean
+    nullable: true
+    description: Whether reminders should be sent for occurrences
+  acceptanceStatus:
+    $ref: '../LessonAcceptance.yaml'
+  intervalWeeks:
+    type: integer
+    minimum: 1
+    nullable: true
+    description: Cadence in weeks (1 = weekly, 2 = biweekly)
+  slots:
+    type: array
+    minItems: 1
+    maxItems: 7
+    nullable: true
+    items:
+      $ref: '../LessonSlot.yaml'
+    description: >-
+      The weekly slots. Changing slots only applies cleanly to future
+      occurrences that have not been individually edited.
+  timezone:
+    type: string
+    nullable: true
+    description: IANA timezone for the slot wall-clock times
+  until:
+    type: string
+    format: date
+    nullable: true
+    description: Inclusive end date
+  count:
+    type: integer
+    minimum: 1
+    nullable: true
+    description: Total occurrences to generate
+description: |-
+  Request body for updating a lesson series template.
+  Changes apply to the series document and to all FUTURE occurrences
+  that have not been individually edited (isException). Per-occurrence
+  state (attendanceStatus, isCancelled) is never modified here.

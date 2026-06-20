@@ -1,0 +1,91 @@
+type: object
+required:
+  - id
+  - studentId
+  - subject
+  - durationMinutes
+  - intervalWeeks
+  - slots
+  - timezone
+  - startDate
+  - acceptanceStatus
+  - remindersEnabled
+  - createdAt
+  - updatedAt
+properties:
+  id:
+    type: string
+    description: Unique series identifier
+    example: series_a1b2c3d4e5f6
+  studentId:
+    type: string
+    description: ID of the student this series is linked to
+    example: student_123
+  subject:
+    type: string
+    description: Subject of the lessons in this series
+    example: Mathematics
+  durationMinutes:
+    type: integer
+    minimum: 1
+    description: Duration in minutes of every occurrence
+    example: 60
+  location:
+    type: string
+    nullable: true
+    description: Where the lessons take place
+    example: Online — Zoom
+  notes:
+    type: string
+    nullable: true
+    description: Free-form tutor notes shared across occurrences
+  intervalWeeks:
+    type: integer
+    minimum: 1
+    description: Cadence in weeks (1 = weekly, 2 = biweekly)
+    example: 1
+  slots:
+    type: array
+    minItems: 1
+    maxItems: 7
+    items:
+      $ref: '../LessonSlot.yaml'
+    description: The weekly slots making up this arrangement
+  timezone:
+    type: string
+    description: IANA timezone for the slot wall-clock times
+    example: America/New_York
+  startDate:
+    type: string
+    format: date
+    description: Anchor date (YYYY-MM-DD)
+    example: "2026-06-23"
+  until:
+    type: string
+    format: date
+    nullable: true
+    description: Inclusive end date
+    example: "2026-08-29"
+  count:
+    type: integer
+    minimum: 1
+    nullable: true
+    description: Total occurrences generated
+    example: 12
+  acceptanceStatus:
+    $ref: '../LessonAcceptance.yaml'
+  remindersEnabled:
+    type: boolean
+    description: Whether reminders should be sent for occurrences
+    example: true
+  createdAt:
+    type: string
+    format: date-time
+    description: When the series was created
+  updatedAt:
+    type: string
+    format: date-time
+    description: When the series was last updated
+description: |-
+  Lesson series response object. tutorId is excluded (the owning tutor
+  is implied by the authenticated caller).

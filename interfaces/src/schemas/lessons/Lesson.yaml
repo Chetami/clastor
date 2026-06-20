@@ -1,0 +1,94 @@
+type: object
+required:
+  - id
+  - tutorId
+  - studentId
+  - subject
+  - startDateTime
+  - durationMinutes
+  - acceptanceStatus
+  - attendanceStatus
+  - remindersEnabled
+  - createdAt
+  - updatedAt
+properties:
+  id:
+    type: string
+    description: Unique lesson identifier
+    example: lesson_a1b2c3d4e5f6
+  tutorId:
+    type: string
+    description: ID of the tutor who owns this lesson
+    example: tutor_abc123
+  studentId:
+    type: string
+    description: >-
+      ID of the student this lesson is linked to. Single student today;
+      to be expanded to multiple students in the future.
+    example: student_123
+  subject:
+    type: string
+    description: Subject of the lesson
+    example: Mathematics
+  startDateTime:
+    type: string
+    format: date-time
+    description: When the lesson starts (ISO 8601)
+    example: "2026-06-20T09:00:00.000Z"
+  durationMinutes:
+    type: integer
+    minimum: 1
+    description: Lesson duration in minutes. End time is derived (start + duration).
+    example: 60
+  location:
+    type: string
+    nullable: true
+    description: Where the lesson takes place
+    example: Online — Zoom
+  notes:
+    type: string
+    nullable: true
+    description: Free-form tutor notes about the lesson
+  acceptanceStatus:
+    $ref: './LessonAcceptance.yaml'
+  attendanceStatus:
+    $ref: './AttendanceStatus.yaml'
+  seriesId:
+    type: string
+    nullable: true
+    description: >-
+      ID of the recurring series this lesson belongs to, or null for a
+      one-off lesson.
+    example: series_a1b2c3d4e5f6
+  isCancelled:
+    type: boolean
+    description: >-
+      Forward-looking cancellation flag (e.g. a single occurrence or an
+      entire future series cancelled ahead of time). Distinct from
+      attendanceStatus which records what happened after the fact.
+    example: false
+  isException:
+    type: boolean
+    description: >-
+      True once this occurrence has been individually edited, so later
+      "edit all future" series operations skip it.
+    example: false
+  remindersEnabled:
+    type: boolean
+    description: >-
+      Whether the student should receive reminder notifications for this
+      lesson. The dispatch of reminders is handled separately.
+    example: true
+  createdAt:
+    type: string
+    format: date-time
+    description: When the lesson record was created
+  updatedAt:
+    type: string
+    format: date-time
+    description: When the lesson record was last updated
+description: |-
+  Lesson interface
+  Represents a lesson in the Firestore lessons collection.
+  Lifecycle status (scheduled/cancelled/completed) is derived from
+  attendanceStatus rather than stored separately.

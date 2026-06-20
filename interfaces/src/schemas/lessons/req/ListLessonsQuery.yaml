@@ -1,0 +1,28 @@
+type: object
+properties:
+  from:
+    type: string
+    format: date-time
+    description: >-
+      Only return lessons starting at or after this instant.
+      Used to bound the calendar window.
+    example: "2026-06-01T00:00:00.000Z"
+  to:
+    type: string
+    format: date-time
+    description: >-
+      Only return lessons starting before this instant.
+      Used to bound the calendar window.
+    example: "2026-06-30T23:59:59.000Z"
+  studentId:
+    type: string
+    description: Filter lessons linked to a specific student
+    example: student_123
+  acceptanceStatus:
+    $ref: '../LessonAcceptance.yaml'
+  attendanceStatus:
+    $ref: '../AttendanceStatus.yaml'
+description: |-
+  Query parameters for listing lessons
+  All parameters are optional; most commonly used with from/to to
+  fetch the lessons visible in a calendar window.

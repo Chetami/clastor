@@ -1,0 +1,18 @@
+type: object
+required:
+  - seriesId
+  - count
+properties:
+  seriesId:
+    type: string
+    description: ID of the created series
+    example: series_a1b2c3d4e5f6
+  count:
+    type: integer
+    minimum: 0
+    description: Number of lesson occurrences generated
+    example: 12
+description: |-
+  Response for creating a recurring lesson series. Returns the new series
+  id and how many occurrences were generated; the occurrences themselves
+  are fetched via the lessons list endpoint.

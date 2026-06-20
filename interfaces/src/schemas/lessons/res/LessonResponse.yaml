@@ -1,0 +1,77 @@
+type: object
+required:
+  - id
+  - studentId
+  - subject
+  - startDateTime
+  - durationMinutes
+  - acceptanceStatus
+  - attendanceStatus
+  - remindersEnabled
+  - createdAt
+  - updatedAt
+properties:
+  id:
+    type: string
+    description: Unique lesson identifier
+    example: lesson_a1b2c3d4e5f6
+  studentId:
+    type: string
+    description: ID of the student this lesson is linked to
+    example: student_123
+  subject:
+    type: string
+    description: Subject of the lesson
+    example: Mathematics
+  startDateTime:
+    type: string
+    format: date-time
+    description: When the lesson starts (ISO 8601)
+    example: "2026-06-20T09:00:00.000Z"
+  durationMinutes:
+    type: integer
+    minimum: 1
+    description: Lesson duration in minutes
+    example: 60
+  location:
+    type: string
+    nullable: true
+    description: Where the lesson takes place
+    example: Online — Zoom
+  notes:
+    type: string
+    nullable: true
+    description: Free-form tutor notes about the lesson
+  acceptanceStatus:
+    $ref: '../LessonAcceptance.yaml'
+  attendanceStatus:
+    $ref: '../AttendanceStatus.yaml'
+  seriesId:
+    type: string
+    nullable: true
+    description: ID of the recurring series, or null for a one-off lesson
+    example: series_a1b2c3d4e5f6
+  isCancelled:
+    type: boolean
+    description: Forward-looking cancellation flag for this occurrence
+    example: false
+  isException:
+    type: boolean
+    description: True if individually edited (excluded from series bulk edits)
+    example: false
+  remindersEnabled:
+    type: boolean
+    description: Whether reminder notifications should be sent for this lesson
+    example: true
+  createdAt:
+    type: string
+    format: date-time
+    description: When the lesson record was created
+  updatedAt:
+    type: string
+    format: date-time
+    description: When the lesson record was last updated
+description: |-
+  Lesson response object
+  Represents a lesson as returned by the API. tutorId is excluded
+  (the owning tutor is implied by the authenticated caller).

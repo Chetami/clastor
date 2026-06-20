@@ -1,13 +1,14 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
-import { addEvent, getEvents, toFullCalendarEvents } from "./events";
+import { useListLessons } from "./api";
+import { useListStudents } from "@/features/students/api";
+import { lessonToCalendarEvent } from "./lesson-utils";
 import { CreateEventDialog } from "./CreateEventDialog";
-import type { EventFormData } from "./event-schema";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Button } from "@/components/ui/button";
 
@@ -17,16 +18,27 @@ export default function Schedule() {
   const navigate = useNavigate();
   const now = new Date();
 
-  const [events, setEvents] = useState(() => [...getEvents()]);
+  const { data: lessons = [] } = useListLessons();
+  const { data: students = [] } = useListStudents();
+
+  const studentNames = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const s of students) map[s.id] = s.name;
+    return map;
+  }, [students]);
+
+  const calendarEvents = useMemo(
+    () =>
+      lessons
+        .filter((l) => !l.isCancelled)
+        .map((l) => lessonToCalendarEvent(l, studentNames)),
+    [lessons, studentNames],
+  );
+
   const [createOpen, setCreateOpen] = useState(false);
   const [draft, setDraft] = useState<{ start: Date; end: Date } | null>(null);
   const [view, setView] = useState("timeGridWeek");
   const [title, setTitle] = useState("");
-
-  const handleCreated = (values: EventFormData) => {
-    const created = addEvent(values);
-    setEvents((prev) => [...prev, created]);
-  };
 
   const changeView = (next: string) => {
     calendarRef.current?.getApi().changeView(next);
@@ -158,13 +170,14 @@ export default function Schedule() {
               dayCount: 4,
             },
           }}
-          events={toFullCalendarEvents(events)}
+          events={calendarEvents}
           eventContent={(arg) => (
             <div className="fc-event-main-frame">
               <div className="fc-event-time">{arg.timeText}</div>
               <div className="fc-event-title-container">
                 <div className="fc-event-title">
-                  {arg.event.extendedProps.student}
+                  {arg.event.extendedProps.studentName ??
+                    arg.event.title}
                 </div>
               </div>
             </div>
@@ -186,7 +199,6 @@ export default function Schedule() {
         onOpenChange={setCreateOpen}
         start={draft?.start ?? null}
         end={draft?.end ?? null}
-        onCreated={handleCreated}
       />
     </div>
   );

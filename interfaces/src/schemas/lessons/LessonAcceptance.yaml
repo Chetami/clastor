@@ -1,0 +1,11 @@
+type: string
+enum:
+  - pending
+  - accepted
+  - declined
+description: |-
+  Student's confirmation of a scheduled lesson.
+  Orthogonal to AttendanceStatus — this is the pre-lesson acceptance state.
+  pending - awaiting student response (default)
+  accepted - student confirmed
+  declined - student declined

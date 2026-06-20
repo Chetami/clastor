@@ -1,0 +1,20 @@
+type: string
+enum:
+  - unrecorded
+  - present
+  - present_late
+  - absent_no_makeup
+  - absent_makeup_issued
+  - absent_warning
+  - tutor_cancelled
+  - tutor_cancelled_makeup_issued
+description: |-
+  Post-lesson attendance/outcome record.
+  unrecorded - default state before the lesson is recorded
+  present - student attended as planned
+  present_late - student attended but arrived late
+  absent_no_makeup - student absent, no make-up credit issued
+  absent_makeup_issued - student absent, make-up credit issued
+  absent_warning - student absent, formal warning issued (repeat no-shows)
+  tutor_cancelled - tutor cancelled the lesson, no make-up credit
+  tutor_cancelled_makeup_issued - tutor cancelled, make-up credit issued

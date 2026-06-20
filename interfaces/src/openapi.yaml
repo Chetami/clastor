@@ -65,3 +65,39 @@ components:
     # Legacy Student Schema (kept for compatibility)
     Student:
       $ref: './schemas/students/Student.yaml'
+    # Lesson Enums
+    AttendanceStatus:
+      $ref: './schemas/lessons/AttendanceStatus.yaml'
+    LessonAcceptance:
+      $ref: './schemas/lessons/LessonAcceptance.yaml'
+    # Lesson Schema
+    Lesson:
+      $ref: './schemas/lessons/Lesson.yaml'
+    # Lesson Request/Response Schemas
+    CreateLessonRequest:
+      $ref: './schemas/lessons/req/CreateLessonRequest.yaml'
+    UpdateLessonRequest:
+      $ref: './schemas/lessons/req/UpdateLessonRequest.yaml'
+    RecordAttendanceRequest:
+      $ref: './schemas/lessons/req/RecordAttendanceRequest.yaml'
+    ListLessonsQuery:
+      $ref: './schemas/lessons/req/ListLessonsQuery.yaml'
+    LessonResponse:
+      $ref: './schemas/lessons/res/LessonResponse.yaml'
+    LessonListResponse:
+      $ref: './schemas/lessons/res/LessonListResponse.yaml'
+    # Recurring Lesson Schemas
+    DayOfWeek:
+      $ref: './schemas/lessons/DayOfWeek.yaml'
+    LessonSlot:
+      $ref: './schemas/lessons/LessonSlot.yaml'
+    LessonSeries:
+      $ref: './schemas/lessons/LessonSeries.yaml'
+    CreateRecurringLessonRequest:
+      $ref: './schemas/lessons/req/CreateRecurringLessonRequest.yaml'
+    UpdateLessonSeriesRequest:
+      $ref: './schemas/lessons/req/UpdateLessonSeriesRequest.yaml'
+    LessonSeriesResponse:
+      $ref: './schemas/lessons/res/LessonSeriesResponse.yaml'
+    CreateRecurringLessonResponse:
+      $ref: './schemas/lessons/res/CreateRecurringLessonResponse.yaml'

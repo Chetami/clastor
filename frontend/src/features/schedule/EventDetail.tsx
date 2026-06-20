@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -7,10 +8,23 @@ import {
   StickyNote,
   User,
   CalendarClock,
+  CheckCircle2,
+  Loader2,
+  Repeat,
+  Ban,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getEventById } from "./events";
+import { useGetLesson, useRecordAttendance, useCancelLesson } from "./api";
+import { useListStudents } from "@/features/students/api";
+import {
+  ACCEPTANCE_LABELS,
+  ATTENDANCE_LABELS,
+  ATTENDANCE_OPTIONS,
+  deriveLessonStatus,
+  lessonEndDate,
+} from "./lesson-utils";
+import type { AttendanceStatus } from "@examify-tms/interfaces";
 
 function formatDateTime(iso: string) {
   return new Date(iso).toLocaleString("en-US", {
@@ -29,19 +43,38 @@ function formatTime(iso: string) {
   });
 }
 
+const STATUS_TONE: Record<string, string> = {
+  scheduled: "bg-muted text-muted-foreground",
+  completed: "bg-emerald-100 text-emerald-700",
+  cancelled: "bg-rose-100 text-rose-700",
+};
+
 export default function EventDetail() {
   const { eventId } = useParams<{ eventId: string }>();
   const navigate = useNavigate();
-  const event = getEventById(eventId);
+  const { data: lesson, isLoading } = useGetLesson(eventId);
+  const { data: students = [] } = useListStudents();
+  const recordAttendance = useRecordAttendance(eventId!);
+  const cancelLesson = useCancelLesson(eventId!);
+  const [pickerError, setPickerError] = useState<string | null>(null);
 
-  if (!event) {
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-20 text-muted-foreground">
+        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+        Loading lesson…
+      </div>
+    );
+  }
+
+  if (!lesson) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-20 text-center">
         <CalendarClock className="h-10 w-10 text-muted-foreground" />
         <div className="space-y-1">
-          <p className="font-medium">Event not found</p>
+          <p className="font-medium">Lesson not found</p>
           <p className="text-sm text-muted-foreground">
-            This event may have been removed or is no longer on the schedule.
+            This lesson may have been removed or is no longer on the schedule.
           </p>
         </div>
         <Button variant="outline" asChild>
@@ -54,9 +87,36 @@ export default function EventDetail() {
     );
   }
 
-  const start = new Date(event.start);
-  const end = new Date(event.end);
-  const durationMin = Math.round((end.getTime() - start.getTime()) / 60000);
+  const end = lessonEndDate(lesson);
+  const studentName =
+    students.find((s) => s.id === lesson.studentId)?.name ?? "Unknown student";
+  const status = deriveLessonStatus(
+    lesson.attendanceStatus,
+    lesson.isCancelled,
+  );
+
+  async function handleAttendanceChange(value: AttendanceStatus) {
+    if (!eventId) return;
+    setPickerError(null);
+    try {
+      await recordAttendance.mutateAsync(value);
+    } catch {
+      setPickerError(
+        recordAttendance.error?.message ?? "Failed to record attendance",
+      );
+    }
+  }
+
+  async function handleCancel() {
+    if (!eventId) return;
+    try {
+      await cancelLesson.mutateAsync();
+    } catch {
+      setPickerError(
+        cancelLesson.error?.message ?? "Failed to cancel lesson",
+      );
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -71,8 +131,23 @@ export default function EventDetail() {
       </Button>
 
       <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight">{event.title}</h1>
-        <p className="text-sm text-muted-foreground">{event.subject} session</p>
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="text-2xl font-semibold tracking-tight">
+            {lesson.subject} — {studentName}
+          </h1>
+          <span
+            className={`rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${STATUS_TONE[status]}`}
+          >
+            {status}
+          </span>
+          {lesson.seriesId && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
+              <Repeat className="h-3 w-3" />
+              Recurring
+            </span>
+          )}
+        </div>
+        <p className="text-sm text-muted-foreground">{lesson.subject} session</p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -84,23 +159,25 @@ export default function EventDetail() {
             <DetailRow
               icon={<Calendar className="h-4 w-4" />}
               label="When"
-              value={formatDateTime(event.start)}
+              value={formatDateTime(lesson.startDateTime)}
             />
             <DetailRow
               icon={<Clock className="h-4 w-4" />}
               label="Duration"
-              value={`${formatTime(event.start)} – ${formatTime(event.end)} (${durationMin} min)`}
+              value={`${formatTime(lesson.startDateTime)} – ${formatTime(
+                end.toISOString(),
+              )} (${lesson.durationMinutes} min)`}
             />
             <DetailRow
               icon={<User className="h-4 w-4" />}
               label="Student"
-              value={event.student}
+              value={studentName}
             />
             <DetailRow
               icon={<MapPin className="h-4 w-4" />}
               label="Location"
-              value={event.location ?? "Not specified"}
-              muted={!event.location}
+              value={lesson.location ?? "Not specified"}
+              muted={!lesson.location}
             />
           </CardContent>
         </Card>
@@ -113,11 +190,77 @@ export default function EventDetail() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {event.notes ? (
-              <p className="whitespace-pre-wrap text-sm">{event.notes}</p>
+            {lesson.notes ? (
+              <p className="whitespace-pre-wrap text-sm">{lesson.notes}</p>
             ) : (
-              <p className="text-sm text-muted-foreground">No notes for this event.</p>
+              <p className="text-sm text-muted-foreground">
+                No notes for this lesson.
+              </p>
             )}
+          </CardContent>
+        </Card>
+
+        <Card className="lg:col-span-3">
+          <CardHeader>
+            <CardTitle className="text-base">Status &amp; attendance</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-x-6 gap-y-6 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <p className="text-xs text-muted-foreground">
+                Student acceptance
+              </p>
+              <div className="flex items-center gap-2 text-sm font-medium">
+                {lesson.acceptanceStatus === "accepted" && (
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                )}
+                {ACCEPTANCE_LABELS[lesson.acceptanceStatus]}
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <p className="text-xs text-muted-foreground">
+                Attendance / outcome
+              </p>
+              <select
+                value={lesson.attendanceStatus}
+                onChange={(e) =>
+                  handleAttendanceChange(e.target.value as AttendanceStatus)
+                }
+                disabled={recordAttendance.isPending}
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {ATTENDANCE_OPTIONS.map((opt) => (
+                  <option key={opt} value={opt}>
+                    {ATTENDANCE_LABELS[opt]}
+                  </option>
+                ))}
+              </select>
+              {pickerError && (
+                <p className="text-xs text-destructive">{pickerError}</p>
+              )}
+              <p className="text-xs text-muted-foreground">
+                Reminders: {lesson.remindersEnabled ? "enabled" : "disabled"}
+              </p>
+            </div>
+
+            <div className="sm:col-span-2">
+              {lesson.isCancelled ? (
+                <p className="text-sm text-muted-foreground">
+                  This occurrence has been cancelled.
+                </p>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCancel}
+                  disabled={cancelLesson.isPending}
+                  className="text-destructive hover:text-destructive"
+                >
+                  <Ban className="h-4 w-4" />
+                  {cancelLesson.isPending ? "Cancelling…" : "Cancel this occurrence"}
+                </Button>
+              )}
+            </div>
           </CardContent>
         </Card>
       </div>

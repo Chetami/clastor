@@ -11,20 +11,47 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useListStudents } from "@/features/students/api";
-import { eventFormSchema, type EventFormData } from "./event-schema";
+import { useCreateLesson, useCreateRecurringLesson } from "./api";
+import {
+  DAYS,
+  DAY_LABELS,
+  eventFormSchema,
+  toCreateLessonRequest,
+  toCreateRecurringLessonRequest,
+  type EventFormData,
+} from "./event-schema";
+import type { DayOfWeek } from "@examify-tms/interfaces";
 
 interface CreateEventDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   start: Date | null;
   end: Date | null;
-  onCreated: (values: EventFormData) => void;
 }
 
 const pad = (n: number) => String(n).padStart(2, "0");
 const toDateStr = (d: Date) =>
   `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const toTimeStr = (d: Date) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+
+const JS_DAY_NAMES: DayOfWeek[] = [
+  "sunday",
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+];
+
+function weekdayOf(dateStr: string): DayOfWeek | null {
+  if (!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return null;
+  return JS_DAY_NAMES[new Date(`${dateStr}T00:00:00`).getDay()];
+}
+
+function browserTimezone(): string {
+  return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+}
 
 function emptyValues(): EventFormData {
   return {
@@ -36,6 +63,12 @@ function emptyValues(): EventFormData {
     endTime: "",
     location: "",
     notes: "",
+    repeat: "none",
+    selectedDays: [],
+    slotTimes: {},
+    endsMode: "until",
+    endDate: "",
+    occurrenceCount: undefined,
   };
 }
 
@@ -46,11 +79,16 @@ export function CreateEventDialog({
   onOpenChange,
   start,
   end,
-  onCreated,
 }: CreateEventDialogProps) {
   const { data: students = [] } = useListStudents();
+  const createLesson = useCreateLesson();
+  const createRecurring = useCreateRecurringLesson();
   const [values, setValues] = useState<EventFormData>(emptyValues);
   const [errors, setErrors] = useState<FieldErrors>({});
+
+  const isRecurring = values.repeat !== "none";
+  const pending = createLesson.isPending || createRecurring.isPending;
+  const submitError = createLesson.error?.message ?? createRecurring.error?.message;
 
   useEffect(() => {
     if (!open) return;
@@ -83,7 +121,44 @@ export function CreateEventDialog({
     setErrors((prev) => ({ ...prev, studentId: undefined }));
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  function handleRepeatChange(next: EventFormData["repeat"]) {
+    if (next === "none") {
+      update("repeat", "none");
+      return;
+    }
+    // Seed the day picker with the weekday of the chosen date (if empty).
+    setValues((prev) => {
+      if (prev.selectedDays.length > 0) {
+        return { ...prev, repeat: next };
+      }
+      const day = weekdayOf(prev.date);
+      if (!day) return { ...prev, repeat: next };
+      return {
+        ...prev,
+        repeat: next,
+        selectedDays: [day],
+        slotTimes: { ...prev.slotTimes, [day]: prev.startTime },
+      };
+    });
+    setErrors((prev) => ({ ...prev, repeat: undefined, selectedDays: undefined }));
+  }
+
+  function toggleDay(day: DayOfWeek) {
+    setValues((prev) => {
+      const isSelected = prev.selectedDays.includes(day);
+      const selectedDays = isSelected
+        ? prev.selectedDays.filter((d) => d !== day)
+        : [...prev.selectedDays, day];
+      const slotTimes = { ...prev.slotTimes };
+      if (!isSelected && !slotTimes[day]) {
+        slotTimes[day] = prev.startTime;
+      }
+      return { ...prev, selectedDays, slotTimes };
+    });
+    setErrors((prev) => ({ ...prev, selectedDays: undefined, slotTimes: undefined }));
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const result = eventFormSchema.safeParse(values);
     if (!result.success) {
@@ -95,8 +170,20 @@ export function CreateEventDialog({
       setErrors(fieldErrors);
       return;
     }
-    onCreated(result.data);
-    onOpenChange(false);
+    try {
+      if (result.data.repeat === "none") {
+        await createLesson.mutateAsync(toCreateLessonRequest(result.data));
+      } else {
+        const student = students.find((s) => s.id === result.data.studentId);
+        const timezone = student?.timezone || browserTimezone();
+        await createRecurring.mutateAsync(
+          toCreateRecurringLessonRequest(result.data, timezone),
+        );
+      }
+      onOpenChange(false);
+    } catch {
+      // error surfaced below; keep dialog open
+    }
   }
 
   const selectClass =
@@ -104,11 +191,11 @@ export function CreateEventDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>New lesson</DialogTitle>
           <DialogDescription>
-            Add a one-off lesson to your schedule.
+            Add a one-off lesson, or set it to repeat weekly or bi-weekly.
           </DialogDescription>
         </DialogHeader>
 
@@ -154,7 +241,7 @@ export function CreateEventDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="date">Date</Label>
+            <Label htmlFor="date">{isRecurring ? "Start date" : "Date"}</Label>
             <Input
               id="date"
               type="date"
@@ -169,7 +256,9 @@ export function CreateEventDialog({
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="startTime">Start</Label>
+              <Label htmlFor="startTime">
+                {isRecurring ? "Default time" : "Start"}
+              </Label>
               <Input
                 id="startTime"
                 type="time"
@@ -195,6 +284,144 @@ export function CreateEventDialog({
               )}
             </div>
           </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="repeat">Repeat</Label>
+            <select
+              id="repeat"
+              value={values.repeat}
+              onChange={(e) =>
+                handleRepeatChange(e.target.value as EventFormData["repeat"])
+              }
+              className={selectClass}
+            >
+              <option value="none">Does not repeat</option>
+              <option value="weekly">Weekly</option>
+              <option value="biweekly">Every 2 weeks</option>
+            </select>
+          </div>
+
+          {isRecurring && (
+            <div className="space-y-4 rounded-lg border p-4">
+              <div className="space-y-2">
+                <Label>Days</Label>
+                <div className="flex flex-wrap gap-2">
+                  {DAYS.map((day) => {
+                    const selected = values.selectedDays.includes(day);
+                    return (
+                      <button
+                        key={day}
+                        type="button"
+                        aria-pressed={selected}
+                        onClick={() => toggleDay(day)}
+                        className={
+                          selected
+                            ? "inline-flex h-9 min-w-9 items-center justify-center rounded-md border border-primary bg-primary/10 px-3 text-sm font-medium text-primary transition-colors"
+                            : "inline-flex h-9 min-w-9 items-center justify-center rounded-md border border-input bg-background px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                        }
+                      >
+                        {DAY_LABELS[day]}
+                      </button>
+                    );
+                  })}
+                </div>
+                {errors.selectedDays && (
+                  <p className="text-xs text-destructive">{errors.selectedDays}</p>
+                )}
+              </div>
+
+              {values.selectedDays.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Start time per day</Label>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {values.selectedDays.map((day) => (
+                      <div key={day} className="flex items-center gap-2">
+                        <span className="w-10 text-sm text-muted-foreground">
+                          {DAY_LABELS[day]}
+                        </span>
+                        <Input
+                          type="time"
+                          className="h-9"
+                          value={values.slotTimes[day] ?? values.startTime}
+                          onChange={(e) =>
+                            setValues((prev) => ({
+                              ...prev,
+                              slotTimes: { ...prev.slotTimes, [day]: e.target.value },
+                            }))
+                          }
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  {errors.slotTimes && (
+                    <p className="text-xs text-destructive">{errors.slotTimes}</p>
+                  )}
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label>Ends</Label>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    aria-pressed={values.endsMode === "until"}
+                    onClick={() => update("endsMode", "until")}
+                    className={
+                      values.endsMode === "until"
+                        ? "inline-flex h-9 items-center justify-center rounded-md border border-primary bg-primary/10 px-3 text-sm font-medium text-primary"
+                        : "inline-flex h-9 items-center justify-center rounded-md border border-input bg-background px-3 text-sm font-medium text-muted-foreground hover:bg-accent"
+                    }
+                  >
+                    On
+                  </button>
+                  <Input
+                    type="date"
+                    className="h-9"
+                    disabled={values.endsMode !== "until"}
+                    value={values.endDate}
+                    onChange={(e) => update("endDate", e.target.value)}
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    aria-pressed={values.endsMode === "count"}
+                    onClick={() => update("endsMode", "count")}
+                    className={
+                      values.endsMode === "count"
+                        ? "inline-flex h-9 items-center justify-center rounded-md border border-primary bg-primary/10 px-3 text-sm font-medium text-primary"
+                        : "inline-flex h-9 items-center justify-center rounded-md border border-input bg-background px-3 text-sm font-medium text-muted-foreground hover:bg-accent"
+                    }
+                  >
+                    After
+                  </button>
+                  <Input
+                    type="number"
+                    min={1}
+                    className="h-9"
+                    disabled={values.endsMode !== "count"}
+                    placeholder="12"
+                    value={values.occurrenceCount ?? ""}
+                    onChange={(e) =>
+                      update(
+                        "occurrenceCount",
+                        e.target.valueAsNumber || undefined,
+                      )
+                    }
+                  />
+                  <span className="text-sm text-muted-foreground">lessons</span>
+                </div>
+                {errors.endDate && (
+                  <p className="text-xs text-destructive">{errors.endDate}</p>
+                )}
+                {errors.occurrenceCount && (
+                  <p className="text-xs text-destructive">
+                    {errors.occurrenceCount}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="location">
@@ -228,11 +455,28 @@ export function CreateEventDialog({
             />
           </div>
 
+          {submitError && (
+            <p className="text-xs text-destructive">
+              {submitError ?? "Failed to create lesson"}
+            </p>
+          )}
+
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={pending}
+            >
               Cancel
             </Button>
-            <Button type="submit">Create lesson</Button>
+            <Button type="submit" disabled={pending}>
+              {pending
+                ? "Creating…"
+                : isRecurring
+                  ? "Create series"
+                  : "Create lesson"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>
