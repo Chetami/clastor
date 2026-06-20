@@ -81,6 +81,57 @@ export async function verifyToken(req: Request, res: Response<{ user: UserInfo }
 }
 
 /**
+ * Google authentication controller
+ * Verifies a Firebase ID token obtained via Google sign-in.
+ * If the user exists, logs them in; otherwise creates their Firestore
+ * document using profile data from the decoded token, then issues a custom JWT.
+ */
+export async function googleAuth(
+  req: Request,
+  res: Response<LoginResponse | ApiError>
+): Promise<void> {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) {
+      res.status(401).json({ message: 'Access Denied. No token provided.' });
+      return;
+    }
+
+    const firebaseToken = authHeader.substring(7);
+    const decodedFirebase = await verifyFirebaseToken(firebaseToken);
+
+    const existingUser = await getUserFromFirestore(decodedFirebase.uid).catch(() => null);
+
+    let user;
+    if (existingUser) {
+      user = existingUser;
+    } else {
+      const name = decodedFirebase.name || decodedFirebase.email?.split('@')[0] || 'User';
+      const email = decodedFirebase.email || '';
+      const avatarUrl = decodedFirebase.picture || null;
+      user = await createUserInFirestore(decodedFirebase.uid, email, name, 'tutor', avatarUrl);
+    }
+
+    const jwtToken = generateJWTForUser(user);
+    await updateLastActive(user.id);
+
+    const userInfo: UserInfo = {
+      uid: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      avatarUrl: user.avatarUrl,
+    };
+
+    res.status(200).json({ jwtToken, user: userInfo });
+  } catch (error) {
+    console.error('Google authentication failed:', error);
+    const message = error instanceof Error ? error.message : 'Google authentication failed';
+    res.status(401).json({ message });
+  }
+}
+
+/**
  * Register controller
  * Creates Firestore document for Firebase-authenticated user and issues custom JWT
  */

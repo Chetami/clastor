@@ -63,7 +63,8 @@ export async function createUserInFirestore(
   id: string,
   email: string,
   name: string,
-  role: Role = 'tutor'
+  role: Role = 'tutor',
+  avatarUrl: string | null = null,
 ): Promise<User> {
   try {
     const firestore = getFirebaseFirestore();
@@ -73,7 +74,7 @@ export async function createUserInFirestore(
       name,
       email,
       role,
-      avatarUrl: null,
+      avatarUrl,
       createdAt: now,
       updatedAt: now,
       lastActive: now,
@@ -87,7 +88,7 @@ export async function createUserInFirestore(
       name,
       email,
       role,
-      avatarUrl: null,
+      avatarUrl,
       createdAt: now.toDate() as any,
       updatedAt: now.toDate() as any,
       lastActive: now.toDate() as any,
