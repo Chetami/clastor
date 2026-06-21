@@ -2,7 +2,6 @@ import admin from "firebase-admin";
 import { getFirebaseFirestore } from "../config/firebase";
 import { getStripe, getAppUrl } from "../config/stripe";
 import type { StripeConnectStatusResponse } from "@examify-tms/interfaces";
-
 /**
  * Stripe Connect service
  *
@@ -83,6 +82,10 @@ export async function getOrCreateConnectAccount(
   const stripe = getStripe();
   const account = await stripe.accounts.create({
     type: "express",
+    capabilities: {
+      card_payments: { requested: true },
+      transfers: { requested: true },
+    },
     metadata: { tutorId },
     ...(email ? { email } : {}),
   });
