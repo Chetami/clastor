@@ -4,11 +4,14 @@ export { useListInvoices } from "./use-list-invoices";
 export { useGetInvoice } from "./use-get-invoice";
 export { useMarkInvoicePaid } from "./use-mark-invoice-paid";
 export { useVoidInvoice } from "./use-void-invoice";
+export { useSendInvoice } from "./use-send-invoice";
 export {
   listInvoicesRequest,
   getInvoiceRequest,
   createInvoiceRequest,
   updateInvoiceRequest,
+  sendInvoiceRequest,
+  getInvoicePdfRequest,
   markInvoicePaidRequest,
   voidInvoiceRequest,
   deleteInvoiceRequest,

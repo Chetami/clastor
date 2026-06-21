@@ -4,6 +4,7 @@ import {
   getSenderDisplayName,
   isEmailConfigured,
 } from "../config/email";
+import type { Invoice } from "@examify-tms/interfaces";
 
 /** Context required to render and send a lesson notification email. */
 export interface LessonNotificationInput {
@@ -183,3 +184,91 @@ export async function sendLessonNotification(
       : {}),
   });
 }
+
+export interface InvoiceEmailInput {
+  to: string;
+  invoice: Invoice;
+  tutorName?: string | null;
+  tutorEmail?: string | null;
+  /** Generated PDF attachment bytes. */
+  pdfBuffer: Buffer;
+  /**
+   * Optional Stripe-hosted pay link. When present, a "Pay online" button is
+   * rendered in the email so the recipient can pay the invoice by card; the
+   * payment is processed on the tutor's own Stripe account. Omitted (PDF only)
+   * when the tutor hasn't set up Stripe.
+   */
+  paymentUrl?: string;
+}
+
+function formatCurrency(amount: number): string {
+  return new Intl.NumberFormat("en-AU", {
+    style: "currency",
+    currency: "AUD",
+    minimumFractionDigits: 2,
+  }).format(amount);
+}
+
+/**
+ * Send an invoice to the parent/billing contact. Attaches the generated PDF
+ * and stamps the tutor's display name on the From line so the recipient
+ * recognises the sender. Throws if SMTP is unconfigured or the send fails.
+ */
+export async function sendInvoiceEmail(input: InvoiceEmailInput): Promise<void> {
+  if (!isEmailConfigured()) {
+    throw new Error(
+      "Email is not configured. Set SMTP_HOST, SMTP_USER and SMTP_PASS to send invoices."
+    );
+  }
+
+  const { invoice, tutorName, paymentUrl } = input;
+  const fromName = tutorName || getSenderDisplayName();
+  const subject = `Invoice ${invoice.invoiceNumber} from ${fromName}`;
+  const total = formatCurrency(invoice.total);
+
+  const payLineText = paymentUrl
+    ? `You can pay securely online with a card here: ${paymentUrl}\n\n`
+    : "";
+
+  const payButtonHtml = paymentUrl
+    ? `<div style="margin:4px 0 16px 0">` +
+      `<a href="${escapeHtml(paymentUrl)}" style="display:inline-block;background:#16a34a;color:#fff;text-decoration:none;padding:12px 24px;border-radius:6px;font-weight:600">Pay ${escapeHtml(total)} online</a>` +
+      `<p style="margin:8px 0 0 0;color:#6b7280;font-size:13px">Payment is processed securely by Stripe and goes directly to ${escapeHtml(fromName)}. No account required.</p>` +
+      `</div>`
+    : "";
+
+  const text =
+    `Hi ${invoice.customerName},\n\n` +
+    `Please find your invoice ${invoice.invoiceNumber} attached. ` +
+    `The amount due is ${total}.\n\n` +
+    payLineText +
+    `Thank you,\n${fromName}`;
+
+  const html =
+    `<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#111827;line-height:1.5">` +
+    `<p style="margin:0 0 12px 0">Hi ${escapeHtml(invoice.customerName)},</p>` +
+    `<p style="margin:0 0 12px 0">Please find your invoice ` +
+    `<strong>${escapeHtml(invoice.invoiceNumber)}</strong> attached. ` +
+    `The amount due is <strong>${escapeHtml(total)}</strong>.</p>` +
+    payButtonHtml +
+    `<p style="margin:0 0 12px 0">Thank you,<br>${escapeHtml(fromName)}</p>` +
+    `</div>`;
+
+  const transporter = getEmailTransporter();
+  await transporter.sendMail({
+    from: `"${fromName} via ${getSenderDisplayName()}" <${getSenderAddress()}>`,
+    replyTo: input.tutorEmail || undefined,
+    to: input.to,
+    subject,
+    text,
+    html,
+    attachments: [
+      {
+        filename: `${invoice.invoiceNumber}.pdf`,
+        content: input.pdfBuffer,
+        contentType: "application/pdf",
+      },
+    ],
+  });
+}
+

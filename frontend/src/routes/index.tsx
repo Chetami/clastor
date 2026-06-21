@@ -16,6 +16,10 @@ import EditInvoice from "@/features/payments/EditInvoice";
 import InvoiceDetail from "@/features/payments/InvoiceDetail";
 import Lessons from "@/features/lessons/Lessons";
 import Settings from "@/features/settings/Settings";
+import TutorProfileEditor from "@/features/tutor-profile/TutorProfileEditor";
+import PublicTutorPage from "@/features/public-tutor/PublicTutorPage";
+import StripePaymentsSettings from "@/features/stripe-payments/StripePaymentsSettings";
+import { PaymentResult } from "@/features/public-pay/PaymentResult";
 
 export const router = createBrowserRouter([
   {
@@ -39,9 +43,15 @@ export const router = createBrowserRouter([
               { path: "lessons", element: <Lessons /> },
               { path: "lessons/:eventId", element: <EventDetail /> },
               { path: "settings", element: <Settings /> },
+              { path: "settings/payments", element: <StripePaymentsSettings /> },
+              { path: "profile", element: <TutorProfileEditor /> },
             ],
           },
         ],
+      },
+      {
+        path: "t/:slug",
+        element: <PublicTutorPage />,
       },
       {
         path: "login",
@@ -50,6 +60,14 @@ export const router = createBrowserRouter([
       {
         path: "signup",
         element: <SignUpPage />,
+      },
+      {
+        path: "pay/success",
+        element: <PaymentResult variant="success" />,
+      },
+      {
+        path: "pay/cancel",
+        element: <PaymentResult variant="cancel" />,
       },
       {
         path: "*",

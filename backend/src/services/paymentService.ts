@@ -51,6 +51,7 @@ function mapInvoice(
     dueDate: data.dueDate ? data.dueDate.toDate() : (null as any),
     paidAt: data.paidAt ? data.paidAt.toDate() : null,
     notes: data.notes ?? null,
+    stripePaymentIntentId: data.stripePaymentIntentId ?? null,
     createdAt: data.createdAt ? data.createdAt.toDate() : (null as any),
     updatedAt: data.updatedAt ? data.updatedAt.toDate() : (null as any),
   };
@@ -305,6 +306,21 @@ export async function updateInvoiceInFirestore(
 }
 
 /**
+ * Mark every lesson linked to an invoice as paid. Shared by the manual
+ * mark-paid path and the Stripe webhook path.
+ */
+async function markLinkedLessonsPaid(
+  lineItems: Array<{ lessonId?: string }> | undefined
+): Promise<void> {
+  if (!lineItems) return;
+  await Promise.all(
+    lineItems.map(
+      (li) => li.lessonId && updateLessonInFirestore(li.lessonId, { isPaid: true })
+    )
+  );
+}
+
+/**
  * Mark an invoice as paid. Side effects:
  *  - flips isPaid=true on every linked lesson
  */
@@ -344,16 +360,62 @@ export async function markInvoicePaidInFirestore(
     await ref.update(updateData);
 
     // Side effect: mark linked lessons as paid
-    const lineItems = invoice.lineItems ?? [];
-    await Promise.all(
-      lineItems.map(
-        (li: { lessonId: string }) =>
-          li.lessonId &&
-          updateLessonInFirestore(li.lessonId, { isPaid: true })
-      )
-    );
+    await markLinkedLessonsPaid(invoice.lineItems);
   } catch (error) {
     console.error("Failed to mark invoice paid in Firestore:", error);
+    throw new Error(
+      error instanceof Error ? error.message : "Failed to mark invoice paid"
+    );
+  }
+}
+
+/**
+ * Idempotent mark-paid triggered by a Stripe webhook when an online payment
+ * succeeds. Unlike markInvoicePaidInFirestore this never throws for
+ * "already paid" — webhooks can fire multiple times and the handler must be
+ * safe to retry. A voided invoice is left untouched. Records the Stripe
+ * PaymentIntent id for reconciliation and stamps paymentMethod = "stripe".
+ */
+export async function markInvoicePaidFromStripe(
+  invoiceId: string,
+  stripePaymentIntentId: string | null
+): Promise<void> {
+  try {
+    const firestore = getFirebaseFirestore();
+    const now = admin.firestore.Timestamp.now();
+
+    const ref = firestore.collection("invoices").doc(invoiceId);
+    const existing = await ref.get();
+    if (!existing.exists) {
+      console.warn(`Stripe webhook: invoice ${invoiceId} not found`);
+      return;
+    }
+    const invoice = existing.data()!;
+
+    // Already paid (e.g. webhook replay or manual mark) — nothing to do.
+    if (invoice.status === "paid") return;
+    // Voided invoices must never flip to paid.
+    if (invoice.status === "void") {
+      console.warn(
+        `Stripe webhook: ignoring payment for voided invoice ${invoiceId}`
+      );
+      return;
+    }
+
+    const updateData: Record<string, unknown> = {
+      status: "paid",
+      paidAt: now,
+      paymentMethod: "stripe",
+      updatedAt: now,
+    };
+    if (stripePaymentIntentId) {
+      updateData.stripePaymentIntentId = stripePaymentIntentId;
+    }
+
+    await ref.update(updateData);
+    await markLinkedLessonsPaid(invoice.lineItems);
+  } catch (error) {
+    console.error("Failed to mark invoice paid from Stripe webhook:", error);
     throw new Error(
       error instanceof Error ? error.message : "Failed to mark invoice paid"
     );

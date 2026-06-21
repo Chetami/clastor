@@ -132,3 +132,28 @@ components:
       $ref: './schemas/payments/res/InvoiceResponse.yaml'
     InvoiceListResponse:
       $ref: './schemas/payments/res/InvoiceListResponse.yaml'
+    # Stripe Connect Schemas
+    StripeConnectStatusResponse:
+      $ref: './schemas/stripe/StripeConnectStatusResponse.yaml'
+    CreateAccountLinkResponse:
+      $ref: './schemas/stripe/CreateAccountLinkResponse.yaml'
+    DashboardLinkResponse:
+      $ref: './schemas/stripe/DashboardLinkResponse.yaml'
+    # Tutor Profile Enums
+    TutorTemplate:
+      $ref: './schemas/tutors/TutorTemplate.yaml'
+    TutorProfileStatus:
+      $ref: './schemas/tutors/TutorProfileStatus.yaml'
+    # Tutor Profile Schemas
+    TutorProfile:
+      $ref: './schemas/tutors/TutorProfile.yaml'
+    UpdateTutorProfileRequest:
+      $ref: './schemas/tutors/req/UpdateTutorProfileRequest.yaml'
+    CheckSlugRequest:
+      $ref: './schemas/tutors/req/CheckSlugRequest.yaml'
+    CheckSlugResponse:
+      $ref: './schemas/tutors/res/CheckSlugResponse.yaml'
+    TutorProfileResponse:
+      $ref: './schemas/tutors/res/TutorProfileResponse.yaml'
+    PublicTutorProfileResponse:
+      $ref: './schemas/tutors/res/PublicTutorProfileResponse.yaml'

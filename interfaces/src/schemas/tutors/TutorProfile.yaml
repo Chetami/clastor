@@ -1,0 +1,88 @@
+type: object
+required:
+  - id
+  - tutorId
+  - slug
+  - template
+  - status
+  - createdAt
+  - updatedAt
+properties:
+  id:
+    type: string
+    description: Profile document ID (equals the tutor's Firebase Auth UID)
+    example: abc123xyz456
+  tutorId:
+    type: string
+    description: ID of the tutor who owns this profile
+    example: abc123xyz456
+  slug:
+    type: string
+    description: >-
+      URL-safe slug used in the public URL (/t/:slug). Lowercase letters,
+      digits and hyphens only, 3-40 characters, unique across all profiles.
+    example: jane-math
+  template:
+    $ref: './TutorTemplate.yaml'
+  status:
+    $ref: './TutorProfileStatus.yaml'
+  headline:
+    type: string
+    nullable: true
+    description: Short one-line tagline shown beneath the tutor's name
+    example: Certified Math Tutor for Grades 6-12
+  bio:
+    type: string
+    nullable: true
+    description: Longer free-form about paragraph
+  subjects:
+    type: array
+    description: Subjects / expertise areas the tutor teaches
+    items:
+      type: string
+    example: [Algebra, Geometry, Calculus]
+  qualifications:
+    type: array
+    description: Degrees, certifications or experience notes
+    items:
+      type: string
+    example: [BSc Mathematics, 8+ years tutoring]
+  hourlyRate:
+    type: number
+    format: double
+    nullable: true
+    minimum: 0
+    description: Optional hourly rate displayed on the public page
+    example: 45
+  currency:
+    type: string
+    description: ISO 4217 currency code for the hourly rate
+    default: USD
+    example: USD
+  contactEmail:
+    type: string
+    format: email
+    nullable: true
+    description: Email used by the public page's contact CTA (mailto). Null hides the CTA.
+    example: jane@example.com
+  ctaText:
+    type: string
+    nullable: true
+    description: Custom label for the contact button. Falls back to a default.
+    example: Get in touch
+  createdAt:
+    type: string
+    format: date-time
+    description: When the profile was first created
+  updatedAt:
+    type: string
+    format: date-time
+    description: When the profile was last updated
+  publishedAt:
+    type: string
+    format: date-time
+    nullable: true
+    description: When the profile was last published. Null while in draft.
+description: |-
+  Tutor profile interface
+  Represents a tutor's public profile in the Firestore tutorProfiles collection

@@ -33,7 +33,7 @@ import {
   useListInvoices,
   useMarkInvoicePaid,
   useVoidInvoice,
-  useUpdateInvoice,
+  useSendInvoice,
 } from "./api";
 import {
   STATUS_META,
@@ -70,7 +70,7 @@ export default function Payments() {
   const { data: invoices = [], isLoading, error } = useListInvoices();
   const markPaid = useMarkInvoicePaid();
   const voidInvoice = useVoidInvoice();
-  const updateInvoice = useUpdateInvoice();
+  const sendInvoice = useSendInvoice();
 
   const counts = useMemo(() => {
     const c: Record<string, number> = {
@@ -322,12 +322,9 @@ export default function Payments() {
                                  {inv.status === "draft" ? (
                                    <>
                                      <DropdownMenuItem
-                                       disabled={updateInvoice.isPending}
+                                       disabled={sendInvoice.isPending}
                                        onSelect={() =>
-                                         updateInvoice.mutate({
-                                           id: inv.id,
-                                           data: { status: "open" },
-                                         })
+                                         sendInvoice.mutate({ id: inv.id })
                                        }
                                      >
                                        Send invoice

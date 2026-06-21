@@ -86,6 +86,12 @@ properties:
     type: string
     nullable: true
     description: Optional free-form notes shown on the invoice
+  stripePaymentIntentId:
+    type: string
+    nullable: true
+    description: >-
+      The Stripe PaymentIntent id when the invoice was paid via Stripe online
+      checkout, for reconciliation. Null otherwise.
   createdAt:
     type: string
     format: date-time

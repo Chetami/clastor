@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -10,6 +11,7 @@ import {
   Edit,
   Send,
   Ban,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +29,8 @@ import {
   useMarkInvoicePaid,
   useVoidInvoice,
   useUpdateInvoice,
+  useSendInvoice,
+  getInvoicePdfRequest,
 } from "./api";
 import {
   STATUS_META,
@@ -42,17 +46,42 @@ export default function InvoiceDetail() {
   const markPaid = useMarkInvoicePaid();
   const voidInvoice = useVoidInvoice();
   const updateInvoice = useUpdateInvoice();
+  const sendInvoice = useSendInvoice();
+  const [actionError, setActionError] = useState<string | null>(null);
 
   async function handlePrint() {
-    window.print();
+    if (!invoice) return;
+    setActionError(null);
+    try {
+      const blob = await getInvoicePdfRequest(invoice.id);
+      const url = URL.createObjectURL(blob);
+      const win = window.open(url, "_blank");
+      // If the browser blocks the new tab, fall back to a download link.
+      if (!win) {
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${invoice.invoiceNumber}.pdf`;
+        a.click();
+      }
+      // Revoke shortly after to let the viewer/print load.
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (err) {
+      setActionError(
+        err instanceof Error ? err.message : "Failed to generate invoice PDF"
+      );
+    }
   }
 
   async function handleSend() {
     if (!invoice) return;
-    await updateInvoice.mutateAsync({
-      id: invoice.id,
-      data: { status: "open" },
-    });
+    setActionError(null);
+    try {
+      await sendInvoice.mutateAsync({ id: invoice.id });
+    } catch (err) {
+      setActionError(
+        err instanceof Error ? err.message : "Failed to send invoice"
+      );
+    }
   }
 
   async function handleMarkPaid() {
@@ -87,7 +116,7 @@ export default function InvoiceDetail() {
 
   const meta = STATUS_META[invoice.status];
   const isDraft = invoice.status === "draft";
-  const canSend = isDraft;
+  const canSend = invoice.status !== "paid" && invoice.status !== "void";
   const canMarkPaid = invoice.status === "open" || invoice.status === "overdue";
   const canVoid = invoice.status !== "paid" && invoice.status !== "void";
   const canEdit = isDraft;
@@ -159,6 +188,10 @@ export default function InvoiceDetail() {
           )}
         </div>
       </div>
+
+      {actionError && (
+        <p className="text-sm font-medium text-destructive">{actionError}</p>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-6">
@@ -347,11 +380,20 @@ export default function InvoiceDetail() {
               {canSend && (
                 <Button
                   className="w-full"
-                  disabled={updateInvoice.isPending}
+                  disabled={sendInvoice.isPending}
                   onClick={handleSend}
                 >
-                  <Send className="h-4 w-4 mr-2" />
-                  Send invoice
+                  {sendInvoice.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Sending…
+                    </>
+                  ) : (
+                    <>
+                      <Send className="h-4 w-4 mr-2" />
+                      {isDraft ? "Send invoice" : "Resend invoice"}
+                    </>
+                  )}
                 </Button>
               )}
             </CardContent>

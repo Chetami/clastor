@@ -1,0 +1,66 @@
+type: object
+required:
+  - id
+  - tutorId
+  - slug
+  - template
+  - status
+  - subjects
+  - qualifications
+  - createdAt
+  - updatedAt
+properties:
+  id:
+    type: string
+    description: Profile document ID (equals the tutor's Firebase Auth UID)
+  tutorId:
+    type: string
+    description: ID of the tutor who owns this profile
+  slug:
+    type: string
+    description: URL-safe slug used in the public URL (/t/:slug)
+    example: jane-math
+  template:
+    $ref: '../TutorTemplate.yaml'
+  status:
+    $ref: '../TutorProfileStatus.yaml'
+  headline:
+    type: string
+    nullable: true
+  bio:
+    type: string
+    nullable: true
+  subjects:
+    type: array
+    items:
+      type: string
+  qualifications:
+    type: array
+    items:
+      type: string
+  hourlyRate:
+    type: number
+    format: double
+    nullable: true
+  currency:
+    type: string
+  contactEmail:
+    type: string
+    format: email
+    nullable: true
+  ctaText:
+    type: string
+    nullable: true
+  createdAt:
+    type: string
+    format: date-time
+  updatedAt:
+    type: string
+    format: date-time
+  publishedAt:
+    type: string
+    format: date-time
+    nullable: true
+description: |-
+  Owner-facing tutor profile response
+  Returned to the authenticated tutor managing their own profile

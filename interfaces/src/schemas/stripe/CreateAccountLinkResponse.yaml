@@ -1,0 +1,19 @@
+type: object
+required:
+  - url
+properties:
+  url:
+    type: string
+    format: uri
+    description: >-
+      Single-use Stripe-hosted URL the tutor should be redirected to in order
+      to start (or resume) Connect onboarding. Expires after one use / ~24h.
+  type:
+    type: string
+    enum:
+      - account_onboarding
+      - account_update
+    description: The Stripe account link type that was created
+description: |-
+  Response for creating a Stripe Connect onboarding link. Contains a single-use
+  URL to forward the tutor to Stripe's hosted onboarding.

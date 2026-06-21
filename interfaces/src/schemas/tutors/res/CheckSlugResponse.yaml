@@ -1,0 +1,16 @@
+type: object
+required:
+  - slug
+  - available
+properties:
+  slug:
+    type: string
+    description: The normalized slug that was checked
+    example: jane-math
+  available:
+    type: boolean
+    description: >-
+      True if the slug is free (or already owned by the current tutor),
+      false if another tutor already claims it or it is reserved.
+description: |-
+  Response for the slug availability check

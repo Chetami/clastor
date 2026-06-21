@@ -44,6 +44,25 @@ export async function updateInvoiceRequest(
   return response.data;
 }
 
+export async function sendInvoiceRequest(
+  id: string,
+): Promise<InvoiceResponse> {
+  const response = await api.post<InvoiceResponse>(`/api/payments/${id}/send`);
+  return response.data;
+}
+
+/**
+ * Fetch the invoice PDF as a blob (authenticated via the bearer interceptor,
+ * so a plain navigation URL won't work). Caller opens an object URL for
+ * printing / download.
+ */
+export async function getInvoicePdfRequest(id: string): Promise<Blob> {
+  const response = await api.get<Blob>(`/api/payments/${id}/pdf`, {
+    responseType: "blob",
+  });
+  return response.data;
+}
+
 export async function markInvoicePaidRequest(
   id: string,
   data?: MarkPaidRequest,
