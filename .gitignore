@@ -4,9 +4,10 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
-package-lock.json
 yarn.lock
 pnpm-lock.yaml
+# NOTE: package-lock.json is intentionally committed so CI / remote installs
+# are reproducible. Do NOT re-add it here.
 
 # Build outputs
 dist/
@@ -52,3 +53,9 @@ coverage/
 *.pid
 *.seed
 *.pid.lock
+
+# Deploy
+backend/.deploy-stage/
+deploy/backend.env.production
+deploy/frontend.env.production
+deploy/firebase-service-account.json
