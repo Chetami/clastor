@@ -325,19 +325,17 @@ export default function Students() {
                               student.rateType,
                             )}
                           </p>
-                          <p
-                            className={`text-xs font-medium ${hasDebt ? "text-destructive" : "text-emerald-600 dark:text-emerald-400"}`}
-                          >
-                            {isLoadingDebt ? (
-                              <span className="text-muted-foreground">
-                                Loading...
-                              </span>
-                            ) : hasDebt ? (
-                              `Owed: ${formatCurrency(debt)}`
-                            ) : (
-                              "No outstanding balance"
-                            )}
-                          </p>
+                          {hasDebt && (
+                            <p className="text-xs font-medium text-destructive">
+                              {isLoadingDebt ? (
+                                <span className="text-muted-foreground">
+                                  Loading...
+                                </span>
+                              ) : (
+                                `Owed: ${formatCurrency(debt)}`
+                              )}
+                            </p>
+                          )}
                         </div>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
