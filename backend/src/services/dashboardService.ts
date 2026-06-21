@@ -3,6 +3,8 @@ import {
   DashboardSummaryResponse,
   DashboardSeriesPoint,
   AttendanceStatus,
+  Lesson,
+  Invoice,
 } from "@examify-tms/interfaces";
 import { listLessonsFromFirestore } from "./lessonService";
 import { listInvoicesFromFirestore } from "./paymentService";
@@ -176,6 +178,56 @@ function bucketIndex(ts: number, bucketDates: number[]): number {
   return -1;
 }
 
+/** Round to 2 decimal places (currency / hours). */
+const round2 = (n: number) => Math.round(n * 100) / 100;
+
+/** Build a per-bucket hours series for a range from raw lessons. */
+function buildHoursSeries(
+  period: DashboardPeriod,
+  range: Range,
+  lessons: Lesson[]
+): DashboardSeriesPoint[] {
+  const buckets = getBuckets(period, range);
+  const bucketDates = buckets.map((b) => new Date(b.date).getTime());
+  const startMs = range.start.getTime();
+  const endMs = range.end.getTime();
+  for (const lesson of lessons) {
+    if (lesson.isCancelled) continue;
+    if (!PRESENT_STATUSES.includes(lesson.attendanceStatus)) continue;
+    const start = new Date(lesson.startDateTime as any).getTime();
+    if (start < startMs || start >= endMs) continue;
+    const idx = bucketIndex(start, bucketDates);
+    if (idx >= 0) {
+      buckets[idx].value = round2(
+        buckets[idx].value + lesson.durationMinutes / 60
+      );
+    }
+  }
+  return buckets;
+}
+
+/** Build a per-bucket income series for a range from raw invoices. */
+function buildIncomeSeries(
+  period: DashboardPeriod,
+  range: Range,
+  invoices: Invoice[]
+): DashboardSeriesPoint[] {
+  const buckets = getBuckets(period, range);
+  const bucketDates = buckets.map((b) => new Date(b.date).getTime());
+  const startMs = range.start.getTime();
+  const endMs = range.end.getTime();
+  for (const invoice of invoices) {
+    if (invoice.status !== "paid" || !invoice.paidAt) continue;
+    const paid = new Date(invoice.paidAt as any).getTime();
+    if (paid < startMs || paid >= endMs) continue;
+    const idx = bucketIndex(paid, bucketDates);
+    if (idx >= 0) {
+      buckets[idx].value = round2(buckets[idx].value + invoice.total);
+    }
+  }
+  return buckets;
+}
+
 /**
  * Compute the dashboard summary for the requesting tutor: hours worked,
  * income collected, active student count, per-bucket chart series for the
@@ -224,7 +276,6 @@ export async function getDashboardSummary(
         previousLessonsTaught++;
       }
     }
-    const round2 = (n: number) => Math.round(n * 100) / 100;
     const hoursWorked = round2(currentMinutes / 60);
     const previousHoursWorked = round2(previousMinutes / 60);
 
@@ -245,38 +296,11 @@ export async function getDashboardSummary(
     const income = round2(currentIncome);
     const previousIncomeRounded = round2(previousIncome);
 
-    // ---- Chart series (current period only) ----
-    const hoursSeries = getBuckets(period, range);
-    const incomeSeries = getBuckets(period, range);
-    const hoursBucketDates = hoursSeries.map((b) => new Date(b.date).getTime());
-    const incomeBucketDates = incomeSeries.map((b) =>
-      new Date(b.date).getTime()
-    );
-
-    for (const lesson of lessons) {
-      if (lesson.isCancelled) continue;
-      if (!PRESENT_STATUSES.includes(lesson.attendanceStatus)) continue;
-      const start = new Date(lesson.startDateTime as any).getTime();
-      if (start < rangeStartMs || start >= rangeEndMs) continue;
-      const idx = bucketIndex(start, hoursBucketDates);
-      if (idx >= 0) {
-        hoursSeries[idx].value = round2(
-          hoursSeries[idx].value + lesson.durationMinutes / 60
-        );
-      }
-    }
-
-    for (const invoice of invoices) {
-      if (invoice.status !== "paid" || !invoice.paidAt) continue;
-      const paid = new Date(invoice.paidAt as any).getTime();
-      if (paid < rangeStartMs || paid >= rangeEndMs) continue;
-      const idx = bucketIndex(paid, incomeBucketDates);
-      if (idx >= 0) {
-        incomeSeries[idx].value = round2(
-          incomeSeries[idx].value + invoice.total
-        );
-      }
-    }
+    // ---- Chart series (current + previous period) ----
+    const hoursSeries = buildHoursSeries(period, range, lessons);
+    const incomeSeries = buildIncomeSeries(period, range, invoices);
+    const previousHoursSeries = buildHoursSeries(period, previous, lessons);
+    const previousIncomeSeries = buildIncomeSeries(period, previous, invoices);
 
     // ---- Student count (active, point-in-time) ----
     const studentCount = students.filter((s) => s.status === "active").length;
@@ -355,6 +379,8 @@ export async function getDashboardSummary(
       studentCount,
       hoursSeries,
       incomeSeries,
+      previousHoursSeries,
+      previousIncomeSeries,
       previousHoursWorked,
       previousIncome: previousIncomeRounded,
       lessonsTaught: currentLessonsTaught,

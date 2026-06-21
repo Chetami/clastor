@@ -8,6 +8,8 @@ required:
   - studentCount
   - hoursSeries
   - incomeSeries
+  - previousHoursSeries
+  - previousIncomeSeries
   - previousHoursWorked
   - previousIncome
   - lessonsTaught
@@ -61,6 +63,22 @@ properties:
   incomeSeries:
     type: array
     description: Per-bucket income series for the chart (same bucketing as hoursSeries).
+    items:
+      $ref: './DashboardSeriesPoint.yaml'
+  previousHoursSeries:
+    type: array
+    description: >-
+      Per-bucket hours series for the immediately preceding period, aligned by
+      ordinal bucket index to hoursSeries. Used to draw a previous-period
+      overlay on the chart.
+    items:
+      $ref: './DashboardSeriesPoint.yaml'
+  previousIncomeSeries:
+    type: array
+    description: >-
+      Per-bucket income series for the immediately preceding period, aligned by
+      ordinal bucket index to incomeSeries. Used to draw a previous-period
+      overlay on the chart.
     items:
       $ref: './DashboardSeriesPoint.yaml'
   previousHoursWorked:

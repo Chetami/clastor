@@ -1,5 +1,9 @@
 import { isSameDay, format } from "date-fns";
-import type { DashboardPeriod, LessonResponse } from "@examify-tms/interfaces";
+import type {
+  DashboardPeriod,
+  DashboardSeriesPoint,
+  LessonResponse,
+} from "@examify-tms/interfaces";
 
 /** Human label for the immediately preceding period, used in sub-lines. */
 export function previousPeriodLabel(period: DashboardPeriod): string {
@@ -13,6 +17,23 @@ export function previousPeriodLabel(period: DashboardPeriod): string {
     case "year":
       return "Last year";
   }
+}
+
+/**
+ * Extract the first http(s) URL from a free-text lesson location string
+ * (e.g. a pasted Google Meet / Zoom link). Returns null when there is none.
+ */
+export function extractCallLink(
+  location: string | null | undefined,
+): string | null {
+  if (!location) return null;
+  const match = location.match(/https?:\/\/[^\s,]+/i);
+  return match ? match[0] : null;
+}
+
+/** True when a URL points to a Google Meet room. */
+export function isGoogleMeet(url: string): boolean {
+  return /meet\.google\.com/i.test(url);
 }
 
 /** Format a number as AUD currency (matches invoice currency today). */
@@ -130,4 +151,57 @@ export function relativeDayLabel(iso: string): string {
   if (isSameDay(date, today)) return "Today";
   if (isSameDay(date, tomorrow)) return "Tomorrow";
   return format(date, "EEE d MMM");
+}
+
+/* ------------------------------------------------------------------ *
+ * Chart helpers — used by the hours + income charts to layer a        *
+ * previous-period overlay, average line, today marker, and stats.     *
+ * ------------------------------------------------------------------ */
+
+export type ChartPoint = {
+  label: string;
+  current: number;
+  previous: number;
+};
+
+/**
+ * Merge the current and previous-period series into one dataset aligned by
+ * ordinal bucket index (so week↔week, month-day↔month-day, etc.). The X axis
+ * uses the current period's labels.
+ */
+export function buildChartData(
+  current: DashboardSeriesPoint[],
+  previous: DashboardSeriesPoint[],
+): ChartPoint[] {
+  return current.map((p, i) => ({
+    label: p.label,
+    current: p.value,
+    previous: previous[i]?.value ?? 0,
+  }));
+}
+
+export function sum(values: number[]): number {
+  return values.reduce((a, b) => a + b, 0);
+}
+
+export function mean(values: number[]): number {
+  return values.length ? sum(values) / values.length : 0;
+}
+
+export function peak(values: number[]): number {
+  return values.length ? Math.max(...values) : 0;
+}
+
+/** The axis label of the bucket containing today (for the "today" marker). */
+export function todayBucketLabel(
+  series: DashboardSeriesPoint[],
+): string | null {
+  const today = new Date();
+  const found = series.find((p) => isSameDay(new Date(p.date), today));
+  return found?.label ?? null;
+}
+
+/** True when there are too many buckets to legibly show per-point labels. */
+export function isDenseSeries(series: DashboardSeriesPoint[]): boolean {
+  return series.length > 14;
 }
