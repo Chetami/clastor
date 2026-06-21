@@ -14,6 +14,26 @@ import { listStudentsFromFirestore } from "./studentService";
  */
 const PRESENT_STATUSES: AttendanceStatus[] = ["present", "present_late"];
 
+/**
+ * Attendance outcomes that count as a student-initiated absence — the
+ * denominator of the attendance rate. Tutor cancellations are excluded
+ * (not the student's fault), as are unrecorded lessons (unknown outcome).
+ */
+const ABSENT_STATUSES: AttendanceStatus[] = [
+  "absent_no_makeup",
+  "absent_makeup_issued",
+  "absent_warning",
+];
+
+/** True when two dates fall on the same UTC calendar day. */
+function isSameUTCDay(a: Date, b: Date): boolean {
+  return (
+    a.getUTCFullYear() === b.getUTCFullYear() &&
+    a.getUTCMonth() === b.getUTCMonth() &&
+    a.getUTCDate() === b.getUTCDate()
+  );
+}
+
 interface Range {
   start: Date;
   end: Date;
@@ -185,21 +205,23 @@ export async function getDashboardSummary(
     const rangeEndMs = range.end.getTime();
     const prevStartMs = previous.start.getTime();
 
-    // ---- Hours worked ----
-    // Sum durationMinutes of non-cancelled, attended (present/present_late)
-    // lessons whose start falls in the window. Convert minutes → hours.
+    // ---- Hours worked + lessons taught ----
+    // Sum durationMinutes and count of non-cancelled, attended
+    // (present/present_late) lessons whose start falls in the window.
     let currentMinutes = 0;
     let previousMinutes = 0;
+    let currentLessonsTaught = 0;
+    let previousLessonsTaught = 0;
     for (const lesson of lessons) {
       if (lesson.isCancelled) continue;
       if (!PRESENT_STATUSES.includes(lesson.attendanceStatus)) continue;
       const start = new Date(lesson.startDateTime as any).getTime();
-      let minutes = 0;
       if (start >= rangeStartMs && start < rangeEndMs) {
-        minutes = lesson.durationMinutes;
-        currentMinutes += minutes;
+        currentMinutes += lesson.durationMinutes;
+        currentLessonsTaught++;
       } else if (start >= prevStartMs && start < rangeStartMs) {
         previousMinutes += lesson.durationMinutes;
+        previousLessonsTaught++;
       }
     }
     const round2 = (n: number) => Math.round(n * 100) / 100;
@@ -259,6 +281,71 @@ export async function getDashboardSummary(
     // ---- Student count (active, point-in-time) ----
     const studentCount = students.filter((s) => s.status === "active").length;
 
+    // ---- Attendance rate (period) ----
+    // present / (present + absent), excluding unrecorded + tutor_cancelled.
+    let attendedInPeriod = 0;
+    let absencesInPeriod = 0;
+    for (const lesson of lessons) {
+      if (lesson.isCancelled) continue;
+      const start = new Date(lesson.startDateTime as any).getTime();
+      if (start < rangeStartMs || start >= rangeEndMs) continue;
+      if (PRESENT_STATUSES.includes(lesson.attendanceStatus)) attendedInPeriod++;
+      else if (ABSENT_STATUSES.includes(lesson.attendanceStatus)) absencesInPeriod++;
+    }
+    const recordedOutcomes = attendedInPeriod + absencesInPeriod;
+    const attendanceRate =
+      recordedOutcomes > 0 ? round2(attendedInPeriod / recordedOutcomes) : null;
+
+    // ---- Unbilled lessons (period) ----
+    // Attended lessons not yet attached to any invoice.
+    let unbilledLessons = 0;
+    for (const lesson of lessons) {
+      if (lesson.isCancelled) continue;
+      if (!PRESENT_STATUSES.includes(lesson.attendanceStatus)) continue;
+      if (lesson.invoiceId) continue;
+      const start = new Date(lesson.startDateTime as any).getTime();
+      if (start < rangeStartMs || start >= rangeEndMs) continue;
+      unbilledLessons++;
+    }
+
+    // ---- Outstanding / overdue (global point-in-time) ----
+    // Outstanding = open + overdue; overdue is a subset. Both ignore period.
+    let outstandingAmount = 0;
+    let overdueAmount = 0;
+    for (const invoice of invoices) {
+      if (invoice.status === "open" || invoice.status === "overdue") {
+        outstandingAmount += invoice.total;
+      }
+      if (invoice.status === "overdue") overdueAmount += invoice.total;
+    }
+
+    // ---- Today / yesterday breakdowns (UTC day, ignore period) ----
+    const todayDate = new Date();
+    const yesterdayDate = new Date();
+    yesterdayDate.setUTCDate(yesterdayDate.getUTCDate() - 1);
+
+    const today = { income: 0, hours: 0, lessonCount: 0 };
+    const yesterday = { income: 0, hours: 0, lessonCount: 0 };
+
+    for (const lesson of lessons) {
+      if (lesson.isCancelled) continue;
+      if (!PRESENT_STATUSES.includes(lesson.attendanceStatus)) continue;
+      const start = new Date(lesson.startDateTime as any);
+      if (isSameUTCDay(start, todayDate)) {
+        today.hours += lesson.durationMinutes / 60;
+        today.lessonCount++;
+      } else if (isSameUTCDay(start, yesterdayDate)) {
+        yesterday.hours += lesson.durationMinutes / 60;
+        yesterday.lessonCount++;
+      }
+    }
+    for (const invoice of invoices) {
+      if (invoice.status !== "paid" || !invoice.paidAt) continue;
+      const paid = new Date(invoice.paidAt as any);
+      if (isSameUTCDay(paid, todayDate)) today.income += invoice.total;
+      else if (isSameUTCDay(paid, yesterdayDate)) yesterday.income += invoice.total;
+    }
+
     return {
       period,
       rangeStart: range.start.toISOString(),
@@ -270,6 +357,22 @@ export async function getDashboardSummary(
       incomeSeries,
       previousHoursWorked,
       previousIncome: previousIncomeRounded,
+      lessonsTaught: currentLessonsTaught,
+      previousLessonsTaught,
+      attendanceRate,
+      unbilledLessons,
+      outstandingAmount: round2(outstandingAmount),
+      overdueAmount: round2(overdueAmount),
+      today: {
+        income: round2(today.income),
+        hours: round2(today.hours),
+        lessonCount: today.lessonCount,
+      },
+      yesterday: {
+        income: round2(yesterday.income),
+        hours: round2(yesterday.hours),
+        lessonCount: yesterday.lessonCount,
+      },
     };
   } catch (error) {
     console.error("Failed to compute dashboard summary:", error);

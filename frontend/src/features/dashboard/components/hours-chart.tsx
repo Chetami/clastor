@@ -1,4 +1,4 @@
-import { Area, AreaChart, CartesianGrid, XAxis } from "recharts";
+import { Area, AreaChart, CartesianGrid, XAxis, LabelList } from "recharts";
 import {
   ChartContainer,
   ChartTooltip,
@@ -29,7 +29,7 @@ export function HoursChart({ summary }: { summary: DashboardSummaryResponse }) {
       </CardHeader>
       <CardContent className="flex-1">
         <ChartContainer config={chartConfig} className="h-[200px] w-full">
-          <AreaChart data={data} margin={{ left: 4, right: 8, top: 8, bottom: 0 }}>
+          <AreaChart data={data} margin={{ left: 4, right: 8, top: 20, bottom: 0 }}>
             <defs>
               <linearGradient id="fillHours" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="var(--color-hours)" stopOpacity={0.8} />
@@ -58,7 +58,18 @@ export function HoursChart({ summary }: { summary: DashboardSummaryResponse }) {
               stroke="var(--color-hours)"
               strokeWidth={2}
               fill="url(#fillHours)"
-            />
+            >
+              <LabelList
+                dataKey="hours"
+                position="top"
+                offset={8}
+                className="fill-muted-foreground"
+                fontSize={10}
+                formatter={(value: number) =>
+                  Number(value) > 0 ? String(Number(value).toFixed(1)) : ""
+                }
+              />
+            </Area>
           </AreaChart>
         </ChartContainer>
       </CardContent>

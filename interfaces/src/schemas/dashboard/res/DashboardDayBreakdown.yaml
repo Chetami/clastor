@@ -1,0 +1,29 @@
+type: object
+required:
+  - income
+  - hours
+  - lessonCount
+properties:
+  income:
+    type: number
+    format: double
+    minimum: 0
+    description: Income collected on this day (sum of paid invoice totals by paidAt).
+    example: 120
+  hours:
+    type: number
+    format: double
+    minimum: 0
+    description: >-
+      Hours taught so far on this day. Sum of durationMinutes for non-cancelled
+      attended (present/present_late) lessons starting this day, divided by 60.
+    example: 2.5
+  lessonCount:
+    type: integer
+    minimum: 0
+    description: Number of non-cancelled attended lessons starting this day.
+    example: 3
+description: |-
+  Per-day breakdown used for the "today vs yesterday" dashboard strip.
+  Reflects actual activity (paid income, attended lessons) rather than
+  what is merely scheduled.

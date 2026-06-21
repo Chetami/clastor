@@ -162,5 +162,7 @@ components:
       $ref: './schemas/dashboard/DashboardPeriod.yaml'
     DashboardSeriesPoint:
       $ref: './schemas/dashboard/res/DashboardSeriesPoint.yaml'
+    DashboardDayBreakdown:
+      $ref: './schemas/dashboard/res/DashboardDayBreakdown.yaml'
     DashboardSummaryResponse:
       $ref: './schemas/dashboard/res/DashboardSummaryResponse.yaml'

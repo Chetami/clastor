@@ -1,4 +1,4 @@
-import { Bar, BarChart, CartesianGrid, XAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, XAxis, LabelList } from "recharts";
 import {
   ChartContainer,
   ChartTooltip,
@@ -29,7 +29,7 @@ export function IncomeChart({ summary }: { summary: DashboardSummaryResponse }) 
       </CardHeader>
       <CardContent className="flex-1">
         <ChartContainer config={chartConfig} className="h-[200px] w-full">
-          <BarChart data={data} margin={{ left: 4, right: 8, top: 8, bottom: 0 }}>
+          <BarChart data={data} margin={{ left: 4, right: 8, top: 20, bottom: 0 }}>
             <CartesianGrid vertical={false} strokeDasharray="3 3" />
             <XAxis
               dataKey="label"
@@ -46,7 +46,18 @@ export function IncomeChart({ summary }: { summary: DashboardSummaryResponse }) 
                 />
               }
             />
-            <Bar dataKey="income" fill="var(--color-income)" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="income" fill="var(--color-income)" radius={[4, 4, 0, 0]}>
+              <LabelList
+                dataKey="income"
+                position="top"
+                offset={8}
+                className="fill-muted-foreground"
+                fontSize={10}
+                formatter={(value: number) =>
+                  Number(value) > 0 ? `$${Math.round(Number(value))}` : ""
+                }
+              />
+            </Bar>
           </BarChart>
         </ChartContainer>
       </CardContent>

@@ -10,6 +10,14 @@ required:
   - incomeSeries
   - previousHoursWorked
   - previousIncome
+  - lessonsTaught
+  - previousLessonsTaught
+  - attendanceRate
+  - unbilledLessons
+  - outstandingAmount
+  - overdueAmount
+  - today
+  - yesterday
 properties:
   period:
     $ref: '../DashboardPeriod.yaml'
@@ -69,6 +77,57 @@ properties:
     minimum: 0
     description: Income collected in the immediately preceding period of the same length.
     example: 1100
+  lessonsTaught:
+    type: integer
+    minimum: 0
+    description: >-
+      Number of non-cancelled attended (present/present_late) lessons in the
+      period. Companion to hoursWorked.
+    example: 14
+  previousLessonsTaught:
+    type: integer
+    minimum: 0
+    description: Attended lesson count in the immediately preceding period.
+    example: 12
+  attendanceRate:
+    type: number
+    format: double
+    minimum: 0
+    maximum: 1
+    nullable: true
+    description: >-
+      Share of recorded lessons in the period that were attended
+      ((present + present_late) / (present + present_late + all absent_*)).
+      Excludes unrecorded and tutor_cancelled lessons. Null when no lessons
+      have a recorded outcome.
+    example: 0.92
+  unbilledLessons:
+    type: integer
+    minimum: 0
+    description: >-
+      Attended lessons in the period that are not yet on any invoice
+      (invoiceId is null). Action signal for invoicing.
+    example: 3
+  outstandingAmount:
+    type: number
+    format: double
+    minimum: 0
+    description: >-
+      Total currently owed to the tutor (sum of open + overdue invoice
+      totals). Global point-in-time snapshot, independent of the period.
+    example: 540
+  overdueAmount:
+    type: number
+    format: double
+    minimum: 0
+    description: >-
+      Total overdue (sum of overdue invoice totals). Global point-in-time
+      snapshot, independent of the period. Subset of outstandingAmount.
+    example: 120
+  today:
+    $ref: './DashboardDayBreakdown.yaml'
+  yesterday:
+    $ref: './DashboardDayBreakdown.yaml'
 description: |-
   Dashboard summary response. Aggregated metrics for the requested period,
   computed server-side from lessons and invoices owned by the requesting tutor.

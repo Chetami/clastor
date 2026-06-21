@@ -1,42 +1,45 @@
-import { Clock, DollarSign, Users, TrendingUp, TrendingDown, Minus } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import {
+  Clock,
+  DollarSign,
+  Users,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  BookCheck,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { DashboardSummaryResponse } from "@examify-tms/interfaces";
-import { formatCurrency, formatHours, deltaPercent } from "../lib";
+import type { DashboardPeriod, DashboardSummaryResponse } from "@examify-tms/interfaces";
+import { formatCurrency, formatHours, deltaPercent, previousPeriodLabel } from "../lib";
 
-type StatCardProps = {
+type TileProps = {
   icon: React.ReactNode;
   label: string;
   value: string;
-  delta: number | null;
-  invertDelta?: boolean;
+  delta?: number | null;
+  children?: React.ReactNode;
 };
 
-function StatCard({ icon, label, value, delta, invertDelta }: StatCardProps) {
-  const isUp = delta !== null && delta > 0;
-  const isDown = delta !== null && delta < 0;
-  const good = invertDelta ? isDown : isUp;
-  const bad = invertDelta ? isUp : isDown;
+function Tile({ icon, label, value, delta, children }: TileProps) {
+  const isUp = (delta ?? null) !== null && delta! > 0;
+  const isDown = (delta ?? null) !== null && delta! < 0;
 
   return (
-    <Card>
-      <CardContent className="flex items-start justify-between p-5">
-        <div className="space-y-1">
-          <p className="text-sm text-muted-foreground">{label}</p>
-          <p className="text-2xl font-semibold tracking-tight">{value}</p>
-        </div>
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+    <div className="rounded-xl border bg-card p-4">
+      <div className="flex items-center justify-between">
+        <p className="text-[11px] text-muted-foreground">{label}</p>
+        <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary/10 text-primary">
           {icon}
         </div>
-      </CardContent>
-      {delta !== null && (
-        <div className="px-5 pb-4 -mt-1">
+      </div>
+      <div className="mt-2 flex items-baseline gap-2">
+        <p className="text-xl font-semibold leading-none tracking-tight">{value}</p>
+        {delta !== undefined && delta !== null && (
           <span
             className={cn(
-              "inline-flex items-center gap-1 text-xs font-medium",
-              good && "text-emerald-600 dark:text-emerald-500",
-              bad && "text-red-600 dark:text-red-500",
-              !good && !bad && "text-muted-foreground",
+              "inline-flex items-center gap-0.5 text-[11px] font-medium",
+              isUp && "text-emerald-600 dark:text-emerald-500",
+              isDown && "text-red-600 dark:text-red-500",
+              !isUp && !isDown && "text-muted-foreground",
             )}
           >
             {isUp ? (
@@ -46,38 +49,122 @@ function StatCard({ icon, label, value, delta, invertDelta }: StatCardProps) {
             ) : (
               <Minus className="h-3 w-3" />
             )}
-            {Math.abs(Math.round(delta))}% vs last period
+            {Math.abs(Math.round(delta!))}%
           </span>
+        )}
+      </div>
+      {children && (
+        <div className="mt-2 space-y-0.5 text-[11px] text-muted-foreground">
+          {children}
         </div>
       )}
-    </Card>
+    </div>
   );
 }
 
-export function StatCards({ summary }: { summary: DashboardSummaryResponse }) {
+function formatRate(rate: number | null): string {
+  if (rate === null) return "—";
+  return `${Math.round(rate * 100)}%`;
+}
+
+export function StatCards({
+  summary,
+  period,
+}: {
+  summary: DashboardSummaryResponse;
+  period: DashboardPeriod;
+}) {
   const hoursDelta = deltaPercent(summary.hoursWorked, summary.previousHoursWorked);
   const incomeDelta = deltaPercent(summary.income, summary.previousIncome);
+  const lessonsDelta = deltaPercent(
+    summary.lessonsTaught,
+    summary.previousLessonsTaught,
+  );
+  const isWeek = period === "week";
+  const prevLabel = previousPeriodLabel(period);
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-      <StatCard
-        icon={<Clock className="h-5 w-5" />}
+    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      {/* Income */}
+      <Tile
+        icon={<DollarSign className="h-4 w-4" />}
+        label="Income"
+        value={formatCurrency(summary.income)}
+        delta={incomeDelta}
+      >
+        {isWeek ? (
+          <p>
+            Today {formatCurrency(summary.today.income)} · Yesterday{" "}
+            {formatCurrency(summary.yesterday.income)}
+          </p>
+        ) : (
+          <p>
+            {prevLabel} {formatCurrency(summary.previousIncome)}
+          </p>
+        )}
+        <p>
+          Outstanding {formatCurrency(summary.outstandingAmount)}
+          {summary.overdueAmount > 0 && (
+            <span className="font-medium text-red-600 dark:text-red-500">
+              {" "}
+              · incl. {formatCurrency(summary.overdueAmount)} overdue
+            </span>
+          )}
+        </p>
+      </Tile>
+
+      {/* Hours */}
+      <Tile
+        icon={<Clock className="h-4 w-4" />}
         label="Hours taught"
         value={formatHours(summary.hoursWorked)}
         delta={hoursDelta}
-      />
-      <StatCard
-        icon={<DollarSign className="h-5 w-5" />}
-        label="Income collected"
-        value={formatCurrency(summary.income)}
-        delta={incomeDelta}
-      />
-      <StatCard
-        icon={<Users className="h-5 w-5" />}
+      >
+        {isWeek ? (
+          <p>
+            Today {formatHours(summary.today.hours)} · Yesterday{" "}
+            {formatHours(summary.yesterday.hours)}
+          </p>
+        ) : (
+          <p>
+            {prevLabel} {formatHours(summary.previousHoursWorked)}
+          </p>
+        )}
+      </Tile>
+
+      {/* Lessons */}
+      <Tile
+        icon={<BookCheck className="h-4 w-4" />}
+        label="Lessons taught"
+        value={String(summary.lessonsTaught)}
+        delta={lessonsDelta}
+      >
+        {isWeek ? (
+          <p>
+            Today {summary.today.lessonCount} · Yesterday {summary.yesterday.lessonCount}
+          </p>
+        ) : (
+          <p>
+            {prevLabel} {summary.previousLessonsTaught}
+          </p>
+        )}
+        <p>{formatRate(summary.attendanceRate)} attendance</p>
+      </Tile>
+
+      {/* Roster */}
+      <Tile
+        icon={<Users className="h-4 w-4" />}
         label="Active students"
         value={String(summary.studentCount)}
-        delta={null}
-      />
+      >
+        {summary.unbilledLessons > 0 ? (
+          <p className="font-medium text-amber-600 dark:text-amber-500">
+            {summary.unbilledLessons} unbilled lessons
+          </p>
+        ) : (
+          <p>All lessons billed</p>
+        )}
+      </Tile>
     </div>
   );
 }

@@ -10,11 +10,11 @@ import { StatCards } from "./components/stat-cards";
 import { HoursChart } from "./components/hours-chart";
 import { IncomeChart } from "./components/income-chart";
 import { UpcomingLessons } from "./components/upcoming-lessons";
-import { TodayAgenda } from "./components/today-agenda";
+import { NextLesson } from "./components/next-lesson";
 import { CurrentLesson } from "./components/current-lesson";
 import { TodoLessons } from "./components/todo-lessons";
 import { QuickActions } from "./components/quick-actions";
-import { findCurrentLesson, todoLessons } from "./lib";
+import { findCurrentLesson, todoLessons, nextLesson } from "./lib";
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -32,6 +32,7 @@ export default function Dashboard() {
 
   const currentLesson = useMemo(() => findCurrentLesson(lessons), [lessons]);
   const todos = useMemo(() => todoLessons(lessons), [lessons]);
+  const upcoming = useMemo(() => nextLesson(lessons), [lessons]);
 
   return (
     <div className="space-y-6">
@@ -56,35 +57,41 @@ export default function Dashboard() {
         />
       )}
 
-      {/* Stat cards */}
+      {/* Stat tiles */}
       {summaryLoading || !summary ? (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          <Skeleton className="h-[120px] rounded-xl" />
-          <Skeleton className="h-[120px] rounded-xl" />
-          <Skeleton className="h-[120px] rounded-xl" />
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-[120px] rounded-xl" />
+          ))}
         </div>
       ) : (
-        <StatCards summary={summary} />
+        <StatCards summary={summary} period={period} />
       )}
 
-      {/* Charts */}
-      {summary && (
-        <div className="grid gap-4 lg:grid-cols-2">
-          <HoursChart summary={summary} />
-          <IncomeChart summary={summary} />
+      {/* Two independent columns (rows need not align).
+          Left: compact panels with Upcoming filling remaining height.
+          Right: charts + things to do. */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="flex min-h-0 flex-col gap-4">
+          <NextLesson
+            lesson={upcoming}
+            studentName={
+              upcoming ? studentNames[upcoming.studentId] ?? "Student" : ""
+            }
+          />
+          <QuickActions />
+          <UpcomingLessons
+            lessons={lessons}
+            studentNames={studentNames}
+            fill
+          />
         </div>
-      )}
 
-      {/* Agenda + todos */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        <TodayAgenda lessons={lessons} studentNames={studentNames} />
-        <TodoLessons lessons={todos} studentNames={studentNames} />
-      </div>
-
-      {/* Upcoming + quick actions */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        <UpcomingLessons lessons={lessons} studentNames={studentNames} />
-        <QuickActions />
+        <div className="flex flex-col gap-4">
+          {summary && <HoursChart summary={summary} />}
+          {summary && <IncomeChart summary={summary} />}
+          <TodoLessons lessons={todos} studentNames={studentNames} />
+        </div>
       </div>
     </div>
   );

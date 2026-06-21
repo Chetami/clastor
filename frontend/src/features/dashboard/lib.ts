@@ -1,5 +1,19 @@
 import { isSameDay, format } from "date-fns";
-import type { LessonResponse } from "@examify-tms/interfaces";
+import type { DashboardPeriod, LessonResponse } from "@examify-tms/interfaces";
+
+/** Human label for the immediately preceding period, used in sub-lines. */
+export function previousPeriodLabel(period: DashboardPeriod): string {
+  switch (period) {
+    case "week":
+      return "Last week";
+    case "month":
+      return "Last month";
+    case "six_months":
+      return "Prev 6 months";
+    case "year":
+      return "Last year";
+  }
+}
 
 /** Format a number as AUD currency (matches invoice currency today). */
 export function formatCurrency(amount: number): string {
@@ -37,17 +51,6 @@ export function findCurrentLesson(
   });
 }
 
-/** Today's non-cancelled lessons, sorted ascending by start time. */
-export function todaysLessons(lessons: LessonResponse[]): LessonResponse[] {
-  const today = new Date();
-  return lessons
-    .filter((l) => !l.isCancelled && isSameDay(new Date(l.startDateTime), today))
-    .sort(
-      (a, b) =>
-        new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime(),
-    );
-}
-
 /** Future non-cancelled lessons, sorted ascending, capped. */
 export function upcomingLessons(
   lessons: LessonResponse[],
@@ -61,6 +64,31 @@ export function upcomingLessons(
         new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime(),
     )
     .slice(0, limit);
+}
+
+/** The single next upcoming non-cancelled lesson, or undefined. */
+export function nextLesson(
+  lessons: LessonResponse[],
+): LessonResponse | undefined {
+  return upcomingLessons(lessons, 1)[0];
+}
+
+/**
+ * Compact countdown to a future timestamp, e.g. "in 45 min", "in 3h 15m",
+ * "in 2d 5h". Returns "Now" when within the minute, and "Started" if past.
+ */
+export function timeUntil(iso: string, now = Date.now()): string {
+  const ms = new Date(iso).getTime() - now;
+  if (ms <= 0) return "Started";
+  const mins = Math.floor(ms / 60000);
+  if (mins < 1) return "Now";
+  if (mins < 60) return `in ${mins} min`;
+  const hours = Math.floor(mins / 60);
+  const remMins = mins % 60;
+  if (hours < 24) return remMins ? `in ${hours}h ${remMins}m` : `in ${hours}h`;
+  const days = Math.floor(hours / 24);
+  const remHours = hours % 24;
+  return remHours ? `in ${days}d ${remHours}h` : `in ${days}d`;
 }
 
 /**
