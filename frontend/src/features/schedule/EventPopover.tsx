@@ -138,30 +138,31 @@ export function EventPopover({
             e.preventDefault();
           }
         }}
-        className="w-80 p-0"
+        className="gi-popover-shell w-80 p-0"
       >
-        {isLoading || !ready || !lesson || !studentName || !endDate ? (
-          <div className="space-y-3 p-4">
-            <Skeleton className="h-5 w-2/3" />
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-3/4" />
-            <Skeleton className="h-8 w-full" />
-          </div>
-        ) : (
-          <PopoverBody
-            subject={lesson.subject}
-            studentName={studentName}
-            startIso={lesson.startDateTime}
-            endIso={endDate.toISOString()}
-            durationMinutes={lesson.durationMinutes}
-            location={lesson.location}
-            notes={lesson.notes}
-            status={deriveLessonStatus(
-              lesson.attendanceStatus,
-              lesson.isCancelled,
-            )}
-            isRecurring={!!lesson.seriesId}
-            isCancelled={lesson.isCancelled ?? false}
+        <div key={lessonId} className="gi-popover-animate">
+          {isLoading || !ready || !lesson || !studentName || !endDate ? (
+            <div className="space-y-3 p-4">
+              <Skeleton className="h-5 w-2/3" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-3/4" />
+              <Skeleton className="h-8 w-full" />
+            </div>
+          ) : (
+            <PopoverBody
+              subject={lesson.subject}
+              studentName={studentName}
+              startIso={lesson.startDateTime}
+              endIso={endDate.toISOString()}
+              durationMinutes={lesson.durationMinutes}
+              location={lesson.location}
+              notes={lesson.notes}
+              status={deriveLessonStatus(
+                lesson.attendanceStatus,
+                lesson.isCancelled,
+              )}
+              isRecurring={!!lesson.seriesId}
+              isCancelled={lesson.isCancelled ?? false}
             acceptanceLabel={ACCEPTANCE_LABELS[lesson.acceptanceStatus]}
             attendanceLabel={ATTENDANCE_LABELS[lesson.attendanceStatus]}
             lessonFinished={isLessonFinished(lesson)}
@@ -175,6 +176,7 @@ export function EventPopover({
             onCancel={handleCancel}
           />
         )}
+        </div>
       </PopoverContent>
     </Popover>
   );

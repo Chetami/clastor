@@ -463,3 +463,35 @@
   background-color: hsl(var(--primary));
   color: hsl(var(--primary-foreground));
 }
+
+/*
+ * Google Calendar-style popover entrance: a snappy scale-up with a slight
+ * overshoot (ease-out-back) and a gentle fade. Uses the individual `scale`
+ * and `translate` CSS properties so it never fights Radix's positioning
+ * `transform`. Unlayered so it reliably overrides tailwindcss-animate.
+ *
+ * Applied to an inner wrapper keyed by lessonId so the animation replays
+ * not just on open, but also when switching directly to another event.
+ */
+@keyframes gi-popover-in {
+  from {
+    opacity: 0;
+    scale: 0.9;
+    translate: -6px 0;
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+    translate: 0 0;
+  }
+}
+
+.gi-popover-animate {
+  animation: gi-popover-in 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Suppress the default tailwindcss-animate enter on the popover shell so
+   only our inner spring animation plays. Exit animation is untouched. */
+.gi-popover-shell[data-state="open"] {
+  animation: none;
+}
