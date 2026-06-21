@@ -20,6 +20,7 @@ import TutorProfileEditor from "@/features/tutor-profile/TutorProfileEditor";
 import PublicTutorPage from "@/features/public-tutor/PublicTutorPage";
 import StripePaymentsSettings from "@/features/stripe-payments/StripePaymentsSettings";
 import { PaymentResult } from "@/features/public-pay/PaymentResult";
+import { isFeatureEnabled } from "@/config/features";
 
 export const router = createBrowserRouter([
   {
@@ -44,15 +45,21 @@ export const router = createBrowserRouter([
               { path: "lessons/:eventId", element: <EventDetail /> },
               { path: "settings", element: <Settings /> },
               { path: "settings/payments", element: <StripePaymentsSettings /> },
-              { path: "profile", element: <TutorProfileEditor /> },
+              ...(isFeatureEnabled("publicProfile")
+                ? [{ path: "profile" as const, element: <TutorProfileEditor /> }]
+                : []),
             ],
           },
         ],
       },
-      {
-        path: "t/:slug",
-        element: <PublicTutorPage />,
-      },
+      ...(isFeatureEnabled("publicProfile")
+        ? [
+            {
+              path: "t/:slug",
+              element: <PublicTutorPage />,
+            },
+          ]
+        : []),
       {
         path: "login",
         element: <LoginPage />,

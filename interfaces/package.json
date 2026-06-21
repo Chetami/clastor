@@ -2,11 +2,22 @@
   "name": "@examify-tms/interfaces",
   "version": "1.0.0",
   "description": "Shared TypeScript interfaces for Clastor",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
   "scripts": {
-    "build": "npm run build:types && npm run build:reexports",
+    "build": "npm run build:types && npm run build:reexports && npm run build:flags && npm run build:flags:esm",
     "build:types": "openapi-typescript src/openapi.yaml -o dist/index.d.ts",
     "build:reexports": "node scripts/add-reexports.js",
+    "build:flags": "tsc -p tsconfig.json",
+    "build:flags:esm": "tsc -p tsconfig.esm.json",
     "postinstall": "npm run build",
     "clean": "rm -rf dist"
   },

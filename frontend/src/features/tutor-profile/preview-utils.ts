@@ -1,4 +1,5 @@
 import type { UserInfo, PublicTutorProfileResponse, TutorProfileResponse } from "@examify-tms/interfaces";
+import { DEFAULT_TEMPLATE_ID } from "@/features/public-tutor/templates/registry";
 import { EMPTY_TUTOR_PROFILE_FORM, type TutorProfileFormData } from "./tutor-profile-schema";
 
 function clean(arr: string[]): string[] {
@@ -40,7 +41,7 @@ export function profileResponseToValues(
   if (!profile) return { ...EMPTY_TUTOR_PROFILE_FORM };
   return {
     slug: profile.slug ?? "",
-    template: profile.template ?? "classic",
+    template: profile.template ?? DEFAULT_TEMPLATE_ID,
     headline: profile.headline ?? "",
     bio: profile.bio ?? "",
     subjects: profile.subjects ?? [],

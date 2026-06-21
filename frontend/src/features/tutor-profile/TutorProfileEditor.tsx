@@ -34,9 +34,9 @@ import {
 } from "./api/use-publish-tutor-profile";
 import { useCheckSlug } from "./api/use-check-slug";
 import { ProfilePreview } from "./ProfilePreview";
+import { TemplatePicker } from "./TemplatePicker";
 import { profileResponseToValues } from "./preview-utils";
 import {
-  TEMPLATE_OPTIONS,
   EMPTY_TUTOR_PROFILE_FORM,
   tutorProfileFormSchema,
   type TutorProfileFormData,
@@ -330,41 +330,19 @@ export default function TutorProfileEditor() {
                 )}
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="headline">
-                    Headline{" "}
-                    <span className="text-xs font-normal text-muted-foreground">
-                      (optional)
-                    </span>
-                  </Label>
-                  <Input
-                    id="headline"
-                    placeholder="Certified Math Tutor for Grades 6-12"
-                    value={values.headline}
-                    onChange={(e) => update("headline", e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="template">Template</Label>
-                  <select
-                    id="template"
-                    value={values.template}
-                    onChange={(e) =>
-                      update(
-                        "template",
-                        e.target.value as TutorProfileFormData["template"],
-                      )
-                    }
-                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                  >
-                    {TEMPLATE_OPTIONS.map((t) => (
-                      <option key={t.value} value={t.value}>
-                        {t.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="headline">
+                  Headline{" "}
+                  <span className="text-xs font-normal text-muted-foreground">
+                    (optional)
+                  </span>
+                </Label>
+                <Input
+                  id="headline"
+                  placeholder="Certified Math Tutor for Grades 6-12"
+                  value={values.headline}
+                  onChange={(e) => update("headline", e.target.value)}
+                />
               </div>
 
               <div className="space-y-2">
@@ -383,6 +361,21 @@ export default function TutorProfileEditor() {
                   className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 />
               </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Template</CardTitle>
+              <CardDescription>
+                Choose how your public page looks. Switch any time.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <TemplatePicker
+                value={values.template}
+                onChange={(v) => update("template", v)}
+              />
             </CardContent>
           </Card>
 

@@ -8,6 +8,7 @@ import {
   getPublicProfile,
 } from "../controllers/tutorProfileController";
 import { authenticateJWT, requireRole } from "../middleware/auth";
+import { requireFeature } from "../middleware/featureFlags";
 
 const router = Router();
 
@@ -15,7 +16,7 @@ const router = Router();
  * GET /api/tutor-profiles/public/:slug
  * Public endpoint (no auth) — returns a published profile for anyone.
  */
-router.get("/public/:slug", getPublicProfile);
+router.get("/public/:slug", requireFeature("publicProfile"), getPublicProfile);
 
 /**
  * GET /api/tutor-profiles/check-slug?slug=...
