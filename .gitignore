@@ -6,9 +6,7 @@ yarn-error.log*
 pnpm-debug.log*
 yarn.lock
 pnpm-lock.yaml
-# NOTE: package-lock.json is intentionally committed so CI / remote installs
-# are reproducible. Do NOT re-add it here.
-
+package-lock.json
 # Build outputs
 dist/
 build/

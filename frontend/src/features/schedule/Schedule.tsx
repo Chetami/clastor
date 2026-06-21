@@ -8,6 +8,7 @@ import { useListLessons } from "./api";
 import { useListStudents } from "@/features/students/api";
 import { lessonToCalendarEvent } from "./lesson-utils";
 import { CreateEventDialog } from "./CreateEventDialog";
+import { EventPopover, type EventAnchor } from "./EventPopover";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Button } from "@/components/ui/button";
 
@@ -37,6 +38,9 @@ export default function Schedule() {
   const [draft, setDraft] = useState<{ start: Date; end: Date } | null>(null);
   const [view, setView] = useState("timeGridWeek");
   const [title, setTitle] = useState("");
+  const [eventAnchor, setEventAnchor] = useState<EventAnchor | null>(null);
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [eventPopoverOpen, setEventPopoverOpen] = useState(false);
 
   const changeView = (next: string) => {
     calendarRef.current?.getApi().changeView(next);
@@ -185,7 +189,14 @@ export default function Schedule() {
             setCreateOpen(true);
             info.view.calendar.unselect();
           }}
-          eventClick={() => {}}
+          eventClick={(info) => {
+            const el = info.el;
+            setEventAnchor({
+              getBoundingClientRect: () => el.getBoundingClientRect(),
+            });
+            setSelectedEventId(info.event.id);
+            setEventPopoverOpen(true);
+          }}
           height="100%"
         />
       </div>
@@ -194,6 +205,12 @@ export default function Schedule() {
         onOpenChange={setCreateOpen}
         start={draft?.start ?? null}
         end={draft?.end ?? null}
+      />
+      <EventPopover
+        lessonId={selectedEventId}
+        open={eventPopoverOpen}
+        onOpenChange={setEventPopoverOpen}
+        anchor={eventAnchor}
       />
     </div>
   );
