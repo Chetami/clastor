@@ -4,6 +4,7 @@ import type {
   TutorTemplate,
 } from "@examify-tms/interfaces";
 import { ClassicTemplate } from "./ClassicTemplate";
+import { ModernTemplate } from "./ModernTemplate";
 
 /**
  * Template registry — the seam for future templates.
@@ -14,6 +15,7 @@ export const templateRegistry: Record<
   ComponentType<{ profile: PublicTutorProfileResponse }>
 > = {
   classic: ClassicTemplate,
+  modern: ModernTemplate,
 };
 
 export function getTemplate(template: TutorTemplate | undefined) {

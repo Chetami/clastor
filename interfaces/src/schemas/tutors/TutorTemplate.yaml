@@ -1,6 +1,7 @@
 type: string
 enum:
   - classic
+  - modern
 description: |-
   Template identifiers for a tutor's public profile webpage.
   Determines which layout component renders the published profile.
