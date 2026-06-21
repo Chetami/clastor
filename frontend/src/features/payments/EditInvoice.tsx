@@ -3,13 +3,9 @@ import { useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
   Check,
-  ChevronDown,
   DollarSign,
-  Lock,
   Loader2,
 } from "lucide-react";
-import type { InvoiceResponse, StudentResponse, LessonResponse } from "@examify-tms/interfaces";
-import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
@@ -30,12 +26,7 @@ import {
 import { useGetInvoice } from "./api/use-get-invoice";
 import { useUpdateInvoice } from "./api/use-update-invoice";
 import { useListStudents } from "@/features/students/api";
-import { useListLessons } from "@/features/schedule/api";
-import {
-  createInvoiceFormSchema,
-  type CreateInvoiceFormData,
-} from "./invoice-schema";
-import { formatCurrency, formatDate } from "./invoice-utils";
+import { formatCurrency } from "./invoice-utils";
 
 interface LineItemDraft {
   lessonId: string;
@@ -54,20 +45,14 @@ export default function EditInvoice() {
   const updateInvoice = useUpdateInvoice();
 
   const [lineItemAmounts, setLineItemAmounts] = useState<Record<string, number>>({});
-  const [billingEmail, setBillingEmail] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [paymentMethod, setPaymentMethod] =
-    useState<CreateInvoiceFormData["paymentMethod"]>("bank_transfer");
+    useState<"cash" | "bank_transfer" | "card" | "stripe">("bank_transfer");
   const [notes, setNotes] = useState("");
-  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const selectedStudent = useMemo(
     () => students.find((s) => s.id === invoice?.studentId) ?? null,
     [students, invoice?.studentId],
-  );
-
-  const lessonsResult = useListLessons(
-    invoice?.studentId ? { studentId: invoice?.studentId, unpaid: true } : undefined,
   );
 
   const lineItems: LineItemDraft[] = useMemo(() => {
@@ -91,11 +76,8 @@ export default function EditInvoice() {
     [lineItems],
   );
 
-  const resolvedBillingEmail = billingEmail || selectedStudent?.billingEmail || "";
-
   useEffect(() => {
     if (invoice) {
-      setBillingEmail(invoice.billingEmail ?? "");
       setDueDate(new Date(invoice.dueDate).toISOString().slice(0, 10));
       setPaymentMethod(invoice.paymentMethod ?? "bank_transfer");
       setNotes(invoice.notes ?? "");
@@ -118,44 +100,22 @@ export default function EditInvoice() {
   async function handleSubmit(status: "draft" | "open") {
     if (!invoice) return;
 
-    const values: CreateInvoiceFormData = {
-      studentId: invoice.studentId,
-      lineItems: lineItems.map((li) => ({
-        lessonId: li.lessonId,
-        description: li.description,
-        durationMinutes: li.durationMinutes,
-        rateType: li.rateType,
-        unitAmount: li.unitAmount,
-        quantity: li.quantity,
-      })),
-      billingEmail: billingEmail.trim() || undefined,
-      dueDate: new Date(dueDate).toISOString(),
-      paymentMethod,
-      notes: notes.trim() || undefined,
-      status,
-    };
-
-    const result = createInvoiceFormSchema.safeParse(values);
-    if (!result.success) {
-      const fieldErrors: Record<string, string> = {};
-      for (const issue of result.error.issues) {
-        const key = String(issue.path[0] ?? "");
-        if (!fieldErrors[key]) fieldErrors[key] = issue.message;
-      }
-      setErrors(fieldErrors);
-      return;
-    }
-
     try {
       await updateInvoice.mutateAsync({
         id: invoice.id,
         data: {
-          lineItems: result.data.lineItems,
-          billingEmail: result.data.billingEmail ?? null,
-          dueDate: result.data.dueDate,
-          paymentMethod: result.data.paymentMethod,
-          notes: result.data.notes ?? null,
-          status: result.data.status,
+          lineItems: lineItems.map((li) => ({
+            lessonId: li.lessonId,
+            description: li.description,
+            durationMinutes: li.durationMinutes,
+            rateType: li.rateType,
+            unitAmount: li.unitAmount,
+            quantity: li.quantity,
+          })),
+          dueDate: new Date(dueDate).toISOString(),
+          paymentMethod,
+          notes: notes.trim() || null,
+          status,
         },
       });
       navigate("/payments");
@@ -313,13 +273,12 @@ export default function EditInvoice() {
                 <Input
                   id="billingEmail"
                   type="email"
-                  placeholder={selectedStudent?.billingEmail ?? ""}
-                  value={billingEmail}
-                  onChange={(e) => setBillingEmail(e.target.value)}
+                  value={invoice.billingEmail ?? ""}
+                  disabled
+                  className="bg-muted"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Defaults to the student's billing email. Leave blank to use{" "}
-                  {selectedStudent?.billingEmail ?? "—"}.
+                  Billing email cannot be changed after invoice creation.
                 </p>
               </div>
 
@@ -338,9 +297,7 @@ export default function EditInvoice() {
                 <Select
                   value={paymentMethod}
                   onValueChange={(v) =>
-                    setPaymentMethod(
-                      v as CreateInvoiceFormData["paymentMethod"],
-                    )
+                    setPaymentMethod(v as "cash" | "bank_transfer" | "card" | "stripe")
                   }
                 >
                   <SelectTrigger>
@@ -376,12 +333,6 @@ export default function EditInvoice() {
 
           <Card>
             <CardContent className="space-y-2 p-4">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Recipient</span>
-                <span className="truncate text-right max-w-[180px]">
-                  {resolvedBillingEmail || "—"}
-                </span>
-              </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Total</span>
                 <span className="font-semibold">
