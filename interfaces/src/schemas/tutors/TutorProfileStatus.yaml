@@ -1,0 +1,7 @@
+type: string
+enum:
+  - draft
+  - published
+description: |-
+  Publication state of a tutor profile.
+  Only profiles with status "published" are reachable at their public URL.

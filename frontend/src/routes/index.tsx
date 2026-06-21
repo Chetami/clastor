@@ -16,6 +16,8 @@ import EditInvoice from "@/features/payments/EditInvoice";
 import InvoiceDetail from "@/features/payments/InvoiceDetail";
 import Lessons from "@/features/lessons/Lessons";
 import Settings from "@/features/settings/Settings";
+import TutorProfileEditor from "@/features/tutor-profile/TutorProfileEditor";
+import PublicTutorPage from "@/features/public-tutor/PublicTutorPage";
 
 export const router = createBrowserRouter([
   {
@@ -39,9 +41,14 @@ export const router = createBrowserRouter([
               { path: "lessons", element: <Lessons /> },
               { path: "lessons/:eventId", element: <EventDetail /> },
               { path: "settings", element: <Settings /> },
+              { path: "profile", element: <TutorProfileEditor /> },
             ],
           },
         ],
+      },
+      {
+        path: "t/:slug",
+        element: <PublicTutorPage />,
       },
       {
         path: "login",

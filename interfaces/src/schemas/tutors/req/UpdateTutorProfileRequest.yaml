@@ -1,0 +1,59 @@
+type: object
+required:
+  - slug
+properties:
+  slug:
+    type: string
+    description: >-
+      URL-safe slug for the public URL. Lowercase letters, digits and
+      hyphens only, 3-40 characters, unique across all profiles.
+    example: jane-math
+  template:
+    $ref: '../TutorTemplate.yaml'
+  headline:
+    type: string
+    nullable: true
+    description: Short one-line tagline shown beneath the tutor's name
+    example: Certified Math Tutor for Grades 6-12
+  bio:
+    type: string
+    nullable: true
+    description: Longer free-form about paragraph
+  subjects:
+    type: array
+    items:
+      type: string
+    description: Subjects / expertise areas the tutor teaches
+    example: [Algebra, Geometry, Calculus]
+  qualifications:
+    type: array
+    items:
+      type: string
+    description: Degrees, certifications or experience notes
+    example: [BSc Mathematics, 8+ years tutoring]
+  hourlyRate:
+    type: number
+    format: double
+    nullable: true
+    minimum: 0
+    description: Optional hourly rate displayed on the public page
+    example: 45
+  currency:
+    type: string
+    description: ISO 4217 currency code for the hourly rate
+    default: USD
+    example: USD
+  contactEmail:
+    type: string
+    format: email
+    nullable: true
+    description: Email used by the public page's contact CTA. Null hides the CTA.
+    example: jane@example.com
+  ctaText:
+    type: string
+    nullable: true
+    description: Custom label for the contact button. Falls back to a default.
+    example: Get in touch
+description: |-
+  Request body for creating or updating the authenticated tutor's profile
+  id, tutorId, status and timestamps are managed server-side

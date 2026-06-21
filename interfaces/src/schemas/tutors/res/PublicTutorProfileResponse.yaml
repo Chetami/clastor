@@ -1,0 +1,52 @@
+type: object
+required:
+  - slug
+  - template
+  - subjects
+  - qualifications
+  - name
+properties:
+  slug:
+    type: string
+    description: The profile's URL slug
+    example: jane-math
+  template:
+    $ref: '../TutorTemplate.yaml'
+  headline:
+    type: string
+    nullable: true
+  bio:
+    type: string
+    nullable: true
+  subjects:
+    type: array
+    items:
+      type: string
+  qualifications:
+    type: array
+    items:
+      type: string
+  hourlyRate:
+    type: number
+    format: double
+    nullable: true
+  currency:
+    type: string
+  contactEmail:
+    type: string
+    format: email
+    nullable: true
+  ctaText:
+    type: string
+    nullable: true
+  name:
+    type: string
+    description: Tutor's display name (from their user record)
+    example: Jane Doe
+  avatarUrl:
+    type: string
+    nullable: true
+    description: Tutor's profile picture (data URL or remote URL from their user record)
+description: |-
+  Public tutor profile response
+  Safe to serve to unauthenticated visitors; contains no internal fields or status

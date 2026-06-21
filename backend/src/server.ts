@@ -8,6 +8,7 @@ import lessonRoutes from "./routes/lessonRoutes";
 import paymentRoutes from "./routes/paymentRoutes";
 import meetingRoutes from "./routes/meetingRoutes";
 import userRoutes from "./routes/userRoutes";
+import tutorProfileRoutes from "./routes/tutorProfileRoutes";
 import { initializeFirebase } from "./config/firebase";
 import { ApiError } from "@examify-tms/interfaces";
 
@@ -40,6 +41,7 @@ app.use("/api/lessons", lessonRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/meetings", meetingRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/tutor-profiles", tutorProfileRoutes);
 
 // 404 handler
 app.use((req, res) => {

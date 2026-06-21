@@ -5,6 +5,7 @@ import {
   CreditCard,
   BookOpen,
   Settings,
+  Globe,
   type LucideIcon,
 } from "lucide-react";
 
@@ -20,5 +21,6 @@ export const navItems: NavItem[] = [
   { title: "Schedule", href: "/schedule", icon: CalendarDays },
   { title: "Payments", href: "/payments", icon: CreditCard },
   { title: "Lessons", href: "/lessons", icon: BookOpen },
+  { title: "Public Profile", href: "/profile", icon: Globe },
   { title: "Settings", href: "/settings", icon: Settings },
 ];

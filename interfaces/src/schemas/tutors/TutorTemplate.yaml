@@ -1,0 +1,7 @@
+type: string
+enum:
+  - classic
+description: |-
+  Template identifiers for a tutor's public profile webpage.
+  Determines which layout component renders the published profile.
+  New templates can be added here as they are implemented.
