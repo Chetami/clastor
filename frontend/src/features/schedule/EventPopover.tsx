@@ -132,6 +132,12 @@ export function EventPopover({
         side="right"
         sideOffset={6}
         onOpenAutoFocus={(e) => e.preventDefault()}
+        onInteractOutside={(e) => {
+          const target = e.target as HTMLElement | null;
+          if (target?.closest(".fc-event")) {
+            e.preventDefault();
+          }
+        }}
         className="w-80 p-0"
       >
         {isLoading || !ready || !lesson || !studentName || !endDate ? (
