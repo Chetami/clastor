@@ -134,6 +134,11 @@ function Invoke-Ssh {
     $target = Get-SshTarget
     $pre = Get-SshPre -IdentityFile $IdentityFile -Password $Password
     $sshArgs = Get-SshAuthArgs -IdentityFile $IdentityFile -Password $Password
+
+    # Normalize to LF. Multi-line commands authored in a CRLF-saved .ps1 would
+    # otherwise ship '\r' to the remote bash, which rejects them with errors
+    # like "set: -: invalid option" or "$'...path...\r': No such file or directory".
+    $Command = $Command -replace "`r`n", "`n" -replace "`r", "`n"
     if ($Trace -or $env:DEPLOY_SSH_VERBOSE) { $sshArgs += @("-v") }
 
     $argList = @()
