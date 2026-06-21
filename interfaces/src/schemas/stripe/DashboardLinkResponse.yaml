@@ -1,0 +1,12 @@
+type: object
+required:
+  - url
+properties:
+  url:
+    type: string
+    format: uri
+    description: >-
+      Single-use Stripe-hosted login URL for the tutor to view their payouts,
+      balance and account settings.
+description: |-
+  Response for creating a Stripe Express dashboard login link.

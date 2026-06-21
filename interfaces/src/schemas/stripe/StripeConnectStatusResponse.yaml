@@ -1,0 +1,34 @@
+type: object
+required:
+  - connected
+  - detailsSubmitted
+  - chargesEnabled
+  - payoutsEnabled
+properties:
+  connected:
+    type: boolean
+    description: Whether a Stripe connected account exists for this tutor
+  detailsSubmitted:
+    type: boolean
+    description: Whether the tutor has completed the Stripe onboarding form
+  chargesEnabled:
+    type: boolean
+    description: >-
+      Whether the connected account is able to accept charges. The invoice
+      "Pay online" link is only embedded while this is true.
+  payoutsEnabled:
+    type: boolean
+    description: Whether Stripe can pay funds out to the tutor's bank account
+  stripeAccountId:
+    type: string
+    nullable: true
+    description: The Stripe connected account id (acct_...), or null if not connected
+  createdAt:
+    type: string
+    format: date-time
+    nullable: true
+    description: When the connect record was created, or null if not connected
+description: |-
+  Stripe Connect status for the authenticated tutor. Reflects whether the
+  tutor has connected a Stripe account and whether it is ready to accept
+  payments and receive payouts.

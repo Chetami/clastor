@@ -132,6 +132,13 @@ components:
       $ref: './schemas/payments/res/InvoiceResponse.yaml'
     InvoiceListResponse:
       $ref: './schemas/payments/res/InvoiceListResponse.yaml'
+    # Stripe Connect Schemas
+    StripeConnectStatusResponse:
+      $ref: './schemas/stripe/StripeConnectStatusResponse.yaml'
+    CreateAccountLinkResponse:
+      $ref: './schemas/stripe/CreateAccountLinkResponse.yaml'
+    DashboardLinkResponse:
+      $ref: './schemas/stripe/DashboardLinkResponse.yaml'
     # Tutor Profile Enums
     TutorTemplate:
       $ref: './schemas/tutors/TutorTemplate.yaml'

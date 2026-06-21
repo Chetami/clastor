@@ -24,6 +24,9 @@ import { canViewInvoice, canEditInvoice, canDeleteInvoice } from "../permissions
 import { generateInvoicePdf } from "../services/invoicePdfService";
 import { sendInvoiceEmail } from "../services/emailService";
 import { getUserFromFirestore } from "../services/userService";
+import { isStripeConfigured } from "../config/stripe";
+import { getPublicApiUrl } from "../config/email";
+import { getStripeAccountRecord } from "../services/stripeConnectService";
 
 /**
  * Convert an Invoice (Date-typed) to an InvoiceResponse (ISO string-typed).
@@ -48,6 +51,7 @@ function toInvoiceResponse(invoice: Invoice): InvoiceResponse {
     dueDate: toIso(invoice.dueDate),
     paidAt: invoice.paidAt ? toIso(invoice.paidAt) : null,
     notes: invoice.notes,
+    stripePaymentIntentId: invoice.stripePaymentIntentId ?? null,
     createdAt: toIso(invoice.createdAt),
     updatedAt: toIso(invoice.updatedAt),
   };
@@ -252,12 +256,31 @@ export async function sendInvoice(
       tutorEmail: tutor?.email,
     });
 
+    // Embed a "Pay online" link when the tutor has connected a Stripe account
+    // that is ready to accept charges. The link is a stable redirect that
+    // mints a fresh Checkout session on each visit (sessions expire after 24h),
+    // so it stays valid for the whole life of the invoice. If Stripe isn't
+    // ready, the email is sent as before (PDF only) — no regression.
+    let paymentUrl: string | undefined;
+    if (isStripeConfigured()) {
+      try {
+        const account = await getStripeAccountRecord(invoice.tutorId);
+        if (account?.chargesEnabled) {
+          paymentUrl = `${getPublicApiUrl()}/api/stripe/pay/${invoice.id}`;
+        }
+      } catch (error) {
+        // A Stripe hiccup must never block sending the invoice.
+        console.error("Failed to resolve Stripe pay link for invoice:", error);
+      }
+    }
+
     await sendInvoiceEmail({
       to: invoice.billingEmail,
       invoice,
       tutorName: tutor?.name,
       tutorEmail: tutor?.email,
       pdfBuffer,
+      paymentUrl,
     });
 
     // Promote drafts to "open" once successfully delivered.

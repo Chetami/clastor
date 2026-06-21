@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
-import { Loader2, Upload } from "lucide-react";
+import { Link } from "react-router-dom";
+import { ChevronRight, CreditCard, Loader2, Upload } from "lucide-react";
 
 import {
   Avatar,
@@ -62,50 +63,71 @@ export default function Settings() {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Profile</CardTitle>
-        <CardDescription>Update your profile picture.</CardDescription>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-6 sm:flex-row sm:items-center">
-        <Avatar className="size-24 shrink-0 rounded-full">
-          {currentAvatar && (
-            <AvatarImage src={currentAvatar} alt={displayName} />
-          )}
-          <AvatarFallback className="rounded-full text-2xl">
-            {initials}
-          </AvatarFallback>
-        </Avatar>
+    <div className="flex flex-col gap-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Profile</CardTitle>
+          <CardDescription>Update your profile picture.</CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-6 sm:flex-row sm:items-center">
+          <Avatar className="size-24 shrink-0 rounded-full">
+            {currentAvatar && (
+              <AvatarImage src={currentAvatar} alt={displayName} />
+            )}
+            <AvatarFallback className="rounded-full text-2xl">
+              {initials}
+            </AvatarFallback>
+          </Avatar>
 
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              disabled={isUploading}
-              onClick={() => inputRef.current?.click()}
-            >
-              {isUploading ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <Upload className="size-4" />
-              )}
-              {isUploading ? "Uploading..." : "Change photo"}
-            </Button>
-            <input
-              ref={inputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleFileChange}
-            />
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={isUploading}
+                onClick={() => inputRef.current?.click()}
+              >
+                {isUploading ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Upload className="size-4" />
+                )}
+                {isUploading ? "Uploading..." : "Change photo"}
+              </Button>
+              <input
+                ref={inputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleFileChange}
+              />
+            </div>
+            {error && <p className="text-sm text-destructive">{error}</p>}
+            <p className="text-xs text-muted-foreground">
+              PNG or JPG, up to 5 MB. Images are resized to a square thumbnail.
+            </p>
           </div>
-          {error && <p className="text-sm text-destructive">{error}</p>}
-          <p className="text-xs text-muted-foreground">
-            PNG or JPG, up to 5 MB. Images are resized to a square thumbnail.
-          </p>
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Online payments</CardTitle>
+          <CardDescription>
+            Connect Stripe to accept card payments that settle straight to your
+            bank.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button variant="outline" asChild>
+            <Link to="/settings/payments">
+              <CreditCard className="size-4" />
+              Manage payments
+              <ChevronRight className="size-4" />
+            </Link>
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

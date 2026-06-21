@@ -72,6 +72,11 @@ properties:
   notes:
     type: string
     nullable: true
+  stripePaymentIntentId:
+    type: string
+    nullable: true
+    description: >-
+      Stripe PaymentIntent id when paid via online checkout; null otherwise.
   createdAt:
     type: string
     format: date-time
