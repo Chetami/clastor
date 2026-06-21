@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Check,
@@ -47,6 +47,49 @@ type View = "editor" | "preview";
 
 const serialize = (v: TutorProfileFormData): string => JSON.stringify(v);
 
+/**
+ * Draft persistence. Unsaved edits are written to localStorage keyed per user,
+ * so a refresh or accidental navigation doesn't lose work. The draft is
+ * restored on first load (taking priority over the saved profile), and cleared
+ * automatically once the form is no longer dirty (i.e. after a save/publish).
+ */
+function draftKey(uid: string | undefined): string | null {
+  return uid ? `examify-tms:profile-draft:${uid}` : null;
+}
+
+function loadDraft(key: string | null): TutorProfileFormData | null {
+  if (!key) return null;
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") return null;
+    // Merge over the empty form so unknown/missing keys fall back to defaults
+    // and a stale draft from an older schema can't break the editor.
+    return { ...EMPTY_TUTOR_PROFILE_FORM, ...parsed };
+  } catch {
+    return null;
+  }
+}
+
+function writeDraft(key: string | null, values: TutorProfileFormData) {
+  if (!key) return;
+  try {
+    localStorage.setItem(key, JSON.stringify(values));
+  } catch {
+    // Quota or private-mode errors are non-fatal — just skip persisting.
+  }
+}
+
+function clearDraft(key: string | null) {
+  if (!key) return;
+  try {
+    localStorage.removeItem(key);
+  } catch {
+    // ignore
+  }
+}
+
 export default function TutorProfileEditor() {
   const { user } = useAuth();
   const { data: profile, isLoading } = useGetTutorProfile();
@@ -54,6 +97,7 @@ export default function TutorProfileEditor() {
   const publishMutation = usePublishTutorProfile();
   const unpublishMutation = useUnpublishTutorProfile();
 
+  const storageKey = draftKey(user?.uid);
   const [values, setValues] = useState<TutorProfileFormData>(
     EMPTY_TUTOR_PROFILE_FORM,
   );
@@ -61,19 +105,31 @@ export default function TutorProfileEditor() {
   const [errors, setErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
 
-  // Hydrate the form once the saved profile loads.
+  // Seed once: a stored draft wins over the saved profile so resumed edits come
+  // back, otherwise fall back to whatever is on the server. After this one-time
+  // seed we never overwrite `values` from the profile again — background
+  // refetches must not clobber in-flight edits.
+  const hydratedRef = useRef(false);
   useEffect(() => {
-    if (!isLoading) {
-      setValues(profileResponseToValues(profile));
-    }
+    if (hydratedRef.current || isLoading) return;
+    hydratedRef.current = true;
+    setValues(loadDraft(storageKey) ?? profileResponseToValues(profile));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profile, isLoading]);
+  }, [isLoading, profile, storageKey]);
 
   const baseline = useMemo(
     () => profileResponseToValues(profile),
     [profile],
   );
   const isDirty = serialize(values) !== serialize(baseline);
+
+  // Persist while there are unsaved changes; clear once we're back in sync with
+  // the server (after save/publish/unpublish), so no stale draft lingers.
+  useEffect(() => {
+    if (!hydratedRef.current) return;
+    if (isDirty) writeDraft(storageKey, values);
+    else clearDraft(storageKey);
+  }, [values, isDirty, storageKey]);
 
   const slugCheck = useCheckSlug(values.slug, profile?.slug);
   const isPublished = profile?.status === "published";
