@@ -271,38 +271,42 @@ export default function Payments() {
                       <TableHead className="w-10" />
                     </TableRow>
                   </TableHeader>
-                  <TableBody>
-                    {visible.map((inv) => {
-                      const meta = STATUS_META[inv.status];
-                      return (
-                        <TableRow key={inv.id}>
-                          <TableCell className="pl-4 font-medium">
-                            {inv.invoiceNumber}
-                          </TableCell>
-                          <TableCell className="font-medium">
-                            {formatCompactCurrency(inv.total)}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={meta.variant}>{meta.label}</Badge>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex flex-col">
-                              <span>{inv.customerName}</span>
-                              <span className="text-xs text-muted-foreground md:hidden">
-                                {inv.billingEmail}
-                              </span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="hidden text-muted-foreground md:table-cell">
-                            {inv.billingEmail}
-                          </TableCell>
-                          <TableCell className="hidden lg:table-cell text-muted-foreground">
-                            {formatDate(inv.dueDate)}
-                          </TableCell>
-                          <TableCell className="hidden lg:table-cell text-muted-foreground">
-                            {formatDate(inv.createdAt)}
-                          </TableCell>
+                   <TableBody>
+                     {visible.map((inv) => {
+                       const meta = STATUS_META[inv.status];
+                       return (
+                         <TableRow
+                           key={inv.id}
+                           className="cursor-pointer"
+                           onClick={() => navigate(`/payments/${inv.id}`)}
+                         >
+                           <TableCell className="pl-4 font-medium">
+                             {inv.invoiceNumber}
+                           </TableCell>
+                           <TableCell className="font-medium">
+                             {formatCompactCurrency(inv.total)}
+                           </TableCell>
                            <TableCell>
+                             <Badge variant={meta.variant}>{meta.label}</Badge>
+                           </TableCell>
+                           <TableCell>
+                             <div className="flex flex-col">
+                               <span>{inv.customerName}</span>
+                               <span className="text-xs text-muted-foreground md:hidden">
+                                 {inv.billingEmail}
+                               </span>
+                             </div>
+                           </TableCell>
+                           <TableCell className="hidden text-muted-foreground md:table-cell">
+                             {inv.billingEmail}
+                           </TableCell>
+                           <TableCell className="hidden lg:table-cell text-muted-foreground">
+                             {formatDate(inv.dueDate)}
+                           </TableCell>
+                           <TableCell className="hidden lg:table-cell text-muted-foreground">
+                             {formatDate(inv.createdAt)}
+                           </TableCell>
+                           <TableCell onClick={(e) => e.stopPropagation()}>
                              <DropdownMenu>
                                <DropdownMenuTrigger asChild>
                                  <Button
@@ -372,10 +376,10 @@ export default function Payments() {
                                </DropdownMenuContent>
                              </DropdownMenu>
                            </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
+                         </TableRow>
+                       );
+                     })}
+                   </TableBody>
                 </Table>
               </div>
             )}

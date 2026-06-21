@@ -7,6 +7,9 @@ import {
   FileText,
   Mail,
   Printer,
+  Edit,
+  Send,
+  Ban,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -105,12 +108,23 @@ export default function InvoiceDetail() {
               {invoice.invoiceNumber}
             </h1>
             <p className="text-sm text-muted-foreground">
-              Invoice details for {invoice.customerName}
+              Invoice details for{" "}
+              <button
+                type="button"
+                className="text-primary hover:underline font-medium"
+                onClick={() => navigate(`/students/${invoice.studentId}`)}
+              >
+                {invoice.customerName}
+              </button>
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2 ml-4">
+          <Button variant="outline" size="sm" onClick={handlePrint}>
+            <Printer className="h-4 w-4 mr-2" />
+            Print
+          </Button>
           {canEdit && (
             <Button
               variant="outline"
@@ -118,16 +132,8 @@ export default function InvoiceDetail() {
               disabled={updateInvoice.isPending}
               onClick={() => navigate(`/payments/${invoice.id}/edit`)}
             >
+              <Edit className="h-4 w-4 mr-2" />
               Edit
-            </Button>
-          )}
-          {canSend && (
-            <Button
-              size="sm"
-              disabled={updateInvoice.isPending}
-              onClick={handleSend}
-            >
-              Send invoice
             </Button>
           )}
           {canMarkPaid && (
@@ -136,6 +142,7 @@ export default function InvoiceDetail() {
               disabled={markPaid.isPending}
               onClick={handleMarkPaid}
             >
+              <DollarSign className="h-4 w-4 mr-2" />
               Mark as paid
             </Button>
           )}
@@ -146,13 +153,10 @@ export default function InvoiceDetail() {
               disabled={voidInvoice.isPending}
               onClick={handleVoid}
             >
+              <Ban className="h-4 w-4 mr-2" />
               Void
             </Button>
           )}
-          <Button variant="outline" size="sm" onClick={handlePrint}>
-            <Printer className="h-4 w-4 mr-2" />
-            Print
-          </Button>
         </div>
       </div>
 
@@ -228,7 +232,7 @@ export default function InvoiceDetail() {
 
           <Card>
             <CardHeader>
-              <h2 className="text-base font-semibold">Line Items</h2>
+              <h2 className="text-base font-semibold">Invoice items</h2>
             </CardHeader>
             <CardContent>
               <div className="rounded-md border">
@@ -290,7 +294,13 @@ export default function InvoiceDetail() {
             <CardContent className="space-y-4">
               <div className="space-y-1">
                 <div className="text-sm text-muted-foreground">Name</div>
-                <div className="font-medium">{invoice.customerName}</div>
+                <button
+                  type="button"
+                  className="font-medium text-primary hover:underline text-left"
+                  onClick={() => navigate(`/students/${invoice.studentId}`)}
+                >
+                  {invoice.customerName}
+                </button>
               </div>
               {invoice.billingEmail && (
                 <div className="space-y-1">
@@ -323,15 +333,27 @@ export default function InvoiceDetail() {
             <CardHeader>
               <h2 className="text-base font-semibold">Totals</h2>
             </CardHeader>
-            <CardContent className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Subtotal</span>
-                <span>{formatCurrency(invoice.subtotal)}</span>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Subtotal</span>
+                  <span>{formatCurrency(invoice.subtotal)}</span>
+                </div>
+                <div className="flex justify-between border-t pt-2 text-lg font-semibold">
+                  <span>Total</span>
+                  <span>{formatCurrency(invoice.total)}</span>
+                </div>
               </div>
-              <div className="flex justify-between border-t pt-2 text-lg font-semibold">
-                <span>Total</span>
-                <span>{formatCurrency(invoice.total)}</span>
-              </div>
+              {canSend && (
+                <Button
+                  className="w-full"
+                  disabled={updateInvoice.isPending}
+                  onClick={handleSend}
+                >
+                  <Send className="h-4 w-4 mr-2" />
+                  Send invoice
+                </Button>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -339,4 +361,3 @@ export default function InvoiceDetail() {
     </div>
   );
 }
-
