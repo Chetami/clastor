@@ -1,0 +1,14 @@
+type: string
+enum:
+  - draft
+  - open
+  - paid
+  - overdue
+  - void
+description: |-
+  Invoice lifecycle status.
+  - draft: created but not yet sent/finalized
+  - open: sent, awaiting payment
+  - paid: fully paid
+  - overdue: derived at read time when status is open and dueDate < now
+  - void: cancelled/uncollectible, no longer expected to be paid

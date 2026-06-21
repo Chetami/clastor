@@ -1,0 +1,31 @@
+type: object
+properties:
+  status:
+    $ref: '../InvoiceStatus.yaml'
+    description: >-
+      Filter by status. Note "overdue" is derived, so filtering by it
+      returns open invoices past their dueDate.
+  search:
+    type: string
+    description: >-
+      Free-text search across invoiceNumber and customerName
+    example: Alice
+  sort:
+    type: string
+    enum:
+      - invoiceNumber
+      - total
+      - customerName
+      - dueDate
+      - issueDate
+      - createdAt
+    default: createdAt
+    description: Sort field for the invoice list
+  order:
+    type: string
+    enum:
+      - asc
+      - desc
+    default: desc
+    description: Sort direction
+description: Query parameters for listing invoices

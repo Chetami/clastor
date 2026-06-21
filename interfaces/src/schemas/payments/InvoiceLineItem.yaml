@@ -1,0 +1,52 @@
+type: object
+required:
+  - lessonId
+  - description
+  - durationMinutes
+  - rateType
+  - unitAmount
+  - quantity
+  - amount
+properties:
+  lessonId:
+    type: string
+    description: >-
+      ID of the lesson this line item was generated from. Each chosen
+      unpaid lesson becomes exactly one invoice line item.
+    example: lesson_a1b2c3d4e5f6
+  description:
+    type: string
+    description: Human-readable label shown on the invoice
+    example: "Mathematics — 60 min on 20 Jun 2026"
+  durationMinutes:
+    type: integer
+    minimum: 1
+    description: Lesson duration in minutes (snapshot at creation time)
+    example: 60
+  rateType:
+    $ref: '../students/RateType.yaml'
+  unitAmount:
+    type: number
+    format: double
+    minimum: 0
+    description: >-
+      Per-unit rate. For hourly rateType this is $/hr; for per_lesson it
+      is $/lesson. Defaults from the student's expectedAmount (prorated
+      by duration for hourly) but is editable per line item.
+    example: 45
+  quantity:
+    type: number
+    format: double
+    minimum: 0
+    description: >-
+      Billable units. Hours for hourly rateType (durationMinutes / 60),
+      1 for per_lesson.
+    example: 1
+  amount:
+    type: number
+    format: double
+    minimum: 0
+    description: Computed line total (unitAmount * quantity).
+    example: 45
+description: |-
+  A single chargeable line on an invoice. Always backed by a lesson.

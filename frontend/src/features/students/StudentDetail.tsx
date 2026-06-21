@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/dialog";
 import { StudentForm } from "./StudentForm";
 import { useGetStudent } from "./api";
+import type { StudentFormData } from "./student-schema";
 import {
   formatCurrency,
   getInitials,
@@ -40,7 +41,7 @@ export default function StudentDetail() {
   const [notesEditing, setNotesEditing] = useState(false);
   const [notesDraft, setNotesDraft] = useState("");
 
-  function handleEdit(_values: any) {
+  function handleEdit(_values: StudentFormData) {
     // TODO: Implement update endpoint
     // For now, just close the dialog
     setEditing(false);

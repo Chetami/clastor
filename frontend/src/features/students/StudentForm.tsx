@@ -46,6 +46,7 @@ export function StudentForm({
   );
   const [errors, setErrors] = useState<FieldErrors>({});
   const [additionalOpen, setAdditionalOpen] = useState(false);
+  const [billingOpen, setBillingOpen] = useState(false);
 
   function update<K extends keyof StudentFormData>(
     key: K,
@@ -141,6 +142,77 @@ export function StudentForm({
           )}
         </div>
       </div>
+
+      <Collapsible
+        open={billingOpen}
+        onOpenChange={setBillingOpen}
+        className="rounded-lg border"
+      >
+        <CollapsibleTrigger asChild>
+          <button
+            type="button"
+            className="flex w-full items-center justify-between rounded-lg px-4 py-3 text-sm font-medium transition-colors hover:bg-accent"
+          >
+            <span>Billing</span>
+            <ChevronDown
+              className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${
+                billingOpen ? "rotate-180" : ""
+              }`}
+            />
+          </button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="space-y-4 p-4 pt-0 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:slide-in-from-top-1">
+          <div className="space-y-2 pt-4">
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="useParentEmailAsBilling"
+                checked={values.useParentEmailAsBilling}
+                onChange={(e) =>
+                  update("useParentEmailAsBilling", e.target.checked)
+                }
+                disabled={!values.parentEmail}
+              />
+              <Label
+                htmlFor="useParentEmailAsBilling"
+                className={`cursor-pointer ${
+                  !values.parentEmail ? "text-muted-foreground/60" : ""
+                }`}
+              >
+                Use parent email as billing email
+              </Label>
+            </div>
+            {!values.parentEmail && (
+              <p className="text-xs text-muted-foreground">
+                Enter a parent email above to enable this option.
+              </p>
+            )}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="billingEmail">
+              Billing Email{" "}
+              <span className="text-xs font-normal text-muted-foreground">
+                (optional)
+              </span>
+            </Label>
+            <Input
+              id="billingEmail"
+              type="email"
+              placeholder="billing@example.com"
+              aria-invalid={!!errors.billingEmail}
+              disabled={values.useParentEmailAsBilling}
+              value={
+                values.useParentEmailAsBilling
+                  ? values.parentEmail
+                  : values.billingEmail
+              }
+              onChange={(e) => update("billingEmail", e.target.value)}
+            />
+            {errors.billingEmail && (
+              <p className="text-xs text-destructive">{errors.billingEmail}</p>
+            )}
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
 
       <div className="space-y-2">
         <Label htmlFor="subject">Subject</Label>

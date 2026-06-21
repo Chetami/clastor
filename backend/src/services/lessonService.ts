@@ -43,6 +43,7 @@ function mapLesson(id: string, data: admin.firestore.DocumentData): Lesson {
       : (null as any),
     studentNotifiedCount: data.studentNotifiedCount ?? 0,
     isPaid: data.isPaid ?? false,
+    invoiceId: data.invoiceId ?? null,
     icsUid: data.icsUid ?? null,
     rsvpTokenVersion: data.rsvpTokenVersion ?? 0,
     createdAt: data.createdAt ? data.createdAt.toDate() : (null as any),
@@ -56,6 +57,7 @@ export interface LessonFilters {
   studentId?: string;
   acceptanceStatus?: string;
   attendanceStatus?: string;
+  unpaid?: boolean;
 }
 
 /**
@@ -109,6 +111,7 @@ export async function listLessonsFromFirestore(
         lesson.attendanceStatus !== filters.attendanceStatus
       )
         return;
+      if (filters.unpaid && (lesson.isPaid || lesson.invoiceId)) return;
 
       lessons.push(lesson);
     });
@@ -182,6 +185,7 @@ export async function createLessonInFirestore(
       lastStudentNotifiedAt: null,
       studentNotifiedCount: 0,
       isPaid: false,
+      invoiceId: null,
       icsUid: null,
       rsvpTokenVersion: 0,
       createdAt: now,
@@ -208,6 +212,7 @@ export async function createLessonInFirestore(
       lastStudentNotifiedAt: null,
       studentNotifiedCount: 0,
       isPaid: false,
+      invoiceId: null,
       icsUid: null,
       rsvpTokenVersion: 0,
       createdAt: now.toDate() as any,
@@ -254,6 +259,28 @@ export async function updateLessonInFirestore(
   } catch (error) {
     console.error("Failed to update lesson in Firestore:", error);
     throw new Error("Failed to update lesson");
+  }
+}
+
+/**
+ * Set or clear the invoice association on a lesson. Called by the payment
+ * service when a lesson is added to an invoice (set) or when that invoice
+ * is voided/deleted (clear). Prevents double-invoicing of the same lesson.
+ */
+export async function setLessonInvoiceIdInFirestore(
+  lessonId: string,
+  invoiceId: string | null
+): Promise<void> {
+  try {
+    const firestore = getFirebaseFirestore();
+    const now = admin.firestore.Timestamp.now();
+    await firestore.collection("lessons").doc(lessonId).update({
+      invoiceId,
+      updatedAt: now,
+    });
+  } catch (error) {
+    console.error("Failed to set lesson invoiceId in Firestore:", error);
+    throw new Error("Failed to update lesson invoice association");
   }
 }
 

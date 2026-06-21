@@ -100,6 +100,15 @@ properties:
       Whether this lesson has been paid for. Defaults to false on creation;
       toggled true once payment is recorded.
     example: false
+  invoiceId:
+    type: string
+    nullable: true
+    description: >-
+      ID of the invoice this lesson is currently associated with, or null
+      if it is not on any invoice. Set when the lesson is added to an
+      invoice; cleared when that invoice is voided or deleted. Prevents
+      the same lesson from appearing on multiple invoices.
+    example: inv_a1b2c3d4e5f6
   icsUid:
     type: string
     nullable: true

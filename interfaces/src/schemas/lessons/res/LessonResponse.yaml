@@ -81,6 +81,12 @@ properties:
     type: boolean
     description: Whether this lesson has been paid for
     example: false
+  invoiceId:
+    type: string
+    nullable: true
+    description: >-
+      ID of the invoice this lesson is on, or null if not invoiced.
+    example: inv_a1b2c3d4e5f6
   createdAt:
     type: string
     format: date-time

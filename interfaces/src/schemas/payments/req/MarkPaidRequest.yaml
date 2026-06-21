@@ -1,0 +1,14 @@
+type: object
+properties:
+  paymentMethod:
+    $ref: '../PaymentMethod.yaml'
+    description: >-
+      Optional recorded payment method to stamp on the invoice at the
+      moment it's marked paid (e.g. cash received).
+  paidAt:
+    type: string
+    format: date-time
+    nullable: true
+    description: >-
+      Optional explicit paid timestamp; defaults to now when omitted.
+description: Request body for marking an invoice as paid

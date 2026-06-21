@@ -12,6 +12,30 @@ export { PhoneInput, type PhoneInputProps } from "./phone-input";
 export { Label } from "./label";
 export { Separator } from "./separator";
 export { Checkbox } from "./checkbox";
+export { Badge, badgeVariants, type BadgeProps } from "./badge";
+export {
+  Table,
+  TableHeader,
+  TableBody,
+  TableFooter,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableCaption,
+} from "./table";
+export {
+  Select,
+  SelectGroup,
+  SelectValue,
+  SelectTrigger,
+  SelectContent,
+  SelectLabel,
+  SelectItem,
+  SelectSeparator,
+  SelectScrollUpButton,
+  SelectScrollDownButton,
+} from "./select";
+export { Tabs, TabsList, TabsTrigger, TabsContent } from "./tabs";
 export {
   Collapsible,
   CollapsibleContent,

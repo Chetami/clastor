@@ -22,6 +22,8 @@ export const studentFormSchema = z
       .trim()
       .optional()
       .or(z.literal("")),
+    useParentEmailAsBilling: z.boolean(),
+    billingEmail: z.string().trim().optional().or(z.literal("")),
     subject: z.string().min(1, "Subject is required").trim(),
     expectedAmount: z
       .union([z.number(), z.string()])
@@ -51,6 +53,20 @@ export const studentFormSchema = z
         });
       }
     }
+    if (
+      !data.useParentEmailAsBilling &&
+      data.billingEmail &&
+      data.billingEmail.length > 0
+    ) {
+      const emailResult = z.string().email().safeParse(data.billingEmail);
+      if (!emailResult.success) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["billingEmail"],
+          message: "Enter a valid billing email",
+        });
+      }
+    }
     if (data.timezoneEnabled && (!data.timezone || data.timezone.length === 0)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -67,6 +83,8 @@ export const EMPTY_STUDENT_FORM: StudentFormData = {
   email: "",
   phone: "",
   parentEmail: "",
+  useParentEmailAsBilling: false,
+  billingEmail: "",
   subject: "",
   expectedAmount: 0,
   rateType: "hourly",

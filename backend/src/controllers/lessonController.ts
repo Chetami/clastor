@@ -115,6 +115,9 @@ export async function listLessons(
     if (typeof req.query.attendanceStatus === "string") {
       filters.attendanceStatus = req.query.attendanceStatus;
     }
+    if (req.query.unpaid === "true" || req.query.unpaid === "1") {
+      filters.unpaid = true;
+    }
 
     const lessons = await listLessonsFromFirestore(
       req.user.uid,

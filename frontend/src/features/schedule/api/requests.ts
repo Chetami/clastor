@@ -35,6 +35,7 @@ export async function listLessonsRequest(params?: {
   from?: string;
   to?: string;
   studentId?: string;
+  unpaid?: boolean;
 }): Promise<LessonListResponse> {
   const response = await api.get<LessonListResponse>("/api/lessons", {
     params,

@@ -29,6 +29,15 @@ properties:
       Linked parent/guardian email. Temporary field until a dedicated
       parent object relationship is introduced.
     example: parent.johnson@example.com
+  billingEmail:
+    type: string
+    format: email
+    nullable: true
+    description: >-
+      Email used as the default recipient when creating invoices for this
+      student. May mirror parentEmail or be a different address. Null
+      means invoice creation falls back to parentEmail then student email.
+    example: billing.johnson@example.com
   subject:
     type: string
     description: Subject(s) the student is being tutored in

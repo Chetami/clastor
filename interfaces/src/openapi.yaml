@@ -110,3 +110,25 @@ components:
       $ref: './schemas/meetings/req/GenerateMeetLinkRequest.yaml'
     GenerateMeetLinkResponse:
       $ref: './schemas/meetings/res/GenerateMeetLinkResponse.yaml'
+    # Payment (Invoice) Enums
+    InvoiceStatus:
+      $ref: './schemas/payments/InvoiceStatus.yaml'
+    PaymentMethod:
+      $ref: './schemas/payments/PaymentMethod.yaml'
+    # Payment (Invoice) Schemas
+    InvoiceLineItem:
+      $ref: './schemas/payments/InvoiceLineItem.yaml'
+    Invoice:
+      $ref: './schemas/payments/Invoice.yaml'
+    CreateInvoiceRequest:
+      $ref: './schemas/payments/req/CreateInvoiceRequest.yaml'
+    UpdateInvoiceRequest:
+      $ref: './schemas/payments/req/UpdateInvoiceRequest.yaml'
+    ListInvoicesQuery:
+      $ref: './schemas/payments/req/ListInvoicesQuery.yaml'
+    MarkPaidRequest:
+      $ref: './schemas/payments/req/MarkPaidRequest.yaml'
+    InvoiceResponse:
+      $ref: './schemas/payments/res/InvoiceResponse.yaml'
+    InvoiceListResponse:
+      $ref: './schemas/payments/res/InvoiceListResponse.yaml'

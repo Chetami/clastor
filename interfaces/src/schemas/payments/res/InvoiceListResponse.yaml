@@ -1,0 +1,13 @@
+type: object
+required:
+  - data
+  - total
+properties:
+  data:
+    type: array
+    items:
+      $ref: './InvoiceResponse.yaml'
+  total:
+    type: integer
+    minimum: 0
+description: Paginated invoice list response

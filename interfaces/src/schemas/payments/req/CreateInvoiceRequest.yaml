@@ -1,0 +1,76 @@
+type: object
+required:
+  - studentId
+  - lineItems
+  - dueDate
+  - paymentMethod
+properties:
+  studentId:
+    type: string
+    description: ID of the student to invoice
+    example: student_123
+  lineItems:
+    type: array
+    minItems: 1
+    items:
+      type: object
+      required:
+        - lessonId
+        - description
+        - durationMinutes
+        - rateType
+        - unitAmount
+        - quantity
+      properties:
+        lessonId:
+          type: string
+        description:
+          type: string
+        durationMinutes:
+          type: integer
+          minimum: 1
+        rateType:
+          $ref: '../../students/RateType.yaml'
+        unitAmount:
+          type: number
+          format: double
+          minimum: 0
+        quantity:
+          type: number
+          format: double
+          minimum: 0
+    description: >-
+      One entry per lesson being invoiced. The server computes `amount`
+      (unitAmount * quantity) and rolls up subtotal/total.
+  billingEmail:
+    type: string
+    format: email
+    nullable: true
+    description: >-
+      Optional override for the invoice billing email. When omitted the
+      student's resolved billingEmail is snapshotted.
+    example: billing.johnson@example.com
+  dueDate:
+    type: string
+    format: date-time
+    description: Payment due date
+  paymentMethod:
+    $ref: '../PaymentMethod.yaml'
+  issueDate:
+    type: string
+    format: date-time
+    nullable: true
+    description: >-
+      Optional issue date; defaults to now when omitted.
+  status:
+    $ref: '../InvoiceStatus.yaml'
+    description: >-
+      Initial status. Defaults to draft when omitted; pass "open" to
+      finalize immediately.
+  notes:
+    type: string
+    nullable: true
+    description: Optional notes shown on the invoice
+description: |-
+  Request body for creating a new invoice. The server generates the
+  invoiceNumber, currency, subtotal, total, and timestamps.

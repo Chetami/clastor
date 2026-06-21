@@ -6,6 +6,7 @@ export function useListLessons(params?: {
   from?: string;
   to?: string;
   studentId?: string;
+  unpaid?: boolean;
 }) {
   return useQuery<LessonResponse[]>({
     queryKey: ["lessons", params],

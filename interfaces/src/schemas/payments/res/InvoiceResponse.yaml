@@ -1,0 +1,81 @@
+type: object
+required:
+  - id
+  - invoiceNumber
+  - tutorId
+  - studentId
+  - customerName
+  - billingEmail
+  - status
+  - currency
+  - lineItems
+  - subtotal
+  - total
+  - paymentMethod
+  - issueDate
+  - dueDate
+  - createdAt
+  - updatedAt
+properties:
+  id:
+    type: string
+    description: Unique invoice identifier
+    example: inv_a1b2c3d4e5f6
+  invoiceNumber:
+    type: string
+    description: Human-readable sequential invoice number
+    example: INV-0001
+  tutorId:
+    type: string
+  studentId:
+    type: string
+  customerName:
+    type: string
+    description: Snapshot of the student's name at creation time
+    example: Alice Johnson
+  billingEmail:
+    type: string
+    format: email
+    description: Snapshot of the resolved billing email at creation time
+    example: parent.johnson@example.com
+  status:
+    $ref: '../InvoiceStatus.yaml'
+  currency:
+    type: string
+    example: AUD
+  lineItems:
+    type: array
+    items:
+      $ref: '../InvoiceLineItem.yaml'
+  subtotal:
+    type: number
+    format: double
+    minimum: 0
+    example: 135
+  total:
+    type: number
+    format: double
+    minimum: 0
+    example: 135
+  paymentMethod:
+    $ref: '../PaymentMethod.yaml'
+  issueDate:
+    type: string
+    format: date-time
+  dueDate:
+    type: string
+    format: date-time
+  paidAt:
+    type: string
+    format: date-time
+    nullable: true
+  notes:
+    type: string
+    nullable: true
+  createdAt:
+    type: string
+    format: date-time
+  updatedAt:
+    type: string
+    format: date-time
+description: Invoice response object (ISO string dates, no tutorId leakage concerns)

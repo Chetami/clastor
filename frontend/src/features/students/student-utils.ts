@@ -52,11 +52,19 @@ export function formatFrequency(
 export function studentToFormValues(
   student: StudentResponse,
 ): Partial<StudentFormData> {
+  const parentEmail = student.parentEmail ?? "";
+  const billingEmail = student.billingEmail ?? "";
+  const useParentEmailAsBilling =
+    parentEmail.length > 0 &&
+    billingEmail.length > 0 &&
+    billingEmail.toLowerCase() === parentEmail.toLowerCase();
   return {
     name: student.name,
     email: student.email,
     phone: student.phone ?? "",
-    parentEmail: student.parentEmail ?? "",
+    parentEmail,
+    useParentEmailAsBilling,
+    billingEmail: useParentEmailAsBilling ? "" : billingEmail,
     subject: student.subject,
     expectedAmount: student.expectedAmount,
     rateType: student.rateType,
@@ -82,6 +90,7 @@ export const SAMPLE_STUDENTS: Student[] = [
     email: "alice.johnson@example.com",
     phone: null,
     parentEmail: "parent.johnson@example.com",
+    billingEmail: "parent.johnson@example.com",
     subject: "Mathematics",
     expectedAmount: 45,
     rateType: "hourly",
@@ -100,6 +109,7 @@ export const SAMPLE_STUDENTS: Student[] = [
     email: "marcus.chen@example.com",
     phone: "+15551234567",
     parentEmail: null,
+    billingEmail: "marcus.chen@example.com",
     subject: "Physics",
     expectedAmount: 120,
     rateType: "per_lesson",
@@ -118,6 +128,7 @@ export const SAMPLE_STUDENTS: Student[] = [
     email: "priya.patel@example.com",
     phone: null,
     parentEmail: null,
+    billingEmail: "priya.patel@example.com",
     subject: "Chemistry",
     expectedAmount: 50,
     rateType: "hourly",
@@ -136,6 +147,7 @@ export const SAMPLE_STUDENTS: Student[] = [
     email: "liam.obrien@example.com",
     phone: "+15559876543",
     parentEmail: "obrien.family@example.com",
+    billingEmail: "obrien.family@example.com",
     subject: "English Literature",
     expectedAmount: 90,
     rateType: "per_lesson",

@@ -13,6 +13,21 @@ function generateStudentId(): string {
 }
 
 /**
+ * Resolve the billing email for a student. Always returns a non-null value:
+ * the tutor's explicit override if set, otherwise the parent email,
+ * otherwise the student's own email (which is always required).
+ */
+function resolveBillingEmail(
+  explicit: string | null | undefined,
+  parentEmail: string | null | undefined,
+  email: string
+): string {
+  if (explicit && explicit.trim().length > 0) return explicit;
+  if (parentEmail && parentEmail.trim().length > 0) return parentEmail;
+  return email;
+}
+
+/**
  * List student documents from Firestore
  * @param userId - ID of the authenticated user
  * @param role - Role of the authenticated user ('tutor' or 'system_admin')
@@ -44,13 +59,19 @@ export async function listStudentsFromFirestore(
     const students: Student[] = [];
     snapshot.forEach((doc) => {
       const data = doc.data();
+      const parentEmail = data.parentEmail || null;
       students.push({
         id: doc.id,
         tutorId: data.tutorId,
         name: data.name,
         email: data.email,
         phone: data.phone || null,
-        parentEmail: data.parentEmail || null,
+        parentEmail,
+        billingEmail: resolveBillingEmail(
+          data.billingEmail,
+          parentEmail,
+          data.email
+        ),
         subject: data.subject,
         expectedAmount: data.expectedAmount,
         rateType: data.rateType,
@@ -92,13 +113,19 @@ export async function getStudentByIdFromFirestore(
       return null;
     }
 
+    const parentEmail = data.parentEmail || null;
     return {
       id: doc.id,
       tutorId: data.tutorId,
       name: data.name,
       email: data.email,
       phone: data.phone || null,
-      parentEmail: data.parentEmail || null,
+      parentEmail,
+      billingEmail: resolveBillingEmail(
+        data.billingEmail,
+        parentEmail,
+        data.email
+      ),
       subject: data.subject,
       expectedAmount: data.expectedAmount,
       rateType: data.rateType,
@@ -136,6 +163,7 @@ export async function createStudentInFirestore(
       email: data.email,
       phone: data.phone || null,
       parentEmail: data.parentEmail || null,
+      billingEmail: data.billingEmail || null,
       subject: data.subject,
       expectedAmount: data.expectedAmount,
       rateType: data.rateType,
@@ -152,13 +180,19 @@ export async function createStudentInFirestore(
     await firestore.collection("students").doc(studentId).set(studentData);
 
     // Return Student object with Date objects (matching getUserFromFirestore pattern)
+    const parentEmail = data.parentEmail || null;
     return {
       id: studentId,
       tutorId,
       name: data.name,
       email: data.email,
       phone: data.phone || null,
-      parentEmail: data.parentEmail || null,
+      parentEmail,
+      billingEmail: resolveBillingEmail(
+        data.billingEmail || null,
+        parentEmail,
+        data.email
+      ),
       subject: data.subject,
       expectedAmount: data.expectedAmount,
       rateType: data.rateType,

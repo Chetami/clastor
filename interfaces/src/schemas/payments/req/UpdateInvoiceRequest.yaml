@@ -1,0 +1,51 @@
+type: object
+properties:
+  dueDate:
+    type: string
+    format: date-time
+    nullable: true
+  paymentMethod:
+    $ref: '../PaymentMethod.yaml'
+  status:
+    $ref: '../InvoiceStatus.yaml'
+    description: >-
+      Lifecycle transitions. Allowed: draft->open, open->void, void->open.
+      Paid/overdue are managed by the mark-paid endpoint.
+  notes:
+    type: string
+    nullable: true
+  lineItems:
+    type: array
+    items:
+      type: object
+      required:
+        - lessonId
+        - description
+        - durationMinutes
+        - rateType
+        - unitAmount
+        - quantity
+      properties:
+        lessonId:
+          type: string
+        description:
+          type: string
+        durationMinutes:
+          type: integer
+          minimum: 1
+        rateType:
+          $ref: '../../students/RateType.yaml'
+        unitAmount:
+          type: number
+          format: double
+          minimum: 0
+        quantity:
+          type: number
+          format: double
+          minimum: 0
+    nullable: true
+    description: >-
+      Replace all line items. When provided, subtotal/total are recomputed.
+description: |-
+  Request body for updating an invoice. All fields optional. Line items
+  can only be edited while the invoice is in draft status.

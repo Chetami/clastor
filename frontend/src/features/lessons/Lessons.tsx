@@ -25,7 +25,12 @@ import {
 import { ImportantLessons } from "@/features/lessons/ImportantLessons";
 
 type FilterTab = "upcoming" | "past" | "cancelled" | "all";
-type SortKey = "upcoming" | "date-desc" | "student-az" | "student-za" | "updated";
+type SortKey =
+  | "upcoming"
+  | "date-desc"
+  | "student-az"
+  | "student-za"
+  | "updated";
 
 const SORT_OPTIONS: { value: SortKey; label: string }[] = [
   { value: "upcoming", label: "Upcoming first" },

@@ -113,11 +113,16 @@ export default function Students() {
 
   async function handleAdd(values: StudentFormData) {
     try {
+      const billingEmail = values.useParentEmailAsBilling
+        ? values.parentEmail?.trim() || undefined
+        : values.billingEmail?.trim() || undefined;
+
       await createStudent.mutateAsync({
         name: values.name,
         email: values.email,
         phone: values.phone?.trim() || undefined,
         parentEmail: values.parentEmail?.trim() || undefined,
+        billingEmail,
         subject: values.subject,
         expectedAmount: values.expectedAmount,
         rateType: values.rateType,

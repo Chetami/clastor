@@ -9,6 +9,7 @@ required:
   - frequencyPerWeek
   - status
   - amountOwed
+  - billingEmail
   - tutorId
   - createdAt
   - updatedAt
@@ -43,6 +44,15 @@ properties:
       Linked parent/guardian email. Temporary field until a dedicated
       parent object relationship is introduced.
     example: parent.johnson@example.com
+  billingEmail:
+    type: string
+    format: email
+    description: >-
+      Email address used as the default recipient when creating invoices
+      for this student. Always non-null: resolved at read time as the
+      tutor's explicit override (if set), otherwise the parentEmail,
+      otherwise the student's own email.
+    example: billing.johnson@example.com
   subject:
     type: string
     description: Subject(s) the student is being tutored in

@@ -11,6 +11,7 @@ import StudentDetail from "@/features/students/StudentDetail";
 import Schedule from "@/features/schedule/Schedule";
 import EventDetail from "@/features/schedule/EventDetail";
 import Payments from "@/features/payments/Payments";
+import CreateInvoice from "@/features/payments/CreateInvoice";
 import Lessons from "@/features/lessons/Lessons";
 import Settings from "@/features/settings/Settings";
 
@@ -31,6 +32,8 @@ export const router = createBrowserRouter([
               { path: "schedule", element: <Schedule /> },
               { path: "schedule/:eventId", element: <EventDetail /> },
               { path: "payments", element: <Payments /> },
+              { path: "payments/new", element: <CreateInvoice /> },
+              { path: "payments/:invoiceId", element: <Payments /> },
               { path: "lessons", element: <Lessons /> },
               { path: "settings", element: <Settings /> },
             ],
