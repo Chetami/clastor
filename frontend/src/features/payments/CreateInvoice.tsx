@@ -33,7 +33,7 @@ import {
 import { useListStudents } from "@/features/students/api";
 import { useListLessons } from "@/features/schedule/api";
 import { lessonBadge } from "@/features/lessons/lesson-display";
-import { useCreateInvoice } from "./api";
+import { useCreateInvoice, useSendInvoice } from "./api";
 import {
   createInvoiceFormSchema,
   defaultQuantity,
@@ -101,6 +101,7 @@ export default function CreateInvoice() {
   const lessonsLoading = studentId ? lessonsResult.isLoading : false;
 
   const createInvoice = useCreateInvoice();
+  const sendInvoice = useSendInvoice();
 
   const completedLessons = useMemo(
     () =>
@@ -209,7 +210,7 @@ export default function CreateInvoice() {
     }
 
     try {
-      await createInvoice.mutateAsync({
+      const created = await createInvoice.mutateAsync({
         studentId: result.data.studentId,
         lineItems: result.data.lineItems,
         billingEmail: result.data.billingEmail ?? null,
@@ -218,6 +219,14 @@ export default function CreateInvoice() {
         notes: result.data.notes ?? null,
         status: result.data.status,
       });
+
+      // "Create & Send" (status === "open") must email the invoice, not just
+      // persist it. The create endpoint only writes to Firestore; the email is
+      // sent by the dedicated /send endpoint (same path Resend uses).
+      if (status === "open") {
+        await sendInvoice.mutateAsync({ id: created.id });
+      }
+
       navigate("/payments");
     } catch (error) {
       console.error("Failed to create invoice:", error);
@@ -592,18 +601,24 @@ export default function CreateInvoice() {
                   onClick={() => handleSubmit("open")}
                   disabled={
                     createInvoice.isPending ||
+                    sendInvoice.isPending ||
                     lineItems.length === 0 ||
                     !studentId
                   }
                 >
                   <Check className="h-4 w-4" />
-                  {createInvoice.isPending ? "Creating..." : "Create & Send"}
+                  {sendInvoice.isPending
+                    ? "Sending..."
+                    : createInvoice.isPending
+                      ? "Creating..."
+                      : "Create & Send"}
                 </Button>
                 <Button
                   variant="outline"
                   onClick={() => handleSubmit("draft")}
                   disabled={
                     createInvoice.isPending ||
+                    sendInvoice.isPending ||
                     lineItems.length === 0 ||
                     !studentId
                   }
