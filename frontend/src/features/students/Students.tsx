@@ -12,11 +12,7 @@ import {
 } from "lucide-react";
 import type { StudentResponse } from "@examify-tms/interfaces";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -37,26 +33,39 @@ import type { StudentFormData } from "./student-schema";
 import { useCreateStudent, useListStudents } from "./api";
 import {
   compactCurrency,
+  formatCurrency,
   formatFrequency,
   getInitials,
   rateUnit,
   studentToFormValues,
 } from "./student-utils";
+import { useStudentsDebts } from "./invoices-api";
 
 type StatusFilter = StudentResponse["status"] | "all";
-type SortKey = "name-asc" | "name-desc" | "amount-high" | "amount-low" | "updated";
+type SortKey =
+  | "name-asc"
+  | "name-desc"
+  | "amount-high"
+  | "amount-low"
+  | "debt-high"
+  | "debt-low"
+  | "updated";
 
 const SORT_OPTIONS: { value: SortKey; label: string }[] = [
   { value: "name-asc", label: "Name (A–Z)" },
   { value: "name-desc", label: "Name (Z–A)" },
-  { value: "amount-high", label: "Amount (High–Low)" },
-  { value: "amount-low", label: "Amount (Low–High)" },
+  { value: "amount-high", label: "Rate (High–Low)" },
+  { value: "amount-low", label: "Rate (Low–High)" },
+  { value: "debt-high", label: "Debt (High–Low)" },
+  { value: "debt-low", label: "Debt (Low–High)" },
   { value: "updated", label: "Recently Updated" },
 ];
 
 export default function Students() {
   const navigate = useNavigate();
   const { data: students = [], isLoading, error } = useListStudents();
+  const studentIds = students.map((s) => s.id);
+  const debtQueries = useStudentsDebts(studentIds);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("active");
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("name-asc");
@@ -68,11 +77,21 @@ export default function Students() {
   const activeCount = students.filter((s) => s.status === "active").length;
   const pastCount = students.filter((s) => s.status === "past").length;
 
+  const studentDebts = useMemo(() => {
+    const debts: Record<string, number> = {};
+    studentIds.forEach((studentId, index) => {
+      const query = debtQueries[index];
+      if (query.data !== undefined) {
+        debts[studentId] = query.data;
+      }
+    });
+    return debts;
+  }, [debtQueries, studentIds]);
+
   const visibleStudents = useMemo(() => {
     const query = search.trim().toLowerCase();
     const filtered = students.filter((s) => {
-      const matchesStatus =
-        statusFilter === "all" || s.status === statusFilter;
+      const matchesStatus = statusFilter === "all" || s.status === statusFilter;
       const matchesSearch =
         query.length === 0 ||
         s.name.toLowerCase().includes(query) ||
@@ -91,6 +110,10 @@ export default function Students() {
           return b.expectedAmount - a.expectedAmount;
         case "amount-low":
           return a.expectedAmount - b.expectedAmount;
+        case "debt-high":
+          return (studentDebts[b.id] || 0) - (studentDebts[a.id] || 0);
+        case "debt-low":
+          return (studentDebts[a.id] || 0) - (studentDebts[b.id] || 0);
         case "updated":
           return (
             new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
@@ -100,7 +123,7 @@ export default function Students() {
       }
     });
     return sorted;
-  }, [students, statusFilter, search, sortKey]);
+  }, [students, statusFilter, search, sortKey, studentDebts]);
 
   async function handleAdd(values: StudentFormData) {
     try {
@@ -119,7 +142,9 @@ export default function Students() {
         rateType: values.rateType,
         frequencyPerWeek: values.frequencyPerWeek,
         status: values.status,
-        timezone: values.timezoneEnabled ? values.timezone ?? undefined : undefined,
+        timezone: values.timezoneEnabled
+          ? (values.timezone ?? undefined)
+          : undefined,
         notes: values.notes?.trim() || undefined,
       });
 
@@ -153,7 +178,9 @@ export default function Students() {
 
       {error && (
         <div className="flex items-center justify-center py-12">
-          <p className="text-sm text-destructive">Failed to load students. Please try again.</p>
+          <p className="text-sm text-destructive">
+            Failed to load students. Please try again.
+          </p>
         </div>
       )}
 
@@ -222,7 +249,9 @@ export default function Students() {
                     </DialogDescription>
                   </DialogHeader>
                   <StudentForm
-                    submitLabel={createStudent.isPending ? "Creating..." : "Save Student"}
+                    submitLabel={
+                      createStudent.isPending ? "Creating..." : "Save Student"
+                    }
                     onCancel={() => setAddOpen(false)}
                     onSubmit={handleAdd}
                     disabled={createStudent.isPending}
@@ -243,90 +272,113 @@ export default function Students() {
               </div>
             ) : (
               <ul className="-mx-6 divide-y">
-                {visibleStudents.map((student) => (
-                  <li
-                    key={student.id}
-                    className="group flex cursor-pointer items-center justify-between gap-4 px-6 py-3 transition-colors hover:bg-accent/40"
-                    onClick={() => navigate(`/students/${student.id}`)}
-                  >
-                    <div className="flex min-w-0 flex-1 items-center gap-3">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-medium text-primary">
-                        {getInitials(student.name)}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="truncate font-medium">{student.name}</p>
-                          <span
-                            className={
-                              student.status === "active"
-                                ? "shrink-0 rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400"
-                                : "shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground"
-                            }
-                          >
-                            {student.status === "active" ? "Active" : "Past"}
-                          </span>
+                {visibleStudents.map((student) => {
+                  const debt = studentDebts[student.id] ?? 0;
+                  const hasDebt = debt > 0;
+                  const debtQueryIndex = studentIds.indexOf(student.id);
+                  const isLoadingDebt =
+                    debtQueryIndex >= 0 &&
+                    (debtQueries[debtQueryIndex]?.isLoading ?? false);
+
+                  return (
+                    <li
+                      key={student.id}
+                      className="group flex cursor-pointer items-center justify-between gap-4 px-6 py-3 transition-colors hover:bg-accent/40"
+                      onClick={() => navigate(`/students/${student.id}`)}
+                    >
+                      <div className="flex min-w-0 flex-1 items-center gap-3">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-medium text-primary">
+                          {getInitials(student.name)}
                         </div>
-                        <p className="flex items-center gap-1 truncate text-sm text-muted-foreground">
-                          <Mail className="h-3 w-3 shrink-0" />
-                          {student.email}
-                        </p>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="truncate font-medium">
+                              {student.name}
+                            </p>
+                            <span
+                              className={
+                                student.status === "active"
+                                  ? "shrink-0 rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400"
+                                  : "shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground"
+                              }
+                            >
+                              {student.status === "active" ? "Active" : "Past"}
+                            </span>
+                          </div>
+                          <p className="flex items-center gap-1 truncate text-sm text-muted-foreground">
+                            <Mail className="h-3 w-3 shrink-0" />
+                            {student.email}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="hidden text-right sm:block">
-                        <p className="font-medium">
-                          {compactCurrency(student.expectedAmount)}
-                          <span className="ml-0.5 text-xs font-normal text-muted-foreground">
-                            {rateUnit(student.rateType)}
-                          </span>
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                           {formatFrequency(
-                             student.frequencyPerWeek,
-                             student.rateType,
-                           )}
-                         </p>
-                       </div>
-                       <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
+                      <div className="flex items-center gap-3">
+                        <div className="hidden text-right sm:block">
+                          <p className="font-medium">
+                            {compactCurrency(student.expectedAmount)}
+                            <span className="ml-0.5 text-xs font-normal text-muted-foreground">
+                              {rateUnit(student.rateType)}
+                            </span>
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {formatFrequency(
+                              student.frequencyPerWeek,
+                              student.rateType,
+                            )}
+                          </p>
+                          <p
+                            className={`text-xs font-medium ${hasDebt ? "text-destructive" : "text-emerald-600 dark:text-emerald-400"}`}
+                          >
+                            {isLoadingDebt ? (
+                              <span className="text-muted-foreground">
+                                Loading...
+                              </span>
+                            ) : hasDebt ? (
+                              `Owed: ${formatCurrency(debt)}`
+                            ) : (
+                              "No outstanding balance"
+                            )}
+                          </p>
+                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <MoreHorizontal className="h-4 w-4" />
+                              <span className="sr-only">Open menu</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent
+                            align="end"
                             onClick={(e) => e.stopPropagation()}
                           >
-                            <MoreHorizontal className="h-4 w-4" />
-                            <span className="sr-only">Open menu</span>
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent
-                          align="end"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <DropdownMenuItem
-                            onSelect={() => setEditing(student)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onSelect={() =>
-                              navigate(`/students/${student.id}`)
-                            }
-                          >
-                            <ChevronRight className="h-4 w-4" />
-                            View Details
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </li>
-                ))}
+                            <DropdownMenuItem
+                              onSelect={() => setEditing(student)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onSelect={() =>
+                                navigate(`/students/${student.id}`)
+                              }
+                            >
+                              <ChevronRight className="h-4 w-4" />
+                              View Details
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </CardContent>
         </Card>
       )}
-
 
       <Dialog
         open={editing !== null}

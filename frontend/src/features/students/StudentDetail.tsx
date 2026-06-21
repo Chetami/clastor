@@ -70,7 +70,9 @@ export default function StudentDetail() {
     setNotesEditing(false);
   }
 
-  const openInvoices = invoices.filter((inv: Invoice) => inv.status === "open" || inv.status === "overdue");
+  const openInvoices = invoices.filter(
+    (inv: Invoice) => inv.status === "open" || inv.status === "overdue",
+  );
 
   function getInvoiceStatusColor(status: Invoice["status"]) {
     switch (status) {
@@ -256,9 +258,7 @@ export default function StudentDetail() {
                     : "font-medium text-emerald-600 dark:text-emerald-400"
                 }
               >
-                {totalDebt > 0
-                  ? formatCurrency(totalDebt)
-                  : "Nothing due"}
+                {totalDebt > 0 ? formatCurrency(totalDebt) : "Nothing due"}
               </span>
             </div>
           </CardContent>
@@ -284,21 +284,28 @@ export default function StudentDetail() {
                     <FileText className="h-5 w-5 text-muted-foreground" />
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-medium">{invoice.invoiceNumber}</span>
+                        <span className="font-medium">
+                          {invoice.invoiceNumber}
+                        </span>
                         <Badge variant={getInvoiceStatusColor(invoice.status)}>
                           {invoice.status}
                         </Badge>
                       </div>
                       <p className="text-sm text-muted-foreground">
-                        {invoice.lineItems.length} lesson{invoice.lineItems.length !== 1 ? "s" : ""} · Due{" "}
-                        {invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString() : "No due date"}
+                        {invoice.lineItems.length} lesson
+                        {invoice.lineItems.length !== 1 ? "s" : ""} · Due{" "}
+                        {invoice.dueDate
+                          ? new Date(invoice.dueDate).toLocaleDateString()
+                          : "No due date"}
                       </p>
                     </div>
                   </div>
                   <div className="text-right">
                     <p className="font-bold">{formatCurrency(invoice.total)}</p>
                     <p className="text-xs text-muted-foreground">
-                      {invoice.issueDate ? new Date(invoice.issueDate).toLocaleDateString() : ""}
+                      {invoice.issueDate
+                        ? new Date(invoice.issueDate).toLocaleDateString()
+                        : ""}
                     </p>
                   </div>
                 </div>
