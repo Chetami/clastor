@@ -232,7 +232,7 @@ export default function Lessons() {
                     <li
                       key={lesson.id}
                       className="group flex cursor-pointer items-center justify-between gap-4 px-6 py-3 transition-colors hover:bg-accent/40"
-                      onClick={() => navigate(`/schedule/${lesson.id}`)}
+                      onClick={() => navigate(`/lessons/${lesson.id}`)}
                     >
                       <div className="flex min-w-0 flex-1 items-center gap-3">
                         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-medium text-primary">

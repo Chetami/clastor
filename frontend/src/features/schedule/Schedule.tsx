@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
@@ -15,7 +14,6 @@ import { Button } from "@/components/ui/button";
 export default function Schedule() {
   const calendarRef = useRef<FullCalendar>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
-  const navigate = useNavigate();
   const now = new Date();
 
   const { data: lessons = [] } = useListLessons();
@@ -176,8 +174,7 @@ export default function Schedule() {
               <div className="fc-event-time">{arg.timeText}</div>
               <div className="fc-event-title-container">
                 <div className="fc-event-title">
-                  {arg.event.extendedProps.studentName ??
-                    arg.event.title}
+                  {arg.event.extendedProps.studentName ?? arg.event.title}
                 </div>
               </div>
             </div>
@@ -188,9 +185,7 @@ export default function Schedule() {
             setCreateOpen(true);
             info.view.calendar.unselect();
           }}
-          eventClick={(info) => {
-            if (info.event.id) navigate(`/schedule/${info.event.id}`);
-          }}
+          eventClick={() => {}}
           height="100%"
         />
       </div>

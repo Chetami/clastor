@@ -75,18 +75,15 @@ function buildGroups(
 
   upcomingToday.sort(
     (a, b) =>
-      new Date(a.startDateTime).getTime() -
-      new Date(b.startDateTime).getTime(),
+      new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime(),
   );
   completedToday.sort(
     (a, b) =>
-      new Date(b.startDateTime).getTime() -
-      new Date(a.startDateTime).getTime(),
+      new Date(b.startDateTime).getTime() - new Date(a.startDateTime).getTime(),
   );
   unpaid.sort(
     (a, b) =>
-      new Date(b.startDateTime).getTime() -
-      new Date(a.startDateTime).getTime(),
+      new Date(b.startDateTime).getTime() - new Date(a.startDateTime).getTime(),
   );
 
   return [
@@ -96,7 +93,10 @@ function buildGroups(
   ];
 }
 
-export function ImportantLessons({ lessons, studentMap }: ImportantLessonsProps) {
+export function ImportantLessons({
+  lessons,
+  studentMap,
+}: ImportantLessonsProps) {
   const navigate = useNavigate();
 
   const groups = useMemo(() => {
@@ -163,7 +163,7 @@ export function ImportantLessons({ lessons, studentMap }: ImportantLessonsProps)
                       <li
                         key={lesson.id}
                         className="group flex cursor-pointer items-center justify-between gap-3 px-6 py-2.5 transition-colors hover:bg-accent/40"
-                        onClick={() => navigate(`/schedule/${lesson.id}`)}
+                        onClick={() => navigate(`/lessons/${lesson.id}`)}
                       >
                         <div className="flex min-w-0 flex-1 items-center gap-2.5">
                           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-medium text-primary">

@@ -9,7 +9,7 @@ import Dashboard from "@/features/dashboard/Dashboard";
 import Students from "@/features/students/Students";
 import StudentDetail from "@/features/students/StudentDetail";
 import Schedule from "@/features/schedule/Schedule";
-import EventDetail from "@/features/schedule/EventDetail";
+import EventDetail from "@/features/lessons/EventDetail";
 import Payments from "@/features/payments/Payments";
 import CreateInvoice from "@/features/payments/CreateInvoice";
 import EditInvoice from "@/features/payments/EditInvoice";
@@ -32,12 +32,12 @@ export const router = createBrowserRouter([
               { path: "students", element: <Students /> },
               { path: "students/:studentId", element: <StudentDetail /> },
               { path: "schedule", element: <Schedule /> },
-              { path: "schedule/:eventId", element: <EventDetail /> },
               { path: "payments", element: <Payments /> },
               { path: "payments/new", element: <CreateInvoice /> },
               { path: "payments/:invoiceId/edit", element: <EditInvoice /> },
               { path: "payments/:invoiceId", element: <InvoiceDetail /> },
               { path: "lessons", element: <Lessons /> },
+              { path: "lessons/:eventId", element: <EventDetail /> },
               { path: "settings", element: <Settings /> },
             ],
           },

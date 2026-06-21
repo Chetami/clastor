@@ -26,12 +26,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useGetLesson, useRecordAttendance, useCancelLesson, useNotifyStudent, useUpdateLesson } from "./api";
+import {
+  useGetLesson,
+  useRecordAttendance,
+  useCancelLesson,
+  useNotifyStudent,
+  useUpdateLesson,
+} from "../schedule/api";
 import {
   generateMeetLinkRequest,
   getGoogleConnectionStatus,
   getGoogleAuthUrl,
-} from "./api/requests";
+} from "../schedule/api/requests";
 import { useListStudents } from "@/features/students/api";
 import {
   ACCEPTANCE_LABELS,
@@ -40,7 +46,7 @@ import {
   deriveLessonStatus,
   isLessonFinished,
   lessonEndDate,
-} from "./lesson-utils";
+} from "../schedule/lesson-utils";
 import type { AttendanceStatus } from "@examify-tms/interfaces";
 import { meetUrl } from "@/features/lessons/lesson-display";
 
@@ -114,9 +120,9 @@ export default function EventDetail() {
           </p>
         </div>
         <Button variant="outline" asChild>
-          <Link to="/schedule">
+          <Link to="/lessons">
             <ArrowLeft className="h-4 w-4" />
-            Back to Schedule
+            Back to Lessons
           </Link>
         </Button>
       </div>
@@ -209,9 +215,7 @@ export default function EventDetail() {
     try {
       await cancelLesson.mutateAsync();
     } catch {
-      setPickerError(
-        cancelLesson.error?.message ?? "Failed to cancel lesson",
-      );
+      setPickerError(cancelLesson.error?.message ?? "Failed to cancel lesson");
     }
   }
 
@@ -221,10 +225,10 @@ export default function EventDetail() {
         variant="ghost"
         size="sm"
         className="-ml-2 text-muted-foreground"
-        onClick={() => navigate("/schedule")}
+        onClick={() => navigate("/lessons")}
       >
         <ArrowLeft className="h-4 w-4" />
-        Schedule
+        Lessons
       </Button>
 
       <div className="flex flex-col gap-1">
@@ -244,7 +248,9 @@ export default function EventDetail() {
             </span>
           )}
         </div>
-        <p className="text-sm text-muted-foreground">{lesson.subject} session</p>
+        <p className="text-sm text-muted-foreground">
+          {lesson.subject} session
+        </p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -334,7 +340,9 @@ export default function EventDetail() {
                       </span>
                     </Button>
                     {meetError && (
-                      <p className="mt-1 text-xs text-destructive">{meetError}</p>
+                      <p className="mt-1 text-xs text-destructive">
+                        {meetError}
+                      </p>
                     )}
                   </div>
                 )}
@@ -418,10 +426,13 @@ export default function EventDetail() {
                     disabled={cooldownActive}
                     title={
                       cooldownActive && nextAllowedAt
-                        ? `Already notified — can resend after ${nextAllowedAt.toLocaleString("en-US", {
-                            dateStyle: "medium",
-                            timeStyle: "short",
-                          })}`
+                        ? `Already notified — can resend after ${nextAllowedAt.toLocaleString(
+                            "en-US",
+                            {
+                              dateStyle: "medium",
+                              timeStyle: "short",
+                            },
+                          )}`
                         : "Send a reminder email to the student"
                     }
                   >
@@ -434,10 +445,16 @@ export default function EventDetail() {
                     onClick={handleCancel}
                     disabled={cancelLesson.isPending || lessonFinished}
                     className="text-destructive hover:text-destructive"
-                    title={lessonFinished ? "Cannot cancel finished lessons" : "Cancel this occurrence"}
+                    title={
+                      lessonFinished
+                        ? "Cannot cancel finished lessons"
+                        : "Cancel this occurrence"
+                    }
                   >
                     <Ban className="h-4 w-4" />
-                    {cancelLesson.isPending ? "Cancelling…" : "Cancel this occurrence"}
+                    {cancelLesson.isPending
+                      ? "Cancelling…"
+                      : "Cancel this occurrence"}
                   </Button>
                 </div>
               )}
@@ -463,8 +480,8 @@ export default function EventDetail() {
           <DialogHeader>
             <DialogTitle>Notify {studentName}</DialogTitle>
             <DialogDescription>
-              Send a reminder email to the student. Lesson details are
-              appended automatically. You can resend once every 24 hours.
+              Send a reminder email to the student. Lesson details are appended
+              automatically. You can resend once every 24 hours.
             </DialogDescription>
           </DialogHeader>
           <textarea
