@@ -1,5 +1,5 @@
 import { getFirebaseFirestore } from "../config/firebase";
-import { CreateStudentRequest, Student } from "@examify-tms/interfaces";
+import { CreateStudentRequest, UpdateStudentRequest, Student } from "@examify-tms/interfaces";
 import admin from "firebase-admin";
 import crypto from "crypto";
 
@@ -207,5 +207,86 @@ export async function createStudentInFirestore(
   } catch (error) {
     console.error("Failed to create student in Firestore:", error);
     throw new Error("Failed to create student");
+  }
+}
+
+/**
+ * Update student document in Firestore
+ * @param studentId - ID of the student to update
+ * @param data - Student update request data
+ * @returns Updated student object
+ */
+export async function updateStudentInFirestore(
+  studentId: string,
+  data: UpdateStudentRequest
+): Promise<Student> {
+  try {
+    const firestore = getFirebaseFirestore();
+    const now = admin.firestore.Timestamp.now();
+
+    const docRef = firestore.collection("students").doc(studentId);
+    const doc = await docRef.get();
+
+    if (!doc.exists) {
+      throw new Error("Student not found");
+    }
+
+    const existingData = doc.data();
+    if (!existingData) {
+      throw new Error("Student data not found");
+    }
+
+    const updateData: Record<string, any> = {};
+
+    if (data.name !== undefined) updateData.name = data.name;
+    if (data.email !== undefined) updateData.email = data.email;
+    if (data.phone !== undefined) updateData.phone = data.phone;
+    if (data.parentEmail !== undefined) updateData.parentEmail = data.parentEmail;
+    if (data.billingEmail !== undefined) updateData.billingEmail = data.billingEmail;
+    if (data.subject !== undefined) updateData.subject = data.subject;
+    if (data.expectedAmount !== undefined) updateData.expectedAmount = data.expectedAmount;
+    if (data.rateType !== undefined) updateData.rateType = data.rateType;
+    if (data.frequencyPerWeek !== undefined) updateData.frequencyPerWeek = data.frequencyPerWeek;
+    if (data.status !== undefined) updateData.status = data.status;
+    if (data.timezone !== undefined) updateData.timezone = data.timezone;
+    if (data.notes !== undefined) updateData.notes = data.notes;
+
+    updateData.updatedAt = now;
+
+    await docRef.update(updateData);
+
+    const updatedDoc = await docRef.get();
+    const updatedData = updatedDoc.data();
+    if (!updatedData) {
+      throw new Error("Failed to retrieve updated student");
+    }
+
+    const parentEmail = updatedData.parentEmail || null;
+    return {
+      id: studentId,
+      tutorId: updatedData.tutorId,
+      name: updatedData.name,
+      email: updatedData.email,
+      phone: updatedData.phone || null,
+      parentEmail,
+      billingEmail: resolveBillingEmail(
+        updatedData.billingEmail,
+        parentEmail,
+        updatedData.email
+      ),
+      subject: updatedData.subject,
+      expectedAmount: updatedData.expectedAmount,
+      rateType: updatedData.rateType,
+      frequencyPerWeek: updatedData.frequencyPerWeek,
+      status: updatedData.status,
+      timezone: updatedData.timezone || null,
+      notes: updatedData.notes || null,
+      amountOwed: updatedData.amountOwed,
+      createdAt: updatedData.createdAt ? updatedData.createdAt.toDate() : (null as any),
+      updatedAt: now.toDate() as any,
+    };
+  } catch (error) {
+    console.error("Failed to update student in Firestore:", error);
+    throw new Error("Failed to update student");
   }
 }

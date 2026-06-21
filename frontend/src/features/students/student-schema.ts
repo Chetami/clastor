@@ -94,3 +94,20 @@ export const EMPTY_STUDENT_FORM: StudentFormData = {
   timezone: "",
   notes: "",
 };
+
+export function formToUpdateRequest(data: StudentFormData): Record<string, any> {
+  return {
+    name: data.name,
+    email: data.email,
+    phone: data.phone || null,
+    parentEmail: data.parentEmail || null,
+    billingEmail: data.useParentEmailAsBilling ? data.parentEmail : (data.billingEmail || null),
+    subject: data.subject,
+    expectedAmount: data.expectedAmount,
+    rateType: data.rateType,
+    frequencyPerWeek: data.frequencyPerWeek,
+    status: data.status,
+    timezone: data.timezoneEnabled ? data.timezone : null,
+    notes: data.notes || null,
+  };
+}

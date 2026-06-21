@@ -1,6 +1,7 @@
 import { api } from "@/lib/api";
 import type {
   CreateStudentRequest,
+  UpdateStudentRequest,
   StudentListResponse,
   StudentResponse,
 } from "@examify-tms/interfaces";
@@ -9,6 +10,14 @@ export async function createStudentRequest(
   data: CreateStudentRequest,
 ): Promise<StudentResponse> {
   const response = await api.post<StudentResponse>("/api/students", data);
+  return response.data;
+}
+
+export async function updateStudentRequest(
+  id: string,
+  data: UpdateStudentRequest,
+): Promise<StudentResponse> {
+  const response = await api.put<StudentResponse>(`/api/students/${id}`, data);
   return response.data;
 }
 

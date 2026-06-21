@@ -10,10 +10,12 @@ export function useMarkInvoicePaid() {
     { id: string; data?: MarkPaidRequest }
   >({
     mutationFn: ({ id, data }) => markInvoicePaidRequest(id, data),
-    onSuccess: () => {
+    onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
       queryClient.invalidateQueries({ queryKey: ["lessons"] });
       queryClient.invalidateQueries({ queryKey: ["students"] });
+      queryClient.invalidateQueries({ queryKey: ["student-invoices", response.studentId] });
+      queryClient.invalidateQueries({ queryKey: ["student-debt", response.studentId] });
     },
   });
 }

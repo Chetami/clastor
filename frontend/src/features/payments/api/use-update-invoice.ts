@@ -13,8 +13,10 @@ export function useUpdateInvoice() {
     { id: string; data: UpdateInvoiceRequest }
   >({
     mutationFn: ({ id, data }) => updateInvoiceRequest(id, data),
-    onSuccess: () => {
+    onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["student-invoices", response.studentId] });
+      queryClient.invalidateQueries({ queryKey: ["student-debt", response.studentId] });
     },
   });
 }

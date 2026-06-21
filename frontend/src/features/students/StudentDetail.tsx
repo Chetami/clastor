@@ -26,9 +26,9 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { StudentForm } from "./StudentForm";
-import { useGetStudent } from "./api";
+import { useGetStudent, useUpdateStudent } from "./api";
 import { useStudentInvoices, useStudentDebt } from "./invoices-api";
-import type { StudentFormData } from "./student-schema";
+import { formToUpdateRequest, type StudentFormData } from "./student-schema";
 import {
   formatCurrency,
   getInitials,
@@ -43,11 +43,17 @@ export default function StudentDetail() {
   const { data: student, isLoading, error } = useGetStudent(studentId);
   const { data: invoices = [] } = useStudentInvoices(studentId);
   const { data: totalDebt = 0 } = useStudentDebt(studentId);
+  const updateStudent = useUpdateStudent();
   const [editing, setEditing] = useState(false);
   const [notesEditing, setNotesEditing] = useState(false);
   const [notesDraft, setNotesDraft] = useState("");
 
-  function handleEdit(_values: StudentFormData) {
+  async function handleEdit(values: StudentFormData) {
+    if (!student) return;
+    await updateStudent.mutateAsync({
+      id: student.id,
+      data: formToUpdateRequest(values),
+    });
     setEditing(false);
   }
 
@@ -371,6 +377,7 @@ export default function StudentDetail() {
             submitLabel="Save Changes"
             onCancel={() => setEditing(false)}
             onSubmit={handleEdit}
+            disabled={updateStudent.isPending}
           />
         </DialogContent>
       </Dialog>

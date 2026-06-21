@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { createStudent, listStudents, getStudentById } from "../controllers/studentController";
+import { createStudent, listStudents, getStudentById, updateStudent } from "../controllers/studentController";
 import { authenticateJWT, requireRole } from "../middleware/auth";
 
 const router = Router();
@@ -36,6 +36,18 @@ router.post(
   authenticateJWT,
   requireRole("tutor", "system_admin"),
   createStudent
+);
+
+/**
+ * PUT /api/students/:id
+ * Update student endpoint - updates an existing student
+ * Both tutors and system_admins can update students they have permission for
+ */
+router.put(
+  "/:id",
+  authenticateJWT,
+  requireRole("tutor", "system_admin"),
+  updateStudent
 );
 
 export default router;

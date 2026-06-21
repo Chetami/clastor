@@ -9,9 +9,11 @@ import { queryClient } from "@/lib/query-client";
 export function useCreateInvoice() {
   return useMutation<InvoiceResponse, Error, CreateInvoiceRequest>({
     mutationFn: (data) => createInvoiceRequest(data),
-    onSuccess: () => {
+    onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
       queryClient.invalidateQueries({ queryKey: ["lessons"] });
+      queryClient.invalidateQueries({ queryKey: ["student-invoices", response.studentId] });
+      queryClient.invalidateQueries({ queryKey: ["student-debt", response.studentId] });
     },
   });
 }

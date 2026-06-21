@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
-import { createStudentInFirestore, listStudentsFromFirestore, getStudentByIdFromFirestore } from "../services/studentService";
-import { CreateStudentRequest, StudentResponse, StudentListResponse, ApiError } from "@examify-tms/interfaces";
-import { canViewStudent } from "../permissions/studentPermissions";
+import { createStudentInFirestore, listStudentsFromFirestore, getStudentByIdFromFirestore, updateStudentInFirestore } from "../services/studentService";
+import { CreateStudentRequest, UpdateStudentRequest, StudentResponse, StudentListResponse, ApiError } from "@examify-tms/interfaces";
+import { canViewStudent, canEditStudent } from "../permissions/studentPermissions";
 
 /**
  * Create student controller
@@ -138,6 +138,63 @@ export async function getStudentById(
   } catch (error) {
     console.error("Get student by ID failed:", error);
     const message = error instanceof Error ? error.message : "Failed to get student";
+    res.status(500).json({ message });
+  }
+}
+
+/**
+ * Update student controller
+ * Updates an existing student record
+ */
+export async function updateStudent(
+  req: Request<{ id: string }, {}, UpdateStudentRequest>,
+  res: Response<StudentResponse | ApiError>
+): Promise<void> {
+  try {
+    if (!req.user) {
+      res.status(401).json({ message: "Unauthorized" });
+      return;
+    }
+
+    const studentId = req.params.id;
+
+    const existingStudent = await getStudentByIdFromFirestore(studentId);
+
+    if (!existingStudent) {
+      res.status(404).json({ message: "Student not found" });
+      return;
+    }
+
+    if (!canEditStudent(existingStudent, req)) {
+      res.status(403).json({ message: "Forbidden: You do not have permission to update this student" });
+      return;
+    }
+
+    const updatedStudent = await updateStudentInFirestore(studentId, req.body);
+
+    const response: StudentResponse = {
+      id: updatedStudent.id,
+      name: updatedStudent.name,
+      email: updatedStudent.email,
+      phone: updatedStudent.phone,
+      parentEmail: updatedStudent.parentEmail,
+      billingEmail: updatedStudent.billingEmail,
+      subject: updatedStudent.subject,
+      expectedAmount: updatedStudent.expectedAmount,
+      rateType: updatedStudent.rateType as "hourly" | "per_lesson",
+      frequencyPerWeek: updatedStudent.frequencyPerWeek,
+      status: updatedStudent.status as "active" | "past",
+      timezone: updatedStudent.timezone,
+      notes: updatedStudent.notes,
+      amountOwed: updatedStudent.amountOwed,
+      createdAt: (updatedStudent.createdAt as any) instanceof Date ? (updatedStudent.createdAt as any).toISOString() : updatedStudent.createdAt,
+      updatedAt: (updatedStudent.updatedAt as any) instanceof Date ? (updatedStudent.updatedAt as any).toISOString() : updatedStudent.updatedAt,
+    };
+
+    res.status(200).json(response);
+  } catch (error) {
+    console.error("Update student failed:", error);
+    const message = error instanceof Error ? error.message : "Failed to update student";
     res.status(500).json({ message });
   }
 }
