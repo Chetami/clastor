@@ -1,0 +1,12 @@
+type: string
+enum:
+  - week
+  - month
+  - six_months
+  - year
+description: |-
+  Dashboard aggregation period.
+  - week: current calendar week (Monday → Sunday)
+  - month: current calendar month
+  - six_months: the last 6 calendar months including the current one
+  - year: current calendar year

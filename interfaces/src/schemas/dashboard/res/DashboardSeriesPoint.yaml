@@ -1,0 +1,22 @@
+type: object
+required:
+  - label
+  - date
+  - value
+properties:
+  label:
+    type: string
+    description: Human-readable bucket label for chart axes (e.g. "Mon", "Jan")
+    example: Mon
+  date:
+    type: string
+    format: date-time
+    description: ISO timestamp of the bucket start (used for chronological sorting)
+    example: "2026-06-22T00:00:00.000Z"
+  value:
+    type: number
+    format: double
+    minimum: 0
+    description: Aggregated value for this bucket (hours for hoursSeries, currency for incomeSeries)
+    example: 2.5
+description: A single point in a dashboard chart series

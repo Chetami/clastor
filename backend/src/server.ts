@@ -9,6 +9,7 @@ import paymentRoutes from "./routes/paymentRoutes";
 import meetingRoutes from "./routes/meetingRoutes";
 import userRoutes from "./routes/userRoutes";
 import tutorProfileRoutes from "./routes/tutorProfileRoutes";
+import dashboardRoutes from "./routes/dashboardRoutes";
 import { initializeFirebase } from "./config/firebase";
 import { ApiError } from "@examify-tms/interfaces";
 
@@ -50,6 +51,7 @@ app.use("/api/payments", paymentRoutes);
 app.use("/api/meetings", meetingRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/tutor-profiles", tutorProfileRoutes);
+app.use("/api/dashboard", dashboardRoutes);
 // Stripe Connect routes (everything except /webhook, which is mounted above).
 app.use("/api/stripe", stripeRoutes);
 

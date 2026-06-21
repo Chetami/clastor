@@ -4,6 +4,7 @@ import { queryClient } from "@/lib/query-client";
 import { useVerifyToken } from "@/features/auth/api";
 import { useAuthStore } from "@/store/auth-store";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import { Toaster } from "@/components/ui/sonner";
 
 function FullScreenLoader() {
   return (
@@ -35,6 +36,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthBoot>{children}</AuthBoot>
+      <Toaster richColors closeButton position="top-right" />
       <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>
   );

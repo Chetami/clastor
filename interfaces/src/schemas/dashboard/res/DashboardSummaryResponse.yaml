@@ -1,0 +1,74 @@
+type: object
+required:
+  - period
+  - rangeStart
+  - rangeEnd
+  - hoursWorked
+  - income
+  - studentCount
+  - hoursSeries
+  - incomeSeries
+  - previousHoursWorked
+  - previousIncome
+properties:
+  period:
+    $ref: '../DashboardPeriod.yaml'
+  rangeStart:
+    type: string
+    format: date-time
+    description: Inclusive start of the selected period (ISO 8601)
+    example: "2026-06-22T00:00:00.000Z"
+  rangeEnd:
+    type: string
+    format: date-time
+    description: Exclusive end of the selected period (ISO 8601)
+    example: "2026-06-29T00:00:00.000Z"
+  hoursWorked:
+    type: number
+    format: double
+    minimum: 0
+    description: >-
+      Total hours taught in the period. Sum of durationMinutes for
+      non-cancelled lessons whose attendance was recorded as present or
+      present_late, divided by 60.
+    example: 12.5
+  income:
+    type: number
+    format: double
+    minimum: 0
+    description: Total income collected in the period (sum of paid invoice totals).
+    example: 1240
+  studentCount:
+    type: integer
+    minimum: 0
+    description: Number of active students as of now.
+    example: 18
+  hoursSeries:
+    type: array
+    description: >-
+      Per-bucket hours series for the chart. Buckets: week → 7 daily points,
+      month → daily points, six_months → 6 monthly points, year → 12 monthly points.
+    items:
+      $ref: './DashboardSeriesPoint.yaml'
+  incomeSeries:
+    type: array
+    description: Per-bucket income series for the chart (same bucketing as hoursSeries).
+    items:
+      $ref: './DashboardSeriesPoint.yaml'
+  previousHoursWorked:
+    type: number
+    format: double
+    minimum: 0
+    description: >-
+      Hours worked in the immediately preceding period of the same length,
+      used to compute a delta percentage for the stat card.
+    example: 11.5
+  previousIncome:
+    type: number
+    format: double
+    minimum: 0
+    description: Income collected in the immediately preceding period of the same length.
+    example: 1100
+description: |-
+  Dashboard summary response. Aggregated metrics for the requested period,
+  computed server-side from lessons and invoices owned by the requesting tutor.

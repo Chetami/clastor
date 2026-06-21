@@ -157,3 +157,10 @@ components:
       $ref: './schemas/tutors/res/TutorProfileResponse.yaml'
     PublicTutorProfileResponse:
       $ref: './schemas/tutors/res/PublicTutorProfileResponse.yaml'
+    # Dashboard Schemas
+    DashboardPeriod:
+      $ref: './schemas/dashboard/DashboardPeriod.yaml'
+    DashboardSeriesPoint:
+      $ref: './schemas/dashboard/res/DashboardSeriesPoint.yaml'
+    DashboardSummaryResponse:
+      $ref: './schemas/dashboard/res/DashboardSummaryResponse.yaml'
