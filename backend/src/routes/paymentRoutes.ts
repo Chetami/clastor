@@ -2,11 +2,13 @@ import { Router } from "express";
 import {
   listInvoices,
   getInvoiceById,
+  getInvoicePdf,
   createInvoice,
   updateInvoice,
   markInvoicePaid,
   voidInvoice,
   deleteInvoice,
+  sendInvoice,
   getStudentInvoices,
   getStudentDebt,
 } from "../controllers/paymentController";
@@ -25,6 +27,13 @@ router.get("/", authenticateJWT, listInvoices);
  * Get a single invoice by ID.
  */
 router.get("/:id", authenticateJWT, getInvoiceById);
+
+/**
+ * GET /api/payments/:id/pdf
+ * Stream the invoice rendered as a PDF (generated on the fly, not stored).
+ * Used for printing and downloading.
+ */
+router.get("/:id/pdf", authenticateJWT, getInvoicePdf);
 
 /**
  * GET /api/payments/student/:studentId/invoices
@@ -82,6 +91,17 @@ router.post(
   authenticateJWT,
   requireRole("tutor", "system_admin"),
   voidInvoice
+);
+
+/**
+ * POST /api/payments/:id/send
+ * Email the invoice PDF to the billing contact and promote a draft to "open".
+ */
+router.post(
+  "/:id/send",
+  authenticateJWT,
+  requireRole("tutor", "system_admin"),
+  sendInvoice
 );
 
 /**

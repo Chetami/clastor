@@ -21,6 +21,9 @@ import {
   ApiError,
 } from "@examify-tms/interfaces";
 import { canViewInvoice, canEditInvoice, canDeleteInvoice } from "../permissions/paymentPermissions";
+import { generateInvoicePdf } from "../services/invoicePdfService";
+import { sendInvoiceEmail } from "../services/emailService";
+import { getUserFromFirestore } from "../services/userService";
 
 /**
  * Convert an Invoice (Date-typed) to an InvoiceResponse (ISO string-typed).
@@ -154,6 +157,138 @@ export async function getInvoiceById(
     console.error("Get invoice failed:", error);
     const message = error instanceof Error ? error.message : "Failed to get invoice";
     res.status(500).json({ message });
+  }
+}
+
+/**
+ * Stream the invoice as an on-the-fly generated PDF. Used by the frontend
+ * print / download view. The PDF is never persisted — it is regenerated from
+ * the single shared template on each request.
+ */
+export async function getInvoicePdf(
+  req: Request<{ id: string }>,
+  res: Response
+): Promise<void> {
+  try {
+    if (!req.user) {
+      res.status(401).json({ message: "Unauthorized" });
+      return;
+    }
+
+    const invoice = await getInvoiceByIdFromFirestore(req.params.id);
+    if (!invoice) {
+      res.status(404).json({ message: "Invoice not found" });
+      return;
+    }
+
+    if (!canViewInvoice(invoice, req)) {
+      res.status(403).json({ message: "Forbidden" });
+      return;
+    }
+
+    const tutor = await safeGetUser(invoice.tutorId);
+    const pdfBuffer = await generateInvoicePdf(invoice, {
+      tutorName: tutor?.name,
+      tutorEmail: tutor?.email,
+    });
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `inline; filename="${invoice.invoiceNumber}.pdf"`
+    );
+    res.status(200).send(pdfBuffer);
+  } catch (error) {
+    console.error("Get invoice PDF failed:", error);
+    const message = error instanceof Error ? error.message : "Failed to generate invoice PDF";
+    res.status(500).json({ message });
+  }
+}
+
+/**
+ * Send an invoice to the billing contact. Generates the PDF on the fly,
+ * emails it as an attachment, and — if the invoice is still a draft — flips
+ * its status to "open". Open/overdue invoices can be resent. Paid/void
+ * invoices cannot be sent.
+ */
+export async function sendInvoice(
+  req: Request<{ id: string }>,
+  res: Response<InvoiceResponse | ApiError>
+): Promise<void> {
+  try {
+    if (!req.user) {
+      res.status(401).json({ message: "Unauthorized" });
+      return;
+    }
+
+    const invoice = await getInvoiceByIdFromFirestore(req.params.id);
+    if (!invoice) {
+      res.status(404).json({ message: "Invoice not found" });
+      return;
+    }
+
+    if (!canEditInvoice(invoice, req)) {
+      res.status(403).json({ message: "Forbidden" });
+      return;
+    }
+
+    if (invoice.status === "paid" || invoice.status === "void") {
+      res
+        .status(409)
+        .json({ message: `Cannot send a ${invoice.status} invoice` });
+      return;
+    }
+
+    if (!invoice.billingEmail) {
+      res
+        .status(400)
+        .json({ message: "This invoice has no billing email address on file" });
+      return;
+    }
+
+    const tutor = await safeGetUser(invoice.tutorId);
+    const pdfBuffer = await generateInvoicePdf(invoice, {
+      tutorName: tutor?.name,
+      tutorEmail: tutor?.email,
+    });
+
+    await sendInvoiceEmail({
+      to: invoice.billingEmail,
+      invoice,
+      tutorName: tutor?.name,
+      tutorEmail: tutor?.email,
+      pdfBuffer,
+    });
+
+    // Promote drafts to "open" once successfully delivered.
+    if (invoice.status === "draft") {
+      await updateInvoiceInFirestore(req.params.id, { status: "open" });
+    }
+
+    const updated = await getInvoiceByIdFromFirestore(req.params.id);
+    if (!updated) {
+      res.status(404).json({ message: "Invoice not found" });
+      return;
+    }
+
+    res.status(200).json(toInvoiceResponse(updated));
+  } catch (error) {
+    console.error("Send invoice failed:", error);
+    const message = error instanceof Error ? error.message : "Failed to send invoice";
+    const status = message.includes("not configured") ? 503 : 500;
+    res.status(status).json({ message });
+  }
+}
+
+/**
+ * Fetch the owning tutor's user record without throwing — missing tutors
+ * shouldn't block PDF generation/email (we just omit their name).
+ */
+async function safeGetUser(uid: string) {
+  try {
+    return await getUserFromFirestore(uid);
+  } catch {
+    return null;
   }
 }
 
