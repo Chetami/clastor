@@ -89,9 +89,11 @@ properties:
     type: number
     format: double
     minimum: 0
+    deprecated: true
     description: >-
-      Outstanding balance the student currently owes. Billing is managed
-      separately; this is a denormalized display field.
+      Deprecated: Outstanding balance the student currently owes. Use the
+      /api/payments/student/:studentId/debt endpoint instead to calculate
+      debt from open and overdue invoices.
     example: 90
   createdAt:
     type: string

@@ -307,7 +307,6 @@ export async function updateInvoiceInFirestore(
 /**
  * Mark an invoice as paid. Side effects:
  *  - flips isPaid=true on every linked lesson
- *  - decrements the student's amountOwed by the invoice total
  */
 export async function markInvoicePaidInFirestore(
   invoiceId: string,
@@ -353,17 +352,6 @@ export async function markInvoicePaidInFirestore(
           updateLessonInFirestore(li.lessonId, { isPaid: true })
       )
     );
-
-    // Side effect: decrement student amountOwed
-    const studentRef = firestore
-      .collection("students")
-      .doc(invoice.studentId as string);
-    const studentSnap = await studentRef.get();
-    if (studentSnap.exists) {
-      const currentOwed = (studentSnap.data()?.amountOwed as number) ?? 0;
-      const newOwed = Math.max(0, currentOwed - (invoice.total as number));
-      await studentRef.update({ amountOwed: newOwed, updatedAt: now });
-    }
   } catch (error) {
     console.error("Failed to mark invoice paid in Firestore:", error);
     throw new Error(
@@ -432,5 +420,48 @@ export async function deleteInvoiceFromFirestore(
   } catch (error) {
     console.error("Failed to delete invoice from Firestore:", error);
     throw new Error("Failed to delete invoice");
+  }
+}
+
+/**
+ * Get all invoices for a specific student
+ */
+export async function getStudentInvoicesFromFirestore(
+  studentId: string
+): Promise<Invoice[]> {
+  try {
+    const firestore = getFirebaseFirestore();
+    const snapshot = await firestore
+      .collection("invoices")
+      .where("studentId", "==", studentId)
+      .get();
+
+    const invoices: Invoice[] = [];
+    snapshot.forEach((doc) => {
+      invoices.push(mapInvoice(doc.id, doc.data()));
+    });
+
+    return invoices;
+  } catch (error) {
+    console.error("Failed to get student invoices from Firestore:", error);
+    throw new Error("Failed to get student invoices");
+  }
+}
+
+/**
+ * Calculate total debt from open and overdue invoices
+ */
+export async function getStudentDebtFromFirestore(
+  studentId: string
+): Promise<number> {
+  try {
+    const invoices = await getStudentInvoicesFromFirestore(studentId);
+    const debt = invoices
+      .filter((invoice) => invoice.status === "open" || invoice.status === "overdue")
+      .reduce((total, invoice) => total + invoice.total, 0);
+    return Math.round(debt * 100) / 100;
+  } catch (error) {
+    console.error("Failed to calculate student debt from Firestore:", error);
+    throw new Error("Failed to calculate student debt");
   }
 }

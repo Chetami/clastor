@@ -7,6 +7,8 @@ import {
   markInvoicePaid,
   voidInvoice,
   deleteInvoice,
+  getStudentInvoices,
+  getStudentDebt,
 } from "../controllers/paymentController";
 import { authenticateJWT, requireRole } from "../middleware/auth";
 
@@ -23,6 +25,18 @@ router.get("/", authenticateJWT, listInvoices);
  * Get a single invoice by ID.
  */
 router.get("/:id", authenticateJWT, getInvoiceById);
+
+/**
+ * GET /api/payments/student/:studentId/invoices
+ * Get all invoices for a specific student.
+ */
+router.get("/student/:studentId/invoices", authenticateJWT, getStudentInvoices);
+
+/**
+ * GET /api/payments/student/:studentId/debt
+ * Get total debt for a specific student (from open and overdue invoices).
+ */
+router.get("/student/:studentId/debt", authenticateJWT, getStudentDebt);
 
 /**
  * POST /api/payments

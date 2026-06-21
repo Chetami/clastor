@@ -12,6 +12,7 @@ import {
   Phone,
   StickyNote,
   Users,
+  FileText,
 } from "lucide-react";
 import { formatPhoneNumberIntl } from "react-phone-number-input";
 import { Button } from "@/components/ui/button";
@@ -23,8 +24,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 import { StudentForm } from "./StudentForm";
 import { useGetStudent } from "./api";
+import { useStudentInvoices, useStudentDebt } from "./invoices-api";
 import type { StudentFormData } from "./student-schema";
 import {
   formatCurrency,
@@ -32,18 +35,19 @@ import {
   rateTypeLabel,
   studentToFormValues,
 } from "./student-utils";
+import type { Invoice } from "@examify-tms/interfaces";
 
 export default function StudentDetail() {
   const { studentId } = useParams<{ studentId: string }>();
   const navigate = useNavigate();
   const { data: student, isLoading, error } = useGetStudent(studentId);
+  const { data: invoices = [] } = useStudentInvoices(studentId);
+  const { data: totalDebt = 0 } = useStudentDebt(studentId);
   const [editing, setEditing] = useState(false);
   const [notesEditing, setNotesEditing] = useState(false);
   const [notesDraft, setNotesDraft] = useState("");
 
   function handleEdit(_values: StudentFormData) {
-    // TODO: Implement update endpoint
-    // For now, just close the dialog
     setEditing(false);
   }
 
@@ -56,10 +60,23 @@ export default function StudentDetail() {
   function saveNotes() {
     if (!student) return;
     const trimmed = notesDraft.trim();
-    // Notes editing is now local-only - updates to notes won't persist to backend
-    // This will be implemented when the update endpoint is available
     console.log("Notes saved locally:", trimmed);
     setNotesEditing(false);
+  }
+
+  const openInvoices = invoices.filter((inv: Invoice) => inv.status === "open" || inv.status === "overdue");
+
+  function getInvoiceStatusColor(status: Invoice["status"]) {
+    switch (status) {
+      case "paid":
+        return "default";
+      case "overdue":
+        return "destructive";
+      case "open":
+        return "secondary";
+      default:
+        return "outline";
+    }
   }
 
   if (isLoading) {
@@ -135,13 +152,13 @@ export default function StudentDetail() {
               <p className="text-sm text-muted-foreground">{student.subject}</p>
             </div>
           </div>
-          {student.amountOwed > 0 && (
+          {totalDebt > 0 && (
             <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-right">
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 Outstanding Balance
               </p>
               <p className="text-2xl font-bold text-destructive">
-                {formatCurrency(student.amountOwed)}
+                {formatCurrency(totalDebt)}
               </p>
             </div>
           )}
@@ -228,19 +245,62 @@ export default function StudentDetail() {
               </span>
               <span
                 className={
-                  student.amountOwed > 0
+                  totalDebt > 0
                     ? "font-bold text-destructive"
                     : "font-medium text-emerald-600 dark:text-emerald-400"
                 }
               >
-                {student.amountOwed > 0
-                  ? formatCurrency(student.amountOwed)
+                {totalDebt > 0
+                  ? formatCurrency(totalDebt)
                   : "Nothing due"}
               </span>
             </div>
           </CardContent>
         </Card>
       </div>
+
+      {openInvoices.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <FileText className="h-4 w-4" />
+              Open Invoices ({openInvoices.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {openInvoices.map((invoice: Invoice) => (
+                <div
+                  key={invoice.id}
+                  className="flex items-center justify-between rounded-lg border p-4"
+                >
+                  <div className="flex items-center gap-4">
+                    <FileText className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{invoice.invoiceNumber}</span>
+                        <Badge variant={getInvoiceStatusColor(invoice.status)}>
+                          {invoice.status}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {invoice.lineItems.length} lesson{invoice.lineItems.length !== 1 ? "s" : ""} · Due{" "}
+                        {invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString() : "No due date"}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-bold">{formatCurrency(invoice.total)}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {invoice.issueDate ? new Date(invoice.issueDate).toLocaleDateString() : ""}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0">

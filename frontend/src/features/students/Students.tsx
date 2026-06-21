@@ -9,7 +9,6 @@ import {
   Plus,
   Search,
   Users,
-  Wallet,
 } from "lucide-react";
 import type { StudentResponse } from "@examify-tms/interfaces";
 import { Button } from "@/components/ui/button";
@@ -38,7 +37,6 @@ import type { StudentFormData } from "./student-schema";
 import { useCreateStudent, useListStudents } from "./api";
 import {
   compactCurrency,
-  formatCurrency,
   formatFrequency,
   getInitials,
   rateUnit,
@@ -69,13 +67,6 @@ export default function Students() {
 
   const activeCount = students.filter((s) => s.status === "active").length;
   const pastCount = students.filter((s) => s.status === "past").length;
-
-  const activeStudents = students.filter((s) => s.status === "active");
-  const outstanding = activeStudents.reduce(
-    (sum, s) => sum + s.amountOwed,
-    0,
-  );
-  const owingCount = activeStudents.filter((s) => s.amountOwed > 0).length;
 
   const visibleStudents = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -153,19 +144,6 @@ export default function Students() {
           Manage your students and their billing details.
         </p>
       </div>
-
-      {outstanding > 0 && (
-        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-sm">
-          <Wallet className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-500" />
-          <span className="font-semibold text-amber-700 dark:text-amber-400">
-            {formatCurrency(outstanding)}
-          </span>
-          <span className="text-muted-foreground">
-            outstanding across {owingCount} active{" "}
-            {owingCount === 1 ? "student" : "students"}
-          </span>
-        </div>
-      )}
 
       {isLoading && (
         <div className="flex items-center justify-center py-12">
@@ -303,21 +281,13 @@ export default function Students() {
                           </span>
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {formatFrequency(
-                            student.frequencyPerWeek,
-                            student.rateType,
-                          )}
-                        </p>
-                      </div>
-                      {student.amountOwed > 0 && (
-                        <div className="hidden text-right lg:block">
-                          <p className="font-medium text-destructive">
-                            {formatCurrency(student.amountOwed)}
-                          </p>
-                          <p className="text-xs text-muted-foreground">owed</p>
-                        </div>
-                      )}
-                      <DropdownMenu>
+                           {formatFrequency(
+                             student.frequencyPerWeek,
+                             student.rateType,
+                           )}
+                         </p>
+                       </div>
+                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button
                             variant="ghost"

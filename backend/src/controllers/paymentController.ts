@@ -7,6 +7,8 @@ import {
   markInvoicePaidInFirestore,
   voidInvoiceInFirestore,
   deleteInvoiceFromFirestore,
+  getStudentInvoicesFromFirestore,
+  getStudentDebtFromFirestore,
 } from "../services/paymentService";
 import {
   CreateInvoiceRequest,
@@ -337,6 +339,55 @@ export async function deleteInvoice(
   } catch (error) {
     console.error("Delete invoice failed:", error);
     const message = error instanceof Error ? error.message : "Failed to delete invoice";
+    res.status(500).json({ message });
+  }
+}
+
+/**
+ * Get all invoices for a specific student
+ */
+export async function getStudentInvoices(
+  req: Request<{ studentId: string }>,
+  res: Response<InvoiceListResponse | ApiError>
+): Promise<void> {
+  try {
+    if (!req.user) {
+      res.status(401).json({ message: "Unauthorized" });
+      return;
+    }
+
+    const invoices = await getStudentInvoicesFromFirestore(req.params.studentId);
+    const response: InvoiceListResponse = {
+      data: invoices.map(toInvoiceResponse),
+      total: invoices.length,
+    };
+
+    res.status(200).json(response);
+  } catch (error) {
+    console.error("Get student invoices failed:", error);
+    const message = error instanceof Error ? error.message : "Failed to get student invoices";
+    res.status(500).json({ message });
+  }
+}
+
+/**
+ * Get total debt for a specific student (from open and overdue invoices)
+ */
+export async function getStudentDebt(
+  req: Request<{ studentId: string }>,
+  res: Response<{ total: number } | ApiError>
+): Promise<void> {
+  try {
+    if (!req.user) {
+      res.status(401).json({ message: "Unauthorized" });
+      return;
+    }
+
+    const total = await getStudentDebtFromFirestore(req.params.studentId);
+    res.status(200).json({ total });
+  } catch (error) {
+    console.error("Get student debt failed:", error);
+    const message = error instanceof Error ? error.message : "Failed to get student debt";
     res.status(500).json({ message });
   }
 }
