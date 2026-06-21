@@ -12,6 +12,7 @@ import Schedule from "@/features/schedule/Schedule";
 import EventDetail from "@/features/schedule/EventDetail";
 import Payments from "@/features/payments/Payments";
 import CreateInvoice from "@/features/payments/CreateInvoice";
+import EditInvoice from "@/features/payments/EditInvoice";
 import Lessons from "@/features/lessons/Lessons";
 import Settings from "@/features/settings/Settings";
 
@@ -33,6 +34,7 @@ export const router = createBrowserRouter([
               { path: "schedule/:eventId", element: <EventDetail /> },
               { path: "payments", element: <Payments /> },
               { path: "payments/new", element: <CreateInvoice /> },
+              { path: "payments/:invoiceId/edit", element: <EditInvoice /> },
               { path: "payments/:invoiceId", element: <Payments /> },
               { path: "lessons", element: <Lessons /> },
               { path: "settings", element: <Settings /> },

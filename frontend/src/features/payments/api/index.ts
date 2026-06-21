@@ -1,4 +1,5 @@
 export { useCreateInvoice } from "./use-create-invoice";
+export { useUpdateInvoice } from "./use-update-invoice";
 export { useListInvoices } from "./use-list-invoices";
 export { useGetInvoice } from "./use-get-invoice";
 export { useMarkInvoicePaid } from "./use-mark-invoice-paid";

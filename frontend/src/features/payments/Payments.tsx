@@ -33,6 +33,7 @@ import {
   useListInvoices,
   useMarkInvoicePaid,
   useVoidInvoice,
+  useUpdateInvoice,
 } from "./api";
 import {
   STATUS_META,
@@ -69,6 +70,7 @@ export default function Payments() {
   const { data: invoices = [], isLoading, error } = useListInvoices();
   const markPaid = useMarkInvoicePaid();
   const voidInvoice = useVoidInvoice();
+  const updateInvoice = useUpdateInvoice();
 
   const counts = useMemo(() => {
     const c: Record<string, number> = {
@@ -300,51 +302,76 @@ export default function Payments() {
                           <TableCell className="hidden lg:table-cell text-muted-foreground">
                             {formatDate(inv.createdAt)}
                           </TableCell>
-                          <TableCell>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8"
-                                >
-                                  <MoreHorizontal className="h-4 w-4" />
-                                  <span className="sr-only">Open menu</span>
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                {inv.status !== "paid" &&
-                                  inv.status !== "void" && (
-                                    <DropdownMenuItem
-                                      disabled={markPaid.isPending}
-                                      onSelect={() =>
-                                        markPaid.mutate({ id: inv.id })
-                                      }
-                                    >
-                                      Mark as paid
-                                    </DropdownMenuItem>
-                                  )}
-                                {inv.status !== "void" &&
-                                  inv.status !== "paid" && (
-                                    <DropdownMenuItem
-                                      disabled={voidInvoice.isPending}
-                                      onSelect={() =>
-                                        voidInvoice.mutate(inv.id)
-                                      }
-                                    >
-                                      Void
-                                    </DropdownMenuItem>
-                                  )}
-                                <DropdownMenuItem
-                                  onSelect={() =>
-                                    navigate(`/payments/${inv.id}`)
-                                  }
-                                >
-                                  View details
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TableCell>
+                           <TableCell>
+                             <DropdownMenu>
+                               <DropdownMenuTrigger asChild>
+                                 <Button
+                                   variant="ghost"
+                                   size="icon"
+                                   className="h-8 w-8"
+                                 >
+                                   <MoreHorizontal className="h-4 w-4" />
+                                   <span className="sr-only">Open menu</span>
+                                 </Button>
+                               </DropdownMenuTrigger>
+                               <DropdownMenuContent align="end">
+                                 {inv.status === "draft" ? (
+                                   <>
+                                     <DropdownMenuItem
+                                       disabled={updateInvoice.isPending}
+                                       onSelect={() =>
+                                         updateInvoice.mutate({
+                                           id: inv.id,
+                                           data: { status: "open" },
+                                         })
+                                       }
+                                     >
+                                       Send invoice
+                                     </DropdownMenuItem>
+                                     <DropdownMenuItem
+                                       onSelect={() =>
+                                         navigate(`/payments/${inv.id}/edit`)
+                                       }
+                                     >
+                                       Edit
+                                     </DropdownMenuItem>
+                                   </>
+                                 ) : (
+                                   <>
+                                     {inv.status !== "paid" &&
+                                       inv.status !== "void" && (
+                                         <DropdownMenuItem
+                                           disabled={markPaid.isPending}
+                                           onSelect={() =>
+                                             markPaid.mutate({ id: inv.id })
+                                           }
+                                         >
+                                           Mark as paid
+                                         </DropdownMenuItem>
+                                       )}
+                                   </>
+                                 )}
+                                 {inv.status !== "void" &&
+                                   inv.status !== "paid" && (
+                                     <DropdownMenuItem
+                                       disabled={voidInvoice.isPending}
+                                       onSelect={() =>
+                                         voidInvoice.mutate(inv.id)
+                                       }
+                                     >
+                                       Void
+                                     </DropdownMenuItem>
+                                   )}
+                                 <DropdownMenuItem
+                                   onSelect={() =>
+                                     navigate(`/payments/${inv.id}`)
+                                   }
+                                 >
+                                   View details
+                                 </DropdownMenuItem>
+                               </DropdownMenuContent>
+                             </DropdownMenu>
+                           </TableCell>
                         </TableRow>
                       );
                     })}

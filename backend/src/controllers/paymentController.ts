@@ -224,7 +224,7 @@ export async function updateInvoice(
 /**
  * Mark an invoice as paid. Triggers lesson isPaid + student amountOwed updates.
  */
-export async function markInvoicePaid(
+  export async function markInvoicePaid(
   req: Request<{ id: string }, {}, MarkPaidRequest>,
   res: Response<InvoiceResponse | ApiError>
 ): Promise<void> {
@@ -242,6 +242,11 @@ export async function markInvoicePaid(
 
     if (!canEditInvoice(invoice, req)) {
       res.status(403).json({ message: "Forbidden" });
+      return;
+    }
+
+    if (invoice.status === "draft") {
+      res.status(409).json({ message: "Cannot mark a draft invoice as paid. Send the invoice first." });
       return;
     }
 
