@@ -59,3 +59,4 @@ backend/.deploy-stage/
 deploy/backend.env.production
 deploy/frontend.env.production
 deploy/firebase-service-account.json
+frontend/.env.production
