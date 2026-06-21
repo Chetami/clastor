@@ -287,6 +287,18 @@ export async function cancelLesson(
       return;
     }
 
+    // Prevent cancellation of finished lessons
+    const now = new Date();
+    const endTime = new Date(new Date(lesson.startDateTime as any).getTime() + lesson.durationMinutes * 60_000);
+    const isFinished = lesson.attendanceStatus !== "unrecorded" || endTime < now;
+    
+    if (isFinished) {
+      res.status(400).json({ 
+        message: "Cannot cancel finished lessons. Only upcoming lessons with unrecorded attendance can be cancelled." 
+      });
+      return;
+    }
+
     await cancelLessonInFirestore(req.params.id);
 
     const updated = await getLessonByIdFromFirestore(req.params.id);

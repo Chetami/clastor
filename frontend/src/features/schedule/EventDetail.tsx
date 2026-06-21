@@ -38,6 +38,7 @@ import {
   ATTENDANCE_LABELS,
   ATTENDANCE_OPTIONS,
   deriveLessonStatus,
+  isLessonFinished,
   lessonEndDate,
 } from "./lesson-utils";
 import type { AttendanceStatus } from "@examify-tms/interfaces";
@@ -130,6 +131,7 @@ export default function EventDetail() {
     lesson.attendanceStatus,
     lesson.isCancelled,
   );
+  const lessonFinished = isLessonFinished(lesson);
 
   const notifiedAt = lesson.lastStudentNotifiedAt
     ? new Date(lesson.lastStudentNotifiedAt)
@@ -430,8 +432,9 @@ export default function EventDetail() {
                     variant="outline"
                     size="sm"
                     onClick={handleCancel}
-                    disabled={cancelLesson.isPending}
+                    disabled={cancelLesson.isPending || lessonFinished}
                     className="text-destructive hover:text-destructive"
+                    title={lessonFinished ? "Cannot cancel finished lessons" : "Cancel this occurrence"}
                   >
                     <Ban className="h-4 w-4" />
                     {cancelLesson.isPending ? "Cancelling…" : "Cancel this occurrence"}

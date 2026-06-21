@@ -89,6 +89,22 @@ export function attendanceTone(
   }
 }
 
+/**
+ * Check if a lesson is finished (cannot be cancelled).
+ * A lesson is finished if:
+ * 1. It has a recorded attendance status (not "unrecorded")
+ * 2. Or its end time has passed
+ */
+export function isLessonFinished(lesson: LessonResponse): boolean {
+  const hasRecordedAttendance = lesson.attendanceStatus !== "unrecorded";
+  const endTime = new Date(
+    new Date(lesson.startDateTime).getTime() +
+      lesson.durationMinutes * 60_000,
+  );
+  const isPastEndTime = endTime < new Date();
+  return hasRecordedAttendance || isPastEndTime;
+}
+
 export interface FullCalendarLessonEvent {
   id: string;
   title: string;
