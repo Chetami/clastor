@@ -978,6 +978,13 @@
   );
 }
 
+/* Working-hours bands — FullCalendar tags slots outside business hours with
+   .fc-non-business. Dim them so the configured working window reads as the
+   "active" region of the day. */
+.gi-calendar .fc .fc-non-business {
+  background-color: hsl(var(--muted) / 0.45);
+}
+
 .gi-calendar .fc-theme-standard td,
 .gi-calendar .fc-theme-standard th {
   border-color: hsl(var(--border));

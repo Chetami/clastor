@@ -3,6 +3,7 @@ import type {
   GoogleConnectionStatus,
   ReminderLeadTime,
   UserInfo,
+  WorkingHours,
 } from "@examify-tms/interfaces";
 
 /**
@@ -54,6 +55,17 @@ export async function updateUserReminderLeadTimeRequest(
   const response = await api.patch<UserInfo>("/api/users/me", {
     reminderLeadTime,
   });
+  return response.data;
+}
+
+/**
+ * Update the tutor's weekly working-hours preference. Pass null to clear.
+ * Returns the updated UserInfo.
+ */
+export async function updateUserWorkingHoursRequest(
+  workingHours: WorkingHours | null,
+): Promise<UserInfo> {
+  const response = await api.patch<UserInfo>("/api/users/me", { workingHours });
   return response.data;
 }
 

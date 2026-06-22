@@ -1,0 +1,17 @@
+type: object
+required:
+  - start
+  - end
+properties:
+  start:
+    type: string
+    description: Start of the working window in 24h "HH:mm" (local time).
+    example: "09:00"
+  end:
+    type: string
+    description: End of the working window in 24h "HH:mm" (local time).
+    example: "17:00"
+description: |-
+  A single working-hours window for one day of the week, expressed as local
+  24h "HH:mm" start/end times. Times are interpreted in the tutor's local
+  timezone (the browser timezone used on the calendar).

@@ -33,6 +33,14 @@ properties:
     example: AUD
   reminderLeadTime:
     $ref: '../common/ReminderLeadTime.yaml'
+  workingHours:
+    nullable: true
+    allOf:
+      - $ref: './WorkingHours.yaml'
+    description: >-
+      The tutor's weekly working hours (per-day start/end windows or null for
+      a day off). Null overall means not configured. Drives the Schedule's
+      shaded business-hours bands and the out-of-hours booking warning.
   createdAt:
     type: string
     format: date-time

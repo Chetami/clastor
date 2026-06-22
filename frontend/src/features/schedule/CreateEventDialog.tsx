@@ -34,6 +34,8 @@ import {
   type EventFormData,
 } from "./event-schema";
 import { isRangeOverlap } from "./lesson-utils";
+import { isSlotOutsideWorkingHours } from "./working-hours-utils";
+import { useAuthStore } from "@/store/auth-store";
 import type { DayOfWeek, ExternalCalendarEvent } from "@examify-tms/interfaces";
 
 interface CreateEventDialogProps {
@@ -97,6 +99,7 @@ export function CreateEventDialog({
   externalEvents = [],
 }: CreateEventDialogProps) {
   const { data: students = [] } = useListStudents();
+  const user = useAuthStore((s) => s.user);
   const createLesson = useCreateLesson();
   const createRecurring = useCreateRecurringLesson();
   const [values, setValues] = useState<EventFormData>(emptyValues);
@@ -130,6 +133,19 @@ export function CreateEventDialog({
       ),
     );
   }, [isRecurring, values.date, values.startTime, values.endTime, externalEvents]);
+
+  // Warn (non-blocking) if the chosen one-off slot is outside the tutor's
+  // configured working hours (day off, or before/after the daily window).
+  const outsideHours = useMemo(() => {
+    if (isRecurring) return false;
+    if (!values.date || !values.startTime || !values.endTime) return false;
+    return isSlotOutsideWorkingHours(
+      values.date,
+      values.startTime,
+      values.endTime,
+      user?.workingHours,
+    );
+  }, [isRecurring, values.date, values.startTime, values.endTime, user?.workingHours]);
 
   useEffect(() => {
     if (!open) return;
@@ -389,6 +405,19 @@ export function CreateEventDialog({
                 </ul>
                 <p className="text-amber-600/80 dark:text-amber-400/80">
                   You can still create this lesson.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {outsideHours && (
+            <div className="flex items-start gap-2 rounded-md border border-amber-500/50 bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-400">
+              <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
+              <div className="space-y-0.5">
+                <p className="font-medium">Outside your working hours</p>
+                <p className="text-amber-600/80 dark:text-amber-400/80">
+                  This time is outside the working hours you set. You can still
+                  create this lesson, or adjust your hours in Settings.
                 </p>
               </div>
             </div>

@@ -50,6 +50,11 @@ components:
       $ref: './schemas/users/res/UserResponse.yaml'
     UserListResponse:
       $ref: './schemas/users/res/UserListResponse.yaml'
+    # Working Hours (tutor preference)
+    WorkingDayWindow:
+      $ref: './schemas/users/WorkingDayWindow.yaml'
+    WorkingHours:
+      $ref: './schemas/users/WorkingHours.yaml'
     # Student Enums
     RateType:
       $ref: './schemas/students/RateType.yaml'

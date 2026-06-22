@@ -1,0 +1,42 @@
+type: object
+properties:
+  monday:
+    allOf:
+      - $ref: './WorkingDayWindow.yaml'
+    nullable: true
+    description: Monday working window, or null for a day off.
+  tuesday:
+    allOf:
+      - $ref: './WorkingDayWindow.yaml'
+    nullable: true
+    description: Tuesday working window, or null for a day off.
+  wednesday:
+    allOf:
+      - $ref: './WorkingDayWindow.yaml'
+    nullable: true
+    description: Wednesday working window, or null for a day off.
+  thursday:
+    allOf:
+      - $ref: './WorkingDayWindow.yaml'
+    nullable: true
+    description: Thursday working window, or null for a day off.
+  friday:
+    allOf:
+      - $ref: './WorkingDayWindow.yaml'
+    nullable: true
+    description: Friday working window, or null for a day off.
+  saturday:
+    allOf:
+      - $ref: './WorkingDayWindow.yaml'
+    nullable: true
+    description: Saturday working window, or null for a day off.
+  sunday:
+    allOf:
+      - $ref: './WorkingDayWindow.yaml'
+    nullable: true
+    description: Sunday working window, or null for a day off.
+description: |-
+  The tutor's weekly working hours — one window per weekday (or null for a
+  day off). Drives the shaded "business hours" bands on the Schedule and the
+  out-of-hours warning when booking. Null overall means not configured (no
+  bands, no warnings).

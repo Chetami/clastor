@@ -22,6 +22,14 @@ properties:
     example: AUD
   reminderLeadTime:
     $ref: '../../common/ReminderLeadTime.yaml'
+  workingHours:
+    nullable: true
+    allOf:
+      - $ref: '../WorkingHours.yaml'
+    description: >-
+      The tutor's weekly working hours. Pass null to clear (no working hours
+      configured). Each weekday is either a {start,end} window or null (day
+      off).
   onboardingComplete:
     type: boolean
     description: Mark the user's onboarding as finished (or dismissed)

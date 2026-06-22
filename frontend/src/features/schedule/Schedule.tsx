@@ -8,10 +8,12 @@ import type { EventInput } from "@fullcalendar/core";
 import { useListLessons, useExternalCalendarEvents } from "./api";
 import { useListStudents } from "@/features/students/api";
 import { useGoogleConnectionStatus } from "@/features/settings/api/use-google-connect";
+import { useAuthStore } from "@/store/auth-store";
 import {
   lessonToCalendarEvent,
   externalEventToCalendarEvent,
 } from "./lesson-utils";
+import { workingHoursToBusinessHours } from "./working-hours-utils";
 import { CreateEventDialog } from "./CreateEventDialog";
 import { EventPopover, type EventAnchor } from "./EventPopover";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -26,6 +28,7 @@ export default function Schedule() {
   const { data: students = [] } = useListStudents();
   const { data: googleStatus } = useGoogleConnectionStatus();
   const googleConnected = !!googleStatus?.connected;
+  const user = useAuthStore((s) => s.user);
 
   const [visibleWindow, setVisibleWindow] = useState<{
     from: string;
@@ -60,6 +63,12 @@ export default function Schedule() {
   const allEvents: EventInput[] = useMemo(
     () => [...lessonEvents, ...externalCalendarEvents],
     [lessonEvents, externalCalendarEvents],
+  );
+
+  // Shaded working-hours bands. False when not configured (no bands).
+  const businessHours = useMemo(
+    () => workingHoursToBusinessHours(user?.workingHours),
+    [user?.workingHours],
   );
 
   const [createOpen, setCreateOpen] = useState(false);
@@ -186,6 +195,7 @@ export default function Schedule() {
           selectable
           selectMirror
           headerToolbar={false}
+          businessHours={businessHours}
           datesSet={(info) => {
             setView(info.view.type);
             setTitle(

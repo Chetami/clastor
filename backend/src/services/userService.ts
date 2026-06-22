@@ -1,7 +1,67 @@
 import { getFirebaseFirestore } from "../config/firebase";
-import { User, Role, UserInfo, ReminderLeadTime } from "@examify-tms/interfaces";
+import {
+  User,
+  Role,
+  UserInfo,
+  ReminderLeadTime,
+  WorkingHours,
+} from "@examify-tms/interfaces";
 import { generateToken } from "../utils/jwt";
 import admin from "firebase-admin";
+
+/** The seven weekday keys stored on WorkingHours, Monday-first. */
+const WORKING_DAYS: (keyof WorkingHours)[] = [
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+  "sunday",
+];
+
+const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+/** Minutes since midnight for an "HH:mm" string (NaN if malformed). */
+function toMinutes(hhmm: string): number {
+  const m = TIME_RE.exec(hhmm);
+  if (!m) return Number.NaN;
+  const [, hh, mm] = m;
+  return Number(hh) * 60 + Number(mm);
+}
+
+/**
+ * Validate + normalize a raw working-hours payload into a clean WorkingHours
+ * object (or null when absent/unset). Each weekday is coerced to a valid
+ * {start,end} window (start strictly before end) or null (day off). Garbage
+ * values become null rather than throwing.
+ */
+export function normalizeWorkingHours(raw: unknown): WorkingHours | null {
+  if (raw == null || typeof raw !== "object") return null;
+  const result = {} as WorkingHours;
+  let hasAny = false;
+  for (const day of WORKING_DAYS) {
+    const entry = (raw as Record<string, unknown>)[day as string];
+    if (
+      entry &&
+      typeof entry === "object" &&
+      typeof (entry as Record<string, unknown>).start === "string" &&
+      typeof (entry as Record<string, unknown>).end === "string"
+    ) {
+      const start = (entry as { start: string }).start;
+      const end = (entry as { end: string }).end;
+      const s = toMinutes(start);
+      const e = toMinutes(end);
+      if (!Number.isNaN(s) && !Number.isNaN(e) && s < e) {
+        result[day] = { start, end };
+        hasAny = true;
+        continue;
+      }
+    }
+    result[day] = null;
+  }
+  return hasAny ? result : null;
+}
 
 /**
  * Map a full User to the trimmed UserInfo returned to clients.
@@ -16,6 +76,7 @@ export function toUserInfo(user: User): UserInfo {
     avatarUrl: user.avatarUrl,
     currency: user.currency,
     reminderLeadTime: user.reminderLeadTime ?? null,
+    workingHours: user.workingHours ?? null,
     onboardingComplete: user.onboardingComplete === true,
     tourSeen: user.tourSeen === true,
   };
@@ -100,6 +161,7 @@ export async function getUserFromFirestore(uid: string): Promise<User> {
       avatarUrl: userData!.avatarUrl,
       currency: normalizeCurrency(userData!.currency),
       reminderLeadTime: normalizeReminderLeadTime(userData!.reminderLeadTime),
+      workingHours: normalizeWorkingHours(userData!.workingHours),
       // Legacy docs created before onboarding existed lack this field; treat
       // anything missing/non-true as incomplete so existing users get prompted.
       onboardingComplete: userData!.onboardingComplete === true,
@@ -237,6 +299,32 @@ export async function updateUserReminderLeadTime(
   } catch (error) {
     console.error("Failed to update reminder lead time:", error);
     throw new Error("Failed to update reminder lead time");
+  }
+}
+
+/**
+ * Update the tutor's weekly working-hours preference. Stored only — drives
+ * the Schedule's shaded bands and the out-of-hours booking warning on the
+ * client. Passing null clears it.
+ * @param uid - User UID
+ * @param workingHours - Normalized WorkingHours, or null to clear
+ * @returns Updated User object
+ */
+export async function updateUserWorkingHours(
+  uid: string,
+  workingHours: WorkingHours | null,
+): Promise<User> {
+  try {
+    const firestore = getFirebaseFirestore();
+    await firestore.collection("users").doc(uid).update({
+      workingHours: workingHours ?? admin.firestore.FieldValue.delete(),
+      updatedAt: admin.firestore.Timestamp.now(),
+    });
+
+    return getUserFromFirestore(uid);
+  } catch (error) {
+    console.error("Failed to update working hours:", error);
+    throw new Error("Failed to update working hours");
   }
 }
 

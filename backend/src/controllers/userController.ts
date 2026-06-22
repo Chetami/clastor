@@ -5,10 +5,12 @@ import {
   updateUserAvatar,
   updateUserCurrency,
   updateUserReminderLeadTime,
+  updateUserWorkingHours,
   updateUserName,
   markOnboardingComplete,
   markTourSeen,
   toUserInfo,
+  normalizeWorkingHours,
 } from "../services/userService";
 import { syncTutorProfileCurrency } from "../services/tutorProfileService";
 
@@ -77,8 +79,14 @@ export async function updateMe(
 ): Promise<void> {
   try {
     const uid = req.user!.uid;
-    const { name, currency, reminderLeadTime, onboardingComplete, tourSeen } =
-      req.body ?? {};
+    const {
+      name,
+      currency,
+      reminderLeadTime,
+      workingHours,
+      onboardingComplete,
+      tourSeen,
+    } = req.body ?? {};
     let updated: User | null = null;
 
     if (typeof name === "string") {
@@ -98,6 +106,12 @@ export async function updateMe(
     // treat the key as provided when explicitly passed (undefined = skip).
     if (reminderLeadTime !== undefined) {
       updated = await updateUserReminderLeadTime(uid, reminderLeadTime);
+    }
+
+    // `workingHours` may be a full object or null (clear). Only treat the key
+    // as provided when explicitly passed (undefined = skip).
+    if (workingHours !== undefined) {
+      updated = await updateUserWorkingHours(uid, normalizeWorkingHours(workingHours));
     }
 
     if (typeof onboardingComplete === "boolean" && onboardingComplete) {

@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/card";
 import { COLOR_SCHEMES, useTheme } from "@/hooks/use-theme";
 import { GoogleConnectionCard } from "./GoogleConnectionCard";
+import { WorkingHoursCard } from "./WorkingHoursCard";
 
 export default function Settings() {
   const { colorScheme, setColorScheme } = useTheme();
@@ -111,6 +112,8 @@ export default function Settings() {
       </Card>
 
       <GoogleConnectionCard />
+
+      <WorkingHoursCard />
 
       <Card>
         <CardHeader>
