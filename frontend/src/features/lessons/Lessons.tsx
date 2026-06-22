@@ -138,13 +138,6 @@ export default function Lessons() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Lessons</h1>
-        <p className="text-sm text-muted-foreground">
-          All your lessons — upcoming, completed and cancelled.
-        </p>
-      </div>
-
       {isLoading && (
         <div className="flex items-center justify-center py-12">
           <p className="text-sm text-muted-foreground">Loading lessons…</p>

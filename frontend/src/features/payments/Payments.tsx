@@ -134,17 +134,13 @@ export default function Payments() {
       setSortOrder((o) => (o === "asc" ? "desc" : "asc"));
     } else {
       setSortField(field);
-      setSortOrder(field === "customerName" || field === "invoiceNumber" ? "asc" : "desc");
+      setSortOrder(
+        field === "customerName" || field === "invoiceNumber" ? "asc" : "desc",
+      );
     }
   }
 
-  function SortHeader({
-    field,
-    label,
-  }: {
-    field: SortField;
-    label: string;
-  }) {
+  function SortHeader({ field, label }: { field: SortField; label: string }) {
     const active = sortField === field;
     return (
       <button
@@ -170,19 +166,6 @@ export default function Payments() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight">Payments</h1>
-          <p className="text-sm text-muted-foreground">
-            Track invoices and record payments.
-          </p>
-        </div>
-        <Button onClick={() => navigate("/payments/new")}>
-          <Plus className="h-4 w-4" />
-          Create Invoice
-        </Button>
-      </div>
-
       {isLoading && (
         <div className="flex items-center justify-center py-12">
           <p className="text-sm text-muted-foreground">Loading invoices...</p>
@@ -219,6 +202,10 @@ export default function Payments() {
                   </span>
                 </button>
               ))}
+              <Button size="sm" className="ml-auto" onClick={() => navigate("/payments/new")}>
+                <Plus className="h-4 w-4" />
+                Create Invoice
+              </Button>
             </div>
 
             <div className="flex items-center justify-between gap-2">
@@ -273,112 +260,112 @@ export default function Payments() {
                       <TableHead className="w-10" />
                     </TableRow>
                   </TableHeader>
-                   <TableBody>
-                     {visible.map((inv) => {
-                       const meta = STATUS_META[inv.status];
-                       return (
-                         <TableRow
-                           key={inv.id}
-                           className="cursor-pointer"
-                           onClick={() => navigate(`/payments/${inv.id}`)}
-                         >
-                           <TableCell className="pl-4 font-medium">
-                             {inv.invoiceNumber}
-                           </TableCell>
-                           <TableCell className="font-medium">
-                             {formatCompactCurrency(inv.total, inv.currency)}
-                           </TableCell>
-                           <TableCell>
-                             <Badge variant={meta.variant}>{meta.label}</Badge>
-                           </TableCell>
-                           <TableCell>
-                             <div className="flex flex-col">
-                               <span>{inv.customerName}</span>
-                               <span className="text-xs text-muted-foreground md:hidden">
-                                 {inv.billingEmail}
-                               </span>
-                             </div>
-                           </TableCell>
-                           <TableCell className="hidden text-muted-foreground md:table-cell">
-                             {inv.billingEmail}
-                           </TableCell>
-                           <TableCell className="hidden lg:table-cell text-muted-foreground">
-                             {formatDate(inv.dueDate)}
-                           </TableCell>
-                           <TableCell className="hidden lg:table-cell text-muted-foreground">
-                             {formatDate(inv.createdAt)}
-                           </TableCell>
-                           <TableCell onClick={(e) => e.stopPropagation()}>
-                             <DropdownMenu>
-                               <DropdownMenuTrigger asChild>
-                                 <Button
-                                   variant="ghost"
-                                   size="icon"
-                                   className="h-8 w-8"
-                                 >
-                                   <MoreHorizontal className="h-4 w-4" />
-                                   <span className="sr-only">Open menu</span>
-                                 </Button>
-                               </DropdownMenuTrigger>
-                               <DropdownMenuContent align="end">
-                                 {inv.status === "draft" ? (
-                                   <>
-                                     <DropdownMenuItem
-                                       disabled={sendInvoice.isPending}
-                                       onSelect={() =>
-                                         sendInvoice.mutate({ id: inv.id })
-                                       }
-                                     >
-                                       Send invoice
-                                     </DropdownMenuItem>
-                                     <DropdownMenuItem
-                                       onSelect={() =>
-                                         navigate(`/payments/${inv.id}/edit`)
-                                       }
-                                     >
-                                       Edit
-                                     </DropdownMenuItem>
-                                   </>
-                                 ) : (
-                                   <>
-                                     {inv.status !== "paid" &&
-                                       inv.status !== "void" && (
-                                         <DropdownMenuItem
-                                           disabled={markPaid.isPending}
-                                           onSelect={() =>
-                                             markPaid.mutate({ id: inv.id })
-                                           }
-                                         >
-                                           Mark as paid
-                                         </DropdownMenuItem>
-                                       )}
-                                   </>
-                                 )}
-                                 {inv.status !== "void" &&
-                                   inv.status !== "paid" && (
-                                     <DropdownMenuItem
-                                       disabled={voidInvoice.isPending}
-                                       onSelect={() =>
-                                         voidInvoice.mutate(inv.id)
-                                       }
-                                     >
-                                       Void
-                                     </DropdownMenuItem>
-                                   )}
-                                 <DropdownMenuItem
-                                   onSelect={() =>
-                                     navigate(`/payments/${inv.id}`)
-                                   }
-                                 >
-                                   View details
-                                 </DropdownMenuItem>
-                               </DropdownMenuContent>
-                             </DropdownMenu>
-                           </TableCell>
-                         </TableRow>
-                       );
-                     })}
-                   </TableBody>
+                  <TableBody>
+                    {visible.map((inv) => {
+                      const meta = STATUS_META[inv.status];
+                      return (
+                        <TableRow
+                          key={inv.id}
+                          className="cursor-pointer"
+                          onClick={() => navigate(`/payments/${inv.id}`)}
+                        >
+                          <TableCell className="pl-4 font-medium">
+                            {inv.invoiceNumber}
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            {formatCompactCurrency(inv.total, inv.currency)}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={meta.variant}>{meta.label}</Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-col">
+                              <span>{inv.customerName}</span>
+                              <span className="text-xs text-muted-foreground md:hidden">
+                                {inv.billingEmail}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="hidden text-muted-foreground md:table-cell">
+                            {inv.billingEmail}
+                          </TableCell>
+                          <TableCell className="hidden lg:table-cell text-muted-foreground">
+                            {formatDate(inv.dueDate)}
+                          </TableCell>
+                          <TableCell className="hidden lg:table-cell text-muted-foreground">
+                            {formatDate(inv.createdAt)}
+                          </TableCell>
+                          <TableCell onClick={(e) => e.stopPropagation()}>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                >
+                                  <MoreHorizontal className="h-4 w-4" />
+                                  <span className="sr-only">Open menu</span>
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                {inv.status === "draft" ? (
+                                  <>
+                                    <DropdownMenuItem
+                                      disabled={sendInvoice.isPending}
+                                      onSelect={() =>
+                                        sendInvoice.mutate({ id: inv.id })
+                                      }
+                                    >
+                                      Send invoice
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      onSelect={() =>
+                                        navigate(`/payments/${inv.id}/edit`)
+                                      }
+                                    >
+                                      Edit
+                                    </DropdownMenuItem>
+                                  </>
+                                ) : (
+                                  <>
+                                    {inv.status !== "paid" &&
+                                      inv.status !== "void" && (
+                                        <DropdownMenuItem
+                                          disabled={markPaid.isPending}
+                                          onSelect={() =>
+                                            markPaid.mutate({ id: inv.id })
+                                          }
+                                        >
+                                          Mark as paid
+                                        </DropdownMenuItem>
+                                      )}
+                                  </>
+                                )}
+                                {inv.status !== "void" &&
+                                  inv.status !== "paid" && (
+                                    <DropdownMenuItem
+                                      disabled={voidInvoice.isPending}
+                                      onSelect={() =>
+                                        voidInvoice.mutate(inv.id)
+                                      }
+                                    >
+                                      Void
+                                    </DropdownMenuItem>
+                                  )}
+                                <DropdownMenuItem
+                                  onSelect={() =>
+                                    navigate(`/payments/${inv.id}`)
+                                  }
+                                >
+                                  View details
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
                 </Table>
               </div>
             )}
@@ -389,7 +376,11 @@ export default function Payments() {
               </span>
               {visible.length > 0 && (
                 <span>
-                  Total: {formatCurrency(visible.reduce((s, i) => s + i.total, 0), currency)}
+                  Total:{" "}
+                  {formatCurrency(
+                    visible.reduce((s, i) => s + i.total, 0),
+                    currency,
+                  )}
                 </span>
               )}
             </div>

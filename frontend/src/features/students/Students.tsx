@@ -165,13 +165,6 @@ export default function Students() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Students</h1>
-        <p className="text-sm text-muted-foreground">
-          Manage your students and their billing details.
-        </p>
-      </div>
-
       {isLoading && (
         <div className="flex items-center justify-center py-12">
           <p className="text-sm text-muted-foreground">Loading students...</p>
