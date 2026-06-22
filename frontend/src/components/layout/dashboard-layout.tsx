@@ -3,6 +3,7 @@ import { Outlet, useLocation } from "react-router-dom";
 import { AppSidebar } from "./app-sidebar";
 import { ThemeToggle } from "./theme-toggle";
 import { OnboardingBanner } from "@/features/onboarding/components/OnboardingBanner";
+import { TourBoot } from "@/features/tour/TourBoot";
 import { Separator } from "@/components/ui/separator";
 import {
   SidebarInset,
@@ -34,6 +35,7 @@ export function DashboardLayout() {
     <SidebarProvider className="h-svh">
       <AppSidebar />
       <SidebarInset className="min-h-0">
+        <TourBoot />
         <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
           <SidebarTrigger />
           <Separator orientation="vertical" className="mr-2 h-4" />

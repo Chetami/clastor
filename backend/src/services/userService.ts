@@ -16,6 +16,7 @@ export function toUserInfo(user: User): UserInfo {
     avatarUrl: user.avatarUrl,
     currency: user.currency,
     onboardingComplete: user.onboardingComplete === true,
+    tourSeen: user.tourSeen === true,
   };
 }
 
@@ -75,6 +76,7 @@ export async function getUserFromFirestore(uid: string): Promise<User> {
       // Legacy docs created before onboarding existed lack this field; treat
       // anything missing/non-true as incomplete so existing users get prompted.
       onboardingComplete: userData!.onboardingComplete === true,
+      tourSeen: userData!.tourSeen === true,
       createdAt: userData!.createdAt.toDate(),
       updatedAt: userData!.updatedAt.toDate(),
       lastActive: userData!.lastActive?.toDate(),
@@ -177,6 +179,27 @@ export async function markOnboardingComplete(uid: string): Promise<User> {
 }
 
 /**
+ * Mark the in-app product tour as seen (completed or skipped). Sets
+ * `tourSeen: true` and bumps `updatedAt`.
+ * @param uid - User UID
+ * @returns Updated User object
+ */
+export async function markTourSeen(uid: string): Promise<User> {
+  try {
+    const firestore = getFirebaseFirestore();
+    await firestore.collection("users").doc(uid).update({
+      tourSeen: true,
+      updatedAt: admin.firestore.Timestamp.now(),
+    });
+
+    return getUserFromFirestore(uid);
+  } catch (error) {
+    console.error("Failed to mark tour seen:", error);
+    throw new Error("Failed to mark tour as seen");
+  }
+}
+
+/**
  * Create user document in Firestore
  * @param id - User ID (Firebase Auth UID)
  * @param email - User email
@@ -204,6 +227,7 @@ export async function createUserInFirestore(
       avatarUrl,
       currency: normalizedCurrency,
       onboardingComplete: false,
+      tourSeen: false,
       createdAt: now,
       updatedAt: now,
       lastActive: now,
@@ -220,6 +244,7 @@ export async function createUserInFirestore(
       avatarUrl,
       currency: normalizedCurrency,
       onboardingComplete: false,
+      tourSeen: false,
       createdAt: now.toDate() as any,
       updatedAt: now.toDate() as any,
       lastActive: now.toDate() as any,

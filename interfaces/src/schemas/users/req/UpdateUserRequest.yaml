@@ -23,6 +23,9 @@ properties:
   onboardingComplete:
     type: boolean
     description: Mark the user's onboarding as finished (or dismissed)
+  tourSeen:
+    type: boolean
+    description: Mark the in-app product tour as seen (or skipped)
 description: |-
   Request body for updating a user
   All fields are optional; only provided fields will be updated

@@ -84,6 +84,7 @@ export default function Schedule() {
     <div
       className="gi-calendar relative flex flex-col h-[calc(100vh-8rem)]"
       ref={wrapperRef}
+      data-tour="schedule"
     >
       <header className="flex items-center justify-between gap-4 px-1 py-2 bg-background">
         <div className="flex items-center gap-2">

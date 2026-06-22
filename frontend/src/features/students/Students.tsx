@@ -236,7 +236,11 @@ export default function Students() {
               </Select>
               <Dialog open={addOpen} onOpenChange={setAddOpen}>
                 <DialogTrigger asChild>
-                  <Button size="sm" disabled={createStudent.isPending}>
+                  <Button
+                    size="sm"
+                    disabled={createStudent.isPending}
+                    data-tour="add-student"
+                  >
                     <Plus className="h-4 w-4" />
                     Add Student
                   </Button>

@@ -202,7 +202,12 @@ export default function Payments() {
                   </span>
                 </button>
               ))}
-              <Button size="sm" className="ml-auto" onClick={() => navigate("/payments/new")}>
+              <Button
+                size="sm"
+                className="ml-auto"
+                onClick={() => navigate("/payments/new")}
+                data-tour="create-invoice"
+              >
                 <Plus className="h-4 w-4" />
                 Create Invoice
               </Button>

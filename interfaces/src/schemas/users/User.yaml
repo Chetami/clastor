@@ -48,6 +48,10 @@ properties:
     type: boolean
     default: false
     description: Whether the user has finished or dismissed the onboarding flow
+  tourSeen:
+    type: boolean
+    default: false
+    description: Whether the user has seen (or skipped) the in-app product tour
 description: |-
   User interface
   Represents a user in the Firestore users collection

@@ -4,6 +4,7 @@ required:
   - email
   - role
   - onboardingComplete
+  - tourSeen
 properties:
   uid:
     type: string
@@ -34,6 +35,10 @@ properties:
     type: boolean
     default: false
     description: Whether the user has finished or dismissed the onboarding flow
+  tourSeen:
+    type: boolean
+    default: false
+    description: Whether the user has seen (or skipped) the in-app product tour
 description: |-
   User info response object
   Basic user information returned by authentication endpoints

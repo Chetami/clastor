@@ -32,7 +32,7 @@ const INTERNAL = [
 
 export function QuickActions() {
   return (
-    <Card>
+    <Card data-tour="quick-actions">
       <CardHeader className="p-4 pb-2">
         <CardTitle className="text-base">Quick actions</CardTitle>
       </CardHeader>

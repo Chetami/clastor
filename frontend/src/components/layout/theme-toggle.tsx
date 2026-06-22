@@ -11,6 +11,7 @@ export function ThemeToggle() {
       size="icon"
       onClick={toggleAppearance}
       title="Toggle theme"
+      data-tour="theme-toggle"
     >
       {appearance === "dark" ? (
         <Sun className="size-4" />

@@ -3,6 +3,7 @@ import {
   User as UserIcon,
   Settings as SettingsIcon,
   ChevronsUpDown,
+  Compass,
 } from "lucide-react";
 
 import {
@@ -26,11 +27,13 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { useLogout } from "@/features/auth/api";
+import { useProductTour } from "@/features/tour/use-product-tour";
 import type { UserInfo } from "@examify-tms/interfaces";
 
 export function NavUser({ user }: { user: UserInfo | null }) {
   const { isMobile } = useSidebar();
   const logout = useLogout();
+  const { start: startTour } = useProductTour();
 
   if (!user) {
     return null;
@@ -96,6 +99,10 @@ export function NavUser({ user }: { user: UserInfo | null }) {
               <DropdownMenuItem>
                 <SettingsIcon />
                 Settings
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => startTour()}>
+                <Compass />
+                Take a tour
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />

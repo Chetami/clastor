@@ -5,6 +5,7 @@ import {
   updateUserAvatar,
   updateUserCurrency,
   markOnboardingComplete,
+  markTourSeen,
   toUserInfo,
 } from "../services/userService";
 import { syncTutorProfileCurrency } from "../services/tutorProfileService";
@@ -63,9 +64,9 @@ export async function uploadAvatar(
 /**
  * PATCH /api/users/me
  * Updates editable fields on the authenticated user's profile. Supports
- * `currency` (also kept in sync on the public tutor profile) and
- * `onboardingComplete`. Only provided fields are applied. Returns the updated
- * UserInfo.
+ * `currency` (also kept in sync on the public tutor profile),
+ * `onboardingComplete`, and `tourSeen`. Only provided fields are applied.
+ * Returns the updated UserInfo.
  */
 export async function updateMe(
   req: Request,
@@ -73,7 +74,7 @@ export async function updateMe(
 ): Promise<void> {
   try {
     const uid = req.user!.uid;
-    const { currency, onboardingComplete } = req.body ?? {};
+    const { currency, onboardingComplete, tourSeen } = req.body ?? {};
     let updated: User | null = null;
 
     if (typeof currency === "string") {
@@ -87,6 +88,10 @@ export async function updateMe(
 
     if (typeof onboardingComplete === "boolean" && onboardingComplete) {
       updated = await markOnboardingComplete(uid);
+    }
+
+    if (typeof tourSeen === "boolean" && tourSeen) {
+      updated = await markTourSeen(uid);
     }
 
     if (!updated) {
