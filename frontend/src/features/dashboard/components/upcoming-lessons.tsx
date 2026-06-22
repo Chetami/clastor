@@ -29,7 +29,9 @@ export function UpcomingLessons({ lessons, studentNames, fill }: Props) {
             No upcoming lessons scheduled.
           </p>
         ) : (
-          <ScrollArea className={cn("pr-3", fill ? "min-h-0 flex-1" : "h-[260px]")}>
+          <ScrollArea
+            className={cn("pr-3", fill ? "min-h-0 flex-1" : "h-[260px]")}
+          >
             <ul className="space-y-1">
               {items.map((l) => (
                 <li key={l.id}>
@@ -46,9 +48,19 @@ export function UpcomingLessons({ lessons, studentNames, fill }: Props) {
                         {lessonTimeRange(l)}
                       </p>
                     </div>
-                    {!l.isPaid && (
-                      <Badge variant="secondary" className="shrink-0">
-                        Unpaid
+                    {l.acceptanceStatus === "pending" && (
+                      <Badge variant="warning" className="shrink-0">
+                        Pending
+                      </Badge>
+                    )}
+                    {l.acceptanceStatus === "declined" && (
+                      <Badge variant="danger" className="shrink-0">
+                        Declined
+                      </Badge>
+                    )}
+                    {l.acceptanceStatus === "accepted" && (
+                      <Badge variant="success" className="shrink-0">
+                        Accepted
                       </Badge>
                     )}
                   </Link>

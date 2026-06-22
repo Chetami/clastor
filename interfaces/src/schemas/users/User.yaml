@@ -31,6 +31,8 @@ properties:
     description: ISO 4217 currency code the tutor charges in
     default: AUD
     example: AUD
+  reminderLeadTime:
+    $ref: '../common/ReminderLeadTime.yaml'
   createdAt:
     type: string
     format: date-time

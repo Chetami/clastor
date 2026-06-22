@@ -1,0 +1,15 @@
+type: string
+nullable: true
+enum:
+  - null
+  - 1_hour_before
+  - 24_hours_before
+  - morning_of
+description: |-
+  When to automatically notify a student before an upcoming lesson.
+  Stored on the user (tutor) as a preference; the backend only persists it and
+  does not yet schedule or send reminders.
+  null - reminders disabled (default)
+  1_hour_before - notify one hour before the lesson starts
+  24_hours_before - notify twenty-four hours before the lesson starts
+  morning_of - notify at 9 AM on the day of the lesson

@@ -20,6 +20,8 @@ properties:
     type: string
     description: ISO 4217 currency code the tutor charges in (e.g. AUD, USD)
     example: AUD
+  reminderLeadTime:
+    $ref: '../../common/ReminderLeadTime.yaml'
   onboardingComplete:
     type: boolean
     description: Mark the user's onboarding as finished (or dismissed)

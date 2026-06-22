@@ -1,7 +1,8 @@
 import { Link } from "react-router-dom";
-import { ChevronRight, CreditCard, Palette } from "lucide-react";
+import { Bell, ChevronRight, CreditCard, Palette } from "lucide-react";
 
 import { CurrencySelect } from "@/components/account/CurrencySelect";
+import { ReminderLeadTimeSelect } from "@/components/account/ReminderLeadTimeSelect";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -87,6 +88,25 @@ export default function Settings() {
         </CardHeader>
         <CardContent>
           <CurrencySelect className="w-full sm:w-72" />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Bell className="size-4" />
+            Notifications
+          </CardTitle>
+          <CardDescription>
+            Automatically remind students before a lesson. Choose when to send,
+            or turn it off. This is a saved preference — sending isn't live yet.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col gap-1.5">
+            <span className="text-sm font-medium">Remind students before lessons</span>
+            <ReminderLeadTimeSelect className="w-full sm:w-72" />
+          </div>
         </CardContent>
       </Card>
 

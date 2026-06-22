@@ -1,5 +1,9 @@
 import { api } from "@/lib/api";
-import type { GoogleConnectionStatus, UserInfo } from "@examify-tms/interfaces";
+import type {
+  GoogleConnectionStatus,
+  ReminderLeadTime,
+  UserInfo,
+} from "@examify-tms/interfaces";
 
 /**
  * Upload a profile picture for the authenticated user.
@@ -36,6 +40,20 @@ export async function updateUserNameRequest(
   name: string,
 ): Promise<UserInfo> {
   const response = await api.patch<UserInfo>("/api/users/me", { name });
+  return response.data;
+}
+
+/**
+ * Update the tutor's automatic lesson-reminder lead-time preference. The
+ * backend stores this only (it does not yet send reminders). Pass null to
+ * disable reminders. Returns the updated UserInfo.
+ */
+export async function updateUserReminderLeadTimeRequest(
+  reminderLeadTime: ReminderLeadTime,
+): Promise<UserInfo> {
+  const response = await api.patch<UserInfo>("/api/users/me", {
+    reminderLeadTime,
+  });
   return response.data;
 }
 

@@ -4,6 +4,7 @@ import { UserInfo, ApiError, User } from "@examify-tms/interfaces";
 import {
   updateUserAvatar,
   updateUserCurrency,
+  updateUserReminderLeadTime,
   updateUserName,
   markOnboardingComplete,
   markTourSeen,
@@ -66,8 +67,9 @@ export async function uploadAvatar(
  * PATCH /api/users/me
  * Updates editable fields on the authenticated user's profile. Supports
  * `name` (display name), `currency` (also kept in sync on the public tutor
- * profile), `onboardingComplete`, and `tourSeen`. Only provided fields are
- * applied. Returns the updated UserInfo.
+ * profile), `reminderLeadTime` (lesson reminder preference — stored only,
+ * no scheduling), `onboardingComplete`, and `tourSeen`. Only provided fields
+ * are applied. Returns the updated UserInfo.
  */
 export async function updateMe(
   req: Request,
@@ -75,7 +77,8 @@ export async function updateMe(
 ): Promise<void> {
   try {
     const uid = req.user!.uid;
-    const { name, currency, onboardingComplete, tourSeen } = req.body ?? {};
+    const { name, currency, reminderLeadTime, onboardingComplete, tourSeen } =
+      req.body ?? {};
     let updated: User | null = null;
 
     if (typeof name === "string") {
@@ -89,6 +92,12 @@ export async function updateMe(
       void syncTutorProfileCurrency(uid, updated.currency).catch((err) =>
         console.error("Failed to sync tutor profile currency:", err),
       );
+    }
+
+    // `reminderLeadTime` may be null (disable) or a supported value. Only
+    // treat the key as provided when explicitly passed (undefined = skip).
+    if (reminderLeadTime !== undefined) {
+      updated = await updateUserReminderLeadTime(uid, reminderLeadTime);
     }
 
     if (typeof onboardingComplete === "boolean" && onboardingComplete) {

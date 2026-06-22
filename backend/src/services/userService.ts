@@ -1,5 +1,5 @@
 import { getFirebaseFirestore } from "../config/firebase";
-import { User, Role, UserInfo } from "@examify-tms/interfaces";
+import { User, Role, UserInfo, ReminderLeadTime } from "@examify-tms/interfaces";
 import { generateToken } from "../utils/jwt";
 import admin from "firebase-admin";
 
@@ -15,6 +15,7 @@ export function toUserInfo(user: User): UserInfo {
     role: user.role,
     avatarUrl: user.avatarUrl,
     currency: user.currency,
+    reminderLeadTime: user.reminderLeadTime ?? null,
     onboardingComplete: user.onboardingComplete === true,
     tourSeen: user.tourSeen === true,
   };
@@ -51,6 +52,31 @@ export function normalizeCurrency(raw: unknown): string {
 }
 
 /**
+ * Valid reminder lead-time preferences. The frontend mirrors this for its
+ * selector. `null` means automatic reminders are disabled.
+ */
+export const SUPPORTED_REMINDER_LEAD_TIMES = [
+  "1_hour_before",
+  "24_hours_before",
+  "morning_of",
+] as const;
+
+/**
+ * Coerce a raw reminder lead time into a valid value. `null` (or anything not
+ * in the supported list) disables reminders. The backend only persists this
+ * preference — it does not yet schedule or send reminders.
+ */
+export function normalizeReminderLeadTime(raw: unknown): ReminderLeadTime {
+  if (
+    typeof raw === "string" &&
+    (SUPPORTED_REMINDER_LEAD_TIMES as readonly string[]).includes(raw)
+  ) {
+    return raw as ReminderLeadTime;
+  }
+  return null;
+}
+
+/**
  * Get user document from Firestore
  * @param uid - User UID
  * @returns User object from Firestore
@@ -73,6 +99,7 @@ export async function getUserFromFirestore(uid: string): Promise<User> {
       role: userData!.role,
       avatarUrl: userData!.avatarUrl,
       currency: normalizeCurrency(userData!.currency),
+      reminderLeadTime: normalizeReminderLeadTime(userData!.reminderLeadTime),
       // Legacy docs created before onboarding existed lack this field; treat
       // anything missing/non-true as incomplete so existing users get prompted.
       onboardingComplete: userData!.onboardingComplete === true,
@@ -187,6 +214,33 @@ export async function updateUserCurrency(
 }
 
 /**
+ * Update the tutor's automatic reminder lead-time preference. The backend only
+ * stores this value — it does not yet schedule or send reminders. Passing null
+ * (or an unsupported value) disables reminders.
+ * @param uid - User UID
+ * @param leadTime - Valid ReminderLeadTime value, or null to disable
+ * @returns Updated User object
+ */
+export async function updateUserReminderLeadTime(
+  uid: string,
+  leadTime: ReminderLeadTime,
+): Promise<User> {
+  const normalized = normalizeReminderLeadTime(leadTime);
+  try {
+    const firestore = getFirebaseFirestore();
+    await firestore.collection("users").doc(uid).update({
+      reminderLeadTime: normalized,
+      updatedAt: admin.firestore.Timestamp.now(),
+    });
+
+    return getUserFromFirestore(uid);
+  } catch (error) {
+    console.error("Failed to update reminder lead time:", error);
+    throw new Error("Failed to update reminder lead time");
+  }
+}
+
+/**
  * Mark the user's onboarding as finished (they completed or dismissed it).
  * Sets `onboardingComplete: true` and bumps `updatedAt`.
  * @param uid - User UID
@@ -255,6 +309,7 @@ export async function createUserInFirestore(
       role,
       avatarUrl,
       currency: normalizedCurrency,
+      reminderLeadTime: null,
       onboardingComplete: false,
       tourSeen: false,
       createdAt: now,
@@ -272,6 +327,7 @@ export async function createUserInFirestore(
       role,
       avatarUrl,
       currency: normalizedCurrency,
+      reminderLeadTime: null,
       onboardingComplete: false,
       tourSeen: false,
       createdAt: now.toDate() as any,
