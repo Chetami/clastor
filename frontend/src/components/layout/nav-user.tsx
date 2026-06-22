@@ -1,5 +1,6 @@
 import {
   LogOut,
+  User as UserIcon,
   Settings as SettingsIcon,
   ChevronsUpDown,
   Compass,
@@ -93,6 +94,10 @@ export function NavUser({ user }: { user: UserInfo | null }) {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
+              <DropdownMenuItem onSelect={() => navigate("/account")}>
+                <UserIcon />
+                Account
+              </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => navigate("/settings")}>
                 <SettingsIcon />
                 Settings

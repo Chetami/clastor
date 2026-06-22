@@ -16,6 +16,7 @@ import EditInvoice from "@/features/payments/EditInvoice";
 import InvoiceDetail from "@/features/payments/InvoiceDetail";
 import Lessons from "@/features/lessons/Lessons";
 import Settings from "@/features/settings/Settings";
+import Account from "@/features/account/Account";
 import TutorProfileEditor from "@/features/tutor-profile/TutorProfileEditor";
 import PublicTutorPage from "@/features/public-tutor/PublicTutorPage";
 import StripePaymentsSettings from "@/features/stripe-payments/StripePaymentsSettings";
@@ -49,6 +50,7 @@ export const router = createBrowserRouter([
               { path: "lessons", element: <Lessons /> },
               { path: "lessons/:eventId", element: <EventDetail /> },
               { path: "settings", element: <Settings /> },
+              { path: "account", element: <Account /> },
               { path: "settings/payments", element: <StripePaymentsSettings /> },
               ...(isFeatureEnabled("publicProfile")
                 ? [{ path: "profile" as const, element: <TutorProfileEditor /> }]

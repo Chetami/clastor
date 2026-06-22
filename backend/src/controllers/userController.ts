@@ -4,6 +4,7 @@ import { UserInfo, ApiError, User } from "@examify-tms/interfaces";
 import {
   updateUserAvatar,
   updateUserCurrency,
+  updateUserName,
   markOnboardingComplete,
   markTourSeen,
   toUserInfo,
@@ -64,9 +65,9 @@ export async function uploadAvatar(
 /**
  * PATCH /api/users/me
  * Updates editable fields on the authenticated user's profile. Supports
- * `currency` (also kept in sync on the public tutor profile),
- * `onboardingComplete`, and `tourSeen`. Only provided fields are applied.
- * Returns the updated UserInfo.
+ * `name` (display name), `currency` (also kept in sync on the public tutor
+ * profile), `onboardingComplete`, and `tourSeen`. Only provided fields are
+ * applied. Returns the updated UserInfo.
  */
 export async function updateMe(
   req: Request,
@@ -74,8 +75,12 @@ export async function updateMe(
 ): Promise<void> {
   try {
     const uid = req.user!.uid;
-    const { currency, onboardingComplete, tourSeen } = req.body ?? {};
+    const { name, currency, onboardingComplete, tourSeen } = req.body ?? {};
     let updated: User | null = null;
+
+    if (typeof name === "string") {
+      updated = await updateUserName(uid, name);
+    }
 
     if (typeof currency === "string") {
       updated = await updateUserCurrency(uid, currency);

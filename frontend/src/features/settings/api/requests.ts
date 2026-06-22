@@ -30,6 +30,16 @@ export async function updateUserCurrencyRequest(
 }
 
 /**
+ * Update the authenticated user's display name. Returns the updated UserInfo.
+ */
+export async function updateUserNameRequest(
+  name: string,
+): Promise<UserInfo> {
+  const response = await api.patch<UserInfo>("/api/users/me", { name });
+  return response.data;
+}
+
+/**
  * Whether the authenticated tutor has connected a Google account (for Meet /
  * Google Calendar). The refresh token itself is never exposed.
  */

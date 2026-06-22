@@ -43,7 +43,7 @@ router.post("/me/avatar", authenticateJWT, uploadAvatarFile, uploadAvatar);
 
 /**
  * PATCH /api/users/me
- * Update editable fields on the authenticated user (e.g. currency).
+ * Update editable fields on the authenticated user (e.g. name, currency).
  */
 router.patch("/me", authenticateJWT, updateMe);
 

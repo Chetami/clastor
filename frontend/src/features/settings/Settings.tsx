@@ -1,7 +1,6 @@
 import { Link } from "react-router-dom";
 import { ChevronRight, CreditCard, Palette } from "lucide-react";
 
-import { AvatarUpload } from "@/components/account/AvatarUpload";
 import { CurrencySelect } from "@/components/account/CurrencySelect";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,16 +18,6 @@ export default function Settings() {
 
   return (
     <div className="flex flex-col gap-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Profile</CardTitle>
-          <CardDescription>Update your profile picture.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <AvatarUpload />
-        </CardContent>
-      </Card>
-
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">

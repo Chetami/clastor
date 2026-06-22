@@ -128,6 +128,35 @@ export async function updateUserAvatar(
 }
 
 /**
+ * Update a user's display name and bump updatedAt. Trims/validates input.
+ * @param uid - User UID
+ * @param name - New display name
+ * @returns Updated User object
+ */
+export async function updateUserName(
+  uid: string,
+  name: string,
+): Promise<User> {
+  const trimmed = name?.trim();
+  if (!trimmed) {
+    throw new Error("Name cannot be empty");
+  }
+
+  try {
+    const firestore = getFirebaseFirestore();
+    await firestore.collection("users").doc(uid).update({
+      name: trimmed,
+      updatedAt: admin.firestore.Timestamp.now(),
+    });
+
+    return getUserFromFirestore(uid);
+  } catch (error) {
+    console.error("Failed to update user name:", error);
+    throw new Error("Failed to update name");
+  }
+}
+
+/**
  * Update the currency a tutor charges in. The currency is validated against
  * the supported list; invalid values throw.
  * @param uid - User UID
