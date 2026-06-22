@@ -3,11 +3,20 @@ import { Button } from "@/components/ui/button";
 import { useTheme } from "@/hooks/use-theme";
 
 export function ThemeToggle() {
-  const { theme, toggleTheme } = useTheme();
+  const { appearance, toggleAppearance } = useTheme();
 
   return (
-    <Button variant="ghost" size="icon" onClick={toggleTheme} title="Toggle theme">
-      {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
+    <Button
+      variant="ghost"
+      size="icon"
+      onClick={toggleAppearance}
+      title="Toggle theme"
+    >
+      {appearance === "dark" ? (
+        <Sun className="size-4" />
+      ) : (
+        <Moon className="size-4" />
+      )}
     </Button>
   );
 }

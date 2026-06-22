@@ -78,6 +78,497 @@
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
+
+  /* ── Ocean ──────────────────────────────────────────────
+     Cool blue palette. Tinted backgrounds/surfaces, blue
+     primary and a cyan accent for the secondary colour.
+     .theme-ocean = light, .dark.theme-ocean = dark. */
+  .theme-ocean {
+    --background: 210 40% 98%;
+    --foreground: 222.2 47.4% 11.2%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 47.4% 11.2%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 47.4% 11.2%;
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 199.2 89.5% 48.2%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221.2 83.2% 53.3%;
+    --sidebar-background: 210 40% 97%;
+    --sidebar-foreground: 215.4 16.3% 30%;
+    --sidebar-primary: 221.2 83.2% 53.3%;
+    --sidebar-primary-foreground: 210 40% 98%;
+    --sidebar-accent: 210 40% 93%;
+    --sidebar-accent-foreground: 222.2 47.4% 11.2%;
+    --sidebar-border: 214.3 31.8% 90%;
+    --sidebar-ring: 221.2 83.2% 53.3%;
+  }
+  .dark.theme-ocean {
+    --background: 222.2 47.4% 11.2%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 45% 14%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 47.4% 11.2%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 199.2 89.5% 48.2%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 224.3 76.3% 48%;
+    --sidebar-background: 222.2 45% 9%;
+    --sidebar-foreground: 215 20.2% 65.1%;
+    --sidebar-primary: 217.2 91.2% 59.8%;
+    --sidebar-primary-foreground: 222.2 47.4% 11.2%;
+    --sidebar-accent: 217.2 32.6% 15%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 217.2 32.6% 15%;
+    --sidebar-ring: 224.3 76.3% 48%;
+  }
+
+  /* ── Emerald ───────────────────────────────────────────
+     Warm-green palette. Subtly green-tinted surfaces, green
+     primary and an amber accent for the secondary colour. */
+  .theme-emerald {
+    --background: 150 20% 98%;
+    --foreground: 149.3 30% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 149.3 30% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 149.3 30% 10%;
+    --primary: 142.1 76.2% 36.3%;
+    --primary-foreground: 138 76% 97%;
+    --secondary: 150 20% 96%;
+    --secondary-foreground: 149.3 30% 10%;
+    --muted: 150 20% 96%;
+    --muted-foreground: 150 10% 40%;
+    --accent: 38 92% 50%;
+    --accent-foreground: 38 92% 97%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 138 76% 97%;
+    --border: 150 14% 90%;
+    --input: 150 14% 90%;
+    --ring: 142.1 76.2% 36.3%;
+    --sidebar-background: 150 20% 97%;
+    --sidebar-foreground: 150 10% 28%;
+    --sidebar-primary: 142.1 76.2% 36.3%;
+    --sidebar-primary-foreground: 138 76% 97%;
+    --sidebar-accent: 150 20% 92%;
+    --sidebar-accent-foreground: 149.3 30% 10%;
+    --sidebar-border: 150 14% 88%;
+    --sidebar-ring: 142.1 76.2% 36.3%;
+  }
+  .dark.theme-emerald {
+    --background: 150 30% 8%;
+    --foreground: 138 76% 97%;
+    --card: 150 28% 11%;
+    --card-foreground: 138 76% 97%;
+    --popover: 150 30% 8%;
+    --popover-foreground: 138 76% 97%;
+    --primary: 142.1 70.6% 45.3%;
+    --primary-foreground: 144.9 80.4% 10%;
+    --secondary: 150 24% 16%;
+    --secondary-foreground: 138 76% 97%;
+    --muted: 150 24% 16%;
+    --muted-foreground: 150 12% 62%;
+    --accent: 38 92% 50%;
+    --accent-foreground: 144.9 80.4% 10%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 138 76% 97%;
+    --border: 150 24% 16%;
+    --input: 150 24% 16%;
+    --ring: 142.1 70.6% 45.3%;
+    --sidebar-background: 150 28% 6%;
+    --sidebar-foreground: 150 12% 62%;
+    --sidebar-primary: 142.1 70.6% 45.3%;
+    --sidebar-primary-foreground: 144.9 80.4% 10%;
+    --sidebar-accent: 150 24% 14%;
+    --sidebar-accent-foreground: 138 76% 97%;
+    --sidebar-border: 150 24% 14%;
+    --sidebar-ring: 142.1 70.6% 45.3%;
+  }
+
+  /* ── Violet ───────────────────────────────────────────
+     Purple palette with a fuchsia accent. */
+  .theme-violet {
+    --background: 250 38% 98%;
+    --foreground: 250 40% 12%;
+    --card: 0 0% 100%;
+    --card-foreground: 250 40% 12%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 250 40% 12%;
+    --primary: 258 90% 52%;
+    --primary-foreground: 250 40% 98%;
+    --secondary: 250 30% 96%;
+    --secondary-foreground: 250 40% 12%;
+    --muted: 250 30% 96%;
+    --muted-foreground: 250 14% 42%;
+    --accent: 292 84% 61%;
+    --accent-foreground: 250 40% 98%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 250 40% 98%;
+    --border: 250 22% 90%;
+    --input: 250 22% 90%;
+    --ring: 258 90% 52%;
+    --sidebar-background: 250 35% 97%;
+    --sidebar-foreground: 250 14% 30%;
+    --sidebar-primary: 258 90% 52%;
+    --sidebar-primary-foreground: 250 40% 98%;
+    --sidebar-accent: 250 30% 93%;
+    --sidebar-accent-foreground: 250 40% 12%;
+    --sidebar-border: 250 22% 88%;
+    --sidebar-ring: 258 90% 52%;
+  }
+  .dark.theme-violet {
+    --background: 250 30% 10%;
+    --foreground: 250 40% 96%;
+    --card: 250 28% 13%;
+    --card-foreground: 250 40% 96%;
+    --popover: 250 30% 10%;
+    --popover-foreground: 250 40% 96%;
+    --primary: 262 70% 62%;
+    --primary-foreground: 250 40% 12%;
+    --secondary: 250 24% 17%;
+    --secondary-foreground: 250 40% 96%;
+    --muted: 250 24% 17%;
+    --muted-foreground: 250 16% 65%;
+    --accent: 292 70% 58%;
+    --accent-foreground: 250 40% 96%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 250 40% 96%;
+    --border: 250 24% 17%;
+    --input: 250 24% 17%;
+    --ring: 262 70% 62%;
+    --sidebar-background: 250 28% 7%;
+    --sidebar-foreground: 250 16% 65%;
+    --sidebar-primary: 262 70% 62%;
+    --sidebar-primary-foreground: 250 40% 12%;
+    --sidebar-accent: 250 24% 15%;
+    --sidebar-accent-foreground: 250 40% 96%;
+    --sidebar-border: 250 24% 15%;
+    --sidebar-ring: 262 70% 62%;
+  }
+
+  /* ── Rose ─────────────────────────────────────────────
+     Rosy palette with a pink accent. */
+  .theme-rose {
+    --background: 350 38% 98%;
+    --foreground: 350 40% 12%;
+    --card: 0 0% 100%;
+    --card-foreground: 350 40% 12%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 350 40% 12%;
+    --primary: 347 77% 50%;
+    --primary-foreground: 350 40% 98%;
+    --secondary: 350 30% 96%;
+    --secondary-foreground: 350 40% 12%;
+    --muted: 350 30% 96%;
+    --muted-foreground: 350 14% 42%;
+    --accent: 330 81% 60%;
+    --accent-foreground: 350 40% 98%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 350 40% 98%;
+    --border: 350 22% 90%;
+    --input: 350 22% 90%;
+    --ring: 347 77% 50%;
+    --sidebar-background: 350 35% 97%;
+    --sidebar-foreground: 350 14% 30%;
+    --sidebar-primary: 347 77% 50%;
+    --sidebar-primary-foreground: 350 40% 98%;
+    --sidebar-accent: 350 30% 93%;
+    --sidebar-accent-foreground: 350 40% 12%;
+    --sidebar-border: 350 22% 88%;
+    --sidebar-ring: 347 77% 50%;
+  }
+  .dark.theme-rose {
+    --background: 350 26% 9%;
+    --foreground: 350 30% 96%;
+    --card: 350 24% 12%;
+    --card-foreground: 350 30% 96%;
+    --popover: 350 26% 9%;
+    --popover-foreground: 350 30% 96%;
+    --primary: 350 80% 62%;
+    --primary-foreground: 350 40% 12%;
+    --secondary: 350 22% 16%;
+    --secondary-foreground: 350 30% 96%;
+    --muted: 350 22% 16%;
+    --muted-foreground: 350 14% 64%;
+    --accent: 330 71% 56%;
+    --accent-foreground: 350 30% 96%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 350 30% 96%;
+    --border: 350 22% 16%;
+    --input: 350 22% 16%;
+    --ring: 350 80% 62%;
+    --sidebar-background: 350 24% 6%;
+    --sidebar-foreground: 350 14% 64%;
+    --sidebar-primary: 350 80% 62%;
+    --sidebar-primary-foreground: 350 40% 12%;
+    --sidebar-accent: 350 22% 14%;
+    --sidebar-accent-foreground: 350 30% 96%;
+    --sidebar-border: 350 22% 14%;
+    --sidebar-ring: 350 80% 62%;
+  }
+
+  /* ── Amber ────────────────────────────────────────────
+     Warm gold palette with an orange accent. */
+  .theme-amber {
+    --background: 40 38% 98%;
+    --foreground: 30 35% 12%;
+    --card: 0 0% 100%;
+    --card-foreground: 30 35% 12%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 30 35% 12%;
+    --primary: 33 88% 38%;
+    --primary-foreground: 40 50% 98%;
+    --secondary: 40 30% 96%;
+    --secondary-foreground: 30 35% 12%;
+    --muted: 40 30% 96%;
+    --muted-foreground: 35 14% 42%;
+    --accent: 25 95% 53%;
+    --accent-foreground: 40 50% 98%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 40 50% 98%;
+    --border: 38 24% 88%;
+    --input: 38 24% 88%;
+    --ring: 33 88% 38%;
+    --sidebar-background: 40 35% 97%;
+    --sidebar-foreground: 35 14% 30%;
+    --sidebar-primary: 33 88% 38%;
+    --sidebar-primary-foreground: 40 50% 98%;
+    --sidebar-accent: 40 30% 93%;
+    --sidebar-accent-foreground: 30 35% 12%;
+    --sidebar-border: 38 24% 86%;
+    --sidebar-ring: 33 88% 38%;
+  }
+  .dark.theme-amber {
+    --background: 30 18% 9%;
+    --foreground: 40 40% 95%;
+    --card: 30 16% 12%;
+    --card-foreground: 40 40% 95%;
+    --popover: 30 18% 9%;
+    --popover-foreground: 40 40% 95%;
+    --primary: 38 92% 50%;
+    --primary-foreground: 30 50% 10%;
+    --secondary: 30 15% 16%;
+    --secondary-foreground: 40 40% 95%;
+    --muted: 30 15% 16%;
+    --muted-foreground: 35 12% 64%;
+    --accent: 25 90% 56%;
+    --accent-foreground: 40 40% 95%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 40 40% 95%;
+    --border: 30 15% 16%;
+    --input: 30 15% 16%;
+    --ring: 38 92% 50%;
+    --sidebar-background: 30 16% 6%;
+    --sidebar-foreground: 35 12% 64%;
+    --sidebar-primary: 38 92% 50%;
+    --sidebar-primary-foreground: 30 50% 10%;
+    --sidebar-accent: 30 15% 14%;
+    --sidebar-accent-foreground: 40 40% 95%;
+    --sidebar-border: 30 15% 14%;
+    --sidebar-ring: 38 92% 50%;
+  }
+
+  /* ── Sunset (3-colour) ────────────────────────────────
+     Orange primary, red secondary, amber accent. */
+  .theme-sunset {
+    --background: 20 40% 98%;
+    --foreground: 20 40% 12%;
+    --card: 0 0% 100%;
+    --card-foreground: 20 40% 12%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 20 40% 12%;
+    --primary: 21 90% 48%;
+    --primary-foreground: 20 40% 98%;
+    --secondary: 0 72% 51%;
+    --secondary-foreground: 20 40% 98%;
+    --muted: 20 30% 96%;
+    --muted-foreground: 20 12% 42%;
+    --accent: 38 92% 50%;
+    --accent-foreground: 20 40% 98%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 20 40% 98%;
+    --border: 20 24% 88%;
+    --input: 20 24% 88%;
+    --ring: 21 90% 48%;
+    --sidebar-background: 20 35% 97%;
+    --sidebar-foreground: 20 12% 30%;
+    --sidebar-primary: 21 90% 48%;
+    --sidebar-primary-foreground: 20 40% 98%;
+    --sidebar-accent: 20 30% 93%;
+    --sidebar-accent-foreground: 20 40% 12%;
+    --sidebar-border: 20 24% 86%;
+    --sidebar-ring: 21 90% 48%;
+  }
+  .dark.theme-sunset {
+    --background: 20 22% 8%;
+    --foreground: 20 30% 95%;
+    --card: 20 20% 11%;
+    --card-foreground: 20 30% 95%;
+    --popover: 20 22% 8%;
+    --popover-foreground: 20 30% 95%;
+    --primary: 25 95% 53%;
+    --primary-foreground: 20 40% 12%;
+    --secondary: 0 63% 40%;
+    --secondary-foreground: 20 30% 96%;
+    --muted: 20 18% 16%;
+    --muted-foreground: 20 12% 64%;
+    --accent: 38 92% 50%;
+    --accent-foreground: 20 30% 95%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 20 30% 95%;
+    --border: 20 18% 16%;
+    --input: 20 18% 16%;
+    --ring: 25 95% 53%;
+    --sidebar-background: 20 20% 5%;
+    --sidebar-foreground: 20 12% 64%;
+    --sidebar-primary: 25 95% 53%;
+    --sidebar-primary-foreground: 20 40% 12%;
+    --sidebar-accent: 20 18% 14%;
+    --sidebar-accent-foreground: 20 30% 95%;
+    --sidebar-border: 20 18% 14%;
+    --sidebar-ring: 25 95% 53%;
+  }
+
+  /* ── Teal (3-colour) ──────────────────────────────────
+     Teal primary, cyan secondary, emerald accent. */
+  .theme-teal {
+    --background: 175 30% 97%;
+    --foreground: 175 35% 12%;
+    --card: 0 0% 100%;
+    --card-foreground: 175 35% 12%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 175 35% 12%;
+    --primary: 173 80% 35%;
+    --primary-foreground: 175 40% 98%;
+    --secondary: 199 89% 42%;
+    --secondary-foreground: 175 40% 98%;
+    --muted: 175 25% 95%;
+    --muted-foreground: 175 12% 40%;
+    --accent: 142 71% 45%;
+    --accent-foreground: 175 40% 98%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 175 40% 98%;
+    --border: 175 20% 88%;
+    --input: 175 20% 88%;
+    --ring: 173 80% 35%;
+    --sidebar-background: 175 28% 96%;
+    --sidebar-foreground: 175 12% 28%;
+    --sidebar-primary: 173 80% 35%;
+    --sidebar-primary-foreground: 175 40% 98%;
+    --sidebar-accent: 175 25% 91%;
+    --sidebar-accent-foreground: 175 35% 12%;
+    --sidebar-border: 175 20% 86%;
+    --sidebar-ring: 173 80% 35%;
+  }
+  .dark.theme-teal {
+    --background: 180 25% 8%;
+    --foreground: 175 30% 95%;
+    --card: 180 23% 11%;
+    --card-foreground: 175 30% 95%;
+    --popover: 180 25% 8%;
+    --popover-foreground: 175 30% 95%;
+    --primary: 173 80% 40%;
+    --primary-foreground: 180 40% 10%;
+    --secondary: 199 80% 40%;
+    --secondary-foreground: 180 30% 96%;
+    --muted: 180 20% 15%;
+    --muted-foreground: 175 12% 62%;
+    --accent: 142 65% 45%;
+    --accent-foreground: 180 30% 96%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 175 30% 95%;
+    --border: 180 20% 15%;
+    --input: 180 20% 15%;
+    --ring: 173 80% 40%;
+    --sidebar-background: 180 23% 5%;
+    --sidebar-foreground: 175 12% 62%;
+    --sidebar-primary: 173 80% 40%;
+    --sidebar-primary-foreground: 180 40% 10%;
+    --sidebar-accent: 180 20% 13%;
+    --sidebar-accent-foreground: 175 30% 95%;
+    --sidebar-border: 180 20% 13%;
+    --sidebar-ring: 173 80% 40%;
+  }
+
+  /* ── Berry (3-colour) ─────────────────────────────────
+     Purple primary, pink secondary, rose accent. */
+  .theme-berry {
+    --background: 300 34% 98%;
+    --foreground: 290 35% 12%;
+    --card: 0 0% 100%;
+    --card-foreground: 290 35% 12%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 290 35% 12%;
+    --primary: 263 70% 50%;
+    --primary-foreground: 300 40% 98%;
+    --secondary: 327 79% 56%;
+    --secondary-foreground: 300 40% 98%;
+    --muted: 300 28% 96%;
+    --muted-foreground: 300 12% 42%;
+    --accent: 347 77% 50%;
+    --accent-foreground: 300 40% 98%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 300 40% 98%;
+    --border: 300 22% 90%;
+    --input: 300 22% 90%;
+    --ring: 263 70% 50%;
+    --sidebar-background: 300 32% 97%;
+    --sidebar-foreground: 300 12% 30%;
+    --sidebar-primary: 263 70% 50%;
+    --sidebar-primary-foreground: 300 40% 98%;
+    --sidebar-accent: 300 28% 93%;
+    --sidebar-accent-foreground: 290 35% 12%;
+    --sidebar-border: 300 22% 88%;
+    --sidebar-ring: 263 70% 50%;
+  }
+  .dark.theme-berry {
+    --background: 290 24% 8%;
+    --foreground: 300 30% 95%;
+    --card: 290 22% 11%;
+    --card-foreground: 300 30% 95%;
+    --popover: 290 24% 8%;
+    --popover-foreground: 300 30% 95%;
+    --primary: 271 81% 56%;
+    --primary-foreground: 290 40% 10%;
+    --secondary: 327 71% 50%;
+    --secondary-foreground: 290 30% 96%;
+    --muted: 290 20% 15%;
+    --muted-foreground: 300 12% 62%;
+    --accent: 350 80% 60%;
+    --accent-foreground: 290 30% 96%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 300 30% 95%;
+    --border: 290 20% 15%;
+    --input: 290 20% 15%;
+    --ring: 271 81% 56%;
+    --sidebar-background: 290 22% 5%;
+    --sidebar-foreground: 300 12% 62%;
+    --sidebar-primary: 271 81% 56%;
+    --sidebar-primary-foreground: 290 40% 10%;
+    --sidebar-accent: 290 20% 13%;
+    --sidebar-accent-foreground: 300 30% 95%;
+    --sidebar-border: 290 20% 13%;
+    --sidebar-ring: 271 81% 56%;
+  }
 }
 
 @layer base {
