@@ -3,6 +3,7 @@ required:
   - uid
   - email
   - role
+  - onboardingComplete
 properties:
   uid:
     type: string
@@ -29,6 +30,10 @@ properties:
     description: ISO 4217 currency code the tutor charges in
     default: AUD
     example: AUD
+  onboardingComplete:
+    type: boolean
+    default: false
+    description: Whether the user has finished or dismissed the onboarding flow
 description: |-
   User info response object
   Basic user information returned by authentication endpoints

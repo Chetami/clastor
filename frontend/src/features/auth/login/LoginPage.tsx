@@ -25,8 +25,8 @@ export default function LoginPage() {
     e.preventDefault();
 
     try {
-      await login.mutateAsync({ email, password });
-      navigate("/dashboard");
+      const data = await login.mutateAsync({ email, password });
+      navigate(data.user.onboardingComplete ? "/dashboard" : "/onboarding");
     } catch {
       // error is surfaced via mutation state
     }
@@ -44,7 +44,11 @@ export default function LoginPage() {
           <div className="space-y-4">
             <GoogleSignInButton
               label="Continue with Google"
-              onSuccess={() => navigate("/dashboard")}
+              onSuccess={(data) =>
+                navigate(
+                  data.user.onboardingComplete ? "/dashboard" : "/onboarding",
+                )
+              }
             />
 
             <div className="relative">

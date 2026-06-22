@@ -20,6 +20,9 @@ properties:
     type: string
     description: ISO 4217 currency code the tutor charges in (e.g. AUD, USD)
     example: AUD
+  onboardingComplete:
+    type: boolean
+    description: Mark the user's onboarding as finished (or dismissed)
 description: |-
   Request body for updating a user
   All fields are optional; only provided fields will be updated

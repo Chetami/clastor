@@ -1,7 +1,23 @@
 import { getFirebaseFirestore } from "../config/firebase";
-import { User, Role } from "@examify-tms/interfaces";
+import { User, Role, UserInfo } from "@examify-tms/interfaces";
 import { generateToken } from "../utils/jwt";
 import admin from "firebase-admin";
+
+/**
+ * Map a full User to the trimmed UserInfo returned to clients.
+ * Centralized here so auth + user controllers stay in sync.
+ */
+export function toUserInfo(user: User): UserInfo {
+  return {
+    uid: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    avatarUrl: user.avatarUrl,
+    currency: user.currency,
+    onboardingComplete: user.onboardingComplete === true,
+  };
+}
 
 /** Default currency for users who never set one (and for legacy docs). */
 export const DEFAULT_CURRENCY = "AUD";
@@ -56,6 +72,9 @@ export async function getUserFromFirestore(uid: string): Promise<User> {
       role: userData!.role,
       avatarUrl: userData!.avatarUrl,
       currency: normalizeCurrency(userData!.currency),
+      // Legacy docs created before onboarding existed lack this field; treat
+      // anything missing/non-true as incomplete so existing users get prompted.
+      onboardingComplete: userData!.onboardingComplete === true,
       createdAt: userData!.createdAt.toDate(),
       updatedAt: userData!.updatedAt.toDate(),
       lastActive: userData!.lastActive?.toDate(),
@@ -137,6 +156,27 @@ export async function updateUserCurrency(
 }
 
 /**
+ * Mark the user's onboarding as finished (they completed or dismissed it).
+ * Sets `onboardingComplete: true` and bumps `updatedAt`.
+ * @param uid - User UID
+ * @returns Updated User object
+ */
+export async function markOnboardingComplete(uid: string): Promise<User> {
+  try {
+    const firestore = getFirebaseFirestore();
+    await firestore.collection("users").doc(uid).update({
+      onboardingComplete: true,
+      updatedAt: admin.firestore.Timestamp.now(),
+    });
+
+    return getUserFromFirestore(uid);
+  } catch (error) {
+    console.error("Failed to mark onboarding complete:", error);
+    throw new Error("Failed to complete onboarding");
+  }
+}
+
+/**
  * Create user document in Firestore
  * @param id - User ID (Firebase Auth UID)
  * @param email - User email
@@ -163,6 +203,7 @@ export async function createUserInFirestore(
       role,
       avatarUrl,
       currency: normalizedCurrency,
+      onboardingComplete: false,
       createdAt: now,
       updatedAt: now,
       lastActive: now,
@@ -178,6 +219,7 @@ export async function createUserInFirestore(
       role,
       avatarUrl,
       currency: normalizedCurrency,
+      onboardingComplete: false,
       createdAt: now.toDate() as any,
       updatedAt: now.toDate() as any,
       lastActive: now.toDate() as any,

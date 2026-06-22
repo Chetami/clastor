@@ -54,18 +54,40 @@ export function extractToken(authHeader: string | undefined): string {
  * Sign a short-lived, opaque state token tying an OAuth redirect to a user.
  * Used for the Google Calendar OAuth flow: the browser can't send the auth
  * header on the redirect, so we pass this signed token through the `state`
- * param and verify it in the callback to recover the uid.
+ * param and verify it in the callback to recover the uid. An optional
+ * `returnTo` path is carried along so the caller can control where the browser
+ * lands after consent (e.g. back into an onboarding wizard).
  */
-export function signStateToken(uid: string): string {
-  return jwt.sign({ uid }, JWT_SECRET, { expiresIn: "10m" });
+export function signStateToken(uid: string, returnTo?: string): string {
+  const payload: { uid: string; r?: string } = { uid };
+  if (returnTo) payload.r = returnTo;
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: "10m" });
 }
 
-/** Verify a state token and return the embedded uid, or null if invalid. */
-export function verifyStateToken(token: string | undefined): string | null {
+/** Payload returned by {@link verifyStateToken}. */
+export interface StateTokenPayload {
+  uid: string;
+  returnTo: string | null;
+}
+
+/**
+ * Verify a state token and return the embedded uid (+ returnTo path), or null
+ * if invalid.
+ */
+export function verifyStateToken(
+  token: string | undefined,
+): StateTokenPayload | null {
   if (!token) return null;
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as { uid?: string };
-    return decoded.uid ?? null;
+    const decoded = jwt.verify(token, JWT_SECRET) as {
+      uid?: string;
+      r?: string;
+    };
+    if (!decoded.uid) return null;
+    return {
+      uid: decoded.uid,
+      returnTo: typeof decoded.r === "string" ? decoded.r : null,
+    };
   } catch {
     return null;
   }

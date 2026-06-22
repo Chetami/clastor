@@ -21,11 +21,11 @@ export function useGoogleConnectionStatus() {
 /**
  * Start the Google OAuth flow. On success the browser is redirected to
  * Google's consent screen; Google then redirects back to the backend callback,
- * which lands on /settings?google=connected.
+ * which lands on `returnTo` (default /settings) with a `google` query param.
  */
-export function useConnectGoogle() {
+export function useConnectGoogle(returnTo?: string) {
   return useMutation({
-    mutationFn: connectGoogleRequest,
+    mutationFn: () => connectGoogleRequest(returnTo),
     onSuccess: (data) => {
       window.location.href = data.authUrl;
     },

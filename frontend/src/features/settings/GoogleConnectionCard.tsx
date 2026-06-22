@@ -49,11 +49,15 @@ function GoogleGlyph({ className }: { className?: string }) {
 /**
  * Lets a tutor connect their Google account so Clastor can generate Google Meet
  * links and write to their Google Calendar. Mirrors the Stripe connection card.
+ *
+ * `returnTo` controls where the browser lands after the Google consent flow
+ * (a same-origin path); defaults to /settings on the backend. Used by the
+ * onboarding wizard to keep the user in-flow.
  */
-export function GoogleConnectionCard() {
+export function GoogleConnectionCard({ returnTo }: { returnTo?: string }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const statusQuery = useGoogleConnectionStatus();
-  const connect = useConnectGoogle();
+  const connect = useConnectGoogle(returnTo);
   const disconnect = useDisconnectGoogle();
 
   const googleParam = searchParams.get("google");
@@ -83,7 +87,7 @@ export function GoogleConnectionCard() {
     }
     searchParams.delete("google");
     setSearchParams(searchParams, { replace: true });
-  }, [googleParam]); // eslint-disable-line react/exhaustive-deps
+  }, [googleParam]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const status = statusQuery.data;
   const isLoading = statusQuery.isLoading;

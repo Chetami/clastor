@@ -11,6 +11,7 @@ export { Input } from "./input";
 export { PhoneInput, type PhoneInputProps } from "./phone-input";
 export { Label } from "./label";
 export { Separator } from "./separator";
+export { Progress } from "./progress";
 export { Checkbox } from "./checkbox";
 export { Badge, badgeVariants, type BadgeProps } from "./badge";
 export {

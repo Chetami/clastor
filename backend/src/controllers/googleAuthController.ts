@@ -13,9 +13,23 @@ function frontendUrl(): string {
 }
 
 /**
+ * Coerce a caller-supplied return path into something safe to redirect to.
+ * Only same-origin absolute paths are allowed (must start with a single "/",
+ * never "//"), otherwise we fall back to /settings.
+ */
+function safeReturnTo(raw: unknown): string {
+  if (typeof raw !== "string" || !raw.startsWith("/") || raw.startsWith("//")) {
+    return "/settings";
+  }
+  return raw;
+}
+
+/**
  * GET /api/auth/google/url
  * Returns a Google consent URL bound to the authenticated user via a signed
  * `state` token. access_type=offline + prompt=consent ensure a refresh token.
+ * Accepts an optional `?returnTo=` path so the browser can be sent back to a
+ * specific page (e.g. /onboarding) after consent.
  */
 export async function getGoogleAuthUrl(
   req: Request,
@@ -28,7 +42,8 @@ export async function getGoogleAuthUrl(
 
   try {
     const oauthClient = getOAuth2Client();
-    const state = signStateToken(req.user.uid);
+    const returnTo = safeReturnTo(req.query.returnTo);
+    const state = signStateToken(req.user.uid, returnTo);
 
     const authUrl = oauthClient.generateAuthUrl({
       access_type: "offline",
@@ -48,7 +63,8 @@ export async function getGoogleAuthUrl(
 /**
  * GET /api/auth/google/callback
  * OAuth redirect target (no auth header). Verifies the signed state to recover
- * the uid, exchanges the code for tokens, and stores the connection.
+ * the uid (+ returnTo path), exchanges the code for tokens, and stores the
+ * connection.
  */
 export async function googleAuthCallback(
   req: Request,
@@ -57,14 +73,20 @@ export async function googleAuthCallback(
   const { code, state, error } = req.query;
 
   const base = frontendUrl();
+  const fail = (path = "/settings") =>
+    res.redirect(`${base}${path}?google=error`);
+
   if (error) {
-    res.redirect(`${base}/settings?google=error`);
+    fail();
     return;
   }
 
-  const uid = verifyStateToken(typeof state === "string" ? state : undefined);
-  if (!uid || !code) {
-    res.redirect(`${base}/settings?google=error`);
+  const statePayload = verifyStateToken(
+    typeof state === "string" ? state : undefined,
+  );
+  const returnTo = safeReturnTo(statePayload?.returnTo);
+  if (!statePayload?.uid || !code) {
+    fail(returnTo);
     return;
   }
 
@@ -78,17 +100,20 @@ export async function googleAuthCallback(
     if (!refreshToken) {
       // No refresh token usually means the account was connected before and
       // Google won't re-issue one without prompt=consent. Force a fresh grant.
-      res.redirect(`${base}/settings?google=no_refresh_token`);
+      res.redirect(`${base}${returnTo}?google=no_refresh_token`);
       return;
     }
 
     const googleEmail = decodeEmailFromIdToken(tokens.id_token);
 
-    await setGoogleConnection(uid, { refreshToken, googleEmail });
-    res.redirect(`${base}/settings?google=connected`);
+    await setGoogleConnection(statePayload.uid, {
+      refreshToken,
+      googleEmail,
+    });
+    res.redirect(`${base}${returnTo}?google=connected`);
   } catch (err) {
     console.error("googleAuthCallback error:", err);
-    res.redirect(`${base}/settings?google=error`);
+    fail(returnTo);
   }
 }
 

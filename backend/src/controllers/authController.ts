@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { verifyFirebaseToken } from "../services/authService";
-import { getUserFromFirestore, generateJWTForUser, updateLastActive, createUserInFirestore } from "../services/userService";
+import { getUserFromFirestore, generateJWTForUser, updateLastActive, createUserInFirestore, toUserInfo } from "../services/userService";
 import { LoginResponse, UserInfo, ApiError } from "@examify-tms/interfaces";
 import { RegisterRequest } from "@examify-tms/interfaces";
 
@@ -30,14 +30,7 @@ export async function login(req: Request, res: Response<LoginResponse | ApiError
     // Update last active timestamp
     await updateLastActive(user.id);
 
-    const userInfo: UserInfo = {
-      uid: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      avatarUrl: user.avatarUrl,
-      currency: user.currency,
-    };
+    const userInfo: UserInfo = toUserInfo(user);
 
     return res.status(200).json({
       jwtToken,
@@ -64,14 +57,7 @@ export async function verifyToken(req: Request, res: Response<{ user: UserInfo }
   try {
     const user = await getUserFromFirestore(req.user.uid);
 
-    const userInfo: UserInfo = {
-      uid: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      avatarUrl: user.avatarUrl,
-      currency: user.currency,
-    };
+    const userInfo: UserInfo = toUserInfo(user);
 
     return res.status(200).json({
       user: userInfo,
@@ -117,14 +103,7 @@ export async function googleAuth(
     const jwtToken = generateJWTForUser(user);
     await updateLastActive(user.id);
 
-    const userInfo: UserInfo = {
-      uid: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      avatarUrl: user.avatarUrl,
-      currency: user.currency,
-    };
+    const userInfo: UserInfo = toUserInfo(user);
 
     res.status(200).json({ jwtToken, user: userInfo });
   } catch (error) {
@@ -186,14 +165,7 @@ export async function register(
     await updateLastActive(user.id);
 
     // 7. Return UserInfo (not full User, consistent with login endpoint)
-    const userInfo: UserInfo = {
-      uid: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      avatarUrl: user.avatarUrl,
-      currency: user.currency,
-    };
+    const userInfo: UserInfo = toUserInfo(user);
 
     res.status(200).json({ jwtToken, user: userInfo });
   } catch (error) {

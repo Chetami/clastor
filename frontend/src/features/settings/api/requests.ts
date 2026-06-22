@@ -42,10 +42,16 @@ export async function getGoogleConnectionStatusRequest(): Promise<GoogleConnecti
 
 /**
  * Start a Google OAuth consent flow bound to the authenticated user. Returns a
- * single-use consent URL the browser should be redirected to.
+ * single-use consent URL the browser should be redirected to. Pass `returnTo`
+ * (a same-origin path) to control where the browser lands after consent; it
+ * defaults to /settings on the backend.
  */
-export async function connectGoogleRequest(): Promise<{ authUrl: string }> {
-  const response = await api.get<{ authUrl: string }>("/api/auth/google/url");
+export async function connectGoogleRequest(
+  returnTo?: string,
+): Promise<{ authUrl: string }> {
+  const response = await api.get<{ authUrl: string }>("/api/auth/google/url", {
+    params: returnTo ? { returnTo } : undefined,
+  });
   return response.data;
 }
 

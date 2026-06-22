@@ -44,6 +44,10 @@ properties:
     format: date-time
     nullable: true
     description: Last activity timestamp
+  onboardingComplete:
+    type: boolean
+    default: false
+    description: Whether the user has finished or dismissed the onboarding flow
 description: |-
   User interface
   Represents a user in the Firestore users collection

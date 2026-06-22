@@ -19,6 +19,7 @@ import Settings from "@/features/settings/Settings";
 import TutorProfileEditor from "@/features/tutor-profile/TutorProfileEditor";
 import PublicTutorPage from "@/features/public-tutor/PublicTutorPage";
 import StripePaymentsSettings from "@/features/stripe-payments/StripePaymentsSettings";
+import OnboardingPage from "@/features/onboarding/OnboardingPage";
 import { PaymentResult } from "@/features/public-pay/PaymentResult";
 import { isFeatureEnabled } from "@/config/features";
 
@@ -29,6 +30,10 @@ export const router = createBrowserRouter([
       {
         element: <ProtectedRoute />,
         children: [
+          {
+            path: "onboarding",
+            element: <OnboardingPage />,
+          },
           {
             element: <DashboardLayout />,
             children: [
