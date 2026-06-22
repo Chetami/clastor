@@ -107,7 +107,10 @@ export function GoogleConnectionCard() {
             </div>
           </div>
           {!isLoading && status && (
-            <Badge variant={connected ? "default" : "secondary"}>
+            <Badge
+              variant={connected ? "default" : "secondary"}
+              className={connected ? "hover:bg-primary" : undefined}
+            >
               {connected ? "Connected" : "Not connected"}
             </Badge>
           )}
