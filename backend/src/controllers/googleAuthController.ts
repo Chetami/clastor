@@ -58,13 +58,13 @@ export async function googleAuthCallback(
 
   const base = frontendUrl();
   if (error) {
-    res.redirect(`${base}/?google=error`);
+    res.redirect(`${base}/settings?google=error`);
     return;
   }
 
   const uid = verifyStateToken(typeof state === "string" ? state : undefined);
   if (!uid || !code) {
-    res.redirect(`${base}/?google=error`);
+    res.redirect(`${base}/settings?google=error`);
     return;
   }
 
@@ -78,17 +78,17 @@ export async function googleAuthCallback(
     if (!refreshToken) {
       // No refresh token usually means the account was connected before and
       // Google won't re-issue one without prompt=consent. Force a fresh grant.
-      res.redirect(`${base}/?google=no_refresh_token`);
+      res.redirect(`${base}/settings?google=no_refresh_token`);
       return;
     }
 
     const googleEmail = decodeEmailFromIdToken(tokens.id_token);
 
     await setGoogleConnection(uid, { refreshToken, googleEmail });
-    res.redirect(`${base}/?google=connected`);
+    res.redirect(`${base}/settings?google=connected`);
   } catch (err) {
     console.error("googleAuthCallback error:", err);
-    res.redirect(`${base}/?google=error`);
+    res.redirect(`${base}/settings?google=error`);
   }
 }
 

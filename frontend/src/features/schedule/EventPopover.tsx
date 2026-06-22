@@ -19,12 +19,15 @@ import {
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
 import { useListStudents } from "@/features/students/api";
 import {
   useCancelLesson,
   useGetLesson,
   useNotifyStudent,
+  useUpdateLesson,
 } from "./api";
+import { generateMeetLinkRequest } from "./api/requests";
 import {
   ACCEPTANCE_LABELS,
   ATTENDANCE_LABELS,
@@ -80,7 +83,9 @@ export function EventPopover({
   const { data: students = [] } = useListStudents();
   const cancelLesson = useCancelLesson(lessonId ?? "");
   const notifyStudent = useNotifyStudent(lessonId ?? "");
+  const updateLesson = useUpdateLesson(lessonId ?? "");
   const [actionError, setActionError] = useState<string | null>(null);
+  const [meetLoading, setMeetLoading] = useState(false);
 
   const studentName = lesson
     ? (students.find((s) => s.id === lesson.studentId)?.name ?? "Unknown student")
@@ -119,6 +124,30 @@ export function EventPopover({
       onOpenChange(false);
     } catch {
       setActionError(cancelLesson.error?.message ?? "Failed to cancel lesson");
+    }
+  }
+
+  async function handleGenerateMeet() {
+    if (!lesson) return;
+    setActionError(null);
+    setMeetLoading(true);
+    try {
+      const { meetingLink } = await generateMeetLinkRequest({
+        startDateTime: lesson.startDateTime,
+        durationMinutes: lesson.durationMinutes,
+      });
+      // Persist so the popover flips to "Open Google Meet" and the
+      // dashboard/calendar reflect it. No new tab — user opens it themselves.
+      await updateLesson.mutateAsync({ location: meetingLink });
+      toast.success("Google Meet link created");
+    } catch (err) {
+      toast.error(
+        err instanceof Error && err.message
+          ? err.message
+          : "Connect your Google account to generate Meet links",
+      );
+    } finally {
+      setMeetLoading(false);
     }
   }
 
@@ -174,6 +203,8 @@ export function EventPopover({
             lessonId={lesson.id}
             onNotify={handleNotify}
             onCancel={handleCancel}
+            onGenerateMeet={handleGenerateMeet}
+            meetLoading={meetLoading}
           />
         )}
         </div>
@@ -204,6 +235,8 @@ interface PopoverBodyProps {
   lessonId: string;
   onNotify: () => void;
   onCancel: () => void;
+  onGenerateMeet: () => void;
+  meetLoading: boolean;
 }
 
 function PopoverBody({
@@ -228,6 +261,8 @@ function PopoverBody({
   lessonId,
   onNotify,
   onCancel,
+  onGenerateMeet,
+  meetLoading,
 }: PopoverBodyProps) {
   const meetLink = meetUrl(location);
   const notifiedAt = notifiedAtIso ? new Date(notifiedAtIso) : null;
@@ -294,10 +329,28 @@ function PopoverBody({
               Open Google Meet
               <ExternalLink className="h-3 w-3" />
             </a>
-          ) : location ? (
-            <span className="font-medium">{location}</span>
           ) : (
-            <span className="text-muted-foreground">Not specified</span>
+            <div className="flex flex-wrap items-center gap-2">
+              {location ? (
+                <span className="font-medium">{location}</span>
+              ) : (
+                <span className="text-muted-foreground">Not specified</span>
+              )}
+              <Button
+                size="sm"
+                variant="secondary"
+                className="h-7 gap-1 px-2 text-xs"
+                onClick={onGenerateMeet}
+                disabled={meetLoading}
+              >
+                {meetLoading ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <Video className="h-3 w-3" />
+                )}
+                Generate Meet
+              </Button>
+            </div>
           )}
         </Detail>
 

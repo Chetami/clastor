@@ -1,5 +1,5 @@
 import { api } from "@/lib/api";
-import type { UserInfo } from "@examify-tms/interfaces";
+import type { GoogleConnectionStatus, UserInfo } from "@examify-tms/interfaces";
 
 /**
  * Upload a profile picture for the authenticated user.
@@ -27,4 +27,31 @@ export async function updateUserCurrencyRequest(
 ): Promise<UserInfo> {
   const response = await api.patch<UserInfo>("/api/users/me", { currency });
   return response.data;
+}
+
+/**
+ * Whether the authenticated tutor has connected a Google account (for Meet /
+ * Google Calendar). The refresh token itself is never exposed.
+ */
+export async function getGoogleConnectionStatusRequest(): Promise<GoogleConnectionStatus> {
+  const response = await api.get<GoogleConnectionStatus>(
+    "/api/auth/google/status",
+  );
+  return response.data;
+}
+
+/**
+ * Start a Google OAuth consent flow bound to the authenticated user. Returns a
+ * single-use consent URL the browser should be redirected to.
+ */
+export async function connectGoogleRequest(): Promise<{ authUrl: string }> {
+  const response = await api.get<{ authUrl: string }>("/api/auth/google/url");
+  return response.data;
+}
+
+/**
+ * Disconnect the authenticated tutor's Google account (clears stored tokens).
+ */
+export async function disconnectGoogleRequest(): Promise<void> {
+  await api.delete("/api/auth/google");
 }

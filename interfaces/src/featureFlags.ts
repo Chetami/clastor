@@ -4,7 +4,7 @@
  * @examify-tms/interfaces package (imported by both).
  */
 export const featureFlags = {
-  publicProfile: true, // <-- off for now
+  publicProfile: false, // <-- off for now
 } as const;
 
 export type FeatureFlags = typeof featureFlags;

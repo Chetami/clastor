@@ -25,6 +25,7 @@ import {
 import { useAuthStore } from "@/store/auth-store";
 import { uploadAvatarRequest, updateUserCurrencyRequest } from "./api/requests";
 import { COLOR_SCHEMES, useTheme } from "@/hooks/use-theme";
+import { GoogleConnectionCard } from "./GoogleConnectionCard";
 
 /** Currencies a tutor can charge in (mirrors the backend SUPPORTED_CURRENCIES). */
 const CURRENCY_OPTIONS = [
@@ -243,6 +244,8 @@ export default function Settings() {
           )}
         </CardContent>
       </Card>
+
+      <GoogleConnectionCard />
 
       <Card>
         <CardHeader>
