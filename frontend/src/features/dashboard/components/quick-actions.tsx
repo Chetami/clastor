@@ -1,7 +1,13 @@
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Calculator, PenLine, UserPlus, FilePlus2, CalendarPlus } from "lucide-react";
+import {
+  Calculator,
+  PenLine,
+  UserPlus,
+  FilePlus2,
+  CalendarPlus,
+} from "lucide-react";
 
 const EXTERNAL = [
   {
@@ -57,9 +63,11 @@ export function QuickActions() {
               <a href={action.href} target="_blank" rel="noopener noreferrer">
                 <span className="flex items-center gap-1.5">
                   <action.icon className="h-3.5 w-3.5" />
-                  <span className="text-[11px] font-medium">{action.label}</span>
+                  <span className="text-[11px] font-medium">
+                    {action.label}
+                  </span>
                 </span>
-                <span className="text-[10px] font-normal text-muted-foreground">
+                <span className="text-[10px] font-normal ">
                   {action.description}
                 </span>
               </a>

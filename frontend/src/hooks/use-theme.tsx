@@ -36,9 +36,9 @@ export const COLOR_SCHEMES: {
   { value: "violet", label: "Violet", swatch: "hsl(258 90% 52%)", accent: "hsl(292 84% 61%)" },
   { value: "rose", label: "Rose", swatch: "hsl(347 77% 50%)", accent: "hsl(330 81% 60%)" },
   { value: "amber", label: "Amber", swatch: "hsl(33 88% 38%)", accent: "hsl(25 95% 53%)" },
-  { value: "sunset", label: "Sunset", swatch: "hsl(21 90% 48%)", secondary: "hsl(0 72% 51%)", accent: "hsl(38 92% 50%)" },
-  { value: "teal", label: "Teal", swatch: "hsl(173 80% 35%)", secondary: "hsl(199 89% 42%)", accent: "hsl(142 71% 45%)" },
-  { value: "berry", label: "Berry", swatch: "hsl(263 70% 50%)", secondary: "hsl(327 79% 56%)", accent: "hsl(347 77% 50%)" },
+  { value: "sunset", label: "Sunset", swatch: "hsl(0 72% 51%)", secondary: "hsl(21 90% 48%)", accent: "hsl(38 92% 50%)" },
+  { value: "teal", label: "Teal", swatch: "hsl(199 89% 42%)", secondary: "hsl(173 80% 35%)", accent: "hsl(142 71% 45%)" },
+  { value: "berry", label: "Berry", swatch: "hsl(327 79% 56%)", secondary: "hsl(263 70% 50%)", accent: "hsl(347 77% 50%)" },
 ];
 
 const APPEARANCE_KEY = "theme";

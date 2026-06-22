@@ -95,7 +95,7 @@
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
     --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted-foreground: 215 10% 48%;
     --accent: 199.2 89.5% 48.2%;
     --accent-foreground: 210 40% 98%;
     --destructive: 0 84.2% 60.2%;
@@ -157,7 +157,7 @@
     --secondary: 150 20% 96%;
     --secondary-foreground: 149.3 30% 10%;
     --muted: 150 20% 96%;
-    --muted-foreground: 150 10% 40%;
+    --muted-foreground: 150 8% 46%;
     --accent: 38 92% 50%;
     --accent-foreground: 38 92% 97%;
     --destructive: 0 84.2% 60.2%;
@@ -218,7 +218,7 @@
     --secondary: 250 30% 96%;
     --secondary-foreground: 250 40% 12%;
     --muted: 250 30% 96%;
-    --muted-foreground: 250 14% 42%;
+    --muted-foreground: 250 10% 48%;
     --accent: 292 84% 61%;
     --accent-foreground: 250 40% 98%;
     --destructive: 0 84.2% 60.2%;
@@ -279,7 +279,7 @@
     --secondary: 350 30% 96%;
     --secondary-foreground: 350 40% 12%;
     --muted: 350 30% 96%;
-    --muted-foreground: 350 14% 42%;
+    --muted-foreground: 350 10% 48%;
     --accent: 330 81% 60%;
     --accent-foreground: 350 40% 98%;
     --destructive: 0 84.2% 60.2%;
@@ -340,7 +340,7 @@
     --secondary: 40 30% 96%;
     --secondary-foreground: 30 35% 12%;
     --muted: 40 30% 96%;
-    --muted-foreground: 35 14% 42%;
+    --muted-foreground: 35 10% 48%;
     --accent: 25 95% 53%;
     --accent-foreground: 40 50% 98%;
     --destructive: 0 84.2% 60.2%;
@@ -388,7 +388,7 @@
   }
 
   /* ── Sunset (3-colour) ────────────────────────────────
-     Orange primary, red secondary, amber accent. */
+     Red primary, orange secondary, amber accent. */
   .theme-sunset {
     --background: 20 40% 98%;
     --foreground: 20 40% 12%;
@@ -396,27 +396,27 @@
     --card-foreground: 20 40% 12%;
     --popover: 0 0% 100%;
     --popover-foreground: 20 40% 12%;
-    --primary: 21 90% 48%;
+    --primary: 0 72% 51%;
     --primary-foreground: 20 40% 98%;
-    --secondary: 0 72% 51%;
+    --secondary: 21 90% 48%;
     --secondary-foreground: 20 40% 98%;
     --muted: 20 30% 96%;
-    --muted-foreground: 20 12% 42%;
+    --muted-foreground: 20 8% 48%;
     --accent: 38 92% 50%;
     --accent-foreground: 20 40% 98%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 20 40% 98%;
     --border: 20 24% 88%;
     --input: 20 24% 88%;
-    --ring: 21 90% 48%;
+    --ring: 0 72% 51%;
     --sidebar-background: 20 35% 97%;
     --sidebar-foreground: 20 12% 30%;
-    --sidebar-primary: 21 90% 48%;
+    --sidebar-primary: 0 72% 51%;
     --sidebar-primary-foreground: 20 40% 98%;
     --sidebar-accent: 20 30% 93%;
     --sidebar-accent-foreground: 20 40% 12%;
     --sidebar-border: 20 24% 86%;
-    --sidebar-ring: 21 90% 48%;
+    --sidebar-ring: 0 72% 51%;
   }
   .dark.theme-sunset {
     --background: 20 22% 8%;
@@ -425,31 +425,31 @@
     --card-foreground: 20 30% 95%;
     --popover: 20 22% 8%;
     --popover-foreground: 20 30% 95%;
-    --primary: 25 95% 53%;
-    --primary-foreground: 20 40% 12%;
-    --secondary: 0 63% 40%;
-    --secondary-foreground: 20 30% 96%;
+    --primary: 0 63% 40%;
+    --primary-foreground: 20 30% 96%;
+    --secondary: 25 95% 53%;
+    --secondary-foreground: 20 40% 98%;
     --muted: 20 18% 16%;
-    --muted-foreground: 20 12% 64%;
+    --muted-foreground: 20 10% 82%;
     --accent: 38 92% 50%;
     --accent-foreground: 20 30% 95%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 20 30% 95%;
     --border: 20 18% 16%;
     --input: 20 18% 16%;
-    --ring: 25 95% 53%;
+    --ring: 0 63% 40%;
     --sidebar-background: 20 20% 5%;
     --sidebar-foreground: 20 12% 64%;
-    --sidebar-primary: 25 95% 53%;
-    --sidebar-primary-foreground: 20 40% 12%;
+    --sidebar-primary: 0 63% 40%;
+    --sidebar-primary-foreground: 20 30% 96%;
     --sidebar-accent: 20 18% 14%;
     --sidebar-accent-foreground: 20 30% 95%;
     --sidebar-border: 20 18% 14%;
-    --sidebar-ring: 25 95% 53%;
+    --sidebar-ring: 0 63% 40%;
   }
 
   /* ── Teal (3-colour) ──────────────────────────────────
-     Teal primary, cyan secondary, emerald accent. */
+     Cyan primary, teal secondary, emerald accent. */
   .theme-teal {
     --background: 175 30% 97%;
     --foreground: 175 35% 12%;
@@ -457,27 +457,27 @@
     --card-foreground: 175 35% 12%;
     --popover: 0 0% 100%;
     --popover-foreground: 175 35% 12%;
-    --primary: 173 80% 35%;
+    --primary: 199 89% 42%;
     --primary-foreground: 175 40% 98%;
-    --secondary: 199 89% 42%;
+    --secondary: 173 80% 35%;
     --secondary-foreground: 175 40% 98%;
     --muted: 175 25% 95%;
-    --muted-foreground: 175 12% 40%;
+    --muted-foreground: 175 8% 46%;
     --accent: 142 71% 45%;
     --accent-foreground: 175 40% 98%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 175 40% 98%;
     --border: 175 20% 88%;
     --input: 175 20% 88%;
-    --ring: 173 80% 35%;
+    --ring: 199 89% 42%;
     --sidebar-background: 175 28% 96%;
     --sidebar-foreground: 175 12% 28%;
-    --sidebar-primary: 173 80% 35%;
+    --sidebar-primary: 199 89% 42%;
     --sidebar-primary-foreground: 175 40% 98%;
     --sidebar-accent: 175 25% 91%;
     --sidebar-accent-foreground: 175 35% 12%;
     --sidebar-border: 175 20% 86%;
-    --sidebar-ring: 173 80% 35%;
+    --sidebar-ring: 199 89% 42%;
   }
   .dark.theme-teal {
     --background: 180 25% 8%;
@@ -486,31 +486,31 @@
     --card-foreground: 175 30% 95%;
     --popover: 180 25% 8%;
     --popover-foreground: 175 30% 95%;
-    --primary: 173 80% 40%;
-    --primary-foreground: 180 40% 10%;
-    --secondary: 199 80% 40%;
-    --secondary-foreground: 180 30% 96%;
+    --primary: 199 80% 40%;
+    --primary-foreground: 180 30% 96%;
+    --secondary: 173 80% 40%;
+    --secondary-foreground: 175 40% 98%;
     --muted: 180 20% 15%;
-    --muted-foreground: 175 12% 62%;
+    --muted-foreground: 175 10% 82%;
     --accent: 142 65% 45%;
     --accent-foreground: 180 30% 96%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 175 30% 95%;
     --border: 180 20% 15%;
     --input: 180 20% 15%;
-    --ring: 173 80% 40%;
+    --ring: 199 80% 40%;
     --sidebar-background: 180 23% 5%;
     --sidebar-foreground: 175 12% 62%;
-    --sidebar-primary: 173 80% 40%;
-    --sidebar-primary-foreground: 180 40% 10%;
+    --sidebar-primary: 199 80% 40%;
+    --sidebar-primary-foreground: 180 30% 96%;
     --sidebar-accent: 180 20% 13%;
     --sidebar-accent-foreground: 175 30% 95%;
     --sidebar-border: 180 20% 13%;
-    --sidebar-ring: 173 80% 40%;
+    --sidebar-ring: 199 80% 40%;
   }
 
   /* ── Berry (3-colour) ─────────────────────────────────
-     Purple primary, pink secondary, rose accent. */
+     Pink primary, purple secondary, rose accent. */
   .theme-berry {
     --background: 300 34% 98%;
     --foreground: 290 35% 12%;
@@ -518,27 +518,27 @@
     --card-foreground: 290 35% 12%;
     --popover: 0 0% 100%;
     --popover-foreground: 290 35% 12%;
-    --primary: 263 70% 50%;
+    --primary: 327 79% 56%;
     --primary-foreground: 300 40% 98%;
-    --secondary: 327 79% 56%;
+    --secondary: 263 70% 50%;
     --secondary-foreground: 300 40% 98%;
     --muted: 300 28% 96%;
-    --muted-foreground: 300 12% 42%;
+    --muted-foreground: 300 8% 48%;
     --accent: 347 77% 50%;
     --accent-foreground: 300 40% 98%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 300 40% 98%;
     --border: 300 22% 90%;
     --input: 300 22% 90%;
-    --ring: 263 70% 50%;
+    --ring: 327 79% 56%;
     --sidebar-background: 300 32% 97%;
     --sidebar-foreground: 300 12% 30%;
-    --sidebar-primary: 263 70% 50%;
+    --sidebar-primary: 327 79% 56%;
     --sidebar-primary-foreground: 300 40% 98%;
     --sidebar-accent: 300 28% 93%;
     --sidebar-accent-foreground: 290 35% 12%;
     --sidebar-border: 300 22% 88%;
-    --sidebar-ring: 263 70% 50%;
+    --sidebar-ring: 327 79% 56%;
   }
   .dark.theme-berry {
     --background: 290 24% 8%;
@@ -547,27 +547,27 @@
     --card-foreground: 300 30% 95%;
     --popover: 290 24% 8%;
     --popover-foreground: 300 30% 95%;
-    --primary: 271 81% 56%;
-    --primary-foreground: 290 40% 10%;
-    --secondary: 327 71% 50%;
-    --secondary-foreground: 290 30% 96%;
+    --primary: 327 71% 50%;
+    --primary-foreground: 290 30% 96%;
+    --secondary: 271 81% 56%;
+    --secondary-foreground: 300 40% 98%;
     --muted: 290 20% 15%;
-    --muted-foreground: 300 12% 62%;
+    --muted-foreground: 300 10% 82%;
     --accent: 350 80% 60%;
     --accent-foreground: 290 30% 96%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 300 30% 95%;
     --border: 290 20% 15%;
     --input: 290 20% 15%;
-    --ring: 271 81% 56%;
+    --ring: 327 71% 50%;
     --sidebar-background: 290 22% 5%;
     --sidebar-foreground: 300 12% 62%;
-    --sidebar-primary: 271 81% 56%;
-    --sidebar-primary-foreground: 290 40% 10%;
+    --sidebar-primary: 327 71% 50%;
+    --sidebar-primary-foreground: 290 30% 96%;
     --sidebar-accent: 290 20% 13%;
     --sidebar-accent-foreground: 300 30% 95%;
     --sidebar-border: 290 20% 13%;
-    --sidebar-ring: 271 81% 56%;
+    --sidebar-ring: 327 71% 50%;
   }
 }
 
