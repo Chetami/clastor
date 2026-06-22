@@ -27,6 +27,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   useGetLesson,
   useRecordAttendance,
   useCancelLesson,
@@ -390,20 +397,24 @@ export default function EventDetail() {
               <p className="text-xs text-muted-foreground">
                 Attendance / outcome
               </p>
-              <select
+              <Select
                 value={lesson.attendanceStatus}
-                onChange={(e) =>
-                  handleAttendanceChange(e.target.value as AttendanceStatus)
+                onValueChange={(v) =>
+                  handleAttendanceChange(v as AttendanceStatus)
                 }
                 disabled={recordAttendance.isPending}
-                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {ATTENDANCE_OPTIONS.map((opt) => (
-                  <option key={opt} value={opt}>
-                    {ATTENDANCE_LABELS[opt]}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ATTENDANCE_OPTIONS.map((opt) => (
+                    <SelectItem key={opt} value={opt}>
+                      {ATTENDANCE_LABELS[opt]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               {pickerError && (
                 <p className="text-xs text-destructive">{pickerError}</p>
               )}

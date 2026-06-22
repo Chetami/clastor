@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  ArrowDownUp,
   CalendarClock,
   ChevronRight,
   Clock,
@@ -12,6 +11,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useListLessons } from "@/features/schedule/api";
 import { useListStudents } from "@/features/students/api";
 import { deriveLessonStatus } from "@/features/schedule/lesson-utils";
@@ -199,21 +205,21 @@ export default function Lessons() {
                   className="w-full pl-8 sm:w-56"
                 />
               </div>
-              <div className="relative">
-                <ArrowDownUp className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <select
-                  value={sortKey}
-                  onChange={(e) => setSortKey(e.target.value as SortKey)}
-                  aria-label="Sort lessons"
-                  className="h-9 w-full rounded-md border border-input bg-transparent pl-8 pr-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring sm:w-48"
-                >
+              <Select
+                value={sortKey}
+                onValueChange={(v) => setSortKey(v as SortKey)}
+              >
+                <SelectTrigger aria-label="Sort lessons" className="sm:w-48">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
                   {SORT_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
+                    <SelectItem key={opt.value} value={opt.value}>
                       {opt.label}
-                    </option>
+                    </SelectItem>
                   ))}
-                </select>
-              </div>
+                </SelectContent>
+              </Select>
             </div>
           </CardHeader>
           <CardContent>

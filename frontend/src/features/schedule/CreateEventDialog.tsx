@@ -11,6 +11,13 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useListStudents } from "@/features/students/api";
 import { useCreateLesson, useCreateRecurringLesson } from "./api";
 import {
@@ -242,9 +249,6 @@ export function CreateEventDialog({
     }
   }
 
-  const selectClass =
-    "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
@@ -258,25 +262,31 @@ export function CreateEventDialog({
         <form onSubmit={handleSubmit} className="space-y-4" noValidate>
           <div className="space-y-2">
             <Label htmlFor="student">Student</Label>
-            <select
-              id="student"
+            <Select
               value={values.studentId}
-              onChange={(e) => handleStudentChange(e.target.value)}
-              className={selectClass}
-              aria-invalid={!!errors.studentId}
+              onValueChange={handleStudentChange}
               disabled={students.length === 0}
             >
-              <option value="" disabled>
-                {students.length === 0
-                  ? "Add a student first"
-                  : "Select a student"}
-              </option>
-              {students.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger
+                id="student"
+                aria-invalid={!!errors.studentId}
+              >
+                <SelectValue
+                  placeholder={
+                    students.length === 0
+                      ? "Add a student first"
+                      : "Select a student"
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {students.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             {errors.studentId && (
               <p className="text-xs text-destructive">{errors.studentId}</p>
             )}
@@ -343,18 +353,21 @@ export function CreateEventDialog({
 
           <div className="space-y-2">
             <Label htmlFor="repeat">Repeat</Label>
-            <select
-              id="repeat"
+            <Select
               value={values.repeat}
-              onChange={(e) =>
-                handleRepeatChange(e.target.value as EventFormData["repeat"])
+              onValueChange={(v) =>
+                handleRepeatChange(v as EventFormData["repeat"])
               }
-              className={selectClass}
             >
-              <option value="none">Does not repeat</option>
-              <option value="weekly">Weekly</option>
-              <option value="biweekly">Every 2 weeks</option>
-            </select>
+              <SelectTrigger id="repeat">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Does not repeat</SelectItem>
+                <SelectItem value="weekly">Weekly</SelectItem>
+                <SelectItem value="biweekly">Every 2 weeks</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {isRecurring && (

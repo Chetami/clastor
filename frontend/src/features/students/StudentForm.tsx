@@ -13,6 +13,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PhoneInput } from "@/components/ui/phone-input";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   EMPTY_STUDENT_FORM,
   studentFormSchema,
   type StudentFormData,
@@ -348,22 +355,24 @@ export function StudentForm({
             {values.timezoneEnabled && (
               <div className="space-y-2">
                 <Label htmlFor="timezone">Timezone</Label>
-                <select
-                  id="timezone"
-                  aria-invalid={!!errors.timezone}
+                <Select
                   value={values.timezone}
-                  onChange={(e) => update("timezone", e.target.value)}
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  onValueChange={(v) => update("timezone", v)}
                 >
-                  <option value="" disabled>
-                    Select a timezone
-                  </option>
-                  {TIMEZONES.map((tz) => (
-                    <option key={tz} value={tz}>
-                      {tz}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger
+                    id="timezone"
+                    aria-invalid={!!errors.timezone}
+                  >
+                    <SelectValue placeholder="Select a timezone" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TIMEZONES.map((tz) => (
+                      <SelectItem key={tz} value={tz}>
+                        {tz}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             )}
             {errors.timezone && (
