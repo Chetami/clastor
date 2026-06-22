@@ -201,10 +201,10 @@ export interface InvoiceEmailInput {
   paymentUrl?: string;
 }
 
-function formatCurrency(amount: number): string {
+function formatCurrency(amount: number, currency: string = "AUD"): string {
   return new Intl.NumberFormat("en-AU", {
     style: "currency",
-    currency: "AUD",
+    currency,
     minimumFractionDigits: 2,
   }).format(amount);
 }
@@ -224,7 +224,7 @@ export async function sendInvoiceEmail(input: InvoiceEmailInput): Promise<void> 
   const { invoice, tutorName, paymentUrl } = input;
   const fromName = tutorName || getSenderDisplayName();
   const subject = `Invoice ${invoice.invoiceNumber} from ${fromName}`;
-  const total = formatCurrency(invoice.total);
+  const total = formatCurrency(invoice.total, invoice.currency);
 
   const payLineText = paymentUrl
     ? `You can pay securely online with a card here: ${paymentUrl}\n\n`

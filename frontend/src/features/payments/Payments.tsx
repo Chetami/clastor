@@ -41,6 +41,7 @@ import {
   formatCurrency,
   formatDate,
 } from "./invoice-utils";
+import { useUserCurrency } from "@/lib/use-currency";
 
 type StatusFilter = InvoiceStatus | "all";
 type SortField =
@@ -62,6 +63,7 @@ const STATUS_TABS: { value: StatusFilter; label: string }[] = [
 
 export default function Payments() {
   const navigate = useNavigate();
+  const currency = useUserCurrency();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [search, setSearch] = useState("");
   const [sortField, setSortField] = useState<SortField>("createdAt");
@@ -284,7 +286,7 @@ export default function Payments() {
                              {inv.invoiceNumber}
                            </TableCell>
                            <TableCell className="font-medium">
-                             {formatCompactCurrency(inv.total)}
+                             {formatCompactCurrency(inv.total, inv.currency)}
                            </TableCell>
                            <TableCell>
                              <Badge variant={meta.variant}>{meta.label}</Badge>
@@ -387,7 +389,7 @@ export default function Payments() {
               </span>
               {visible.length > 0 && (
                 <span>
-                  Total: {formatCurrency(visible.reduce((s, i) => s + i.total, 0))}
+                  Total: {formatCurrency(visible.reduce((s, i) => s + i.total, 0), currency)}
                 </span>
               )}
             </div>

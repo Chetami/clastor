@@ -43,6 +43,7 @@ export default function EditInvoice() {
   const { data: invoice, isLoading: isLoadingInvoice, error: invoiceError } = useGetInvoice(invoiceId ?? "");
   const { data: students = [] } = useListStudents();
   const updateInvoice = useUpdateInvoice();
+  const currency = invoice?.currency ?? "AUD";
 
   const [lineItemAmounts, setLineItemAmounts] = useState<Record<string, number>>({});
   const [dueDate, setDueDate] = useState("");
@@ -191,7 +192,7 @@ export default function EditInvoice() {
                   </div>
                   <div>
                     <span className="text-muted-foreground">Rate:</span>{" "}
-                    {formatCurrency(selectedStudent?.expectedAmount ?? 0)}
+                    {formatCurrency(selectedStudent?.expectedAmount ?? 0, currency)}
                     {selectedStudent?.rateType === "hourly" ? "/hr" : "/lesson"}
                   </div>
                 </div>
@@ -239,7 +240,7 @@ export default function EditInvoice() {
                           </div>
                         </TableCell>
                         <TableCell className="text-right text-sm font-medium">
-                          {formatCurrency(li.unitAmount * li.quantity)}
+                          {formatCurrency(li.unitAmount * li.quantity, currency)}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -250,11 +251,11 @@ export default function EditInvoice() {
                 <div className="w-full max-w-xs space-y-1 text-sm">
                   <div className="flex justify-between text-muted-foreground">
                     <span>Subtotal</span>
-                    <span>{formatCurrency(subtotal)}</span>
+                    <span>{formatCurrency(subtotal, currency)}</span>
                   </div>
                   <div className="flex justify-between border-t pt-1 text-base font-semibold">
                     <span>Total</span>
-                    <span>{formatCurrency(subtotal)}</span>
+                    <span>{formatCurrency(subtotal, currency)}</span>
                   </div>
                 </div>
               </div>
@@ -336,7 +337,7 @@ export default function EditInvoice() {
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Total</span>
                 <span className="font-semibold">
-                  {formatCurrency(subtotal)}
+                  {formatCurrency(subtotal, currency)}
                 </span>
               </div>
               <div className="flex flex-col gap-2 pt-2">

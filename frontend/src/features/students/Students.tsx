@@ -40,6 +40,7 @@ import {
   studentToFormValues,
 } from "./student-utils";
 import { useStudentsDebts } from "./invoices-api";
+import { useUserCurrency } from "@/lib/use-currency";
 
 type StatusFilter = StudentResponse["status"] | "all";
 type SortKey =
@@ -63,6 +64,7 @@ const SORT_OPTIONS: { value: SortKey; label: string }[] = [
 
 export default function Students() {
   const navigate = useNavigate();
+  const currency = useUserCurrency();
   const { data: students = [], isLoading, error } = useListStudents();
   const studentIds = students.map((s) => s.id);
   const debtQueries = useStudentsDebts(studentIds);
@@ -314,7 +316,7 @@ export default function Students() {
                       <div className="flex items-center gap-3">
                         <div className="hidden text-right sm:block">
                           <p className="font-medium">
-                            {compactCurrency(student.expectedAmount)}
+                            {compactCurrency(student.expectedAmount, currency)}
                             <span className="ml-0.5 text-xs font-normal text-muted-foreground">
                               {rateUnit(student.rateType)}
                             </span>
@@ -332,7 +334,7 @@ export default function Students() {
                                   Loading...
                                 </span>
                               ) : (
-                                `Owed: ${formatCurrency(debt)}`
+                                `Owed: ${formatCurrency(debt, currency)}`
                               )}
                             </p>
                           )}

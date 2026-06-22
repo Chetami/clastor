@@ -38,7 +38,6 @@ export const tutorProfileFormSchema = z.object({
       (v) => v === null || (!Number.isNaN(v) && v >= 0),
       "Enter a valid amount",
     ),
-  currency: z.string().trim().min(1, "Currency is required").default("USD"),
   contactEmail: z
     .string()
     .trim()
@@ -61,7 +60,6 @@ export const EMPTY_TUTOR_PROFILE_FORM: TutorProfileFormData = {
   subjects: [],
   qualifications: [],
   hourlyRate: null,
-  currency: "USD",
   contactEmail: "",
   ctaText: "",
 };

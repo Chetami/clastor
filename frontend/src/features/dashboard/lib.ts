@@ -36,11 +36,11 @@ export function isGoogleMeet(url: string): boolean {
   return /meet\.google\.com/i.test(url);
 }
 
-/** Format a number as AUD currency (matches invoice currency today). */
-export function formatCurrency(amount: number): string {
+/** Format a number as currency (defaults to AUD). Pass the tutor's currency. */
+export function formatCurrency(amount: number, currency: string = "AUD"): string {
   return new Intl.NumberFormat("en-AU", {
     style: "currency",
-    currency: "AUD",
+    currency,
     maximumFractionDigits: 0,
   }).format(amount);
 }

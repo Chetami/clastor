@@ -38,11 +38,6 @@ properties:
     minimum: 0
     description: Optional hourly rate displayed on the public page
     example: 45
-  currency:
-    type: string
-    description: ISO 4217 currency code for the hourly rate
-    default: USD
-    example: USD
   contactEmail:
     type: string
     format: email

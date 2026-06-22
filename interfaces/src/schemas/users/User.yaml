@@ -26,6 +26,11 @@ properties:
     type: string
     nullable: true
     description: Optional profile picture URL
+  currency:
+    type: string
+    description: ISO 4217 currency code the tutor charges in
+    default: AUD
+    example: AUD
   createdAt:
     type: string
     format: date-time

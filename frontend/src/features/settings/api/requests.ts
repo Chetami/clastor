@@ -16,3 +16,15 @@ export async function uploadAvatarRequest(file: File): Promise<UserInfo> {
   });
   return response.data;
 }
+
+/**
+ * Update the authenticated user's currency (the currency they charge in).
+ * The backend keeps the tutor profile's denormalized currency in sync and
+ * returns the updated UserInfo.
+ */
+export async function updateUserCurrencyRequest(
+  currency: string,
+): Promise<UserInfo> {
+  const response = await api.patch<UserInfo>("/api/users/me", { currency });
+  return response.data;
+}

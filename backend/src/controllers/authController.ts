@@ -36,6 +36,7 @@ export async function login(req: Request, res: Response<LoginResponse | ApiError
       email: user.email,
       role: user.role,
       avatarUrl: user.avatarUrl,
+      currency: user.currency,
     };
 
     return res.status(200).json({
@@ -69,6 +70,7 @@ export async function verifyToken(req: Request, res: Response<{ user: UserInfo }
       email: user.email,
       role: user.role,
       avatarUrl: user.avatarUrl,
+      currency: user.currency,
     };
 
     return res.status(200).json({
@@ -121,6 +123,7 @@ export async function googleAuth(
       email: user.email,
       role: user.role,
       avatarUrl: user.avatarUrl,
+      currency: user.currency,
     };
 
     res.status(200).json({ jwtToken, user: userInfo });
@@ -189,6 +192,7 @@ export async function register(
       email: user.email,
       role: user.role,
       avatarUrl: user.avatarUrl,
+      currency: user.currency,
     };
 
     res.status(200).json({ jwtToken, user: userInfo });

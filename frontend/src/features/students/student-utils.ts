@@ -21,21 +21,31 @@ export function getInitials(name: string): string {
     .toUpperCase();
 }
 
-export function formatCurrency(amount: number): string {
-  return `$${amount.toFixed(2)}`;
+export function formatCurrency(amount: number, currency: string = "AUD"): string {
+  return new Intl.NumberFormat("en-AU", {
+    style: "currency",
+    currency,
+    minimumFractionDigits: 2,
+  }).format(amount);
 }
 
-export function compactCurrency(amount: number): string {
-  return amount % 1 === 0 ? `$${amount}` : `$${amount.toFixed(2)}`;
+export function compactCurrency(
+  amount: number,
+  currency: string = "AUD",
+): string {
+  return amount % 1 === 0
+    ? formatCurrency(amount, currency).replace(/\.00$/, "")
+    : formatCurrency(amount, currency);
 }
 
 export function formatRate(
   amount: number,
   rateType: Student["rateType"],
+  currency: string = "AUD",
 ): string {
   return rateType === "hourly"
-    ? `${compactCurrency(amount)}/hr`
-    : `${compactCurrency(amount)}/lesson`;
+    ? `${compactCurrency(amount, currency)}/hr`
+    : `${compactCurrency(amount, currency)}/lesson`;
 }
 
 export function rateUnit(rateType: Student["rateType"]): string {

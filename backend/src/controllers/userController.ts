@@ -1,12 +1,25 @@
 import { Request, Response } from "express";
 import sharp from "sharp";
-import { UserInfo, ApiError } from "@examify-tms/interfaces";
-import { updateUserAvatar } from "../services/userService";
+import { UserInfo, ApiError, User } from "@examify-tms/interfaces";
+import { updateUserAvatar, updateUserCurrency } from "../services/userService";
+import { syncTutorProfileCurrency } from "../services/tutorProfileService";
 
 /** Max upload size enforced by multer (5 MB) before processing. */
 const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
 /** Square avatar output dimension. */
 const AVATAR_SIZE = 256;
+
+/** Map a full User to the trimmed UserInfo returned to clients. */
+function toUserInfo(user: User): UserInfo {
+  return {
+    uid: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    avatarUrl: user.avatarUrl,
+    currency: user.currency,
+  };
+}
 
 /**
  * POST /api/users/me/avatar
@@ -45,19 +58,44 @@ export async function uploadAvatar(
 
     const user = await updateUserAvatar(req.user!.uid, dataUrl);
 
-    const userInfo: UserInfo = {
-      uid: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      avatarUrl: user.avatarUrl,
-    };
-
-    res.status(200).json(userInfo);
+    res.status(200).json(toUserInfo(user));
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Failed to upload avatar";
     console.error("uploadAvatar error:", error);
+    res.status(500).json({ message });
+  }
+}
+
+/**
+ * PATCH /api/users/me
+ * Updates editable fields on the authenticated user's profile. Currently
+ * supports `currency`; keeps the tutor profile's denormalized currency in sync
+ * so the public profile page reflects the change. Returns the updated UserInfo.
+ */
+export async function updateMe(
+  req: Request,
+  res: Response<UserInfo | ApiError>,
+): Promise<void> {
+  try {
+    const uid = req.user!.uid;
+
+    if (typeof req.body?.currency === "string") {
+      const user = await updateUserCurrency(uid, req.body.currency);
+      // Keep the public tutor profile's currency mirroring the user's. Safe
+      // to fire-and-forget: if the tutor has no profile yet, it's a no-op.
+      void syncTutorProfileCurrency(uid, user.currency).catch((err) =>
+        console.error("Failed to sync tutor profile currency:", err),
+      );
+      res.status(200).json(toUserInfo(user));
+      return;
+    }
+
+    res.status(400).json({ message: "No supported fields provided" });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Failed to update user";
+    console.error("updateMe error:", error);
     res.status(500).json({ message });
   }
 }

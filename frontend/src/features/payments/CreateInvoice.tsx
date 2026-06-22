@@ -41,6 +41,7 @@ import {
   type CreateInvoiceFormData,
 } from "./invoice-schema";
 import { formatCurrency, formatDate } from "./invoice-utils";
+import { useUserCurrency } from "@/lib/use-currency";
 
 interface LineItemDraft {
   lessonId: string;
@@ -65,6 +66,7 @@ function isPastLesson(lesson: LessonResponse): boolean {
 
 export default function CreateInvoice() {
   const navigate = useNavigate();
+  const currency = useUserCurrency();
   const { data: students = [] } = useListStudents();
 
   const [studentId, setStudentId] = useState<string>("");
@@ -290,7 +292,7 @@ export default function CreateInvoice() {
                   <div className="grid grid-cols-2 gap-2">
                     <div>
                       <span className="text-muted-foreground">Rate:</span>{" "}
-                      {formatCurrency(selectedStudent.expectedAmount)}
+                      {formatCurrency(selectedStudent.expectedAmount, currency)}
                       {selectedStudent.rateType === "hourly" ? "/hr" : "/lesson"}
                     </div>
                     <div>
@@ -484,6 +486,7 @@ export default function CreateInvoice() {
                               {formatCurrency(
                                 (lineItemAmounts[li.lessonId] ??
                                   li.unitAmount) * li.quantity,
+                                currency,
                               )}
                             </TableCell>
                           </TableRow>
@@ -495,11 +498,11 @@ export default function CreateInvoice() {
                     <div className="w-full max-w-xs space-y-1 text-sm">
                       <div className="flex justify-between text-muted-foreground">
                         <span>Subtotal</span>
-                        <span>{formatCurrency(subtotal)}</span>
+                        <span>{formatCurrency(subtotal, currency)}</span>
                       </div>
                       <div className="flex justify-between border-t pt-1 text-base font-semibold">
                         <span>Total</span>
-                        <span>{formatCurrency(subtotal)}</span>
+                        <span>{formatCurrency(subtotal, currency)}</span>
                       </div>
                     </div>
                   </div>
@@ -593,7 +596,7 @@ export default function CreateInvoice() {
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Total</span>
                 <span className="font-semibold">
-                  {formatCurrency(subtotal)}
+                  {formatCurrency(subtotal, currency)}
                 </span>
               </div>
               <div className="flex flex-col gap-2 pt-2">

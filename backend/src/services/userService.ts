@@ -3,6 +3,36 @@ import { User, Role } from "@examify-tms/interfaces";
 import { generateToken } from "../utils/jwt";
 import admin from "firebase-admin";
 
+/** Default currency for users who never set one (and for legacy docs). */
+export const DEFAULT_CURRENCY = "AUD";
+
+/**
+ * Currencies a tutor may charge in. ISO 4217 codes, uppercase.
+ * The frontend mirrors this list for its currency selector.
+ */
+export const SUPPORTED_CURRENCIES = [
+  "AUD",
+  "USD",
+  "EUR",
+  "GBP",
+  "NZD",
+  "CAD",
+  "SGD",
+  "HKD",
+  "INR",
+  "ZAR",
+  "AED",
+] as const;
+
+/** Normalize + validate a raw currency code, falling back to AUD. */
+export function normalizeCurrency(raw: unknown): string {
+  if (typeof raw !== "string") return DEFAULT_CURRENCY;
+  const code = raw.trim().toUpperCase();
+  return (SUPPORTED_CURRENCIES as readonly string[]).includes(code)
+    ? code
+    : DEFAULT_CURRENCY;
+}
+
 /**
  * Get user document from Firestore
  * @param uid - User UID
@@ -25,6 +55,7 @@ export async function getUserFromFirestore(uid: string): Promise<User> {
       email: userData!.email,
       role: userData!.role,
       avatarUrl: userData!.avatarUrl,
+      currency: normalizeCurrency(userData!.currency),
       createdAt: userData!.createdAt.toDate(),
       updatedAt: userData!.updatedAt.toDate(),
       lastActive: userData!.lastActive?.toDate(),
@@ -76,6 +107,36 @@ export async function updateUserAvatar(
 }
 
 /**
+ * Update the currency a tutor charges in. The currency is validated against
+ * the supported list; invalid values throw.
+ * @param uid - User UID
+ * @param currency - ISO 4217 code (e.g. "AUD", "USD")
+ * @returns Updated User object
+ */
+export async function updateUserCurrency(
+  uid: string,
+  currency: string,
+): Promise<User> {
+  const code = currency?.trim().toUpperCase();
+  if (!(SUPPORTED_CURRENCIES as readonly string[]).includes(code)) {
+    throw new Error(`Unsupported currency: ${currency}`);
+  }
+
+  try {
+    const firestore = getFirebaseFirestore();
+    await firestore.collection("users").doc(uid).update({
+      currency: code,
+      updatedAt: admin.firestore.Timestamp.now(),
+    });
+
+    return getUserFromFirestore(uid);
+  } catch (error) {
+    console.error("Failed to update user currency:", error);
+    throw new Error("Failed to update currency");
+  }
+}
+
+/**
  * Create user document in Firestore
  * @param id - User ID (Firebase Auth UID)
  * @param email - User email
@@ -89,16 +150,19 @@ export async function createUserInFirestore(
   name: string,
   role: Role = 'tutor',
   avatarUrl: string | null = null,
+  currency: string = DEFAULT_CURRENCY,
 ): Promise<User> {
   try {
     const firestore = getFirebaseFirestore();
     const now = admin.firestore.Timestamp.now();
+    const normalizedCurrency = normalizeCurrency(currency);
 
     const userData = {
       name,
       email,
       role,
       avatarUrl,
+      currency: normalizedCurrency,
       createdAt: now,
       updatedAt: now,
       lastActive: now,
@@ -113,6 +177,7 @@ export async function createUserInFirestore(
       email,
       role,
       avatarUrl,
+      currency: normalizedCurrency,
       createdAt: now.toDate() as any,
       updatedAt: now.toDate() as any,
       lastActive: now.toDate() as any,

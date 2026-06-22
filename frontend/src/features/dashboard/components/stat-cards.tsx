@@ -8,6 +8,7 @@ import {
   BookCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useUserCurrency } from "@/lib/use-currency";
 import type { DashboardPeriod, DashboardSummaryResponse } from "@examify-tms/interfaces";
 import { formatCurrency, formatHours, deltaPercent, previousPeriodLabel } from "../lib";
 
@@ -74,6 +75,7 @@ export function StatCards({
   summary: DashboardSummaryResponse;
   period: DashboardPeriod;
 }) {
+  const currency = useUserCurrency();
   const hoursDelta = deltaPercent(summary.hoursWorked, summary.previousHoursWorked);
   const incomeDelta = deltaPercent(summary.income, summary.previousIncome);
   const lessonsDelta = deltaPercent(
@@ -89,25 +91,25 @@ export function StatCards({
       <Tile
         icon={<DollarSign className="h-4 w-4" />}
         label="Income"
-        value={formatCurrency(summary.income)}
+        value={formatCurrency(summary.income, currency)}
         delta={incomeDelta}
       >
         {isWeek ? (
           <p>
-            Today {formatCurrency(summary.today.income)} · Yesterday{" "}
-            {formatCurrency(summary.yesterday.income)}
+            Today {formatCurrency(summary.today.income, currency)} · Yesterday{" "}
+            {formatCurrency(summary.yesterday.income, currency)}
           </p>
         ) : (
           <p>
-            {prevLabel} {formatCurrency(summary.previousIncome)}
+            {prevLabel} {formatCurrency(summary.previousIncome, currency)}
           </p>
         )}
         <p>
-          Outstanding {formatCurrency(summary.outstandingAmount)}
+          Outstanding {formatCurrency(summary.outstandingAmount, currency)}
           {summary.overdueAmount > 0 && (
             <span className="font-medium text-red-600 dark:text-red-500">
               {" "}
-              · incl. {formatCurrency(summary.overdueAmount)} overdue
+              · incl. {formatCurrency(summary.overdueAmount, currency)} overdue
             </span>
           )}
         </p>

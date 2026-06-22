@@ -23,7 +23,7 @@ export function buildPreviewProfile(
     subjects: clean(values.subjects),
     qualifications: clean(values.qualifications),
     hourlyRate: values.hourlyRate,
-    currency: values.currency.trim() || "USD",
+    currency: user?.currency ?? "AUD",
     contactEmail: values.contactEmail?.trim() || null,
     ctaText: values.ctaText?.trim() || null,
     name: user?.name ?? "Your name",
@@ -47,7 +47,6 @@ export function profileResponseToValues(
     subjects: profile.subjects ?? [],
     qualifications: profile.qualifications ?? [],
     hourlyRate: profile.hourlyRate ?? null,
-    currency: profile.currency ?? "USD",
     contactEmail: profile.contactEmail ?? "",
     ctaText: profile.ctaText ?? "",
   };

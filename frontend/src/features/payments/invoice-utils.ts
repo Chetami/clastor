@@ -25,18 +25,21 @@ export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   stripe: "Stripe",
 };
 
-export function formatCurrency(amount: number): string {
+export function formatCurrency(amount: number, currency: string = "AUD"): string {
   return new Intl.NumberFormat("en-AU", {
     style: "currency",
-    currency: "AUD",
+    currency,
     minimumFractionDigits: 2,
   }).format(amount);
 }
 
-export function formatCompactCurrency(amount: number): string {
+export function formatCompactCurrency(
+  amount: number,
+  currency: string = "AUD",
+): string {
   return amount % 1 === 0
-    ? formatCurrency(amount).replace(/\.00$/, "")
-    : formatCurrency(amount);
+    ? formatCurrency(amount, currency).replace(/\.00$/, "")
+    : formatCurrency(amount, currency);
 }
 
 export function formatDate(iso: string): string {

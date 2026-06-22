@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { ChevronDown, DollarSign } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import type { RateType, StudentStatus } from "@examify-tms/interfaces";
+import { useUserCurrency, getCurrencySymbol } from "@/lib/use-currency";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -47,6 +48,7 @@ export function StudentForm({
   const [errors, setErrors] = useState<FieldErrors>({});
   const [additionalOpen, setAdditionalOpen] = useState(false);
   const [billingOpen, setBillingOpen] = useState(false);
+  const currencySymbol = getCurrencySymbol(useUserCurrency());
 
   function update<K extends keyof StudentFormData>(
     key: K,
@@ -232,7 +234,9 @@ export function StudentForm({
         <div className="space-y-2">
           <Label htmlFor="expectedAmount">Expected Amount</Label>
           <div className="relative">
-            <DollarSign className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+              {currencySymbol}
+            </span>
             <Input
               id="expectedAmount"
               type="number"

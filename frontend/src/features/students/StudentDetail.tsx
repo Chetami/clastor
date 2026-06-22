@@ -36,10 +36,12 @@ import {
   studentToFormValues,
 } from "./student-utils";
 import type { Invoice } from "@examify-tms/interfaces";
+import { useUserCurrency } from "@/lib/use-currency";
 
 export default function StudentDetail() {
   const { studentId } = useParams<{ studentId: string }>();
   const navigate = useNavigate();
+  const currency = useUserCurrency();
   const { data: student, isLoading, error } = useGetStudent(studentId);
   const { data: invoices = [] } = useStudentInvoices(studentId);
   const { data: totalDebt = 0 } = useStudentDebt(studentId);
@@ -166,7 +168,7 @@ export default function StudentDetail() {
                 Outstanding Balance
               </p>
               <p className="text-2xl font-bold text-destructive">
-                {formatCurrency(totalDebt)}
+                {formatCurrency(totalDebt, currency)}
               </p>
             </div>
           )}
@@ -228,7 +230,7 @@ export default function StudentDetail() {
                 Rate
               </span>
               <span className="font-medium">
-                {formatCurrency(student.expectedAmount)}{" "}
+                {formatCurrency(student.expectedAmount, currency)}{" "}
                 <span className="text-muted-foreground">
                   ({rateTypeLabel[student.rateType]})
                 </span>
@@ -244,6 +246,7 @@ export default function StudentDetail() {
                   student.rateType === "hourly"
                     ? student.expectedAmount * student.frequencyPerWeek
                     : student.expectedAmount * student.frequencyPerWeek,
+                  currency,
                 )}
               </span>
             </div>
@@ -258,7 +261,7 @@ export default function StudentDetail() {
                     : "font-medium text-emerald-600 dark:text-emerald-400"
                 }
               >
-                {totalDebt > 0 ? formatCurrency(totalDebt) : "Nothing due"}
+                {totalDebt > 0 ? formatCurrency(totalDebt, currency) : "Nothing due"}
               </span>
             </div>
           </CardContent>
@@ -301,7 +304,7 @@ export default function StudentDetail() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="font-bold">{formatCurrency(invoice.total)}</p>
+                    <p className="font-bold">{formatCurrency(invoice.total, invoice.currency)}</p>
                     <p className="text-xs text-muted-foreground">
                       {invoice.issueDate
                         ? new Date(invoice.issueDate).toLocaleDateString()

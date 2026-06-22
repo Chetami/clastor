@@ -19,10 +19,10 @@ const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
 
 const PAGE_WIDTH = 595.28; // A4 in points (72dpi)
 
-function formatCurrency(amount: number): string {
+function formatCurrency(amount: number, currency: string = "AUD"): string {
   return new Intl.NumberFormat("en-AU", {
     style: "currency",
-    currency: "AUD",
+    currency,
     minimumFractionDigits: 2,
   }).format(amount);
 }
@@ -150,11 +150,11 @@ export function generateInvoicePdf(
         }
         doc.text(li.description, colX.desc, y, { width: 280 });
         doc.text(String(li.quantity), colX.qty, y, { width: 60, align: "right" });
-        doc.text(formatCurrency(li.unitAmount), colX.unit, y, {
+        doc.text(formatCurrency(li.unitAmount, invoice.currency), colX.unit, y, {
           width: 80,
           align: "right",
         });
-        doc.text(formatCurrency(li.amount), colX.amount, y, {
+        doc.text(formatCurrency(li.amount, invoice.currency), colX.amount, y, {
           width: 45,
           align: "right",
         });
@@ -180,7 +180,7 @@ export function generateInvoicePdf(
       doc.text("Subtotal", totalsX, y);
       doc
         .fillColor("#111827")
-        .text(formatCurrency(invoice.subtotal), colX.amount - 5, y, {
+        .text(formatCurrency(invoice.subtotal, invoice.currency), colX.amount - 5, y, {
           width: 50,
           align: "right",
         });
@@ -188,7 +188,7 @@ export function generateInvoicePdf(
 
       doc.font("Helvetica-Bold").fontSize(14).fillColor("#111827");
       doc.text("Total", totalsX, y);
-      doc.text(formatCurrency(invoice.total), colX.amount - 5, y, {
+      doc.text(formatCurrency(invoice.total, invoice.currency), colX.amount - 5, y, {
         width: 50,
         align: "right",
       });

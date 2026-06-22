@@ -24,6 +24,11 @@ properties:
     nullable: true
     description: Optional profile picture URL
     example: https://example.com/avatar.jpg
+  currency:
+    type: string
+    description: ISO 4217 currency code the tutor charges in
+    default: AUD
+    example: AUD
 description: |-
   User info response object
   Basic user information returned by authentication endpoints

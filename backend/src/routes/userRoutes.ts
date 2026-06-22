@@ -1,6 +1,6 @@
 import { Router, Request, Response, NextFunction } from "express";
 import multer from "multer";
-import { uploadAvatar } from "../controllers/userController";
+import { uploadAvatar, updateMe } from "../controllers/userController";
 import { authenticateJWT } from "../middleware/auth";
 import type { ApiError } from "@examify-tms/interfaces";
 
@@ -40,5 +40,11 @@ function uploadAvatarFile(req: Request, res: Response<ApiError>, next: NextFunct
  * Upload/update the authenticated user's profile picture (multipart "avatar").
  */
 router.post("/me/avatar", authenticateJWT, uploadAvatarFile, uploadAvatar);
+
+/**
+ * PATCH /api/users/me
+ * Update editable fields on the authenticated user (e.g. currency).
+ */
+router.patch("/me", authenticateJWT, updateMe);
 
 export default router;

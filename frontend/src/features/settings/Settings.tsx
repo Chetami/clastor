@@ -15,8 +15,30 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useAuthStore } from "@/store/auth-store";
-import { uploadAvatarRequest } from "./api/requests";
+import { uploadAvatarRequest, updateUserCurrencyRequest } from "./api/requests";
+
+/** Currencies a tutor can charge in (mirrors the backend SUPPORTED_CURRENCIES). */
+const CURRENCY_OPTIONS = [
+  { code: "AUD", label: "AUD — Australian Dollar" },
+  { code: "USD", label: "USD — US Dollar" },
+  { code: "EUR", label: "EUR — Euro" },
+  { code: "GBP", label: "GBP — British Pound" },
+  { code: "NZD", label: "NZD — New Zealand Dollar" },
+  { code: "CAD", label: "CAD — Canadian Dollar" },
+  { code: "SGD", label: "SGD — Singapore Dollar" },
+  { code: "HKD", label: "HKD — Hong Kong Dollar" },
+  { code: "INR", label: "INR — Indian Rupee" },
+  { code: "ZAR", label: "ZAR — South African Rand" },
+  { code: "AED", label: "AED — UAE Dirham" },
+];
 
 export default function Settings() {
   const user = useAuthStore((s) => s.user);
@@ -26,6 +48,10 @@ export default function Settings() {
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  const currentCurrency = user?.currency ?? "AUD";
+  const [isSavingCurrency, setIsSavingCurrency] = useState(false);
+  const [currencyError, setCurrencyError] = useState<string | null>(null);
 
   const displayName = user?.name ?? user?.email ?? "User";
   const initials = user?.name
@@ -59,6 +85,21 @@ export default function Settings() {
       if (inputRef.current) {
         inputRef.current.value = "";
       }
+    }
+  }
+
+  async function handleCurrencyChange(code: string) {
+    setCurrencyError(null);
+    setIsSavingCurrency(true);
+    try {
+      const updated = await updateUserCurrencyRequest(code);
+      setUser(updated);
+    } catch (err) {
+      setCurrencyError(
+        err instanceof Error ? err.message : "Failed to update currency",
+      );
+    } finally {
+      setIsSavingCurrency(false);
     }
   }
 
@@ -107,6 +148,37 @@ export default function Settings() {
               PNG or JPG, up to 5 MB. Images are resized to a square thumbnail.
             </p>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Currency</CardTitle>
+          <CardDescription>
+            The currency you charge in. Used across your dashboard, invoices,
+            emails and public profile.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-2">
+          <Select
+            value={currentCurrency}
+            disabled={isSavingCurrency}
+            onValueChange={handleCurrencyChange}
+          >
+            <SelectTrigger className="w-full sm:w-72">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {CURRENCY_OPTIONS.map((c) => (
+                <SelectItem key={c.code} value={c.code}>
+                  {c.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {currencyError && (
+            <p className="text-sm text-destructive">{currencyError}</p>
+          )}
         </CardContent>
       </Card>
 

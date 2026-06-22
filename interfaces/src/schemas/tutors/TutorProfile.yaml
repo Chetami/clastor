@@ -56,9 +56,9 @@ properties:
     example: 45
   currency:
     type: string
-    description: ISO 4217 currency code for the hourly rate
-    default: USD
-    example: USD
+    description: ISO 4217 currency code for the hourly rate (mirrors the user's currency)
+    default: AUD
+    example: AUD
   contactEmail:
     type: string
     format: email

@@ -292,10 +292,10 @@ export default function InvoiceDetail() {
                           {li.quantity}
                         </TableCell>
                         <TableCell className="text-right text-sm">
-                          {formatCurrency(li.unitAmount)}
+                          {formatCurrency(li.unitAmount, invoice.currency)}
                         </TableCell>
                         <TableCell className="text-right text-sm font-medium">
-                          {formatCurrency(li.amount)}
+                          {formatCurrency(li.amount, invoice.currency)}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -307,11 +307,11 @@ export default function InvoiceDetail() {
                 <div className="w-full max-w-xs space-y-1 text-sm">
                   <div className="flex justify-between text-muted-foreground">
                     <span>Subtotal</span>
-                    <span>{formatCurrency(invoice.subtotal)}</span>
+                    <span>{formatCurrency(invoice.subtotal, invoice.currency)}</span>
                   </div>
                   <div className="flex justify-between border-t pt-1 text-base font-semibold">
                     <span>Total</span>
-                    <span>{formatCurrency(invoice.total)}</span>
+                    <span>{formatCurrency(invoice.total, invoice.currency)}</span>
                   </div>
                 </div>
               </div>
@@ -370,11 +370,11 @@ export default function InvoiceDetail() {
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Subtotal</span>
-                  <span>{formatCurrency(invoice.subtotal)}</span>
+                  <span>{formatCurrency(invoice.subtotal, invoice.currency)}</span>
                 </div>
                 <div className="flex justify-between border-t pt-2 text-lg font-semibold">
                   <span>Total</span>
-                  <span>{formatCurrency(invoice.total)}</span>
+                  <span>{formatCurrency(invoice.total, invoice.currency)}</span>
                 </div>
               </div>
               {canSend && (

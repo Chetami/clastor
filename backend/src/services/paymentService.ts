@@ -7,6 +7,7 @@ import {
   MarkPaidRequest,
 } from "@examify-tms/interfaces";
 import { getStudentByIdFromFirestore } from "./studentService";
+import { getUserFromFirestore } from "./userService";
 import { updateLessonInFirestore, setLessonInvoiceIdInFirestore } from "./lessonService";
 import admin from "firebase-admin";
 import crypto from "crypto";
@@ -185,6 +186,16 @@ export async function createInvoiceInFirestore(
     // Compute line amounts + totals
     const { lineItems, subtotal, total } = computeTotals(data.lineItems);
 
+    // Stamp the invoice with the tutor's currency (single source of truth on
+    // the user document). Falls back to AUD if the user record is missing.
+    let currency = "AUD";
+    try {
+      const tutor = await getUserFromFirestore(tutorId);
+      currency = tutor.currency;
+    } catch {
+      // Fall back to default.
+    }
+
     const invoiceNumber = await allocateInvoiceNumber(firestore, tutorId);
     const invoiceId = generateInvoiceId();
 
@@ -202,7 +213,7 @@ export async function createInvoiceInFirestore(
       customerName,
       billingEmail,
       status,
-      currency: "AUD",
+      currency,
       lineItems,
       subtotal,
       total,
@@ -233,7 +244,7 @@ export async function createInvoiceInFirestore(
       customerName,
       billingEmail,
       status,
-      currency: "AUD",
+      currency,
       lineItems,
       subtotal,
       total,

@@ -73,7 +73,7 @@ function mapDocToProfile(
     qualifications: data.qualifications ?? [],
     hourlyRate:
       typeof data.hourlyRate === "number" ? data.hourlyRate : null,
-    currency: data.currency ?? "USD",
+    currency: data.currency ?? "AUD",
     contactEmail: data.contactEmail ?? null,
     ctaText: data.ctaText ?? null,
     createdAt: data.createdAt?.toDate() ?? (null as any),
@@ -200,6 +200,17 @@ export async function upsertProfile(
     const existing = await docRef.get();
     const now = admin.firestore.Timestamp.now();
 
+    // Currency is owned by the user document (single source of truth); the
+    // profile mirrors it so the unauthenticated public page can render the
+    // rate without reading the user record.
+    let currency = "AUD";
+    try {
+      const user = await getUserFromFirestore(tutorId);
+      currency = user.currency;
+    } catch {
+      // Fall back to default if the user record is somehow missing.
+    }
+
     const profileData: Record<string, unknown> = {
       slug: normalized,
       template: data.template ?? "classic",
@@ -210,7 +221,7 @@ export async function upsertProfile(
         ? data.qualifications
         : [],
       hourlyRate: data.hourlyRate ?? null,
-      currency: data.currency || "USD",
+      currency,
       contactEmail: data.contactEmail ?? null,
       ctaText: data.ctaText ?? null,
       tutorId,
@@ -297,4 +308,23 @@ export async function getPublicProfileBySlug(
     name,
     avatarUrl,
   };
+}
+
+/**
+ * Keep the profile's denormalized currency in sync with the user's currency.
+ * No-op when the tutor has no profile yet. Called when the user updates their
+ * currency so the public page reflects the change immediately.
+ */
+export async function syncTutorProfileCurrency(
+  tutorId: string,
+  currency: string,
+): Promise<void> {
+  const firestore = getFirebaseFirestore();
+  const docRef = firestore.collection("tutorProfiles").doc(tutorId);
+  const existing = await docRef.get();
+  if (!existing.exists) return;
+  await docRef.update({
+    currency,
+    updatedAt: admin.firestore.Timestamp.now(),
+  });
 }

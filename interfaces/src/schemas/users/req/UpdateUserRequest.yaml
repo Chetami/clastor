@@ -16,6 +16,10 @@ properties:
     type: string
     nullable: true
     description: Optional profile picture URL
+  currency:
+    type: string
+    description: ISO 4217 currency code the tutor charges in (e.g. AUD, USD)
+    example: AUD
 description: |-
   Request body for updating a user
   All fields are optional; only provided fields will be updated

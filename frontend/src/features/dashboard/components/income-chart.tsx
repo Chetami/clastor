@@ -14,6 +14,7 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useUserCurrency } from "@/lib/use-currency";
 import type { DashboardSummaryResponse } from "@examify-tms/interfaces";
 import {
   buildChartData,
@@ -43,6 +44,7 @@ type TooltipProps = {
 };
 
 export function IncomeChart({ summary }: { summary: DashboardSummaryResponse }) {
+  const currency = useUserCurrency();
   const data = buildChartData(summary.incomeSeries, summary.previousIncomeSeries);
   const currents = data.map((d) => d.current);
   const total = sum(currents);
@@ -58,11 +60,11 @@ export function IncomeChart({ summary }: { summary: DashboardSummaryResponse }) 
     const pct = total > 0 ? Math.round((cur / total) * 100) : 0;
     return (
       <div className="rounded-lg border bg-background px-2.5 py-1.5 text-xs shadow-xl">
-        <div className="mb-1 font-medium">{formatCurrency(cur)}</div>
+        <div className="mb-1 font-medium">{formatCurrency(cur, currency)}</div>
         <div className="text-muted-foreground">{pct}% of period</div>
         {prev > 0 && (
           <div className="text-muted-foreground">
-            Last: {formatCurrency(prev)}
+            Last: {formatCurrency(prev, currency)}
           </div>
         )}
       </div>
@@ -74,8 +76,8 @@ export function IncomeChart({ summary }: { summary: DashboardSummaryResponse }) 
       <CardHeader className="flex flex-row items-center justify-between space-y-0">
         <CardTitle className="text-base">Income collected</CardTitle>
         <p className="text-xs text-muted-foreground">
-          {formatCurrency(total)} · avg {formatCurrency(avg)} · peak{" "}
-          {formatCurrency(peakVal)}
+          {formatCurrency(total, currency)} · avg {formatCurrency(avg, currency)} · peak{" "}
+          {formatCurrency(peakVal, currency)}
         </p>
       </CardHeader>
       <CardContent className="flex-1">
@@ -99,7 +101,7 @@ export function IncomeChart({ summary }: { summary: DashboardSummaryResponse }) 
               strokeOpacity={0.5}
               strokeDasharray="4 4"
               label={{
-                value: `avg ${formatCurrency(avg)}`,
+                value: `avg ${formatCurrency(avg, currency)}`,
                 position: "insideTopRight",
                 fill: "hsl(var(--muted-foreground))",
                 fontSize: 10,

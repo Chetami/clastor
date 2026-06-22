@@ -189,7 +189,6 @@ export default function TutorProfileEditor() {
       subjects: clean(values.subjects),
       qualifications: clean(values.qualifications),
       hourlyRate: values.hourlyRate,
-      currency: values.currency.trim() || "USD",
       contactEmail: values.contactEmail?.trim() || null,
       ctaText: values.ctaText?.trim() || null,
     };
@@ -470,38 +469,30 @@ export default function TutorProfileEditor() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="hourlyRate">
-                    Hourly rate{" "}
-                    <span className="text-xs font-normal text-muted-foreground">
-                      (optional)
-                    </span>
-                  </Label>
-                  <Input
-                    id="hourlyRate"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    placeholder="45"
-                    value={values.hourlyRate ?? ""}
-                    onChange={(e) =>
-                      update(
-                        "hourlyRate",
-                        e.target.value === "" ? null : e.target.valueAsNumber,
-                      )
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="currency">Currency</Label>
-                  <Input
-                    id="currency"
-                    placeholder="USD"
-                    value={values.currency}
-                    onChange={(e) => update("currency", e.target.value)}
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="hourlyRate">
+                  Hourly rate{" "}
+                  <span className="text-xs font-normal text-muted-foreground">
+                    (optional)
+                  </span>
+                </Label>
+                <Input
+                  id="hourlyRate"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="45"
+                  value={values.hourlyRate ?? ""}
+                  onChange={(e) =>
+                    update(
+                      "hourlyRate",
+                      e.target.value === "" ? null : e.target.valueAsNumber,
+                    )
+                  }
+                />
+                <p className="text-xs text-muted-foreground">
+                  Shown in your currency, which you can change in Settings.
+                </p>
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
