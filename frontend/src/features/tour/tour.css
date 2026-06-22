@@ -17,7 +17,7 @@
   color: #111827;
   border: 1px solid #e5e7eb;
   border-radius: 12px;
-  padding: 1rem 1.125rem;
+  padding: 1.5rem 1.125rem 0.5rem 1.125rem;
   min-width: 280px;
   max-width: 360px;
   box-shadow:
@@ -54,7 +54,6 @@
 /* Close (×) — no background box, just the glyph */
 .clastor-tour .driver-popover-close-btn {
   all: unset;
-  display: flex;
   width: 1.6rem;
   height: 1.6rem;
   align-items: center;
@@ -65,22 +64,19 @@
   text-align: center;
   cursor: pointer;
   transform: translateY(-1px);
+  background-color: transparent;
   border-radius: 8px;
-  transition:
-    background-color 0.15s ease,
-    background-color #f3f4f6,
-    color 0.15s ease,
-    border-color 0.15s ease;
-  position: relative;
+  transition: background-color 0.15s ease;
+  position: absolute;
+  top: 0.825rem;
+  right: 0.825rem;
   margin-left: auto;
-  margin-bottom: 0.3rem;
+  z-index: 9999;
 }
 
-.clastor-tour .driver-popover-close-btn:hover,
-.clastor-tour .driver-popover-close-btn:focus {
+.clastor-tour .driver-popover-close-btn:hover {
   background-color: #e5e7eb;
   color: #111827;
-  border-color: #d1d5db;
 }
 
 /* Footer buttons → consistent sizing */
