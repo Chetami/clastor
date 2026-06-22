@@ -17,6 +17,17 @@
   animation: view-in 0.18s ease-out;
 }
 
+/* Card entrance — fade + slight slide up, applied via the Card component. */
+.animate-card-in {
+  animation: view-in 0.3s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-card-in {
+    animation: none;
+  }
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;

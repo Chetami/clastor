@@ -8,6 +8,7 @@ import {
   BookCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Card } from "@/components/ui/card";
 import { useUserCurrency } from "@/lib/use-currency";
 import type { DashboardPeriod, DashboardSummaryResponse } from "@examify-tms/interfaces";
 import { formatCurrency, formatHours, deltaPercent, previousPeriodLabel } from "../lib";
@@ -25,7 +26,7 @@ function Tile({ icon, label, value, delta, children }: TileProps) {
   const isDown = (delta ?? null) !== null && delta! < 0;
 
   return (
-    <div className="rounded-xl border bg-card p-4">
+    <Card className="p-4">
       <div className="flex items-center justify-between">
         <p className="text-[11px] text-muted-foreground">{label}</p>
         <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary/10 text-primary">
@@ -59,7 +60,7 @@ function Tile({ icon, label, value, delta, children }: TileProps) {
           {children}
         </div>
       )}
-    </div>
+    </Card>
   );
 }
 
