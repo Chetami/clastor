@@ -44,6 +44,10 @@ function mapLesson(id: string, data: admin.firestore.DocumentData): Lesson {
     studentNotifiedCount: data.studentNotifiedCount ?? 0,
     isPaid: data.isPaid ?? false,
     invoiceId: data.invoiceId ?? null,
+    googleCalendarEventId: data.googleCalendarEventId ?? null,
+    googleCalendarSyncedAt: data.googleCalendarSyncedAt
+      ? data.googleCalendarSyncedAt.toDate()
+      : (null as any),
     icsUid: data.icsUid ?? null,
     rsvpTokenVersion: data.rsvpTokenVersion ?? 0,
     createdAt: data.createdAt ? data.createdAt.toDate() : (null as any),
@@ -186,6 +190,8 @@ export async function createLessonInFirestore(
       studentNotifiedCount: 0,
       isPaid: false,
       invoiceId: null,
+      googleCalendarEventId: null,
+      googleCalendarSyncedAt: null,
       icsUid: null,
       rsvpTokenVersion: 0,
       createdAt: now,
@@ -213,6 +219,8 @@ export async function createLessonInFirestore(
       studentNotifiedCount: 0,
       isPaid: false,
       invoiceId: null,
+      googleCalendarEventId: null,
+      googleCalendarSyncedAt: null,
       icsUid: null,
       rsvpTokenVersion: 0,
       createdAt: now.toDate() as any,
@@ -259,6 +267,30 @@ export async function updateLessonInFirestore(
   } catch (error) {
     console.error("Failed to update lesson in Firestore:", error);
     throw new Error("Failed to update lesson");
+  }
+}
+
+/**
+ * Store (or clear) the Google Calendar event id on a lesson, and stamp the
+ * sync time. Called after a successful push to Google Calendar. Passing null
+ * clears the mapping (e.g. after the event is deleted).
+ */
+export async function setLessonGoogleEventId(
+  lessonId: string,
+  googleCalendarEventId: string | null
+): Promise<void> {
+  try {
+    const firestore = getFirebaseFirestore();
+    await firestore.collection("lessons").doc(lessonId).update({
+      googleCalendarEventId,
+      googleCalendarSyncedAt: googleCalendarEventId
+        ? admin.firestore.Timestamp.now()
+        : null,
+      updatedAt: admin.firestore.Timestamp.now(),
+    });
+  } catch (error) {
+    console.error("Failed to set lesson googleCalendarEventId:", error);
+    throw new Error("Failed to record Google Calendar event id");
   }
 }
 
@@ -355,6 +387,48 @@ export async function markStudentNotifiedInFirestore(
   } catch (error) {
     console.error("Failed to mark student notified in Firestore:", error);
     throw new Error("Failed to record notification");
+  }
+}
+
+/**
+ * List lessons belonging to a recurring series, mapped to Lesson objects
+ * (including googleCalendarEventId). Optionally limited to upcoming,
+ * non-cancelled occurrences. Used by the calendar sync after series
+ * create/update/cancel.
+ */
+export async function listLessonsBySeriesFromFirestore(
+  seriesId: string,
+  opts: { futureOnly?: boolean } = {}
+): Promise<Lesson[]> {
+  try {
+    const firestore = getFirebaseFirestore();
+    const snapshot = await firestore
+      .collection("lessons")
+      .where("seriesId", "==", seriesId)
+      .get();
+
+    const nowMs = Date.now();
+    const lessons: Lesson[] = [];
+    snapshot.forEach((doc) => {
+      const lesson = mapLesson(doc.id, doc.data());
+      if (opts.futureOnly) {
+        if (lesson.isCancelled) return;
+        const start = new Date(lesson.startDateTime as any).getTime();
+        if (start < nowMs) return;
+      }
+      lessons.push(lesson);
+    });
+
+    lessons.sort(
+      (a, b) =>
+        new Date(a.startDateTime as any).getTime() -
+        new Date(b.startDateTime as any).getTime(),
+    );
+
+    return lessons;
+  } catch (error) {
+    console.error("Failed to list lessons by series:", error);
+    throw new Error("Failed to list lessons by series");
   }
 }
 

@@ -5,6 +5,11 @@ import {
   cancelLessonSeriesFuture,
   getLessonSeriesByIdFromFirestore,
 } from "../services/lessonSeriesService";
+import { listLessonsBySeriesFromFirestore } from "../services/lessonService";
+import {
+  syncLessonToCalendar,
+  deleteLessonCalendarEvent,
+} from "../services/googleCalendarService";
 import {
   CreateRecurringLessonRequest,
   UpdateLessonSeriesRequest,
@@ -65,6 +70,19 @@ export async function createRecurringLesson(
     }
 
     const result = await createLessonSeriesInFirestore(req.body, req.user.uid);
+
+    // Best-effort push every upcoming occurrence to Google Calendar.
+    // Never blocks the response; failures are logged inside the sync helper.
+    try {
+      const upcoming = await listLessonsBySeriesFromFirestore(result.seriesId, {
+        futureOnly: true,
+      });
+      await Promise.all(
+        upcoming.map((l) => syncLessonToCalendar(req.user!.uid, l)),
+      );
+    } catch {
+      /* logged inside syncLessonToCalendar */
+    }
 
     const response: CreateRecurringLessonResponse = {
       seriesId: result.seriesId,
@@ -141,6 +159,19 @@ export async function updateLessonSeries(
 
     await updateLessonSeriesInFirestore(req.params.id, req.body);
 
+    // Re-sync the future (non-exception) occurrences to Google so titles/
+    // times/locations reflect the template change.
+    try {
+      const upcoming = await listLessonsBySeriesFromFirestore(req.params.id, {
+        futureOnly: true,
+      });
+      await Promise.all(
+        upcoming.map((l) => syncLessonToCalendar(req.user!.uid, l)),
+      );
+    } catch {
+      /* logged inside syncLessonToCalendar */
+    }
+
     const updated = await getLessonSeriesByIdFromFirestore(req.params.id);
     if (!updated) {
       res.status(404).json({ message: "Lesson series not found" });
@@ -183,6 +214,23 @@ export async function cancelLessonSeries(
     }
 
     const cancelled = await cancelLessonSeriesFuture(req.params.id);
+
+    // Best-effort delete the Google Calendar events for the cancelled
+    // occurrences.
+    try {
+      const upcoming = await listLessonsBySeriesFromFirestore(req.params.id);
+      const toRemove = upcoming.filter(
+        (l) => l.isCancelled && l.googleCalendarEventId,
+      );
+      await Promise.all(
+        toRemove.map((l) =>
+          deleteLessonCalendarEvent(req.user!.uid, l.googleCalendarEventId),
+        ),
+      );
+    } catch {
+      /* logged inside deleteLessonCalendarEvent */
+    }
+
     res.status(200).json({ cancelled });
   } catch (error) {
     console.error("Cancel lesson series failed:", error);

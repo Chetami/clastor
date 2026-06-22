@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Loader2, Unplug } from "lucide-react";
+import { Loader2, Unplug, RefreshCw } from "lucide-react";
+import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,7 @@ import {
   useConnectGoogle,
   useDisconnectGoogle,
 } from "./api/use-google-connect";
+import { useSyncCalendar } from "@/features/schedule/api";
 
 function GoogleGlyph({ className }: { className?: string }) {
   return (
@@ -59,6 +61,7 @@ export function GoogleConnectionCard({ returnTo }: { returnTo?: string }) {
   const statusQuery = useGoogleConnectionStatus();
   const connect = useConnectGoogle(returnTo);
   const disconnect = useDisconnectGoogle();
+  const syncCalendar = useSyncCalendar();
 
   const googleParam = searchParams.get("google");
   const [banner, setBanner] = useState<{
@@ -150,7 +153,7 @@ export function GoogleConnectionCard({ returnTo }: { returnTo?: string }) {
                 .
               </p>
             )}
-            <div>
+            <div className="flex flex-wrap items-center gap-2">
               <Button
                 variant="outline"
                 onClick={() => disconnect.mutate()}
@@ -162,6 +165,35 @@ export function GoogleConnectionCard({ returnTo }: { returnTo?: string }) {
                   <Unplug className="size-4" />
                 )}
                 Disconnect
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  syncCalendar.mutate(undefined, {
+                    onSuccess: ({ pushed, skipped }) => {
+                      toast.success(
+                        pushed > 0
+                          ? `Synced ${pushed} lesson${pushed === 1 ? "" : "s"} to Google Calendar (${skipped} already synced).`
+                          : "All upcoming lessons are already on Google Calendar.",
+                      );
+                    },
+                    onError: (err) =>
+                      toast.error(
+                        err instanceof Error
+                          ? err.message
+                          : "Failed to sync lessons.",
+                      ),
+                  });
+                }}
+                disabled={syncCalendar.isPending}
+                title="Push all upcoming lessons to your Google Calendar"
+              >
+                {syncCalendar.isPending ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="size-4" />
+                )}
+                Sync all lessons
               </Button>
             </div>
           </div>

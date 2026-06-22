@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Video, Loader2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Video, Loader2, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -33,13 +33,15 @@ import {
   toCreateRecurringLessonRequest,
   type EventFormData,
 } from "./event-schema";
-import type { DayOfWeek } from "@examify-tms/interfaces";
+import { isRangeOverlap } from "./lesson-utils";
+import type { DayOfWeek, ExternalCalendarEvent } from "@examify-tms/interfaces";
 
 interface CreateEventDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   start: Date | null;
   end: Date | null;
+  externalEvents?: ExternalCalendarEvent[];
 }
 
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -92,6 +94,7 @@ export function CreateEventDialog({
   onOpenChange,
   start,
   end,
+  externalEvents = [],
 }: CreateEventDialogProps) {
   const { data: students = [] } = useListStudents();
   const createLesson = useCreateLesson();
@@ -106,6 +109,27 @@ export function CreateEventDialog({
   const isRecurring = values.repeat !== "none";
   const pending = createLesson.isPending || createRecurring.isPending;
   const submitError = createLesson.error?.message ?? createRecurring.error?.message;
+
+  // Warn (non-blocking) if the chosen one-off slot overlaps an external Google
+  // Calendar event. Only computed for the single-lesson case where a concrete
+  // date + time range is known.
+  const overlaps = useMemo(() => {
+    if (isRecurring) return [];
+    if (!values.date || !values.startTime || !values.endTime) return [];
+    const startMs = new Date(`${values.date}T${values.startTime}:00`).getTime();
+    const endMs = new Date(`${values.date}T${values.endTime}:00`).getTime();
+    if (Number.isNaN(startMs) || Number.isNaN(endMs) || endMs <= startMs) {
+      return [];
+    }
+    return externalEvents.filter((ev) =>
+      isRangeOverlap(
+        new Date(startMs),
+        new Date(endMs),
+        ev.startDateTime,
+        ev.endDateTime,
+      ),
+    );
+  }, [isRecurring, values.date, values.startTime, values.endTime, externalEvents]);
 
   useEffect(() => {
     if (!open) return;
@@ -350,6 +374,25 @@ export function CreateEventDialog({
               )}
             </div>
           </div>
+
+          {overlaps.length > 0 && (
+            <div className="flex items-start gap-2 rounded-md border border-amber-500/50 bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-400">
+              <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
+              <div className="space-y-0.5">
+                <p className="font-medium">
+                  Overlaps with a Google Calendar event
+                </p>
+                <ul className="list-inside list-disc text-amber-600/90 dark:text-amber-400/90">
+                  {overlaps.map((ev) => (
+                    <li key={ev.id}>{ev.title}</li>
+                  ))}
+                </ul>
+                <p className="text-amber-600/80 dark:text-amber-400/80">
+                  You can still create this lesson.
+                </p>
+              </div>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="repeat">Repeat</Label>

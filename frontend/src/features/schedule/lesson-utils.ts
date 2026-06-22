@@ -2,6 +2,7 @@ import type {
   AttendanceStatus,
   LessonAcceptance,
   LessonResponse,
+  ExternalCalendarEvent,
 } from "@examify-tms/interfaces";
 
 /**
@@ -147,4 +148,52 @@ export function lessonToCalendarEvent(
       status: deriveLessonStatus(lesson.attendanceStatus, lesson.isCancelled),
     },
   };
+}
+
+/** A FullCalendar event representing an external (non-lesson) Google event. */
+export interface FullCalendarExternalEvent {
+  id: string;
+  title: string;
+  start: string;
+  end: string;
+  extendedProps: {
+    kind: "external";
+    location: string | null;
+  };
+}
+
+/**
+ * Map an ExternalCalendarEvent to a FullCalendar event tagged as external so
+ * the calendar can render + treat it distinctly (muted, read-only).
+ */
+export function externalEventToCalendarEvent(
+  event: ExternalCalendarEvent,
+): FullCalendarExternalEvent {
+  return {
+    id: `ext:${event.id}`,
+    title: event.title,
+    start: event.startDateTime,
+    end: event.endDateTime,
+    extendedProps: {
+      kind: "external",
+      location: event.location ?? null,
+    },
+  };
+}
+
+/**
+ * True if the [startA, endA) range overlaps [startB, endB). Touching edges
+ * (endA === startB) do not count as an overlap.
+ */
+export function isRangeOverlap(
+  startA: Date | string,
+  endA: Date | string,
+  startB: Date | string,
+  endB: Date | string,
+): boolean {
+  const sA = new Date(startA).getTime();
+  const eA = new Date(endA).getTime();
+  const sB = new Date(startB).getTime();
+  const eB = new Date(endB).getTime();
+  return sA < eB && sB < eA;
 }

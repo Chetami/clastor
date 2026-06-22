@@ -12,6 +12,7 @@ import type {
   GoogleConnectionStatus,
   LessonResponse,
   LessonListResponse,
+  ExternalCalendarEventListResponse,
 } from "@examify-tms/interfaces";
 
 export async function createLessonRequest(
@@ -115,5 +116,26 @@ export async function getGoogleConnectionStatus(): Promise<GoogleConnectionStatu
 
 export async function getGoogleAuthUrl(): Promise<{ authUrl: string }> {
   const response = await api.get<{ authUrl: string }>("/api/auth/google/url");
+  return response.data;
+}
+
+export async function getExternalCalendarEventsRequest(params: {
+  from: string;
+  to: string;
+}): Promise<ExternalCalendarEventListResponse> {
+  const response = await api.get<ExternalCalendarEventListResponse>(
+    "/api/calendar/events",
+    { params },
+  );
+  return response.data;
+}
+
+export async function syncCalendarRequest(): Promise<{
+  pushed: number;
+  skipped: number;
+}> {
+  const response = await api.post<{ pushed: number; skipped: number }>(
+    "/api/calendar/sync",
+  );
   return response.data;
 }

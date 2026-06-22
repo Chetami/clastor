@@ -109,6 +109,23 @@ properties:
       invoice; cleared when that invoice is voided or deleted. Prevents
       the same lesson from appearing on multiple invoices.
     example: inv_a1b2c3d4e5f6
+  googleCalendarEventId:
+    type: string
+    nullable: true
+    description: >-
+      ID of the Google Calendar event created for this lesson on the tutor's
+      primary calendar (two-way sync). Null when Google isn't connected, the
+      lesson hasn't been pushed yet, or a previous push failed. Used to map
+      app lessons to Google events for update/cancel sync.
+    example: abc123xyz_google_event
+  googleCalendarSyncedAt:
+    type: string
+    format: date-time
+    nullable: true
+    description: >-
+      Timestamp of the most recent successful Google Calendar sync for this
+      lesson, or null if it has never been synced.
+    example: "2026-06-20T09:00:00.000Z"
   icsUid:
     type: string
     nullable: true

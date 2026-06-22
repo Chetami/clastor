@@ -1,0 +1,42 @@
+type: object
+required:
+  - id
+  - title
+  - startDateTime
+  - endDateTime
+  - isAllDay
+properties:
+  id:
+    type: string
+    description: The Google Calendar event ID.
+    example: evt_abc123
+  title:
+    type: string
+    description: Event summary/title from Google Calendar.
+    example: Dentist appointment
+  startDateTime:
+    type: string
+    format: date-time
+    description: >-
+      Start of the event (ISO 8601). For all-day events this is the start of
+      the day in the calendar's timezone.
+    example: "2026-06-20T14:00:00.000Z"
+  endDateTime:
+    type: string
+    format: date-time
+    description: >-
+      End of the event (ISO 8601). For all-day events this is the end of the
+      last day in the calendar's timezone.
+    example: "2026-06-20T15:00:00.000Z"
+  location:
+    type: string
+    nullable: true
+    description: Optional event location from Google Calendar.
+    example: "Suite 4, 12 Main St"
+  isAllDay:
+    type: boolean
+    description: Whether this is an all-day event in Google Calendar.
+    example: false
+description: |-
+  A non-lesson event read from the tutor's Google Calendar. Displayed as a
+  read-only, busy-blocking event on the Schedule alongside lessons.

@@ -10,12 +10,17 @@ import {
   ensureLessonIcsUid,
   bumpRsvpTokenVersion,
   setLessonAcceptanceInFirestore,
+  setLessonGoogleEventId,
   LessonFilters,
 } from "../services/lessonService";
 import { getStudentByIdFromFirestore } from "../services/studentService";
 import { getUserFromFirestore } from "../services/userService";
 import { sendLessonNotification } from "../services/emailService";
 import { buildLessonInvite } from "../services/icalService";
+import {
+  syncLessonToCalendar,
+  deleteLessonCalendarEvent,
+} from "../services/googleCalendarService";
 import { signRsvpToken, verifyRsvpToken } from "../utils/jwt";
 import { getNotifyCooldownMs, getPublicApiUrl } from "../config/email";
 import {
@@ -57,6 +62,10 @@ function toLessonResponse(lesson: Lesson): LessonResponse {
       : null,
     studentNotifiedCount: lesson.studentNotifiedCount ?? 0,
     isPaid: lesson.isPaid ?? false,
+    googleCalendarEventId: lesson.googleCalendarEventId ?? null,
+    googleCalendarSyncedAt: lesson.googleCalendarSyncedAt
+      ? toIso(lesson.googleCalendarSyncedAt)
+      : null,
     createdAt: toIso(lesson.createdAt),
     updatedAt: toIso(lesson.updatedAt),
   };
@@ -76,7 +85,18 @@ export async function createLesson(
     }
 
     const lesson = await createLessonInFirestore(req.body, req.user.uid);
-    res.status(201).json(toLessonResponse(lesson));
+
+    // Best-effort push to Google Calendar. Never blocks the response; if it
+    // succeeds the returned lesson carries a googleCalendarEventId.
+    try {
+      await syncLessonToCalendar(req.user.uid, lesson);
+    } catch {
+      /* syncLessonToCalendar logs internally; ignore here */
+    }
+
+    // Re-fetch so the response reflects any persisted googleCalendarEventId.
+    const synced = await getLessonByIdFromFirestore(lesson.id);
+    res.status(201).json(toLessonResponse(synced ?? lesson));
   } catch (error) {
     console.error("Create lesson failed:", error);
     const message = error instanceof Error ? error.message : "Failed to create lesson";
@@ -208,7 +228,16 @@ export async function updateLesson(
       return;
     }
 
-    res.status(200).json(toLessonResponse(updated));
+    // Best-effort re-sync to Google Calendar (creates the event if missing
+    // while connected, otherwise patches the existing one).
+    try {
+      await syncLessonToCalendar(req.user.uid, updated);
+    } catch {
+      /* logged inside syncLessonToCalendar */
+    }
+
+    const resynced = (await getLessonByIdFromFirestore(req.params.id)) ?? updated;
+    res.status(200).json(toLessonResponse(resynced));
   } catch (error) {
     console.error("Update lesson failed:", error);
     const message = error instanceof Error ? error.message : "Failed to update lesson";
@@ -300,6 +329,16 @@ export async function cancelLesson(
     }
 
     await cancelLessonInFirestore(req.params.id);
+
+    // Best-effort delete the corresponding Google Calendar event.
+    try {
+      await deleteLessonCalendarEvent(req.user.uid, lesson.googleCalendarEventId);
+      if (lesson.googleCalendarEventId) {
+        await setLessonGoogleEventId(req.params.id, null);
+      }
+    } catch {
+      /* logged inside deleteLessonCalendarEvent */
+    }
 
     const updated = await getLessonByIdFromFirestore(req.params.id);
     if (!updated) {

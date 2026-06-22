@@ -944,6 +944,40 @@
   color: hsl(var(--muted-foreground));
 }
 
+/* External (non-lesson) Google Calendar events — rendered as read-only,
+   muted, hatched blocks so they clearly "block out" availability without
+   being mistaken for lessons. Pointer disabled since they aren't editable. */
+.gi-calendar .fc-event.gi-external-event {
+  background-color: hsl(var(--muted) / 0.7);
+  border: 1px dashed hsl(var(--muted-foreground) / 0.55);
+  box-shadow: none;
+  cursor: default;
+  background-image: repeating-linear-gradient(
+    45deg,
+    hsl(var(--muted-foreground) / 0.08),
+    hsl(var(--muted-foreground) / 0.08) 6px,
+    transparent 6px,
+    transparent 12px
+  );
+}
+
+.gi-calendar .fc-event.gi-external-event .fc-event-title,
+.gi-calendar .fc-event.gi-external-event .fc-event-time {
+  color: hsl(var(--muted-foreground));
+}
+
+/* Legend dot next to Accepted/Pending/Declined in the schedule header. */
+.gi-external-legend {
+  background-color: hsl(var(--muted-foreground) / 0.55);
+  background-image: repeating-linear-gradient(
+    45deg,
+    hsl(var(--muted-foreground) / 0.25),
+    hsl(var(--muted-foreground) / 0.25) 2px,
+    transparent 2px,
+    transparent 4px
+  );
+}
+
 .gi-calendar .fc-theme-standard td,
 .gi-calendar .fc-theme-standard th {
   border-color: hsl(var(--border));

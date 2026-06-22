@@ -7,6 +7,8 @@ export { useRecordAttendance } from "./use-record-attendance";
 export { useCancelLesson } from "./use-cancel-lesson";
 export { useCancelLessonSeries } from "./use-cancel-lesson-series";
 export { useNotifyStudent } from "./use-notify-student";
+export { useExternalCalendarEvents } from "./use-external-events";
+export { useSyncCalendar } from "./use-sync-calendar";
 export {
   createLessonRequest,
   createRecurringLessonRequest,
@@ -17,4 +19,6 @@ export {
   cancelLessonRequest,
   notifyStudentRequest,
   cancelLessonSeriesRequest,
+  getExternalCalendarEventsRequest,
+  syncCalendarRequest,
 } from "./requests";

@@ -87,6 +87,21 @@ properties:
     description: >-
       ID of the invoice this lesson is on, or null if not invoiced.
     example: inv_a1b2c3d4e5f6
+  googleCalendarEventId:
+    type: string
+    nullable: true
+    description: >-
+      ID of the Google Calendar event synced for this lesson, or null if not
+      yet synced (Google not connected or sync failed). Used by the UI to show
+      sync status.
+    example: abc123xyz_google_event
+  googleCalendarSyncedAt:
+    type: string
+    format: date-time
+    nullable: true
+    description: >-
+      Timestamp of the most recent successful Google Calendar sync, or null.
+    example: "2026-06-20T09:00:00.000Z"
   createdAt:
     type: string
     format: date-time

@@ -1,0 +1,18 @@
+type: object
+required:
+  - data
+  - total
+properties:
+  data:
+    type: array
+    items:
+      $ref: '../ExternalCalendarEvent.yaml'
+    description: External (non-lesson) Google Calendar events in the window.
+  total:
+    type: integer
+    description: Number of events returned.
+    example: 3
+description: |-
+  Response for GET /api/calendar/events. Returns external (non-lesson) events
+  from the tutor's primary Google Calendar for the requested time window.
+  Events created by Examify (lesson sync) are excluded to avoid duplicates.

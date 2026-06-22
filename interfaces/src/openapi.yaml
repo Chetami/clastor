@@ -112,6 +112,11 @@ components:
       $ref: './schemas/meetings/req/GenerateMeetLinkRequest.yaml'
     GenerateMeetLinkResponse:
       $ref: './schemas/meetings/res/GenerateMeetLinkResponse.yaml'
+    # Calendar (Google Calendar two-way sync) Schemas
+    ExternalCalendarEvent:
+      $ref: './schemas/calendar/ExternalCalendarEvent.yaml'
+    ExternalCalendarEventListResponse:
+      $ref: './schemas/calendar/res/ExternalCalendarEventListResponse.yaml'
     # Payment (Invoice) Enums
     InvoiceStatus:
       $ref: './schemas/payments/InvoiceStatus.yaml'

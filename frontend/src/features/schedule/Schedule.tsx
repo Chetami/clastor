@@ -4,9 +4,14 @@ import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
-import { useListLessons } from "./api";
+import type { EventInput } from "@fullcalendar/core";
+import { useListLessons, useExternalCalendarEvents } from "./api";
 import { useListStudents } from "@/features/students/api";
-import { lessonToCalendarEvent } from "./lesson-utils";
+import { useGoogleConnectionStatus } from "@/features/settings/api/use-google-connect";
+import {
+  lessonToCalendarEvent,
+  externalEventToCalendarEvent,
+} from "./lesson-utils";
 import { CreateEventDialog } from "./CreateEventDialog";
 import { EventPopover, type EventAnchor } from "./EventPopover";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -19,6 +24,18 @@ export default function Schedule() {
 
   const { data: lessons = [] } = useListLessons();
   const { data: students = [] } = useListStudents();
+  const { data: googleStatus } = useGoogleConnectionStatus();
+  const googleConnected = !!googleStatus?.connected;
+
+  const [visibleWindow, setVisibleWindow] = useState<{
+    from: string;
+    to: string;
+  } | null>(null);
+
+  const { data: externalEvents = [] } = useExternalCalendarEvents(
+    visibleWindow,
+    googleConnected,
+  );
 
   const studentNames = useMemo(() => {
     const map: Record<string, string> = {};
@@ -26,12 +43,23 @@ export default function Schedule() {
     return map;
   }, [students]);
 
-  const calendarEvents = useMemo(
+  const lessonEvents = useMemo(
     () =>
       lessons
         .filter((l) => !l.isCancelled)
         .map((l) => lessonToCalendarEvent(l, studentNames)),
     [lessons, studentNames],
+  );
+
+  const externalCalendarEvents = useMemo(
+    () => externalEvents.map(externalEventToCalendarEvent),
+    [externalEvents],
+  );
+
+  // Merge lessons + external events into a single EventInput[] for FullCalendar.
+  const allEvents: EventInput[] = useMemo(
+    () => [...lessonEvents, ...externalCalendarEvents],
+    [lessonEvents, externalCalendarEvents],
   );
 
   const [createOpen, setCreateOpen] = useState(false);
@@ -123,6 +151,12 @@ export default function Schedule() {
               <span className="h-2 w-2 rounded-full bg-rose-500" />
               Declined
             </span>
+            {googleConnected && (
+              <span className="inline-flex items-center gap-1">
+                <span className="gi-external-legend h-2 w-2 rounded-full" />
+                Google Calendar
+              </span>
+            )}
           </div>
         </div>
         <div className="text-lg font-semibold tracking-tight">{title}</div>
@@ -160,6 +194,10 @@ export default function Schedule() {
                 year: "numeric",
               }),
             );
+            setVisibleWindow({
+              from: info.view.activeStart.toISOString(),
+              to: info.view.activeEnd.toISOString(),
+            });
           }}
           dayHeaderContent={(arg) => (
             <button
@@ -187,8 +225,11 @@ export default function Schedule() {
               dayCount: 4,
             },
           }}
-          events={calendarEvents}
+          events={allEvents}
           eventClassNames={(arg) => {
+            if (arg.event.extendedProps.kind === "external") {
+              return ["gi-external-event"];
+            }
             const a = arg.event.extendedProps.acceptance as string | undefined;
             return a ? [`gi-acceptance-${a}`] : [];
           }}
@@ -197,24 +238,28 @@ export default function Schedule() {
               <div className="fc-event-time">{arg.timeText}</div>
               <div className="fc-event-title-container">
                 <div className="fc-event-title">
-                  {arg.event.extendedProps.studentName ?? arg.event.title}
+                  {arg.event.extendedProps.kind === "external"
+                    ? arg.event.title
+                    : arg.event.extendedProps.studentName ?? arg.event.title}
                 </div>
               </div>
             </div>
           )}
-          select={(info) => {
-            if (info.allDay) return;
-            setDraft({ start: info.start, end: info.end });
-            setCreateOpen(true);
-            info.view.calendar.unselect();
-          }}
           eventClick={(info) => {
+            // External (read-only) events aren't actionable.
+            if (info.event.extendedProps.kind === "external") return;
             const el = info.el;
             setEventAnchor({
               getBoundingClientRect: () => el.getBoundingClientRect(),
             });
             setSelectedEventId(info.event.id);
             setEventPopoverOpen(true);
+          }}
+          select={(info) => {
+            if (info.allDay) return;
+            setDraft({ start: info.start, end: info.end });
+            setCreateOpen(true);
+            info.view.calendar.unselect();
           }}
           height="100%"
         />
@@ -224,6 +269,7 @@ export default function Schedule() {
         onOpenChange={setCreateOpen}
         start={draft?.start ?? null}
         end={draft?.end ?? null}
+        externalEvents={externalEvents}
       />
       <EventPopover
         lessonId={selectedEventId}

@@ -7,6 +7,7 @@ import {
   getGoogleConnection,
   clearGoogleConnection,
 } from "../services/userService";
+import { backfillUpcomingLessons } from "../services/googleCalendarService";
 
 function frontendUrl(): string {
   return process.env.FRONTEND_URL || process.env.CORS_ORIGIN || "http://localhost:5173";
@@ -110,6 +111,17 @@ export async function googleAuthCallback(
       refreshToken,
       googleEmail,
     });
+
+    // Best-effort backfill: push all upcoming lessons to Google Calendar.
+    // Fire-and-forget (non-blocking) so the OAuth redirect resolves fast;
+    // failures are logged and the tutor can re-run it from Settings.
+    backfillUpcomingLessons(statePayload.uid).catch((err) => {
+      console.error(
+        "[calendar-backfill] Background backfill failed:",
+        err instanceof Error ? err.message : err,
+      );
+    });
+
     res.redirect(`${base}${returnTo}?google=connected`);
   } catch (err) {
     console.error("googleAuthCallback error:", err);
