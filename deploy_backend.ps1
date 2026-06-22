@@ -97,6 +97,8 @@ Write-Host "      Firebase key: $resolvedKey"
 
 # 2d. Scrubbed package.json - drop the @examify-tms/interfaces workspace dep
 #      (type-only at runtime; npm would fail to resolve it from the registry).
+#      All backend imports from interfaces must stay type-only so tsc erases
+#      them — no runtime require("@examify-tms/interfaces") survives into dist.
 $pj = Get-Content "$repoRoot/backend/package.json" -Raw | ConvertFrom-Json
 if ($pj.dependencies.PSObject.Properties.Name -contains "@examify-tms/interfaces") {
     $pj.dependencies.PSObject.Properties.Remove("@examify-tms/interfaces")
