@@ -1,10 +1,10 @@
 import {
   LogOut,
-  User as UserIcon,
   Settings as SettingsIcon,
   ChevronsUpDown,
   Compass,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 import {
   Avatar,
@@ -34,6 +34,7 @@ export function NavUser({ user }: { user: UserInfo | null }) {
   const { isMobile } = useSidebar();
   const logout = useLogout();
   const { start: startTour } = useProductTour();
+  const navigate = useNavigate();
 
   if (!user) {
     return null;
@@ -92,11 +93,7 @@ export function NavUser({ user }: { user: UserInfo | null }) {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem>
-                <UserIcon />
-                Account
-              </DropdownMenuItem>
-              <DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => navigate("/settings")}>
                 <SettingsIcon />
                 Settings
               </DropdownMenuItem>

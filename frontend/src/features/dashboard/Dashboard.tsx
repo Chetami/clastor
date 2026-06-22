@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth";
 import { useListLessons } from "@/features/schedule/api";
 import { useListStudents } from "@/features/students/api";
@@ -14,6 +13,13 @@ import { NextLesson } from "./components/next-lesson";
 import { CurrentLesson } from "./components/current-lesson";
 import { TodoLessons } from "./components/todo-lessons";
 import { QuickActions } from "./components/quick-actions";
+import {
+  StatCardsSkeleton,
+  NextLessonSkeleton,
+  ChartSkeleton,
+  UpcomingLessonsSkeleton,
+  TodoLessonsSkeleton,
+} from "./components/skeletons";
 import { findCurrentLesson, todoLessons, nextLesson } from "./lib";
 
 export default function Dashboard() {
@@ -21,7 +27,7 @@ export default function Dashboard() {
   const [period, setPeriod] = useState<DashboardPeriod>("week");
 
   const { data: summary, isLoading: summaryLoading } = useDashboardSummary(period);
-  const { data: lessons = [] } = useListLessons();
+  const { data: lessons = [], isLoading: lessonsLoading } = useListLessons();
   const { data: students = [] } = useListStudents();
 
   const studentNames = useMemo(() => {
@@ -59,11 +65,7 @@ export default function Dashboard() {
 
       {/* Stat tiles */}
       {summaryLoading || !summary ? (
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-[120px] rounded-xl" />
-          ))}
-        </div>
+        <StatCardsSkeleton />
       ) : (
         <StatCards summary={summary} period={period} />
       )}
@@ -73,24 +75,44 @@ export default function Dashboard() {
           Right: charts + things to do. */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <div className="flex min-h-0 flex-col gap-4">
-          <NextLesson
-            lesson={upcoming}
-            studentName={
-              upcoming ? studentNames[upcoming.studentId] ?? "Student" : ""
-            }
-          />
+          {lessonsLoading ? (
+            <NextLessonSkeleton />
+          ) : (
+            <NextLesson
+              lesson={upcoming}
+              studentName={
+                upcoming ? studentNames[upcoming.studentId] ?? "Student" : ""
+              }
+            />
+          )}
           <QuickActions />
-          <UpcomingLessons
-            lessons={lessons}
-            studentNames={studentNames}
-            fill
-          />
+          {lessonsLoading ? (
+            <UpcomingLessonsSkeleton fill />
+          ) : (
+            <UpcomingLessons
+              lessons={lessons}
+              studentNames={studentNames}
+              fill
+            />
+          )}
         </div>
 
         <div className="flex flex-col gap-4">
-          {summary && <HoursChart summary={summary} />}
-          {summary && <IncomeChart summary={summary} />}
-          <TodoLessons lessons={todos} studentNames={studentNames} />
+          {summaryLoading || !summary ? (
+            <ChartSkeleton />
+          ) : (
+            <HoursChart summary={summary} />
+          )}
+          {summaryLoading || !summary ? (
+            <ChartSkeleton />
+          ) : (
+            <IncomeChart summary={summary} />
+          )}
+          {lessonsLoading ? (
+            <TodoLessonsSkeleton />
+          ) : (
+            <TodoLessons lessons={todos} studentNames={studentNames} />
+          )}
         </div>
       </div>
     </div>
