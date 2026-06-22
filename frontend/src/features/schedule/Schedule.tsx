@@ -110,6 +110,20 @@ export default function Schedule() {
             <ChevronRight className="h-4 w-4" />
           </Button>
           <span className="text-sm text-muted-foreground">{tzLabel}</span>
+          <div className="ml-2 hidden items-center gap-3 text-[11px] text-muted-foreground md:flex">
+            <span className="inline-flex items-center gap-1">
+              <span className="h-2 w-2 rounded-full bg-emerald-500" />
+              Accepted
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <span className="h-2 w-2 rounded-full bg-amber-500" />
+              Pending
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <span className="h-2 w-2 rounded-full bg-rose-500" />
+              Declined
+            </span>
+          </div>
         </div>
         <div className="text-lg font-semibold tracking-tight">{title}</div>
         <ToggleGroup
@@ -174,6 +188,10 @@ export default function Schedule() {
             },
           }}
           events={calendarEvents}
+          eventClassNames={(arg) => {
+            const a = arg.event.extendedProps.acceptance as string | undefined;
+            return a ? [`gi-acceptance-${a}`] : [];
+          }}
           eventContent={(arg) => (
             <div className="fc-event-main-frame">
               <div className="fc-event-time">{arg.timeText}</div>

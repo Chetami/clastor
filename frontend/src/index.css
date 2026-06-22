@@ -923,6 +923,27 @@
   opacity: 0.9;
 }
 
+/* Acceptance status accents — colored left stripe + tone per state.
+   Uses inset box-shadow so the event box model isn't disturbed. */
+.gi-calendar .fc-event.gi-acceptance-accepted {
+  box-shadow: inset 3px 0 0 0 #10b981;
+  background-color: hsl(var(--primary) / 0.42);
+}
+
+.gi-calendar .fc-event.gi-acceptance-pending {
+  box-shadow: inset 3px 0 0 0 #f59e0b;
+}
+
+.gi-calendar .fc-event.gi-acceptance-declined {
+  box-shadow: inset 3px 0 0 0 #f43f5e;
+  opacity: 0.75;
+}
+
+.gi-calendar .fc-event.gi-acceptance-declined .fc-event-title {
+  text-decoration: line-through;
+  color: hsl(var(--muted-foreground));
+}
+
 .gi-calendar .fc-theme-standard td,
 .gi-calendar .fc-theme-standard th {
   border-color: hsl(var(--border));
