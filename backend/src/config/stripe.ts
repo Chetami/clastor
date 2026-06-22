@@ -34,7 +34,7 @@ export function getStripe(): Stripe {
   }
 
   stripeClient = new Stripe(secretKey, {
-    appInfo: { name: "Examify TMS" },
+    appInfo: { name: "Clastor" },
   });
 
   return stripeClient;

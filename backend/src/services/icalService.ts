@@ -30,9 +30,9 @@ export interface LessonInviteInput {
  */
 export function buildLessonInvite(input: LessonInviteInput): string {
   const cal = ical({
-    name: "Examify TMS",
+    name: "Clastor",
     prodId: {
-      company: "Examify TMS",
+      company: "Clastor",
       product: "Lesson Scheduler",
       language: "EN",
     },

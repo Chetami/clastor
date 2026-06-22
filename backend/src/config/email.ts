@@ -39,15 +39,15 @@ export function getSenderAddress(): string {
 }
 
 /**
- * The organisation/product name parsed from EMAIL_FROM (e.g. "Examify TMS"
- * from "Examify TMS <x@y>"). Used as the "via" suffix on the per-tutor
+ * The organisation/product name parsed from EMAIL_FROM (e.g. "Clastor"
+ * from "Clastor <x@y>"). Used as the "via" suffix on the per-tutor
  * From display name, since the technical sender address can't be the tutor.
  */
 export function getSenderDisplayName(): string {
   const from = process.env.EMAIL_FROM || "";
   const match = from.match(/^"?(.*?)"?\s*<.+>$/s);
   if (match && match[1].trim()) return match[1].trim();
-  return "Examify TMS";
+  return "Clastor";
 }
 
 /**

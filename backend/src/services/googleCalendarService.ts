@@ -51,9 +51,9 @@ async function buildLessonSummary(
     : null;
   const studentName = student?.name;
   const summary = studentName
-    ? `${lesson.subject} — ${studentName}`
+    ? ` ${studentName} — ${lesson.subject}`
     : lesson.subject;
-  const description = "Lesson managed by Examify TMS";
+  const description = "Lesson managed by Clastor";
   return { summary, description };
 }
 
@@ -89,6 +89,7 @@ export async function createLessonCalendarEvent(
     location: lesson.location ?? undefined,
     start,
     end,
+    colorId: "1",
     extendedProperties: {
       private: {
         examifySource: EXAMIFY_SOURCE,
