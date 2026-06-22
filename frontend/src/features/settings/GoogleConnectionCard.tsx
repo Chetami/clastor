@@ -170,12 +170,27 @@ export function GoogleConnectionCard({ returnTo }: { returnTo?: string }) {
                 variant="outline"
                 onClick={() => {
                   syncCalendar.mutate(undefined, {
-                    onSuccess: ({ pushed, skipped }) => {
-                      toast.success(
-                        pushed > 0
-                          ? `Synced ${pushed} lesson${pushed === 1 ? "" : "s"} to Google Calendar (${skipped} already synced).`
-                          : "All upcoming lessons are already on Google Calendar.",
-                      );
+                    onSuccess: ({ pushed, recovered, skipped }) => {
+                      if (pushed === 0 && recovered === 0) {
+                        toast.success(
+                          skipped > 0
+                            ? "All upcoming lessons are already on Google Calendar."
+                            : "No upcoming lessons to sync.",
+                        );
+                        return;
+                      }
+                      const parts: string[] = [];
+                      if (pushed > 0) {
+                        parts.push(
+                          `Pushed ${pushed} lesson${pushed === 1 ? "" : "s"}`,
+                        );
+                      }
+                      if (recovered > 0) {
+                        parts.push(
+                          `Recovered ${recovered} deleted event${recovered === 1 ? "" : "s"}`,
+                        );
+                      }
+                      toast.success(`${parts.join(" · ")} on Google Calendar.`);
                     },
                     onError: (err) =>
                       toast.error(
@@ -186,7 +201,7 @@ export function GoogleConnectionCard({ returnTo }: { returnTo?: string }) {
                   });
                 }}
                 disabled={syncCalendar.isPending}
-                title="Push all upcoming lessons to your Google Calendar"
+                title="Push all upcoming lessons to your Google Calendar (and recover any deleted events)"
               >
                 {syncCalendar.isPending ? (
                   <Loader2 className="size-4 animate-spin" />

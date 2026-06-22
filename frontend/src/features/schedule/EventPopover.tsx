@@ -11,6 +11,9 @@ import {
   StickyNote,
   User,
   Video,
+  RefreshCw,
+  CheckCircle2,
+  CloudOff,
 } from "lucide-react";
 import {
   Popover,
@@ -21,11 +24,13 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { useListStudents } from "@/features/students/api";
+import { useGoogleConnectionStatus } from "@/features/settings/api/use-google-connect";
 import {
   useCancelLesson,
   useGetLesson,
   useNotifyStudent,
   useUpdateLesson,
+  useResyncLesson,
 } from "./api";
 import { generateMeetLinkRequest } from "./api/requests";
 import {
@@ -84,6 +89,9 @@ export function EventPopover({
   const cancelLesson = useCancelLesson(lessonId ?? "");
   const notifyStudent = useNotifyStudent(lessonId ?? "");
   const updateLesson = useUpdateLesson(lessonId ?? "");
+  const resyncLesson = useResyncLesson(lessonId ?? "");
+  const { data: googleStatus } = useGoogleConnectionStatus();
+  const googleConnected = !!googleStatus?.connected;
   const [actionError, setActionError] = useState<string | null>(null);
   const [meetLoading, setMeetLoading] = useState(false);
 
@@ -151,6 +159,25 @@ export function EventPopover({
     }
   }
 
+  async function handleResync() {
+    if (!lessonId) return;
+    setActionError(null);
+    try {
+      const { action } = await resyncLesson.mutateAsync();
+      toast.success(
+        action === "created"
+          ? "Added to Google Calendar."
+          : action === "recreated"
+            ? "Recovered on Google Calendar."
+            : "Already up to date on Google Calendar.",
+      );
+    } catch {
+      setActionError(
+        resyncLesson.error?.message ?? "Failed to sync to Google Calendar",
+      );
+    }
+  }
+
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
       {anchor && lessonId && (
@@ -205,6 +232,10 @@ export function EventPopover({
             onCancel={handleCancel}
             onGenerateMeet={handleGenerateMeet}
             meetLoading={meetLoading}
+            googleConnected={googleConnected}
+            googleSynced={!!lesson.googleCalendarEventId}
+            onResync={handleResync}
+            resyncPending={resyncLesson.isPending}
           />
         )}
         </div>
@@ -237,6 +268,10 @@ interface PopoverBodyProps {
   onCancel: () => void;
   onGenerateMeet: () => void;
   meetLoading: boolean;
+  googleConnected: boolean;
+  googleSynced: boolean;
+  onResync: () => void;
+  resyncPending: boolean;
 }
 
 function PopoverBody({
@@ -263,6 +298,10 @@ function PopoverBody({
   onCancel,
   onGenerateMeet,
   meetLoading,
+  googleConnected,
+  googleSynced,
+  onResync,
+  resyncPending,
 }: PopoverBodyProps) {
   const meetLink = meetUrl(location);
   const notifiedAt = notifiedAtIso ? new Date(notifiedAtIso) : null;
@@ -374,6 +413,26 @@ function PopoverBody({
             <p className="font-medium">{attendanceLabel}</p>
           </div>
         </div>
+
+        {googleConnected && (
+          <div
+            className={
+              "mt-1 flex items-center gap-1.5 rounded-md px-2 py-1.5 text-[11px] font-medium " +
+              (googleSynced
+                ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                : "bg-amber-500/10 text-amber-700 dark:text-amber-400")
+            }
+          >
+            {googleSynced ? (
+              <CheckCircle2 className="h-3.5 w-3.5" />
+            ) : (
+              <CloudOff className="h-3.5 w-3.5" />
+            )}
+            {googleSynced
+              ? "On Google Calendar"
+              : "Not on Google Calendar"}
+          </div>
+        )}
       </dl>
 
       {actionError && (
@@ -422,6 +481,26 @@ function PopoverBody({
             )}
             Cancel
           </Button>
+          {googleConnected && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onResync}
+              disabled={resyncPending}
+              title={
+                googleSynced
+                  ? "Update the Google Calendar event, or recover it if it was deleted"
+                  : "Add this lesson to your Google Calendar"
+              }
+            >
+              {resyncPending ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <RefreshCw className="h-3.5 w-3.5" />
+              )}
+              {googleSynced ? "Resync" : "Add to Google"}
+            </Button>
+          )}
           <Button size="sm" variant="ghost" asChild className="ml-auto">
             <Link to={`/lessons/${lessonId}`}>Open</Link>
           </Button>

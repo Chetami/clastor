@@ -18,6 +18,19 @@ export const EXAMIFY_SOURCE = "examify-tms-lesson";
 /** The tutor's primary calendar is the only one we sync with. */
 const PRIMARY_CALENDAR_ID = "primary";
 
+/**
+ * True when a Google Calendar API error indicates the target event no longer
+ * exists — either soft-deleted (404) or permanently purged from trash (410).
+ * Used to detect a stale stored googleCalendarEventId after a tutor deletes
+ * the event over on Google's side, so we can recreate it.
+ */
+function isGoogleEventNotFound(error: unknown): boolean {
+  const code =
+    (error as { code?: number; response?: { status?: number } } | null)?.code ??
+    (error as { response?: { status?: number } } | null)?.response?.status;
+  return code === 404 || code === 410;
+}
+
 /** Thrown when a tutor hasn't connected their Google account yet. */
 export class GoogleNotConnectedError extends Error {
   constructor() {
@@ -158,7 +171,9 @@ export async function deleteLessonCalendarEvent(
 
 /**
  * Best-effort push of a lesson to Google Calendar:
- *  - If the lesson already has a googleCalendarEventId, patch it.
+ *  - If the lesson already has a googleCalendarEventId, patch it. If the patch
+ *    reveals the event was deleted over on Google (404/410), transparently
+ *    recreate it and persist the new id (self-heal).
  *  - Otherwise create a new event and persist the returned id.
  *
  * Never throws on Google errors (logs only) — lesson operations must not be
@@ -171,12 +186,19 @@ export async function syncLessonToCalendar(
 ): Promise<void> {
   try {
     if (lesson.googleCalendarEventId) {
-      await updateLessonCalendarEvent(uid, lesson);
-    } else {
-      const eventId = await createLessonCalendarEvent(uid, lesson);
-      if (eventId) {
-        await setLessonGoogleEventId(lesson.id, eventId);
+      try {
+        await updateLessonCalendarEvent(uid, lesson);
+        return;
+      } catch (error) {
+        if (!isGoogleEventNotFound(error)) throw error;
+        // The stored event id is stale (deleted on Google's side) — clear it
+        // and fall through to create a fresh event (self-heal).
+        await setLessonGoogleEventId(lesson.id, null);
       }
+    }
+    const eventId = await createLessonCalendarEvent(uid, lesson);
+    if (eventId) {
+      await setLessonGoogleEventId(lesson.id, eventId);
     }
   } catch (error) {
     console.error(
@@ -239,43 +261,72 @@ export async function listExternalCalendarEvents(
 }
 
 /**
- * Push all upcoming, non-cancelled lessons that aren't yet on Google Calendar
- * to the tutor's primary calendar. Skips lessons that already have a
- * googleCalendarEventId. Used on first connect and from the manual "Sync"
- * button.
+ * Push all upcoming, non-cancelled lessons to Google Calendar, reconciling
+ * against events that already exist. Used on first connect and from the
+ * manual "Sync" button. For each upcoming lesson:
+ *   - No stored id            → create (pushed)
+ *   - Stored id but gone      → recreate, update id (recovered)
+ *   - Stored id & still live  → skip (skipped)
  *
- * @returns counts of pushed and skipped lessons.
+ * Liveness is established with a single events.list over the window
+ * [now, latest upcoming lesson start] (default +1yr), so the whole pass costs
+ * one list call plus one create per missing/absent lesson.
+ *
+ * @returns counts of pushed, recovered and skipped lessons.
  * @throws {GoogleNotConnectedError} when the tutor isn't connected.
  */
 export async function backfillUpcomingLessons(
   uid: string,
-): Promise<{ pushed: number; skipped: number }> {
+): Promise<{ pushed: number; recovered: number; skipped: number }> {
   // Confirm a connection exists before doing any work.
   const connection = await getGoogleConnection(uid);
   if (!connection) throw new GoogleNotConnectedError();
 
   const now = new Date();
-  const lessons = await listLessonsFromFirestore(uid, "tutor", {
+  const lessons = (await listLessonsFromFirestore(uid, "tutor", {
     from: now,
-  });
+  })).filter((l) => !l.isCancelled);
+
+  if (lessons.length === 0) {
+    return { pushed: 0, recovered: 0, skipped: 0 };
+  }
+
+  // Window end = the latest upcoming lesson start, or ~1yr out as a fallback.
+  const latestStart = lessons.reduce((max, l) => {
+    const t = new Date(l.startDateTime as any).getTime();
+    return t > max ? t : max;
+  }, 0);
+  const windowEnd = new Date(
+    Math.max(latestStart, now.getTime()) + 60 * 1000,
+  );
+
+  // Set of Examify-created event ids that still exist on Google.
+  const liveIds = await listOwnCalendarEventIds(uid, now, windowEnd);
 
   let pushed = 0;
+  let recovered = 0;
   let skipped = 0;
 
   for (const lesson of lessons) {
-    if (lesson.isCancelled) {
+    const existingId = lesson.googleCalendarEventId;
+    const isLive = existingId ? liveIds.has(existingId) : false;
+
+    if (existingId && isLive) {
       skipped++;
       continue;
     }
-    if (lesson.googleCalendarEventId) {
-      skipped++;
-      continue;
-    }
+
     try {
       const eventId = await createLessonCalendarEvent(uid, lesson);
       if (eventId) {
         await setLessonGoogleEventId(lesson.id, eventId);
-        pushed++;
+        if (existingId) {
+          recovered++;
+        } else {
+          pushed++;
+        }
+      } else {
+        skipped++;
       }
     } catch (error) {
       console.error(
@@ -286,5 +337,89 @@ export async function backfillUpcomingLessons(
     }
   }
 
-  return { pushed, skipped };
+  return { pushed, recovered, skipped };
+}
+
+/**
+ * Fetch the ids of all Examify-created (lesson) events that currently exist
+ * on the tutor's primary calendar within [from, to]. Used by reconciliation
+ * to detect lessons whose stored googleCalendarEventId points at a
+ * since-deleted event.
+ *
+ * @throws {GoogleNotConnectedError} when the tutor isn't connected.
+ */
+async function listOwnCalendarEventIds(
+  uid: string,
+  from: Date,
+  to: Date,
+): Promise<Set<string>> {
+  const ctx = await getCalendarForUser(uid);
+  if (!ctx) throw new GoogleNotConnectedError();
+
+  const ids = new Set<string>();
+  let pageToken: string | undefined;
+  do {
+    const res = await ctx.cal.events.list({
+      calendarId: PRIMARY_CALENDAR_ID,
+      timeMin: from.toISOString(),
+      timeMax: to.toISOString(),
+      singleEvents: true,
+      maxResults: 250,
+      pageToken,
+    });
+    for (const item of res.data.items ?? []) {
+      if (item.status === "cancelled") continue;
+      if (item.extendedProperties?.private?.examifySource !== EXAMIFY_SOURCE) {
+        continue;
+      }
+      if (item.id) ids.add(item.id);
+    }
+    pageToken = res.data.nextPageToken ?? undefined;
+  } while (pageToken);
+
+  return ids;
+}
+
+export type ResyncAction = "created" | "updated" | "recreated";
+
+/**
+ * Force a single lesson's Google Calendar event to exist and match:
+ *   - No stored id                 → create (action "created")
+ *   - Stored id, event still live  → patch in place (action "updated")
+ *   - Stored id but gone (404/410) → recreate + store new id (action "recreated")
+ *
+ * Unlike syncLessonToCalendar this throws on Google failures so the caller
+ * (a manual user action) gets feedback; it never swallows.
+ *
+ * @throws {GoogleNotConnectedError} when the tutor isn't connected.
+ */
+export async function resyncLessonCalendar(
+  uid: string,
+  lesson: Lesson,
+): Promise<{ action: ResyncAction; eventId: string | null }> {
+  const ctx = await getCalendarForUser(uid);
+  if (!ctx) throw new GoogleNotConnectedError();
+
+  // Verify the stored event still exists (if any).
+  if (lesson.googleCalendarEventId) {
+    try {
+      await ctx.cal.events.get({
+        calendarId: PRIMARY_CALENDAR_ID,
+        eventId: lesson.googleCalendarEventId,
+      });
+      // It exists — patch it to match current lesson data.
+      await updateLessonCalendarEvent(uid, lesson);
+      return { action: "updated", eventId: lesson.googleCalendarEventId };
+    } catch (error) {
+      if (!isGoogleEventNotFound(error)) throw error;
+      // Gone — clear the stale id and recreate below.
+      await setLessonGoogleEventId(lesson.id, null);
+    }
+  }
+
+  const eventId = await createLessonCalendarEvent(uid, lesson);
+  if (eventId) {
+    await setLessonGoogleEventId(lesson.id, eventId);
+  }
+  return { action: lesson.googleCalendarEventId ? "recreated" : "created", eventId };
 }

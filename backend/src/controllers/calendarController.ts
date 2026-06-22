@@ -67,13 +67,13 @@ export async function listExternalEvents(
 
 /**
  * POST /api/calendar/sync
- * Manually push all upcoming lessons to Google Calendar (backfill). Intended
- * for the "Sync all lessons" button in Settings. Skips lessons that already
- * have a googleCalendarEventId.
+ * Manually reconcile all upcoming lessons with Google Calendar: pushes lessons
+ * that aren't on Google yet AND recreates events that were deleted on Google's
+ * side. Intended for the "Sync all lessons" button in Settings.
  */
 export async function syncLessons(
   req: Request,
-  res: Response<{ pushed: number; skipped: number } | ApiError>,
+  res: Response<{ pushed: number; recovered: number; skipped: number } | ApiError>,
 ): Promise<void> {
   try {
     if (!req.user) {

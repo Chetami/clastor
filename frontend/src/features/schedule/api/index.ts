@@ -9,6 +9,7 @@ export { useCancelLessonSeries } from "./use-cancel-lesson-series";
 export { useNotifyStudent } from "./use-notify-student";
 export { useExternalCalendarEvents } from "./use-external-events";
 export { useSyncCalendar } from "./use-sync-calendar";
+export { useResyncLesson } from "./use-resync-lesson";
 export {
   createLessonRequest,
   createRecurringLessonRequest,
@@ -21,4 +22,6 @@ export {
   cancelLessonSeriesRequest,
   getExternalCalendarEventsRequest,
   syncCalendarRequest,
+  resyncLessonRequest,
 } from "./requests";
+export type { ResyncLessonAction } from "./requests";

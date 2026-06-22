@@ -20,6 +20,8 @@ import { buildLessonInvite } from "../services/icalService";
 import {
   syncLessonToCalendar,
   deleteLessonCalendarEvent,
+  resyncLessonCalendar,
+  GoogleNotConnectedError,
 } from "../services/googleCalendarService";
 import { signRsvpToken, verifyRsvpToken } from "../utils/jwt";
 import { getNotifyCooldownMs, getPublicApiUrl } from "../config/email";
@@ -241,6 +243,52 @@ export async function updateLesson(
   } catch (error) {
     console.error("Update lesson failed:", error);
     const message = error instanceof Error ? error.message : "Failed to update lesson";
+    res.status(500).json({ message });
+  }
+}
+
+/**
+ * Resync a single lesson to Google Calendar. Recreates the backing Google
+ * event if it was deleted over on Google's side. Intended for the per-lesson
+ * "Resync" button. Returns the updated lesson + the action taken.
+ */
+export async function resyncLesson(
+  req: Request<{ id: string }>,
+  res: Response<
+    { lesson: LessonResponse; action: "created" | "updated" | "recreated" } | ApiError
+  >,
+): Promise<void> {
+  try {
+    if (!req.user) {
+      res.status(401).json({ message: "Unauthorized" });
+      return;
+    }
+
+    const lesson = await getLessonByIdFromFirestore(req.params.id);
+    if (!lesson) {
+      res.status(404).json({ message: "Lesson not found" });
+      return;
+    }
+
+    if (!canEditLesson(lesson, req)) {
+      res
+        .status(403)
+        .json({ message: "Forbidden: You do not have permission to resync this lesson" });
+      return;
+    }
+
+    const { action } = await resyncLessonCalendar(req.user.uid, lesson);
+
+    const updated = (await getLessonByIdFromFirestore(req.params.id)) ?? lesson;
+    res.status(200).json({ lesson: toLessonResponse(updated), action });
+  } catch (error) {
+    if (error instanceof GoogleNotConnectedError) {
+      res.status(400).json({ message: "Connect your Google account first." });
+      return;
+    }
+    console.error("Resync lesson failed:", error);
+    const message =
+      error instanceof Error ? error.message : "Failed to resync lesson";
     res.status(500).json({ message });
   }
 }

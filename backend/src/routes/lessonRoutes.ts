@@ -8,6 +8,7 @@ import {
   cancelLesson,
   notifyStudent,
   rsvpLesson,
+  resyncLesson,
 } from "../controllers/lessonController";
 import {
   createRecurringLesson,
@@ -135,6 +136,18 @@ router.post(
   authenticateJWT,
   requireRole("tutor", "system_admin"),
   notifyStudent
+);
+
+/**
+ * POST /api/lessons/:id/resync
+ * Push/restore this lesson's event on the tutor's Google Calendar. Recreates
+ * the event if it was deleted over on Google's side.
+ */
+router.post(
+  "/:id/resync",
+  authenticateJWT,
+  requireRole("tutor", "system_admin"),
+  resyncLesson
 );
 
 export default router;

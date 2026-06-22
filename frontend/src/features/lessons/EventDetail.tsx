@@ -15,7 +15,10 @@ import {
   Mail,
   Video,
   ExternalLink,
+  RefreshCw,
+  CloudOff,
 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -39,6 +42,7 @@ import {
   useCancelLesson,
   useNotifyStudent,
   useUpdateLesson,
+  useResyncLesson,
 } from "../schedule/api";
 import {
   generateMeetLinkRequest,
@@ -93,6 +97,7 @@ export default function EventDetail() {
   const cancelLesson = useCancelLesson(eventId!);
   const notifyStudent = useNotifyStudent(eventId!);
   const updateLesson = useUpdateLesson(eventId!);
+  const resyncLesson = useResyncLesson(eventId!);
   const [pickerError, setPickerError] = useState<string | null>(null);
   const [notifyOpen, setNotifyOpen] = useState(false);
   const [notifyMessage, setNotifyMessage] = useState("");
@@ -226,6 +231,24 @@ export default function EventDetail() {
     }
   }
 
+  async function handleResync() {
+    if (!eventId) return;
+    try {
+      const { action } = await resyncLesson.mutateAsync();
+      toast.success(
+        action === "created"
+          ? "Added to Google Calendar."
+          : action === "recreated"
+            ? "Recovered on Google Calendar."
+            : "Already up to date on Google Calendar.",
+      );
+    } catch {
+      toast.error(
+        resyncLesson.error?.message ?? "Failed to sync to Google Calendar",
+      );
+    }
+  }
+
   return (
     <div className="space-y-6">
       <Button
@@ -252,6 +275,30 @@ export default function EventDetail() {
             <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
               <Repeat className="h-3 w-3" />
               Recurring
+            </span>
+          )}
+          {googleConnected && !lesson.isCancelled && (
+            <span
+              className={
+                "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium " +
+                (lesson.googleCalendarEventId
+                  ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400"
+                  : "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400")
+              }
+              title={
+                lesson.googleCalendarEventId
+                  ? "This lesson has an event on your Google Calendar"
+                  : "This lesson isn't on your Google Calendar yet"
+              }
+            >
+              {lesson.googleCalendarEventId ? (
+                <CheckCircle2 className="h-3 w-3" />
+              ) : (
+                <CloudOff className="h-3 w-3" />
+              )}
+              {lesson.googleCalendarEventId
+                ? "On Google Calendar"
+                : "Not on Google Calendar"}
             </span>
           )}
         </div>
@@ -467,6 +514,31 @@ export default function EventDetail() {
                       ? "Cancelling…"
                       : "Cancel this occurrence"}
                   </Button>
+                  {googleConnected && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleResync}
+                      disabled={resyncLesson.isPending}
+                      className="ml-auto"
+                      title={
+                        lesson.googleCalendarEventId
+                          ? "Update the Google Calendar event for this lesson, or recover it if it was deleted"
+                          : "Add this lesson to your Google Calendar"
+                      }
+                    >
+                      {resyncLesson.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <RefreshCw className="h-4 w-4" />
+                      )}
+                      {resyncLesson.isPending
+                        ? "Syncing…"
+                        : lesson.googleCalendarEventId
+                          ? "Resync to Google"
+                          : "Add to Google Calendar"}
+                    </Button>
+                  )}
                 </div>
               )}
               {notifiedAt && (

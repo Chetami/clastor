@@ -132,10 +132,25 @@ export async function getExternalCalendarEventsRequest(params: {
 
 export async function syncCalendarRequest(): Promise<{
   pushed: number;
+  recovered: number;
   skipped: number;
 }> {
-  const response = await api.post<{ pushed: number; skipped: number }>(
-    "/api/calendar/sync",
-  );
+  const response = await api.post<{
+    pushed: number;
+    recovered: number;
+    skipped: number;
+  }>("/api/calendar/sync");
+  return response.data;
+}
+
+export type ResyncLessonAction = "created" | "updated" | "recreated";
+
+export async function resyncLessonRequest(
+  id: string,
+): Promise<{ lesson: LessonResponse; action: ResyncLessonAction }> {
+  const response = await api.post<{
+    lesson: LessonResponse;
+    action: ResyncLessonAction;
+  }>(`/api/lessons/${id}/resync`);
   return response.data;
 }
