@@ -572,6 +572,66 @@
 }
 
 @layer base {
+  /* Calendar "today" cell — a softer tint than the full accent so the
+     highlight stays subtle in coloured schemes. Graphite is kept a
+     touch brighter for visibility. */
+  :root {
+    --calendar-today: 0 0% 94%;
+  }
+  .dark {
+    --calendar-today: 0 0% 7%;
+  }
+  .theme-ocean {
+    --calendar-today: 204 45% 93%;
+  }
+  .dark.theme-ocean {
+    --calendar-today: 205 85% 7%;
+  }
+  .theme-emerald {
+    --calendar-today: 150 40% 93%;
+  }
+  .dark.theme-emerald {
+    --calendar-today: 130 35% 10%;
+  }
+  .theme-violet {
+    --calendar-today: 270 40% 94%;
+  }
+  .dark.theme-violet {
+    --calendar-today: 280 60% 7%;
+  }
+  .theme-rose {
+    --calendar-today: 350 45% 94%;
+  }
+  .dark.theme-rose {
+    --calendar-today: 345 24% 10%;
+  }
+  .theme-amber {
+    --calendar-today: 38 50% 93%;
+  }
+  .dark.theme-amber {
+    --calendar-today: 35 24% 10%;
+  }
+  .theme-sunset {
+    --calendar-today: 30 50% 93%;
+  }
+  .dark.theme-sunset {
+    --calendar-today: 25 26% 10%;
+  }
+  .theme-teal {
+    --calendar-today: 175 40% 93%;
+  }
+  .dark.theme-teal {
+    --calendar-today: 185 22% 10%;
+  }
+  .theme-berry {
+    --calendar-today: 310 40% 94%;
+  }
+  .dark.theme-berry {
+    --calendar-today: 300 24% 10%;
+  }
+}
+
+@layer base {
   * {
     @apply border-border;
   }
@@ -808,11 +868,11 @@
 
 .gi-calendar .fc-daygrid-day.fc-day-today,
 .gi-calendar .fc .fc-timegrid-col.fc-day-today {
-  background-color: hsl(var(--accent)) !important;
+  background-color: hsl(var(--calendar-today)) !important;
 }
 
 .gi-calendar .fc-daygrid-day.fc-day-today .fc-daygrid-day-number {
-  color: hsl(var(--accent-foreground));
+  color: hsl(var(--foreground));
   font-weight: 600;
 }
 
