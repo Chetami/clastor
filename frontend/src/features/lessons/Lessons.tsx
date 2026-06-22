@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowDownUp,
@@ -32,6 +32,8 @@ type SortKey =
   | "student-za"
   | "updated";
 
+const COLLAPSED_LIMIT = 8;
+
 const SORT_OPTIONS: { value: SortKey; label: string }[] = [
   { value: "upcoming", label: "Upcoming first" },
   { value: "date-desc", label: "Date (newest first)" },
@@ -47,6 +49,7 @@ export default function Lessons() {
   const [filter, setFilter] = useState<FilterTab>("all");
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("upcoming");
+  const [expanded, setExpanded] = useState(false);
 
   const studentMap = useMemo(() => {
     const map: Record<string, string> = {};
@@ -123,6 +126,15 @@ export default function Lessons() {
 
     return filtered.map((e) => e.lesson);
   }, [lessons, studentMap, filter, search, sortKey]);
+
+  useEffect(() => {
+    setExpanded(false);
+  }, [filter, search, sortKey]);
+
+  const displayedLessons = expanded
+    ? visibleLessons
+    : visibleLessons.slice(0, COLLAPSED_LIMIT);
+  const hiddenCount = visibleLessons.length - displayedLessons.length;
 
   return (
     <div className="space-y-6">
@@ -223,7 +235,7 @@ export default function Lessons() {
               </div>
             ) : (
               <ul className="-mx-6 divide-y">
-                {visibleLessons.map((lesson) => {
+                {displayedLessons.map((lesson) => {
                   const name =
                     studentMap[lesson.studentId] ?? "Unknown student";
                   const badge = lessonBadge(lesson);
@@ -297,6 +309,28 @@ export default function Lessons() {
                   );
                 })}
               </ul>
+            )}
+            {!expanded && hiddenCount > 0 && (
+              <div className="mt-4 flex justify-center border-t pt-4">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setExpanded(true)}
+                >
+                  View {hiddenCount} more
+                </Button>
+              </div>
+            )}
+            {expanded && visibleLessons.length > COLLAPSED_LIMIT && (
+              <div className="mt-4 flex justify-center border-t pt-4">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setExpanded(false)}
+                >
+                  Show less
+                </Button>
+              </div>
             )}
           </CardContent>
         </Card>
