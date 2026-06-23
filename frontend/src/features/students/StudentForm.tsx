@@ -25,6 +25,7 @@ import {
   type StudentFormData,
 } from "./student-schema";
 import { TIMEZONES } from "./timezones";
+import { NumberInput } from "@/components/ui/number-input";
 
 interface StudentFormProps {
   defaultValues?: Partial<StudentFormData>;
@@ -34,9 +35,7 @@ interface StudentFormProps {
   disabled?: boolean;
 }
 
-function toFormData(
-  defaultValues?: Partial<StudentFormData>,
-): StudentFormData {
+function toFormData(defaultValues?: Partial<StudentFormData>): StudentFormData {
   return { ...EMPTY_STUDENT_FORM, ...defaultValues };
 }
 
@@ -241,27 +240,19 @@ export function StudentForm({
         <div className="space-y-2">
           <Label htmlFor="expectedAmount">Expected Amount</Label>
           <div className="relative">
-            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-              {currencySymbol}
-            </span>
-            <Input
+            <NumberInput
               id="expectedAmount"
-              type="number"
-              min="0"
-              step="0.01"
-              placeholder="0.00"
-              className="pl-9"
-              aria-invalid={!!errors.expectedAmount}
+              min={0}
+              placeholder={`${currencySymbol}0.00`}
               value={values.expectedAmount}
-              onChange={(e) =>
-                update("expectedAmount", e.target.valueAsNumber || 0)
-              }
+              prefix={currencySymbol}
+              aria-invalid={!!errors.expectedAmount}
+              decimalScale={2}
+              onValueChange={(number) => update("expectedAmount", number || 0)}
             />
           </div>
           {errors.expectedAmount && (
-            <p className="text-xs text-destructive">
-              {errors.expectedAmount}
-            </p>
+            <p className="text-xs text-destructive">{errors.expectedAmount}</p>
           )}
         </div>
         <div className="space-y-2">
@@ -270,17 +261,13 @@ export function StudentForm({
               ? "Expected Hours Per Week"
               : "Expected Lessons Per Week"}
           </Label>
-          <Input
+          <NumberInput
             id="frequencyPerWeek"
-            type="number"
-            min="0"
-            step="1"
+            min={0}
             placeholder={values.rateType === "hourly" ? "e.g. 4" : "e.g. 2"}
             aria-invalid={!!errors.frequencyPerWeek}
             value={values.frequencyPerWeek}
-            onChange={(e) =>
-              update("frequencyPerWeek", e.target.valueAsNumber || 0)
-            }
+            onValueChange={(number) => update("frequencyPerWeek", number || 0)}
           />
           {errors.frequencyPerWeek && (
             <p className="text-xs text-destructive">
@@ -359,10 +346,7 @@ export function StudentForm({
                   value={values.timezone}
                   onValueChange={(v) => update("timezone", v)}
                 >
-                  <SelectTrigger
-                    id="timezone"
-                    aria-invalid={!!errors.timezone}
-                  >
+                  <SelectTrigger id="timezone" aria-invalid={!!errors.timezone}>
                     <SelectValue placeholder="Select a timezone" />
                   </SelectTrigger>
                   <SelectContent>
@@ -401,10 +385,17 @@ export function StudentForm({
       </div>
 
       <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
-        <Button type="button" variant="outline" onClick={onCancel} disabled={disabled}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onCancel}
+          disabled={disabled}
+        >
           Cancel
         </Button>
-        <Button type="submit" disabled={disabled}>{submitLabel}</Button>
+        <Button type="submit" disabled={disabled}>
+          {submitLabel}
+        </Button>
       </div>
     </form>
   );

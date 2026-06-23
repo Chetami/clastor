@@ -26,6 +26,7 @@
     "npm": ">=9.0.0"
   },
   "dependencies": {
-    "@tanstack/react-query-devtools": "^5.101.0"
+    "@tanstack/react-query-devtools": "^5.101.0",
+    "react-number-format": "^5.4.5"
   }
 }
