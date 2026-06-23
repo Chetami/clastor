@@ -1,3 +1,4 @@
+import { parse, isValid } from "date-fns";
 import type { WorkingHours, WorkingDayWindow } from "@examify-tms/interfaces";
 
 /** Weekday keys, Monday-first (matches the calendar's firstDay=1). */
@@ -39,19 +40,26 @@ export const DAY_TO_FC_INDEX: Record<WorkingDay, number> = {
 
 /** Sensible starting point shown in Settings before the tutor saves. */
 export const DEFAULT_WORKING_HOURS: WorkingHours = {
-  monday: { start: "09:00", end: "17:00" },
-  tuesday: { start: "09:00", end: "17:00" },
-  wednesday: { start: "09:00", end: "17:00" },
-  thursday: { start: "09:00", end: "17:00" },
-  friday: { start: "09:00", end: "17:00" },
+  monday: { start: "12:00", end: "20:00" },
+  tuesday: { start: "12:00", end: "20:00" },
+  wednesday: { start: "12:00", end: "20:00" },
+  thursday: { start: "12:00", end: "20:00" },
+  friday: { start: "12:00", end: "20:00" },
   saturday: null,
   sunday: null,
 };
 
+// Arbitrary reference date; only hour/minute components are read.
+const TIME_REFERENCE = new Date(2000, 0, 1);
+
 /** "HH:mm" → minutes since midnight (NaN if malformed). */
 function toMinutes(hhmm: string): number {
-  const m = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(hhmm);
-  return m ? Number(m[1]) * 60 + Number(m[2]) : Number.NaN;
+  // Require the canonical "HH:mm" shape; date-fns validates the ranges.
+  if (!/^\d{2}:\d{2}$/.test(hhmm)) return Number.NaN;
+  const parsed = parse(hhmm, "HH:mm", TIME_REFERENCE);
+  return isValid(parsed)
+    ? parsed.getHours() * 60 + parsed.getMinutes()
+    : Number.NaN;
 }
 
 /** FullCalendar business-hours input object. */
@@ -80,14 +88,12 @@ export function workingHoursToBusinessHours(
       endTime: window.end,
     });
   }
+  console.log(entries);
   return entries.length > 0 ? entries : false;
 }
 
 /** Find the working window for a JS Date (local time). */
-function windowForDate(
-  date: Date,
-  wh: WorkingHours,
-): WorkingDayWindow | null {
+function windowForDate(date: Date, wh: WorkingHours): WorkingDayWindow | null {
   const fcIndex = date.getDay(); // 0 = Sunday — matches DAY_TO_FC_INDEX
   const day = WORKING_DAYS.find((d) => DAY_TO_FC_INDEX[d] === fcIndex);
   if (!day) return null;

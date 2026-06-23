@@ -9,11 +9,13 @@ import { useAuthStore } from "@/store/auth-store";
 import { useCompleteOnboarding } from "./api/use-complete-onboarding";
 import { WelcomeStep } from "./steps/WelcomeStep";
 import { ProfileStep } from "./steps/ProfileStep";
+import { WorkingHoursStep } from "./steps/WorkingHoursStep";
 import { GoogleConnectStep } from "./steps/GoogleConnectStep";
 
 const STEPS = [
   { key: "welcome", label: "Welcome" },
   { key: "profile", label: "Profile" },
+  { key: "hours", label: "Working hours" },
   { key: "google", label: "Calendar" },
 ] as const;
 
@@ -110,7 +112,8 @@ export default function OnboardingPage() {
           <CardContent className="p-6">
             {step === 0 && <WelcomeStep />}
             {step === 1 && <ProfileStep />}
-            {step === 2 && <GoogleConnectStep />}
+            {step === 2 && <WorkingHoursStep />}
+            {step === 3 && <GoogleConnectStep />}
           </CardContent>
         </Card>
 

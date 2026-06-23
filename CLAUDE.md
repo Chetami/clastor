@@ -49,7 +49,12 @@ cd backend
 npm run dev          # Start with tsx watch
 npm run build        # TypeScript compile to dist/
 npm start            # Run compiled dist/server.js
+npm test             # Run unit tests once (Vitest)
+npm run test:watch   # Vitest in watch mode
 ```
+
+Tests live in `backend/test/**/*.test.ts` (outside `src/` so `tsc` doesn't
+emit them into `dist/`). Vitest config is `backend/vitest.config.ts`.
 
 ### Frontend Only
 ```bash

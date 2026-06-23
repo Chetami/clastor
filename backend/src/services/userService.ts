@@ -7,6 +7,7 @@ import {
   WorkingHours,
 } from "@examify-tms/interfaces";
 import { generateToken } from "../utils/jwt";
+import { parse, isValid } from "date-fns";
 import admin from "firebase-admin";
 
 /** The seven weekday keys stored on WorkingHours, Monday-first. */
@@ -20,14 +21,17 @@ const WORKING_DAYS: (keyof WorkingHours)[] = [
   "sunday",
 ];
 
-const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+// Arbitrary reference date; only hour/minute components are read, and both
+// ends of a window share it, so the actual day is irrelevant.
+const TIME_REFERENCE = new Date(2000, 0, 1);
 
 /** Minutes since midnight for an "HH:mm" string (NaN if malformed). */
 function toMinutes(hhmm: string): number {
-  const m = TIME_RE.exec(hhmm);
-  if (!m) return Number.NaN;
-  const [, hh, mm] = m;
-  return Number(hh) * 60 + Number(mm);
+  // Require the canonical "HH:mm" shape; date-fns validates the ranges.
+  if (!/^\d{2}:\d{2}$/.test(hhmm)) return Number.NaN;
+  const parsed = parse(hhmm, "HH:mm", TIME_REFERENCE);
+  if (!isValid(parsed)) return Number.NaN;
+  return parsed.getHours() * 60 + parsed.getMinutes();
 }
 
 /**
