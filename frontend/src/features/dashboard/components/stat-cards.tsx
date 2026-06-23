@@ -1,7 +1,7 @@
 import {
   Clock,
   DollarSign,
-  Users,
+  Wallet,
   TrendingUp,
   TrendingDown,
   Minus,
@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 import { useUserCurrency } from "@/lib/use-currency";
 import type { DashboardPeriod, DashboardSummaryResponse } from "@examify-tms/interfaces";
-import { formatCurrency, formatHours, deltaPercent, previousPeriodLabel } from "../lib";
+import { formatCurrency, formatHours, deltaPercent, previousPeriodLabel, nextPeriodLabel } from "../lib";
 
 type TileProps = {
   icon: React.ReactNode;
@@ -72,9 +72,13 @@ function formatRate(rate: number | null): string {
 export function StatCards({
   summary,
   period,
+  expectedIncome,
+  plannedLessonCount,
 }: {
   summary: DashboardSummaryResponse;
   period: DashboardPeriod;
+  expectedIncome: number;
+  plannedLessonCount: number;
 }) {
   const currency = useUserCurrency();
   const hoursDelta = deltaPercent(summary.hoursWorked, summary.previousHoursWorked);
@@ -154,18 +158,19 @@ export function StatCards({
         <p>{formatRate(summary.attendanceRate)} attendance</p>
       </Tile>
 
-      {/* Roster */}
+      {/* Expected income */}
       <Tile
-        icon={<Users className="h-4 w-4" />}
-        label="Active students"
-        value={String(summary.studentCount)}
+        icon={<Wallet className="h-4 w-4" />}
+        label="Expected income"
+        value={formatCurrency(expectedIncome, currency)}
       >
-        {summary.unbilledLessons > 0 ? (
-          <p className="font-medium text-amber-600 dark:text-amber-500">
-            {summary.unbilledLessons} unbilled lessons
+        {plannedLessonCount > 0 ? (
+          <p>
+            {plannedLessonCount} planned{" "}
+            {plannedLessonCount === 1 ? "lesson" : "lessons"} {nextPeriodLabel(period).toLowerCase()}
           </p>
         ) : (
-          <p>All lessons billed</p>
+          <p>Nothing planned {nextPeriodLabel(period).toLowerCase()}</p>
         )}
       </Tile>
     </div>

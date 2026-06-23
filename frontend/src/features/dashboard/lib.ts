@@ -3,6 +3,7 @@ import type {
   DashboardPeriod,
   DashboardSeriesPoint,
   LessonResponse,
+  StudentResponse,
 } from "@examify-tms/interfaces";
 
 /** Human label for the immediately preceding period, used in sub-lines. */
@@ -59,7 +60,93 @@ export function deltaPercent(current: number, previous: number): number | null {
   return ((current - previous) / previous) * 100;
 }
 
-/** Lessons happening right now: start <= now <= end. */
+/**
+ * The [start, end) window (ms since epoch) for the NEXT period after the
+ * selected one — used for forward-looking "expected income". Anchored to UTC
+ * calendar boundaries:
+ * - week: next calendar week, Monday → Sunday
+ * - month: next calendar month
+ * - six_months: the next 6 calendar months
+ * - year: next calendar year
+ */
+export function nextPeriodRange(
+  period: DashboardPeriod,
+  now: Date = new Date(),
+): { start: number; end: number } {
+  const year = now.getUTCFullYear();
+  const month = now.getUTCMonth();
+  const day = now.getUTCDate();
+  if (period === "week") {
+    const todayMs = Date.UTC(year, month, day);
+    const dow = new Date(todayMs).getUTCDay(); // 0 = Sun .. 6 = Sat
+    const diffToMonday = dow === 0 ? -6 : 1 - dow;
+    const thisMonday = Date.UTC(year, month, day + diffToMonday);
+    const start = thisMonday + 7 * 86_400_000;
+    const end = start + 7 * 86_400_000;
+    return { start, end };
+  }
+  if (period === "month") {
+    return { start: Date.UTC(year, month + 1, 1), end: Date.UTC(year, month + 2, 1) };
+  }
+  if (period === "six_months") {
+    return { start: Date.UTC(year, month + 1, 1), end: Date.UTC(year, month + 7, 1) };
+  }
+  return { start: Date.UTC(year + 1, 0, 1), end: Date.UTC(year + 2, 0, 1) };
+}
+
+/** Human label for the next period, e.g. "Next week", "Next month". */
+export function nextPeriodLabel(period: DashboardPeriod): string {
+  switch (period) {
+    case "week":
+      return "Next week";
+    case "month":
+      return "Next month";
+    case "six_months":
+      return "Next 6 months";
+    case "year":
+      return "Next year";
+  }
+}
+
+/**
+ * Planned (non-cancelled) lessons that fall within the NEXT period's window.
+ */
+export function plannedLessons(
+  lessons: LessonResponse[],
+  period: DashboardPeriod,
+  now: Date = new Date(),
+): LessonResponse[] {
+  const { start, end } = nextPeriodRange(period, now);
+  return lessons.filter((l) => {
+    if (l.isCancelled) return false;
+    const t = new Date(l.startDateTime).getTime();
+    return t >= start && t < end;
+  });
+}
+
+/**
+ * Expected income for the next period, derived from its planned lessons and
+ * each student's expectedAmount / rateType. Hourly rates bill per hour
+ * (durationMinutes / 60), per_lesson rates bill a flat unit per lesson.
+ */
+export function expectedIncomeFromLessons(
+  lessons: LessonResponse[],
+  students: Record<string, StudentResponse>,
+  period: DashboardPeriod,
+  now: Date = new Date(),
+): number {
+  return sum(
+    plannedLessons(lessons, period, now).map((l) => {
+      const student = students[l.studentId];
+      if (!student) return 0;
+      const quantity =
+        student.rateType === "hourly"
+          ? Math.round((l.durationMinutes / 60) * 100) / 100
+          : 1;
+      return student.expectedAmount * quantity;
+    }),
+  );
+}
 export function findCurrentLesson(
   lessons: LessonResponse[],
 ): LessonResponse | undefined {

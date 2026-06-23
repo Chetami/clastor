@@ -20,7 +20,7 @@ import {
   UpcomingLessonsSkeleton,
   TodoLessonsSkeleton,
 } from "./components/skeletons";
-import { findCurrentLesson, todoLessons, nextLesson } from "./lib";
+import { findCurrentLesson, todoLessons, nextLesson, expectedIncomeFromLessons, plannedLessons } from "./lib";
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -36,9 +36,23 @@ export default function Dashboard() {
     return map;
   }, [students]);
 
+  const studentMap = useMemo(() => {
+    const map: Record<string, (typeof students)[number]> = {};
+    for (const s of students) map[s.id] = s;
+    return map;
+  }, [students]);
+
   const currentLesson = useMemo(() => findCurrentLesson(lessons), [lessons]);
   const todos = useMemo(() => todoLessons(lessons), [lessons]);
   const upcoming = useMemo(() => nextLesson(lessons), [lessons]);
+  const expectedIncome = useMemo(
+    () => expectedIncomeFromLessons(lessons, studentMap, period),
+    [lessons, studentMap, period],
+  );
+  const plannedCount = useMemo(
+    () => plannedLessons(lessons, period).length,
+    [lessons, period],
+  );
 
   return (
     <div className="space-y-6">
@@ -67,7 +81,12 @@ export default function Dashboard() {
       {summaryLoading || !summary ? (
         <StatCardsSkeleton />
       ) : (
-        <StatCards summary={summary} period={period} />
+        <StatCards
+          summary={summary}
+          period={period}
+          expectedIncome={expectedIncome}
+          plannedLessonCount={plannedCount}
+        />
       )}
 
       {/* Two independent columns (rows need not align).
