@@ -1,7 +1,44 @@
+import { parse } from "csv-parse/sync";
 import { getFirebaseFirestore } from "../config/firebase";
-import { CreateStudentRequest, UpdateStudentRequest, Student } from "@examify-tms/interfaces";
+import {
+  CreateStudentRequest,
+  UpdateStudentRequest,
+  Student,
+  StudentImportSummary,
+  Subject,
+} from "@examify-tms/interfaces";
+import { getUserFromFirestore } from "./userService";
 import admin from "firebase-admin";
 import crypto from "crypto";
+
+// Simple email sanity check (RFC 5322 is overkill for import validation).
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/**
+ * Resolve a `;`-separated list of subject names to subject ids against the
+ * tutor's catalogue (case-insensitive, trimmed). Returns the matched ids and
+ * the names that could not be resolved so callers can report them.
+ */
+function resolveSubjectIdsByName(
+  raw: string,
+  subjects: Subject[]
+): { ids: string[]; unresolved: string[] } {
+  const lowerNameToId = new Map<string, string>();
+  for (const s of subjects) {
+    lowerNameToId.set(s.name.trim().toLowerCase(), s.id);
+  }
+  const ids: string[] = [];
+  const unresolved: string[] = [];
+  for (const name of raw.split(";").map((n) => n.trim()).filter(Boolean)) {
+    const id = lowerNameToId.get(name.toLowerCase());
+    if (id) {
+      if (!ids.includes(id)) ids.push(id);
+    } else {
+      unresolved.push(name);
+    }
+  }
+  return { ids, unresolved };
+}
 
 /**
  * Generate a unique student ID with prefix
@@ -308,4 +345,183 @@ export async function updateStudentInFirestore(
     console.error("Failed to update student in Firestore:", error);
     throw new Error("Failed to update student");
   }
+}
+
+/**
+ * Parse a student CSV and create valid rows in Firestore. Rows that fail
+ * validation (missing/invalid required fields, unresolved subjects) or that
+ * duplicate an existing student's email for the importing tutor are skipped
+ * and reported in the returned summary.
+ *
+ * The importing user's subject catalogue is used to map subject names → ids,
+ * and newly created students are owned by that user (tutorId = userId).
+ *
+ * @param csvContent - Raw CSV text (with a header row).
+ * @param userId - ID of the authenticated user performing the import.
+ * @returns Summary of created / skipped rows with per-row error reasons.
+ */
+export async function importStudentsFromCsv(
+  csvContent: string,
+  userId: string
+): Promise<StudentImportSummary> {
+  // Load the importing tutor's subject catalogue for name → id resolution.
+  const user = await getUserFromFirestore(userId);
+  const subjects = user.subjects ?? [];
+
+  // Load existing students so we can skip duplicate emails for this tutor.
+  const existing = await listStudentsFromFirestore(userId, "tutor");
+  const existingEmails = new Set(
+    existing.map((s) => s.email.trim().toLowerCase())
+  );
+
+  let records: Record<string, string>[];
+  try {
+    records = parse(csvContent, {
+      // Normalize headers (trim + lowercase) so lookups are case/space
+      // insensitive, e.g. "Parent Email" / "Name" → "parentemail" / "name".
+      columns: (header) => header.map((h) => h.trim().toLowerCase()),
+      trim: true,
+      bom: true,
+      skip_empty_lines: true,
+      relax_column_count: true,
+    }) as Record<string, string>[];
+  } catch (error) {
+    console.error("Failed to parse student CSV:", error);
+    throw new Error(
+      "Failed to parse CSV: " +
+        (error instanceof Error ? error.message : "invalid format")
+    );
+  }
+
+  const errors: { row: number; message: string }[] = [];
+  const pending: { row: number; name: string; request: CreateStudentRequest }[] = [];
+
+  // Track emails seen within this batch so intra-file duplicates are skipped.
+  const seenEmails = new Set<string>();
+
+  // 1. Validate every row synchronously, collecting skips and valid requests.
+  records.forEach((row, index) => {
+    const rowNumber = index + 1; // 1-based, excluding header
+
+    const get = (key: string): string => {
+      const value = row[key.toLowerCase()];
+      return typeof value === "string" ? value.trim() : "";
+    };
+
+    const skip = (message: string) => {
+      errors.push({ row: rowNumber, message });
+    };
+
+    const name = get("name");
+    const email = get("email");
+
+    if (!name) {
+      skip("Missing name");
+      return;
+    }
+    if (!email) {
+      skip(`Row ${rowNumber} (${name}): missing email`);
+      return;
+    }
+    if (!EMAIL_RE.test(email)) {
+      skip(`Row ${rowNumber} (${name}): invalid email "${email}"`);
+      return;
+    }
+
+    const expectedAmountRaw = get("expectedAmount");
+    const expectedAmount = Number(expectedAmountRaw);
+    if (expectedAmountRaw === "" || Number.isNaN(expectedAmount) || expectedAmount < 0) {
+      skip(`Row ${rowNumber} (${name}): invalid expectedAmount "${expectedAmountRaw}"`);
+      return;
+    }
+
+    const frequencyRaw = get("frequencyPerWeek");
+    const frequencyPerWeek = Number(frequencyRaw);
+    if (
+      frequencyRaw === "" ||
+      !Number.isInteger(frequencyPerWeek) ||
+      frequencyPerWeek < 0
+    ) {
+      skip(`Row ${rowNumber} (${name}): frequencyPerWeek must be a whole number (got "${frequencyRaw}")`);
+      return;
+    }
+
+    const rateType = get("rateType").toLowerCase();
+    if (rateType !== "hourly" && rateType !== "per_lesson") {
+      skip(`Row ${rowNumber} (${name}): rateType must be "hourly" or "per_lesson" (got "${rateType || "(empty)"}")`);
+      return;
+    }
+
+    const statusRaw = get("status").toLowerCase();
+    const status: "active" | "past" =
+      statusRaw === "past" ? "past" : "active";
+
+    const { ids, unresolved } = resolveSubjectIdsByName(get("subjects"), subjects);
+    if (unresolved.length > 0) {
+      skip(
+        `Row ${rowNumber} (${name}): unknown subject(s): ${unresolved.join(", ")}`
+      );
+      return;
+    }
+    if (ids.length === 0) {
+      skip(`Row ${rowNumber} (${name}): at least one subject is required`);
+      return;
+    }
+
+    const normalizedEmail = email.toLowerCase();
+    if (existingEmails.has(normalizedEmail)) {
+      skip(`Row ${rowNumber} (${name}): duplicate email "${email}" (already exists)`);
+      return;
+    }
+    if (seenEmails.has(normalizedEmail)) {
+      skip(`Row ${rowNumber} (${name}): duplicate email "${email}" (already in this file)`);
+      return;
+    }
+    seenEmails.add(normalizedEmail);
+
+    pending.push({
+      row: rowNumber,
+      name,
+      request: {
+        name,
+        email,
+        phone: get("phone") || null,
+        parentEmail: get("parentEmail") || null,
+        billingEmail: null,
+        subjectIds: ids,
+        expectedAmount,
+        rateType: rateType as "hourly" | "per_lesson",
+        frequencyPerWeek,
+        status,
+        timezone: get("timezone") || null,
+        notes: get("notes") || null,
+      },
+    });
+  });
+
+  // 2. Persist all valid rows, then tally successes / failures.
+  const results = await Promise.allSettled(
+    pending.map(({ request }) => createStudentInFirestore(request, userId))
+  );
+
+  let created = 0;
+  results.forEach((result, index) => {
+    const { row, name } = pending[index];
+    if (result.status === "fulfilled") {
+      created += 1;
+    } else {
+      console.error(`Import row ${row} (${name}) failed:`, result.reason);
+      errors.push({
+        row,
+        message: `Row ${row} (${name}): failed to create`,
+      });
+    }
+  });
+
+  return {
+    total: records.length,
+    created,
+    skipped: errors.length,
+    errors,
+  };
 }

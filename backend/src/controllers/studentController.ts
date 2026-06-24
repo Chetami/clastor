@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
-import { createStudentInFirestore, listStudentsFromFirestore, getStudentByIdFromFirestore, updateStudentInFirestore } from "../services/studentService";
-import { CreateStudentRequest, UpdateStudentRequest, StudentResponse, StudentListResponse, ApiError } from "@examify-tms/interfaces";
+import { createStudentInFirestore, listStudentsFromFirestore, getStudentByIdFromFirestore, updateStudentInFirestore, importStudentsFromCsv } from "../services/studentService";
+import { CreateStudentRequest, UpdateStudentRequest, StudentResponse, StudentListResponse, StudentImportSummary, ApiError } from "@examify-tms/interfaces";
 import { canViewStudent, canEditStudent } from "../permissions/studentPermissions";
 
 /**
@@ -201,6 +201,43 @@ export async function updateStudent(
   } catch (error) {
     console.error("Update student failed:", error);
     const message = error instanceof Error ? error.message : "Failed to update student";
+    res.status(500).json({ message });
+  }
+}
+
+/**
+ * Import students controller
+ * Parses an uploaded CSV and bulk-creates valid student records linked to the
+ * authenticated tutor. Returns a summary of created / skipped rows.
+ */
+export async function importStudents(
+  req: Request,
+  res: Response<StudentImportSummary | ApiError>
+): Promise<void> {
+  try {
+    if (!req.user) {
+      res.status(401).json({ message: "Unauthorized" });
+      return;
+    }
+
+    const file = (req as Request).file;
+    if (!file) {
+      res.status(400).json({ message: "No CSV file uploaded" });
+      return;
+    }
+
+    const csvContent = file.buffer.toString("utf8");
+    if (csvContent.trim().length === 0) {
+      res.status(400).json({ message: "CSV file is empty" });
+      return;
+    }
+
+    const summary = await importStudentsFromCsv(csvContent, req.user.uid);
+
+    res.status(200).json(summary);
+  } catch (error) {
+    console.error("Import students failed:", error);
+    const message = error instanceof Error ? error.message : "Failed to import students";
     res.status(500).json({ message });
   }
 }

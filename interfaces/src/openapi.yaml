@@ -73,6 +73,8 @@ components:
       $ref: './schemas/students/res/StudentResponse.yaml'
     StudentListResponse:
       $ref: './schemas/students/res/StudentListResponse.yaml'
+    StudentImportSummary:
+      $ref: './schemas/students/res/StudentImportSummary.yaml'
     # Legacy Student Schema (kept for compatibility)
     Student:
       $ref: './schemas/students/Student.yaml'

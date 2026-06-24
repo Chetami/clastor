@@ -1,4 +1,4 @@
-import type { Student, StudentResponse } from "@examify-tms/interfaces";
+import type { Student, StudentResponse, Subject } from "@examify-tms/interfaces";
 import type { StudentFormData } from "./student-schema";
 
 export const rateTypeLabel: Record<Student["rateType"], string> = {
@@ -84,6 +84,108 @@ export function studentToFormValues(
     timezone: student.timezone ?? "",
     notes: student.notes ?? "",
   };
+}
+
+// ---------------------------------------------------------------------------
+// CSV import / export helpers
+//
+// Column order is shared by export, the downloadable template and (implicitly)
+// the backend parser (which is header-driven, so order is flexible). The
+// `subjects` column uses `;`-separated display names so the file stays
+// human-readable and round-trips through the backend name→id resolver.
+// ---------------------------------------------------------------------------
+
+export const STUDENT_CSV_COLUMNS = [
+  "name",
+  "email",
+  "phone",
+  "parentEmail",
+  "subjects",
+  "expectedAmount",
+  "rateType",
+  "frequencyPerWeek",
+  "status",
+  "timezone",
+  "notes",
+] as const;
+
+/** Quote a CSV field when it contains commas, quotes, semicolons or newlines. */
+export function escapeCsvField(value: string): string {
+  if (/[",;\n\r]/.test(value)) {
+    return `"${value.replace(/"/g, '""')}"`;
+  }
+  return value;
+}
+
+/** Map a student's subject ids to `;`-joined display names for export. */
+function studentSubjectsToNames(
+  subjectIds: string[] | undefined,
+  subjects: Subject[],
+): string {
+  const byId = new Map(subjects.map((s) => [s.id, s.name]));
+  return (subjectIds ?? [])
+    .map((id) => byId.get(id))
+    .filter((n): n is string => !!n)
+    .join("; ");
+}
+
+/** Serialize a list of students to CSV text (including the header row). */
+export function studentsToCsv(
+  students: StudentResponse[],
+  subjects: Subject[],
+): string {
+  const header = STUDENT_CSV_COLUMNS.map(escapeCsvField).join(",");
+  const rows = students.map((s) =>
+    [
+      s.name,
+      s.email,
+      s.phone ?? "",
+      s.parentEmail ?? "",
+      studentSubjectsToNames(s.subjectIds, subjects),
+      String(s.expectedAmount),
+      s.rateType,
+      String(s.frequencyPerWeek),
+      s.status,
+      s.timezone ?? "",
+      s.notes ?? "",
+    ]
+      .map(escapeCsvField)
+      .join(","),
+  );
+  return [header, ...rows].join("\n");
+}
+
+/** A CSV with only the header + one example row, to seed first-time imports. */
+export const STUDENT_CSV_TEMPLATE = [
+  STUDENT_CSV_COLUMNS.join(","),
+  [
+    "Jane Doe",
+    "jane.doe@example.com",
+    "+1 555 0100",
+    "parent.doe@example.com",
+    "Mathematics; Physics",
+    "45",
+    "hourly",
+    "2",
+    "active",
+    "America/New_York",
+    "Prefers morning sessions",
+  ]
+    .map(escapeCsvField)
+    .join(","),
+].join("\n");
+
+/** Trigger a browser download of the given CSV text. */
+export function downloadCsv(filename: string, csv: string): void {
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
 }
 
 let nextId = 100;

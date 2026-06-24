@@ -2,20 +2,25 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ChevronRight,
+  Download,
+  FileSpreadsheet,
   Mail,
   MoreHorizontal,
   Pencil,
   Plus,
   Search,
+  Upload,
   Users,
 } from "lucide-react";
-import type { StudentResponse } from "@examify-tms/interfaces";
+import { toast } from "sonner";
+import type { StudentImportSummary, StudentResponse } from "@examify-tms/interfaces";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -36,14 +41,17 @@ import {
 } from "@/components/ui/select";
 import { StudentForm } from "./StudentForm";
 import type { StudentFormData } from "./student-schema";
-import { useCreateStudent, useListStudents } from "./api";
-import { useSubjectMap } from "@/lib/subjects";
+import { useCreateStudent, useImportStudents, useListStudents } from "./api";
+import { useSubjectMap, useSubjects } from "@/lib/subjects";
 import {
   compactCurrency,
+  downloadCsv,
   formatCurrency,
   formatFrequency,
   getInitials,
   rateUnit,
+  STUDENT_CSV_TEMPLATE,
+  studentsToCsv,
   studentToFormValues,
 } from "./student-utils";
 import { useStudentsDebts } from "./invoices-api";
@@ -74,6 +82,7 @@ export default function Students() {
   const currency = useUserCurrency();
   const { data: students = [], isLoading, error } = useListStudents();
   const subjectMap = useSubjectMap();
+  const subjects = useSubjects();
   const studentIds = students.map((s) => s.id);
   const debtQueries = useStudentsDebts(studentIds);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("active");
@@ -81,8 +90,13 @@ export default function Students() {
   const [sortKey, setSortKey] = useState<SortKey>("name-asc");
   const [addOpen, setAddOpen] = useState(false);
   const [editing, setEditing] = useState<StudentResponse | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importResult, setImportResult] =
+    useState<StudentImportSummary | null>(null);
 
   const createStudent = useCreateStudent();
+  const importStudents = useImportStudents();
 
   const activeCount = students.filter((s) => s.status === "active").length;
   const pastCount = students.filter((s) => s.status === "past").length;
@@ -173,6 +187,45 @@ export default function Students() {
     setEditing(null);
   }
 
+  function handleExport() {
+    if (students.length === 0) {
+      toast.error("There are no students to export.");
+      return;
+    }
+    const csv = studentsToCsv(students, subjects);
+    const date = new Date().toISOString().slice(0, 10);
+    downloadCsv(`students-${date}.csv`, csv);
+    toast.success(`Exported ${students.length} student${students.length === 1 ? "" : "s"}.`);
+  }
+
+  function handleDownloadTemplate() {
+    downloadCsv("students-template.csv", STUDENT_CSV_TEMPLATE);
+  }
+
+  function openImport() {
+    setImportFile(null);
+    setImportResult(null);
+    setImportOpen(true);
+  }
+
+  async function handleImport() {
+    if (!importFile) return;
+    try {
+      const summary = await importStudents.mutateAsync(importFile);
+      setImportResult(summary);
+      if (summary.created > 0) {
+        toast.success(
+          `Imported ${summary.created} student${summary.created === 1 ? "" : "s"}.`,
+        );
+      }
+    } catch (error) {
+      console.error("Failed to import students:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Failed to import students.",
+      );
+    }
+  }
+
   return (
     <div className="space-y-6">
       {isLoading && (
@@ -238,6 +291,28 @@ export default function Students() {
                   ))}
                 </SelectContent>
               </Select>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" data-tour="csv-actions">
+                    <FileSpreadsheet className="h-4 w-4" />
+                    CSV
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onSelect={openImport}>
+                    <Upload className="h-4 w-4" />
+                    Import from CSV…
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={handleExport}>
+                    <Download className="h-4 w-4" />
+                    Export to CSV
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={handleDownloadTemplate}>
+                    <FileSpreadsheet className="h-4 w-4" />
+                    Download template
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               <Dialog open={addOpen} onOpenChange={setAddOpen}>
                 <DialogTrigger asChild>
                   <Button
@@ -407,6 +482,129 @@ export default function Students() {
               onSubmit={handleEdit}
             />
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={importOpen}
+        onOpenChange={(open) => {
+          setImportOpen(open);
+          if (!open) {
+            setImportFile(null);
+            setImportResult(null);
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Import students from CSV</DialogTitle>
+            <DialogDescription>
+              Upload a CSV file with a header row. Subject names must match your
+              subject catalogue and are separated by semicolons (e.g.
+              <span className="font-medium"> Mathematics; Physics</span>).
+              Existing emails are skipped.
+            </DialogDescription>
+          </DialogHeader>
+
+          {importResult ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-3 gap-3 text-center">
+                <div className="rounded-md border p-3">
+                  <p className="text-2xl font-semibold">
+                    {importResult.total}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Rows</p>
+                </div>
+                <div className="rounded-md border p-3">
+                  <p className="text-2xl font-semibold text-emerald-600 dark:text-emerald-400">
+                    {importResult.created}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Created</p>
+                </div>
+                <div className="rounded-md border p-3">
+                  <p className="text-2xl font-semibold text-destructive">
+                    {importResult.skipped}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Skipped</p>
+                </div>
+              </div>
+              {importResult.errors.length > 0 && (
+                <div className="max-h-48 overflow-y-auto rounded-md border">
+                  <ul className="divide-y text-sm">
+                    {importResult.errors.map((e, i) => (
+                      <li
+                        key={i}
+                        className="flex items-start gap-2 px-3 py-2"
+                      >
+                        <span className="shrink-0 rounded bg-muted px-1.5 text-xs text-muted-foreground">
+                          row {e.row}
+                        </span>
+                        <span className="text-muted-foreground">
+                          {e.message}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex flex-col gap-2">
+                <Input
+                  type="file"
+                  accept=".csv,text/csv,text/plain"
+                  onChange={(e) =>
+                    setImportFile(e.target.files?.[0] ?? null)
+                  }
+                />
+                {importFile && (
+                  <p className="text-xs text-muted-foreground">
+                    Selected: {importFile.name}
+                  </p>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={handleDownloadTemplate}
+                className="text-xs text-primary underline-offset-2 hover:underline"
+              >
+                Download a CSV template
+              </button>
+            </div>
+          )}
+
+          <DialogFooter>
+            {importResult ? (
+              <Button
+                type="button"
+                onClick={() => {
+                  setImportOpen(false);
+                  setImportFile(null);
+                  setImportResult(null);
+                }}
+              >
+                Done
+              </Button>
+            ) : (
+              <>
+                <Button
+                  variant="outline"
+                  type="button"
+                  onClick={() => setImportOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  disabled={!importFile || importStudents.isPending}
+                  onClick={handleImport}
+                >
+                  {importStudents.isPending ? "Importing…" : "Import"}
+                </Button>
+              </>
+            )}
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

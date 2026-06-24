@@ -4,6 +4,7 @@ import type {
   UpdateStudentRequest,
   StudentListResponse,
   StudentResponse,
+  StudentImportSummary,
 } from "@examify-tms/interfaces";
 
 export async function createStudentRequest(
@@ -28,5 +29,18 @@ export async function listStudentsRequest(): Promise<StudentListResponse> {
 
 export async function getStudentRequest(id: string): Promise<StudentResponse> {
   const response = await api.get<StudentResponse>(`/api/students/id/${id}`);
+  return response.data;
+}
+
+export async function importStudentsRequest(
+  file: File,
+): Promise<StudentImportSummary> {
+  const form = new FormData();
+  form.append("file", file);
+  const response = await api.post<StudentImportSummary>(
+    "/api/students/import",
+    form,
+    { headers: { "Content-Type": "multipart/form-data" } },
+  );
   return response.data;
 }
