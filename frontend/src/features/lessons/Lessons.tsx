@@ -160,7 +160,7 @@ export default function Lessons() {
 
       {!isLoading &&
         !error &&
-        filter === "all" &&
+        filter === "upcoming" &&
         search.trim().length === 0 && (
           <ImportantLessons lessons={lessons} studentMap={studentMap} />
         )}
