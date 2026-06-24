@@ -83,6 +83,11 @@ export default function Settings() {
           </Button>
         </CardContent>
       </Card>
+
+      {/* Build identifier for debugging — which version (commit) is live. */}
+      <p className="pt-1 text-center text-xs text-muted-foreground/60">
+        v{__APP_VERSION__}
+      </p>
     </div>
   );
 }
