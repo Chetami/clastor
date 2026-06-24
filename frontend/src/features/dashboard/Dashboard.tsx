@@ -14,7 +14,6 @@ import { PeriodSelector } from "./components/period-selector";
 import { StatCards } from "./components/stat-cards";
 import { HoursChart } from "./components/hours-chart";
 import { IncomeChart } from "./components/income-chart";
-import { UpcomingLessons } from "./components/upcoming-lessons";
 import { NextLesson } from "./components/next-lesson";
 import { CurrentLesson } from "./components/current-lesson";
 import { TodoLessons } from "./components/todo-lessons";
@@ -23,7 +22,6 @@ import {
   StatCardsSkeleton,
   NextLessonSkeleton,
   ChartSkeleton,
-  UpcomingLessonsSkeleton,
   TodoLessonsSkeleton,
 } from "./components/skeletons";
 import {
@@ -165,13 +163,14 @@ export default function Dashboard() {
             />
           )}
           <QuickActions />
+
           {lessonsLoading ? (
-            <UpcomingLessonsSkeleton fill />
+            <TodoLessonsSkeleton />
           ) : (
-            <UpcomingLessons
-              lessons={lessons}
+            <TodoLessons
+              lessons={todos}
               studentNames={studentNames}
-              fill
+              onConfirm={handleTodoConfirm}
             />
           )}
         </div>
@@ -186,15 +185,6 @@ export default function Dashboard() {
             <ChartSkeleton />
           ) : (
             <IncomeChart summary={summary} />
-          )}
-          {lessonsLoading ? (
-            <TodoLessonsSkeleton />
-          ) : (
-            <TodoLessons
-              lessons={todos}
-              studentNames={studentNames}
-              onConfirm={handleTodoConfirm}
-            />
           )}
         </div>
       </div>
