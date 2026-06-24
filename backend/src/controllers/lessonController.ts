@@ -48,7 +48,7 @@ function toLessonResponse(lesson: Lesson): LessonResponse {
   return {
     id: lesson.id,
     studentId: lesson.studentId,
-    subject: lesson.subject,
+    subject: lesson.subject ?? null,
     startDateTime: toIso(lesson.startDateTime),
     durationMinutes: lesson.durationMinutes,
     location: lesson.location ?? null,
@@ -489,7 +489,7 @@ export async function notifyStudent(
       studentName: student.name,
       tutorName: tutor.name,
       tutorEmail: tutor.email,
-      subject: lesson.subject,
+      subject: lesson.subject ?? null,
       startDateTime: start,
       durationMinutes: lesson.durationMinutes,
       location: lesson.location,

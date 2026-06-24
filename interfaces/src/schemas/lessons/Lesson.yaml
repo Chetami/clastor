@@ -3,7 +3,6 @@ required:
   - id
   - tutorId
   - studentId
-  - subject
   - startDateTime
   - durationMinutes
   - acceptanceStatus
@@ -29,6 +28,7 @@ properties:
     example: student_123
   subject:
     type: string
+    nullable: true
     description: Subject of the lesson
     example: Mathematics
   startDateTime:

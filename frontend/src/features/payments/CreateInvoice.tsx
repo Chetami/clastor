@@ -1,12 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  ArrowLeft,
-  Check,
-  ChevronDown,
-  DollarSign,
-  Lock,
-} from "lucide-react";
+import { ArrowLeft, Check, ChevronDown, DollarSign, Lock } from "lucide-react";
 import type { LessonResponse } from "@examify-tms/interfaces";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -99,7 +93,7 @@ export default function CreateInvoice() {
     studentId ? { studentId, unpaid: true } : undefined,
   );
   const unpaidLessons = useMemo(
-    () => (studentId ? lessonsResult.data ?? [] : []),
+    () => (studentId ? (lessonsResult.data ?? []) : []),
     [studentId, lessonsResult.data],
   );
   const lessonsLoading = studentId ? lessonsResult.isLoading : false;
@@ -165,7 +159,8 @@ export default function CreateInvoice() {
     [lineItems],
   );
 
-  const resolvedBillingEmail = billingEmail || selectedStudent?.billingEmail || "";
+  const resolvedBillingEmail =
+    billingEmail || selectedStudent?.billingEmail || "";
 
   function toggleLesson(lessonId: string) {
     setSelectedLessonIds((prev) => {
@@ -302,7 +297,9 @@ export default function CreateInvoice() {
                     <div>
                       <span className="text-muted-foreground">Rate:</span>{" "}
                       {formatCurrency(selectedStudent.expectedAmount, currency)}
-                      {selectedStudent.rateType === "hourly" ? "/hr" : "/lesson"}
+                      {selectedStudent.rateType === "hourly"
+                        ? "/hr"
+                        : "/lesson"}
                     </div>
                     <div>
                       <span className="text-muted-foreground">
@@ -332,7 +329,8 @@ export default function CreateInvoice() {
                 <p className="py-6 text-center text-sm text-muted-foreground">
                   Loading unpaid lessons...
                 </p>
-              ) : completedLessons.length === 0 && upcomingLessons.length === 0 ? (
+              ) : completedLessons.length === 0 &&
+                upcomingLessons.length === 0 ? (
                 <p className="py-6 text-center text-sm text-muted-foreground">
                   No unpaid lessons for this student.
                 </p>
@@ -459,7 +457,9 @@ export default function CreateInvoice() {
                       <TableHeader>
                         <TableRow className="bg-muted/30 hover:bg-muted/30">
                           <TableHead>Description</TableHead>
-                          <TableHead className="text-right">Hours/Qty</TableHead>
+                          <TableHead className="text-right">
+                            Hours/Qty
+                          </TableHead>
                           <TableHead className="text-right">Rate</TableHead>
                           <TableHead className="text-right">Amount</TableHead>
                         </TableRow>
@@ -569,7 +569,6 @@ export default function CreateInvoice() {
                   <SelectContent>
                     <SelectItem value="cash">Cash</SelectItem>
                     <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
-                    <SelectItem value="card">Card</SelectItem>
                     <SelectItem value="stripe">Stripe</SelectItem>
                   </SelectContent>
                 </Select>

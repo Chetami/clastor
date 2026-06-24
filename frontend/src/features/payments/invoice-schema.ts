@@ -1,11 +1,6 @@
 import { z } from "zod";
 
-export const paymentMethodSchema = z.enum([
-  "cash",
-  "bank_transfer",
-  "card",
-  "stripe",
-]);
+export const paymentMethodSchema = z.enum(["cash", "bank_transfer", "stripe"]);
 
 export const rateTypeSchema = z.enum(["hourly", "per_lesson"]);
 

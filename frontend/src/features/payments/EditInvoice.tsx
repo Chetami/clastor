@@ -1,11 +1,6 @@
 import { useMemo, useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import {
-  ArrowLeft,
-  Check,
-  DollarSign,
-  Loader2,
-} from "lucide-react";
+import { ArrowLeft, Check, DollarSign, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
@@ -40,15 +35,22 @@ interface LineItemDraft {
 export default function EditInvoice() {
   const navigate = useNavigate();
   const { invoiceId } = useParams<{ invoiceId: string }>();
-  const { data: invoice, isLoading: isLoadingInvoice, error: invoiceError } = useGetInvoice(invoiceId ?? "");
+  const {
+    data: invoice,
+    isLoading: isLoadingInvoice,
+    error: invoiceError,
+  } = useGetInvoice(invoiceId ?? "");
   const { data: students = [] } = useListStudents();
   const updateInvoice = useUpdateInvoice();
   const currency = invoice?.currency ?? "AUD";
 
-  const [lineItemAmounts, setLineItemAmounts] = useState<Record<string, number>>({});
+  const [lineItemAmounts, setLineItemAmounts] = useState<
+    Record<string, number>
+  >({});
   const [dueDate, setDueDate] = useState("");
-  const [paymentMethod, setPaymentMethod] =
-    useState<"cash" | "bank_transfer" | "card" | "stripe">("bank_transfer");
+  const [paymentMethod, setPaymentMethod] = useState<
+    "cash" | "bank_transfer" | "stripe"
+  >("bank_transfer");
   const [notes, setNotes] = useState("");
 
   const selectedStudent = useMemo(
@@ -192,7 +194,10 @@ export default function EditInvoice() {
                   </div>
                   <div>
                     <span className="text-muted-foreground">Rate:</span>{" "}
-                    {formatCurrency(selectedStudent?.expectedAmount ?? 0, currency)}
+                    {formatCurrency(
+                      selectedStudent?.expectedAmount ?? 0,
+                      currency,
+                    )}
                     {selectedStudent?.rateType === "hourly" ? "/hr" : "/lesson"}
                   </div>
                 </div>
@@ -240,7 +245,10 @@ export default function EditInvoice() {
                           </div>
                         </TableCell>
                         <TableCell className="text-right text-sm font-medium">
-                          {formatCurrency(li.unitAmount * li.quantity, currency)}
+                          {formatCurrency(
+                            li.unitAmount * li.quantity,
+                            currency,
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -298,7 +306,7 @@ export default function EditInvoice() {
                 <Select
                   value={paymentMethod}
                   onValueChange={(v) =>
-                    setPaymentMethod(v as "cash" | "bank_transfer" | "card" | "stripe")
+                    setPaymentMethod(v as "cash" | "bank_transfer" | "stripe")
                   }
                 >
                   <SelectTrigger>
@@ -307,7 +315,6 @@ export default function EditInvoice() {
                   <SelectContent>
                     <SelectItem value="cash">Cash</SelectItem>
                     <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
-                    <SelectItem value="card">Card</SelectItem>
                     <SelectItem value="stripe">Stripe</SelectItem>
                   </SelectContent>
                 </Select>
@@ -343,10 +350,7 @@ export default function EditInvoice() {
               <div className="flex flex-col gap-2 pt-2">
                 <Button
                   onClick={() => handleSubmit("open")}
-                  disabled={
-                    updateInvoice.isPending ||
-                    lineItems.length === 0
-                  }
+                  disabled={updateInvoice.isPending || lineItems.length === 0}
                 >
                   <Check className="h-4 w-4" />
                   {updateInvoice.isPending ? "Updating..." : "Update & Send"}
@@ -354,10 +358,7 @@ export default function EditInvoice() {
                 <Button
                   variant="outline"
                   onClick={() => handleSubmit("draft")}
-                  disabled={
-                    updateInvoice.isPending ||
-                    lineItems.length === 0
-                  }
+                  disabled={updateInvoice.isPending || lineItems.length === 0}
                 >
                   Save as Draft
                 </Button>
@@ -369,3 +370,4 @@ export default function EditInvoice() {
     </div>
   );
 }
+

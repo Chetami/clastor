@@ -63,9 +63,9 @@ async function buildLessonSummary(
     ? await getStudentByIdFromFirestore(lesson.studentId)
     : null;
   const studentName = student?.name;
-  const summary = studentName
-    ? ` ${studentName} — ${lesson.subject}`
-    : lesson.subject;
+  const summary = lesson.subject
+    ? (studentName ? `${studentName} — ${lesson.subject}` : lesson.subject)
+    : studentName || "Lesson";
   const description = "Lesson managed by Clastor";
   return { summary, description };
 }

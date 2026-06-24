@@ -114,7 +114,7 @@ export interface FullCalendarLessonEvent {
   extendedProps: {
     studentId: string;
     studentName?: string;
-    subject: string;
+    subject: string | null | undefined;
     attendance: AttendanceStatus;
     acceptance: LessonAcceptance;
     status: DerivedLessonStatus;
@@ -132,11 +132,11 @@ export function lessonToCalendarEvent(
   const start = lesson.startDateTime;
   const end = lessonEndDate(lesson).toISOString();
   const studentName = studentNames?.[lesson.studentId];
+  const titleParts = [lesson.subject, studentName].filter(Boolean);
+  const title = titleParts.join(" — ") || "Lesson";
   return {
     id: lesson.id,
-    title: studentName
-      ? `${lesson.subject} — ${studentName}`
-      : lesson.subject,
+    title,
     start,
     end,
     extendedProps: {

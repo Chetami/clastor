@@ -245,7 +245,7 @@ export function EventPopover({
 }
 
 interface PopoverBodyProps {
-  subject: string;
+  subject: string | null | undefined;
   studentName: string;
   startIso: string;
   endIso: string;
@@ -317,7 +317,7 @@ function PopoverBody({
       <div className="space-y-2 border-b p-4">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <h3 className="text-sm font-semibold leading-tight">
-            {subject}
+            {subject || "Lesson"}
           </h3>
           <span
             className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium capitalize ${STATUS_TONE[status]}`}

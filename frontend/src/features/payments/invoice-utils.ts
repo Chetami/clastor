@@ -21,11 +21,13 @@ export const STATUS_META: Record<
 export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   cash: "Cash",
   bank_transfer: "Bank Transfer",
-  card: "Card",
   stripe: "Stripe",
 };
 
-export function formatCurrency(amount: number, currency: string = "AUD"): string {
+export function formatCurrency(
+  amount: number,
+  currency: string = "AUD",
+): string {
   return new Intl.NumberFormat("en-AU", {
     style: "currency",
     currency,

@@ -101,7 +101,7 @@ export default function Lessons() {
       const matchesSearch =
         query.length === 0 ||
         name.toLowerCase().includes(query) ||
-        lesson.subject.toLowerCase().includes(query);
+        (lesson.subject?.toLowerCase() ?? "").includes(query);
       return matchesFilter && matchesSearch;
     });
 

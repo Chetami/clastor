@@ -46,15 +46,16 @@ export default function Settings() {
         </CardHeader>
         <CardContent>
           <div className="flex flex-col gap-1.5">
-            <span className="text-sm font-medium">Remind students before lessons</span>
+            <span className="text-sm font-medium">
+              Remind students before lessons
+            </span>
             <ReminderLeadTimeSelect className="w-full sm:w-72" />
           </div>
         </CardContent>
       </Card>
 
-      <GoogleConnectionCard />
-
       <WorkingHoursCard />
+      <GoogleConnectionCard />
 
       <Card>
         <CardHeader>

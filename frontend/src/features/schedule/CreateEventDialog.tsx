@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useListStudents } from "@/features/students/api";
-import { useSubjects, resolveSubjectNames } from "@/lib/subjects";
+import { useSubjects } from "@/lib/subjects";
 import { useCreateLesson, useCreateRecurringLesson } from "./api";
 import {
   generateMeetLinkRequest,
@@ -113,7 +113,8 @@ export function CreateEventDialog({
 
   const isRecurring = values.repeat !== "none";
   const pending = createLesson.isPending || createRecurring.isPending;
-  const submitError = createLesson.error?.message ?? createRecurring.error?.message;
+  const submitError =
+    createLesson.error?.message ?? createRecurring.error?.message;
 
   const selectedStudent = useMemo(() => {
     return students.find((s) => s.id === values.studentId);
@@ -143,7 +144,13 @@ export function CreateEventDialog({
         ev.endDateTime,
       ),
     );
-  }, [isRecurring, values.date, values.startTime, values.endTime, externalEvents]);
+  }, [
+    isRecurring,
+    values.date,
+    values.startTime,
+    values.endTime,
+    externalEvents,
+  ]);
 
   // Warn (non-blocking) if the chosen one-off slot is outside the tutor's
   // configured working hours (day off, or before/after the daily window).
@@ -156,7 +163,13 @@ export function CreateEventDialog({
       values.endTime,
       user?.workingHours,
     );
-  }, [isRecurring, values.date, values.startTime, values.endTime, user?.workingHours]);
+  }, [
+    isRecurring,
+    values.date,
+    values.startTime,
+    values.endTime,
+    user?.workingHours,
+  ]);
 
   useEffect(() => {
     if (!open) return;
@@ -176,7 +189,10 @@ export function CreateEventDialog({
       .catch(() => setGoogleConnected(false));
   }, [open, start, end]);
 
-  function update<K extends keyof EventFormData>(key: K, value: EventFormData[K]) {
+  function update<K extends keyof EventFormData>(
+    key: K,
+    value: EventFormData[K],
+  ) {
     setValues((prev) => ({ ...prev, [key]: value }));
     setErrors((prev) => ({ ...prev, [key]: undefined }));
   }
@@ -199,13 +215,13 @@ export function CreateEventDialog({
       const durationMinutes =
         values.startTime && values.endTime
           ? Math.max(
-            1,
-            Math.round(
-              (new Date(`${values.date}T${values.endTime}:00`).getTime() -
-                new Date(`${values.date}T${values.startTime}:00`).getTime()) /
-              60000,
-            ),
-          )
+              1,
+              Math.round(
+                (new Date(`${values.date}T${values.endTime}:00`).getTime() -
+                  new Date(`${values.date}T${values.startTime}:00`).getTime()) /
+                  60000,
+              ),
+            )
           : undefined;
 
       const { meetingLink } = await generateMeetLinkRequest({
@@ -214,7 +230,9 @@ export function CreateEventDialog({
       });
       update("location", meetingLink);
     } catch (err) {
-      setMeetError(err instanceof Error ? err.message : "Failed to generate link");
+      setMeetError(
+        err instanceof Error ? err.message : "Failed to generate link",
+      );
     } finally {
       setMeetLoading(false);
     }
@@ -228,8 +246,11 @@ export function CreateEventDialog({
       return;
     }
     setValues((prev) => {
-      const studentSubjectNames = student.subjectIds?.map(sid => subjects.find(s => s.id === sid)?.name).filter((n): n is string => !!n);
-      const keepSubject = prev.subject && studentSubjectNames?.includes(prev.subject);
+      const studentSubjectNames = student.subjectIds
+        ?.map((sid) => subjects.find((s) => s.id === sid)?.name)
+        .filter((n): n is string => !!n);
+      const keepSubject =
+        prev.subject && studentSubjectNames?.includes(prev.subject);
       return {
         ...prev,
         studentId: student.id,
@@ -237,7 +258,11 @@ export function CreateEventDialog({
         subject: keepSubject ? prev.subject : "",
       };
     });
-    setErrors((prev) => ({ ...prev, studentId: undefined, subject: undefined }));
+    setErrors((prev) => ({
+      ...prev,
+      studentId: undefined,
+      subject: undefined,
+    }));
   }
 
   function handleRepeatChange(next: EventFormData["repeat"]) {
@@ -259,7 +284,11 @@ export function CreateEventDialog({
         slotTimes: { ...prev.slotTimes, [day]: prev.startTime },
       };
     });
-    setErrors((prev) => ({ ...prev, repeat: undefined, selectedDays: undefined }));
+    setErrors((prev) => ({
+      ...prev,
+      repeat: undefined,
+      selectedDays: undefined,
+    }));
   }
 
   function toggleDay(day: DayOfWeek) {
@@ -274,7 +303,11 @@ export function CreateEventDialog({
       }
       return { ...prev, selectedDays, slotTimes };
     });
-    setErrors((prev) => ({ ...prev, selectedDays: undefined, slotTimes: undefined }));
+    setErrors((prev) => ({
+      ...prev,
+      selectedDays: undefined,
+      slotTimes: undefined,
+    }));
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -323,10 +356,7 @@ export function CreateEventDialog({
               onValueChange={handleStudentChange}
               disabled={students.length === 0}
             >
-              <SelectTrigger
-                id="student"
-                aria-invalid={!!errors.studentId}
-              >
+              <SelectTrigger id="student" aria-invalid={!!errors.studentId}>
                 <SelectValue
                   placeholder={
                     students.length === 0
@@ -360,10 +390,7 @@ export function CreateEventDialog({
               onValueChange={(v) => update("subject", v)}
               disabled={!selectedStudent}
             >
-              <SelectTrigger
-                id="subject"
-                aria-invalid={!!errors.subject}
-              >
+              <SelectTrigger id="subject" aria-invalid={!!errors.subject}>
                 <SelectValue
                   placeholder={
                     selectedStudent && studentSubjects.length > 0
@@ -507,7 +534,9 @@ export function CreateEventDialog({
                   })}
                 </div>
                 {errors.selectedDays && (
-                  <p className="text-xs text-destructive">{errors.selectedDays}</p>
+                  <p className="text-xs text-destructive">
+                    {errors.selectedDays}
+                  </p>
                 )}
               </div>
 
@@ -527,7 +556,10 @@ export function CreateEventDialog({
                           onChange={(e) =>
                             setValues((prev) => ({
                               ...prev,
-                              slotTimes: { ...prev.slotTimes, [day]: e.target.value },
+                              slotTimes: {
+                                ...prev.slotTimes,
+                                [day]: e.target.value,
+                              },
                             }))
                           }
                         />
@@ -535,7 +567,9 @@ export function CreateEventDialog({
                     ))}
                   </div>
                   {errors.slotTimes && (
-                    <p className="text-xs text-destructive">{errors.slotTimes}</p>
+                    <p className="text-xs text-destructive">
+                      {errors.slotTimes}
+                    </p>
                   )}
                 </div>
               )}

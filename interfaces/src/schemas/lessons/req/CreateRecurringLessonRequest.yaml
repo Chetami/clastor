@@ -1,7 +1,6 @@
 type: object
 required:
   - studentId
-  - subject
   - durationMinutes
   - intervalWeeks
   - slots
@@ -14,6 +13,7 @@ properties:
     example: student_123
   subject:
     type: string
+    nullable: true
     description: Subject of the lessons
     example: Mathematics
   durationMinutes:

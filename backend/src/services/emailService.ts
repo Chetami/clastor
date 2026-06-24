@@ -13,7 +13,7 @@ export interface LessonNotificationInput {
   tutorName: string;
   /** Tutor's real email — used as Reply-To so replies reach the tutor. */
   tutorEmail?: string | null;
-  subject: string;
+  subject: string | null;
   startDateTime: Date;
   durationMinutes: number;
   location?: string | null;
@@ -48,7 +48,7 @@ function formatStart(d: Date): string {
  * Build the subject line for a lesson reminder.
  */
 export function buildLessonNotificationSubject(input: LessonNotificationInput): string {
-  return `Lesson reminder: ${input.subject} with ${input.tutorName} on ${formatStart(input.startDateTime)}`;
+  return `Lesson reminder${input.subject ? `: ${input.subject}` : ""} with ${input.tutorName} on ${formatStart(input.startDateTime)}`;
 }
 
 /**
@@ -71,7 +71,7 @@ export function buildLessonNotificationBody(input: LessonNotificationInput): str
     "",
     "—",
     "Lesson details",
-    `Subject: ${input.subject}`,
+    ...(input.subject ? [`Subject: ${input.subject}`] : []),
     `When: ${formatStart(input.startDateTime)} (${timeRange}, ${input.durationMinutes} min)`,
     input.location ? `Location: ${input.location}` : null,
     `Tutor: ${input.tutorName}`,
@@ -106,7 +106,7 @@ export function buildLessonNotificationHtml(input: LessonNotificationInput): str
   })} – ${end.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`;
 
   const rows = [
-    ["Subject", escapeHtml(input.subject)],
+    ...(input.subject ? [["Subject", escapeHtml(input.subject)]] : []),
     [
       "When",
       `${escapeHtml(formatStart(input.startDateTime))} (${escapeHtml(

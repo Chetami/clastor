@@ -1,7 +1,6 @@
 type: object
 required:
   - studentId
-  - subject
   - startDateTime
   - durationMinutes
 properties:
@@ -11,6 +10,7 @@ properties:
     example: student_123
   subject:
     type: string
+    nullable: true
     description: Subject of the lesson
     example: Mathematics
   startDateTime:

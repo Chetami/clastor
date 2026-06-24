@@ -13,7 +13,6 @@ import { Invoice, PaymentMethod } from "@examify-tms/interfaces";
 const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   cash: "Cash",
   bank_transfer: "Bank Transfer",
-  card: "Card",
   stripe: "Stripe",
 };
 
@@ -48,7 +47,7 @@ export interface InvoicePdfContext {
  */
 export function generateInvoicePdf(
   invoice: Invoice,
-  context: InvoicePdfContext = {}
+  context: InvoicePdfContext = {},
 ): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     try {
@@ -82,18 +81,24 @@ export function generateInvoicePdf(
       const metaX = 360;
       let metaY = 50;
       doc.fontSize(11).font("Helvetica-Bold").text("Invoice #", metaX, metaY);
-      doc
-        .font("Helvetica")
-        .text(invoice.invoiceNumber, metaX + 90, metaY, { width: 90, align: "right" });
+      doc.font("Helvetica").text(invoice.invoiceNumber, metaX + 90, metaY, {
+        width: 90,
+        align: "right",
+      });
       metaY += 18;
 
       doc.font("Helvetica-Bold").text("Issued", metaX, metaY);
       doc
         .font("Helvetica")
-        .text(formatDate(new Date(invoice.issueDate as any)), metaX + 90, metaY, {
-          width: 90,
-          align: "right",
-        });
+        .text(
+          formatDate(new Date(invoice.issueDate as any)),
+          metaX + 90,
+          metaY,
+          {
+            width: 90,
+            align: "right",
+          },
+        );
       metaY += 18;
 
       doc.font("Helvetica-Bold").text("Due", metaX, metaY);
@@ -106,7 +111,11 @@ export function generateInvoicePdf(
 
       // ---- Bill to ------------------------------------------------------
       let y = 150;
-      doc.fontSize(10).font("Helvetica-Bold").fillColor("#6b7280").text("BILL TO", 50, y);
+      doc
+        .fontSize(10)
+        .font("Helvetica-Bold")
+        .fillColor("#6b7280")
+        .text("BILL TO", 50, y);
       doc
         .fontSize(13)
         .font("Helvetica-Bold")
@@ -149,11 +158,19 @@ export function generateInvoicePdf(
           y = 50;
         }
         doc.text(li.description, colX.desc, y, { width: 280 });
-        doc.text(String(li.quantity), colX.qty, y, { width: 60, align: "right" });
-        doc.text(formatCurrency(li.unitAmount, invoice.currency), colX.unit, y, {
-          width: 80,
+        doc.text(String(li.quantity), colX.qty, y, {
+          width: 60,
           align: "right",
         });
+        doc.text(
+          formatCurrency(li.unitAmount, invoice.currency),
+          colX.unit,
+          y,
+          {
+            width: 80,
+            align: "right",
+          },
+        );
         doc.text(formatCurrency(li.amount, invoice.currency), colX.amount, y, {
           width: 45,
           align: "right",
@@ -180,18 +197,28 @@ export function generateInvoicePdf(
       doc.text("Subtotal", totalsX, y);
       doc
         .fillColor("#111827")
-        .text(formatCurrency(invoice.subtotal, invoice.currency), colX.amount - 5, y, {
-          width: 50,
-          align: "right",
-        });
+        .text(
+          formatCurrency(invoice.subtotal, invoice.currency),
+          colX.amount - 5,
+          y,
+          {
+            width: 50,
+            align: "right",
+          },
+        );
       y += 24;
 
       doc.font("Helvetica-Bold").fontSize(14).fillColor("#111827");
       doc.text("Total", totalsX, y);
-      doc.text(formatCurrency(invoice.total, invoice.currency), colX.amount - 5, y, {
-        width: 50,
-        align: "right",
-      });
+      doc.text(
+        formatCurrency(invoice.total, invoice.currency),
+        colX.amount - 5,
+        y,
+        {
+          width: 50,
+          align: "right",
+        },
+      );
 
       if (invoice.paymentMethod && invoice.paymentMethod !== "cash") {
         y += 26;
@@ -199,7 +226,11 @@ export function generateInvoicePdf(
           .font("Helvetica")
           .fontSize(10)
           .fillColor("#6b7280")
-          .text(`Payment method: ${PAYMENT_METHOD_LABELS[invoice.paymentMethod]}`, 50, y);
+          .text(
+            `Payment method: ${PAYMENT_METHOD_LABELS[invoice.paymentMethod]}`,
+            50,
+            y,
+          );
       }
 
       // ---- Notes --------------------------------------------------------
@@ -209,7 +240,11 @@ export function generateInvoicePdf(
           doc.addPage();
           y = 50;
         }
-        doc.font("Helvetica-Bold").fontSize(10).fillColor("#6b7280").text("NOTES", 50, y);
+        doc
+          .font("Helvetica-Bold")
+          .fontSize(10)
+          .fillColor("#6b7280")
+          .text("NOTES", 50, y);
         doc
           .font("Helvetica")
           .fontSize(10)

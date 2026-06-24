@@ -2,7 +2,6 @@ type: string
 enum:
   - cash
   - bank_transfer
-  - card
   - stripe
 description: |-
   Recorded payment method for an invoice. Purely descriptive — no money
@@ -10,5 +9,4 @@ description: |-
   paid for this invoice.
   - cash: physical cash
   - bank_transfer: direct deposit / EFT
-  - card: card payment collected out-of-band
   - stripe: Stripe payment link (recorded only; no live integration)
