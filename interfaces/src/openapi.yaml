@@ -182,3 +182,10 @@ components:
       $ref: './schemas/dashboard/res/DashboardDayBreakdown.yaml'
     DashboardSummaryResponse:
       $ref: './schemas/dashboard/res/DashboardSummaryResponse.yaml'
+    # Feedback Schemas
+    FeedbackType:
+      $ref: './schemas/feedback/FeedbackType.yaml'
+    CreateFeedbackRequest:
+      $ref: './schemas/feedback/CreateFeedbackRequest.yaml'
+    FeedbackResponse:
+      $ref: './schemas/feedback/FeedbackResponse.yaml'

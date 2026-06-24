@@ -1,0 +1,41 @@
+type: object
+required:
+  - id
+  - type
+  - message
+  - createdAt
+properties:
+  id:
+    type: string
+    description: Unique feedback identifier.
+    example: feedback_a1b2c3d4
+  type:
+    $ref: './FeedbackType.yaml'
+  message:
+    type: string
+    description: The feedback message body.
+  images:
+    type: array
+    description: Base64 data URLs of attached screenshots (max 2).
+    items:
+      type: string
+    default: []
+  pageUrl:
+    type: string
+    nullable: true
+    description: The app route the user was on when submitting.
+  userAgent:
+    type: string
+    nullable: true
+    description: The browser user-agent string at time of submission.
+  status:
+    type: string
+    enum: [open, resolved]
+    default: open
+    description: Whether the feedback item has been addressed.
+  createdAt:
+    type: string
+    format: date-time
+    description: When the feedback was submitted.
+description: |-
+  Response object for a feedback submission.

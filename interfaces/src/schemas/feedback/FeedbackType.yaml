@@ -1,0 +1,10 @@
+type: string
+enum:
+  - bug
+  - feedback
+  - feature_request
+description: |-
+  The category of a feedback submission.
+  - bug: Something is broken or not working as expected.
+  - feedback: General thoughts, praise, or complaints.
+  - feature_request: An idea for something new or a change.

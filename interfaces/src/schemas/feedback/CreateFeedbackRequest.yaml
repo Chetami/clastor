@@ -1,0 +1,19 @@
+type: object
+required:
+  - type
+  - message
+properties:
+  type:
+    $ref: './FeedbackType.yaml'
+  message:
+    type: string
+    minLength: 1
+    description: The feedback message body.
+  pageUrl:
+    type: string
+    nullable: true
+    description: The app route the user was on when submitting (auto-captured).
+    example: /lessons/lesson_abc123
+description: |-
+  Request body for submitting feedback.
+  Images are sent as multipart file uploads alongside these text fields.
