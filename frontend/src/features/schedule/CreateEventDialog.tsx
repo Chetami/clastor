@@ -115,6 +115,15 @@ export function CreateEventDialog({
   const pending = createLesson.isPending || createRecurring.isPending;
   const submitError = createLesson.error?.message ?? createRecurring.error?.message;
 
+  const selectedStudent = useMemo(() => {
+    return students.find((s) => s.id === values.studentId);
+  }, [students, values.studentId]);
+
+  const studentSubjects = useMemo(() => {
+    if (!selectedStudent) return [];
+    return subjects.filter((s) => selectedStudent.subjectIds?.includes(s.id));
+  }, [selectedStudent, subjects]);
+
   // Warn (non-blocking) if the chosen one-off slot overlaps an external Google
   // Calendar event. Only computed for the single-lesson case where a concrete
   // date + time range is known.
@@ -215,17 +224,20 @@ export function CreateEventDialog({
     const student = students.find((s) => s.id === id);
     if (!student) {
       update("studentId", id);
+      update("subject", "");
       return;
     }
-    setValues((prev) => ({
-      ...prev,
-      studentId: student.id,
-      studentName: student.name,
-      subject:
-        prev.subject ||
-        resolveSubjectNames(student.subjectIds, subjects),
-    }));
-    setErrors((prev) => ({ ...prev, studentId: undefined }));
+    setValues((prev) => {
+      const studentSubjectNames = student.subjectIds?.map(sid => subjects.find(s => s.id === sid)?.name).filter((n): n is string => !!n);
+      const keepSubject = prev.subject && studentSubjectNames?.includes(prev.subject);
+      return {
+        ...prev,
+        studentId: student.id,
+        studentName: student.name,
+        subject: keepSubject ? prev.subject : "",
+      };
+    });
+    setErrors((prev) => ({ ...prev, studentId: undefined, subject: undefined }));
   }
 
   function handleRepeatChange(next: EventFormData["repeat"]) {
@@ -337,14 +349,38 @@ export function CreateEventDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="subject">Subject</Label>
-            <Input
-              id="subject"
-              placeholder="Mathematics"
-              aria-invalid={!!errors.subject}
+            <Label htmlFor="subject">
+              Subject{" "}
+              <span className="text-xs font-normal text-muted-foreground">
+                (optional)
+              </span>
+            </Label>
+            <Select
               value={values.subject}
-              onChange={(e) => update("subject", e.target.value)}
-            />
+              onValueChange={(v) => update("subject", v)}
+              disabled={!selectedStudent}
+            >
+              <SelectTrigger
+                id="subject"
+                aria-invalid={!!errors.subject}
+              >
+                <SelectValue
+                  placeholder={
+                    selectedStudent && studentSubjects.length > 0
+                      ? "Select a subject"
+                      : "No subjects assigned"
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">No subject</SelectItem>
+                {studentSubjects.map((s) => (
+                  <SelectItem key={s.id} value={s.name}>
+                    {s.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             {errors.subject && (
               <p className="text-xs text-destructive">{errors.subject}</p>
             )}

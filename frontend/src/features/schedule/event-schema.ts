@@ -36,11 +36,11 @@ function minutesBetween(start: string, end: string): number {
   return eh * 60 + em - (sh * 60 + sm);
 }
 
-export const eventFormSchema = z
+  export const eventFormSchema = z
   .object({
     studentId: z.string().min(1, "Select a student"),
     studentName: z.string().min(1),
-    subject: z.string().min(1, "Subject is required").trim(),
+    subject: z.string().trim().optional().or(z.literal("")),
     date: z.string().regex(dateRegex, "Enter a valid date"),
     startTime: z.string().regex(timeRegex, "Enter a valid start time"),
     endTime: z.string().regex(timeRegex, "Enter a valid end time"),
@@ -105,7 +105,7 @@ export function toCreateLessonRequest(
 ): CreateLessonRequest {
   return {
     studentId: values.studentId,
-    subject: values.subject,
+    subject: values.subject ? values.subject : null,
     startDateTime: new Date(
       `${values.date}T${values.startTime}:00`,
     ).toISOString(),
@@ -128,7 +128,7 @@ export function toCreateRecurringLessonRequest(
   }));
   return {
     studentId: values.studentId,
-    subject: values.subject,
+    subject: values.subject ? values.subject : null,
     durationMinutes,
     intervalWeeks: values.repeat === "weekly" ? 1 : 2,
     slots,
