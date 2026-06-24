@@ -41,6 +41,14 @@ properties:
       The tutor's weekly working hours (per-day start/end windows or null for
       a day off). Null overall means not configured. Drives the Schedule's
       shaded business-hours bands and the out-of-hours booking warning.
+  subjects:
+    type: array
+    description: >-
+      Subjects this tutor teaches (their catalogue). Single source of truth:
+      students are tagged by subject id via their `subjectIds` field.
+    items:
+      $ref: '../common/Subject.yaml'
+    default: []
   createdAt:
     type: string
     format: date-time

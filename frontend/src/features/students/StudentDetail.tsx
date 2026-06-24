@@ -29,6 +29,8 @@ import { StudentForm } from "./StudentForm";
 import { useGetStudent, useUpdateStudent } from "./api";
 import { useStudentInvoices, useStudentDebt } from "./invoices-api";
 import { formToUpdateRequest, type StudentFormData } from "./student-schema";
+import { SubjectChips } from "@/components/subjects/SubjectChips";
+import { useSubjectMap, resolveSubjectNames } from "@/lib/subjects";
 import {
   formatCurrency,
   getInitials,
@@ -46,6 +48,7 @@ export default function StudentDetail() {
   const { data: invoices = [] } = useStudentInvoices(studentId);
   const { data: totalDebt = 0 } = useStudentDebt(studentId);
   const updateStudent = useUpdateStudent();
+  const subjectMap = useSubjectMap();
   const [editing, setEditing] = useState(false);
   const [notesEditing, setNotesEditing] = useState(false);
   const [notesDraft, setNotesDraft] = useState("");
@@ -159,7 +162,11 @@ export default function StudentDetail() {
                   {student.status === "active" ? "Active" : "Past"}
                 </span>
               </div>
-              <p className="text-sm text-muted-foreground">{student.subject}</p>
+              {student.subjectIds?.length ? (
+                <SubjectChips subjectIds={student.subjectIds} />
+              ) : (
+                <p className="text-sm text-muted-foreground">No subjects</p>
+              )}
             </div>
           </div>
           {totalDebt > 0 && (
@@ -188,8 +195,16 @@ export default function StudentDetail() {
             />
             <DetailRow
               icon={<BookOpen className="h-4 w-4" />}
-              label="Subject"
-              value={student.subject}
+              label="Subjects"
+              value={
+                student.subjectIds?.length
+                  ? resolveSubjectNames(
+                      student.subjectIds,
+                      Array.from(subjectMap.values()),
+                    )
+                  : "\u2014"
+              }
+              muted={!student.subjectIds?.length}
             />
             <DetailRow
               icon={<Phone className="h-4 w-4" />}

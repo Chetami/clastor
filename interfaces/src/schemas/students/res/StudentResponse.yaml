@@ -3,7 +3,7 @@ required:
   - id
   - name
   - email
-  - subject
+  - subjectIds
   - expectedAmount
   - rateType
   - frequencyPerWeek
@@ -48,10 +48,16 @@ properties:
       explicit override (if set), otherwise parentEmail, otherwise the
       student's own email.
     example: billing.johnson@example.com
-  subject:
-    type: string
-    description: Subject(s) the student is being tutored in
-    example: Mathematics
+  subjectIds:
+    type: array
+    description: >-
+      Ids of the subjects (from the tutor's catalogue on their user document)
+      the student is being tutored in. Resolve to names/colors client-side.
+    items:
+      type: string
+    default: []
+    example:
+      - subj_abc123
   expectedAmount:
     type: number
     format: double

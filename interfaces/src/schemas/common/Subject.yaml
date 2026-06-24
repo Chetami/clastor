@@ -1,0 +1,27 @@
+type: object
+required:
+  - id
+  - name
+properties:
+  id:
+    type: string
+    description: >-
+      Stable unique identifier for the subject within the tutor's catalogue.
+      Generated client-side and preserved across renames so students tagged
+      by id keep their tag.
+    example: subj_abc123
+  name:
+    type: string
+    description: Subject display name
+    example: Mathematics
+  color:
+    type: string
+    nullable: true
+    description: >-
+      Optional accent color used when rendering subject chips/tags (any CSS
+      color value, e.g. a hex code). Null means the default accent is used.
+    example: "#2563eb"
+description: |-
+  A subject a tutor teaches. Stored on the user document as the tutor's
+  catalogue of subjects (single source of truth). Students reference subjects
+  by id via their `subjectIds` field.

@@ -28,14 +28,26 @@ function resolveBillingEmail(
 }
 
 /**
+ * Coerce a raw subjectIds value into a clean string[]. Handles docs created
+ * before the field existed (missing) or malformed values.
+ */
+function coalesceSubjectIds(raw: unknown): string[] {
+  return Array.isArray(raw)
+    ? raw.filter((id): id is string => typeof id === "string")
+    : [];
+}
+
+/**
  * List student documents from Firestore
  * @param userId - ID of the authenticated user
  * @param role - Role of the authenticated user ('tutor' or 'system_admin')
+ * @param subjectId - Optional subject id to filter by (array-contains)
  * @returns Array of Student objects
  */
 export async function listStudentsFromFirestore(
   userId: string,
-  role: string
+  role: string,
+  subjectId?: string
 ): Promise<Student[]> {
   try {
     const firestore = getFirebaseFirestore();
@@ -43,14 +55,21 @@ export async function listStudentsFromFirestore(
 
     // Tutors can only see their own students
     if (role === "tutor") {
-      snapshot = await firestore
+      let q: admin.firestore.Query = firestore
         .collection("students")
-        .where("tutorId", "==", userId)
-        .get();
+        .where("tutorId", "==", userId);
+      if (subjectId) {
+        q = q.where("subjectIds", "array-contains", subjectId);
+      }
+      snapshot = await q.get();
     }
     // System admins can see all students
     else if (role === "system_admin") {
-      snapshot = await firestore.collection("students").get();
+      let q: admin.firestore.Query = firestore.collection("students");
+      if (subjectId) {
+        q = q.where("subjectIds", "array-contains", subjectId);
+      }
+      snapshot = await q.get();
     } else {
       throw new Error("Invalid role");
     }
@@ -72,7 +91,7 @@ export async function listStudentsFromFirestore(
           parentEmail,
           data.email
         ),
-        subject: data.subject,
+        subjectIds: coalesceSubjectIds(data.subjectIds),
         expectedAmount: data.expectedAmount,
         rateType: data.rateType,
         frequencyPerWeek: data.frequencyPerWeek,
@@ -126,7 +145,7 @@ export async function getStudentByIdFromFirestore(
         parentEmail,
         data.email
       ),
-      subject: data.subject,
+      subjectIds: coalesceSubjectIds(data.subjectIds),
       expectedAmount: data.expectedAmount,
       rateType: data.rateType,
       frequencyPerWeek: data.frequencyPerWeek,
@@ -164,7 +183,7 @@ export async function createStudentInFirestore(
       phone: data.phone || null,
       parentEmail: data.parentEmail || null,
       billingEmail: data.billingEmail || null,
-      subject: data.subject,
+      subjectIds: coalesceSubjectIds(data.subjectIds),
       expectedAmount: data.expectedAmount,
       rateType: data.rateType,
       frequencyPerWeek: data.frequencyPerWeek,
@@ -193,7 +212,7 @@ export async function createStudentInFirestore(
         parentEmail,
         data.email
       ),
-      subject: data.subject,
+      subjectIds: coalesceSubjectIds(data.subjectIds),
       expectedAmount: data.expectedAmount,
       rateType: data.rateType,
       frequencyPerWeek: data.frequencyPerWeek,
@@ -243,7 +262,7 @@ export async function updateStudentInFirestore(
     if (data.phone !== undefined) updateData.phone = data.phone;
     if (data.parentEmail !== undefined) updateData.parentEmail = data.parentEmail;
     if (data.billingEmail !== undefined) updateData.billingEmail = data.billingEmail;
-    if (data.subject !== undefined) updateData.subject = data.subject;
+    if (data.subjectIds !== undefined) updateData.subjectIds = coalesceSubjectIds(data.subjectIds);
     if (data.expectedAmount !== undefined) updateData.expectedAmount = data.expectedAmount;
     if (data.rateType !== undefined) updateData.rateType = data.rateType;
     if (data.frequencyPerWeek !== undefined) updateData.frequencyPerWeek = data.frequencyPerWeek;
@@ -274,7 +293,7 @@ export async function updateStudentInFirestore(
         parentEmail,
         updatedData.email
       ),
-      subject: updatedData.subject,
+      subjectIds: coalesceSubjectIds(updatedData.subjectIds),
       expectedAmount: updatedData.expectedAmount,
       rateType: updatedData.rateType,
       frequencyPerWeek: updatedData.frequencyPerWeek,

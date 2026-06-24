@@ -31,6 +31,7 @@ import {
   TableRow,
 } from "@/components/ui";
 import { useListStudents } from "@/features/students/api";
+import { useSubjects, resolveSubjectNames } from "@/lib/subjects";
 import { useListLessons } from "@/features/schedule/api";
 import { lessonBadge } from "@/features/lessons/lesson-display";
 import { useCreateInvoice, useSendInvoice } from "./api";
@@ -68,6 +69,7 @@ export default function CreateInvoice() {
   const navigate = useNavigate();
   const currency = useUserCurrency();
   const { data: students = [] } = useListStudents();
+  const subjects = useSubjects();
 
   const [studentId, setStudentId] = useState<string>("");
   const [selectedLessonIds, setSelectedLessonIds] = useState<Set<string>>(
@@ -275,11 +277,18 @@ export default function CreateInvoice() {
                   <SelectValue placeholder="Select a student..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {students.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>
-                      {s.name} — {s.subject}
-                    </SelectItem>
-                  ))}
+                  {students.map((s) => {
+                    const subjectsLabel = resolveSubjectNames(
+                      s.subjectIds,
+                      subjects,
+                    );
+                    return (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.name}
+                        {subjectsLabel ? ` — ${subjectsLabel}` : ""}
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
               {errors.studentId && (

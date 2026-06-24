@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useListStudents } from "@/features/students/api";
+import { useSubjects, resolveSubjectNames } from "@/lib/subjects";
 import { useCreateLesson, useCreateRecurringLesson } from "./api";
 import {
   generateMeetLinkRequest,
@@ -99,6 +100,7 @@ export function CreateEventDialog({
   externalEvents = [],
 }: CreateEventDialogProps) {
   const { data: students = [] } = useListStudents();
+  const subjects = useSubjects();
   const user = useAuthStore((s) => s.user);
   const createLesson = useCreateLesson();
   const createRecurring = useCreateRecurringLesson();
@@ -219,7 +221,9 @@ export function CreateEventDialog({
       ...prev,
       studentId: student.id,
       studentName: student.name,
-      subject: prev.subject || student.subject,
+      subject:
+        prev.subject ||
+        resolveSubjectNames(student.subjectIds, subjects),
     }));
     setErrors((prev) => ({ ...prev, studentId: undefined }));
   }

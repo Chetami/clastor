@@ -2,7 +2,7 @@ type: object
 required:
   - name
   - email
-  - subject
+  - subjectIds
   - expectedAmount
   - rateType
   - frequencyPerWeek
@@ -38,10 +38,16 @@ properties:
       student. May mirror parentEmail or be a different address. Null
       means invoice creation falls back to parentEmail then student email.
     example: billing.johnson@example.com
-  subject:
-    type: string
-    description: Subject(s) the student is being tutored in
-    example: Mathematics
+  subjectIds:
+    type: array
+    description: >-
+      Ids of the subjects (from the tutor's catalogue) the student is being
+      tutored in. Defaults to an empty array.
+    items:
+      type: string
+    default: []
+    example:
+      - subj_abc123
   expectedAmount:
     type: number
     format: double

@@ -25,6 +25,7 @@ import {
   type StudentFormData,
 } from "./student-schema";
 import { TIMEZONES } from "./timezones";
+import { SubjectMultiSelect } from "@/components/subjects/SubjectMultiSelect";
 import { NumberInput } from "@/components/ui/number-input";
 
 interface StudentFormProps {
@@ -223,17 +224,12 @@ export function StudentForm({
       </Collapsible>
 
       <div className="space-y-2">
-        <Label htmlFor="subject">Subject</Label>
-        <Input
-          id="subject"
-          placeholder="Mathematics"
-          aria-invalid={!!errors.subject}
-          value={values.subject}
-          onChange={(e) => update("subject", e.target.value)}
+        <Label htmlFor="subject">Subjects</Label>
+        <SubjectMultiSelect
+          value={values.subjectIds}
+          onChange={(ids) => update("subjectIds", ids)}
+          invalid={!!errors.subjectIds}
         />
-        {errors.subject && (
-          <p className="text-xs text-destructive">{errors.subject}</p>
-        )}
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">

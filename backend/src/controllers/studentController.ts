@@ -29,7 +29,7 @@ export async function createStudent(
       phone: student.phone,
       parentEmail: student.parentEmail,
       billingEmail: student.billingEmail,
-      subject: student.subject,
+      subjectIds: student.subjectIds,
       expectedAmount: student.expectedAmount,
       rateType: student.rateType,
       frequencyPerWeek: student.frequencyPerWeek,
@@ -66,7 +66,13 @@ export async function listStudents(
     }
 
     // List students based on user role
-    const students = await listStudentsFromFirestore(req.user.uid, req.user.role);
+    const subjectId =
+      typeof req.query.subjectId === "string" ? req.query.subjectId : undefined;
+    const students = await listStudentsFromFirestore(
+      req.user.uid,
+      req.user.role,
+      subjectId
+    );
 
     // Return StudentListResponse
     const response: StudentListResponse = {
@@ -122,7 +128,7 @@ export async function getStudentById(
       phone: student.phone,
       parentEmail: student.parentEmail,
       billingEmail: student.billingEmail,
-      subject: student.subject,
+      subjectIds: student.subjectIds,
       expectedAmount: student.expectedAmount,
       rateType: student.rateType as "hourly" | "per_lesson",
       frequencyPerWeek: student.frequencyPerWeek,
@@ -179,7 +185,7 @@ export async function updateStudent(
       phone: updatedStudent.phone,
       parentEmail: updatedStudent.parentEmail,
       billingEmail: updatedStudent.billingEmail,
-      subject: updatedStudent.subject,
+      subjectIds: updatedStudent.subjectIds,
       expectedAmount: updatedStudent.expectedAmount,
       rateType: updatedStudent.rateType as "hourly" | "per_lesson",
       frequencyPerWeek: updatedStudent.frequencyPerWeek,

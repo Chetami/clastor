@@ -4,8 +4,12 @@ import {
   Settings as SettingsIcon,
   ChevronsUpDown,
   Compass,
+  Palette,
 } from "lucide-react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+
+import { AppearanceDialog } from "@/components/layout/appearance-dialog";
 
 import {
   Avatar,
@@ -36,6 +40,7 @@ export function NavUser({ user }: { user: UserInfo | null }) {
   const logout = useLogout();
   const { start: startTour } = useProductTour();
   const navigate = useNavigate();
+  const [appearanceOpen, setAppearanceOpen] = useState(false);
 
   if (!user) {
     return null;
@@ -102,6 +107,10 @@ export function NavUser({ user }: { user: UserInfo | null }) {
                 <SettingsIcon />
                 Settings
               </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setAppearanceOpen(true)}>
+                <Palette />
+                Appearance
+              </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => startTour()}>
                 <Compass />
                 Take a tour
@@ -118,6 +127,7 @@ export function NavUser({ user }: { user: UserInfo | null }) {
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>
+      <AppearanceDialog open={appearanceOpen} onOpenChange={setAppearanceOpen} />
     </SidebarMenu>
   );
 }

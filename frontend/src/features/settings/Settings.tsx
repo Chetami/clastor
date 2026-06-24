@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Bell, ChevronRight, CreditCard, Palette } from "lucide-react";
+import { Bell, ChevronRight, CreditCard } from "lucide-react";
 
 import { CurrencySelect } from "@/components/account/CurrencySelect";
 import { ReminderLeadTimeSelect } from "@/components/account/ReminderLeadTimeSelect";
@@ -11,73 +11,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { COLOR_SCHEMES, useTheme } from "@/hooks/use-theme";
+import { SubjectsCard } from "@/features/subjects/SubjectsCard";
 import { GoogleConnectionCard } from "./GoogleConnectionCard";
 import { WorkingHoursCard } from "./WorkingHoursCard";
 
 export default function Settings() {
-  const { colorScheme, setColorScheme } = useTheme();
-
   return (
     <div className="flex flex-col gap-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Palette className="size-4" />
-            Appearance
-          </CardTitle>
-          <CardDescription>
-            Choose a colour scheme. Each tints the background and pairs a primary
-            with a complementary accent. Your light or dark preference still
-            applies on top.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          {COLOR_SCHEMES.map((scheme) => {
-            const selected = scheme.value === colorScheme;
-            return (
-              <button
-                key={scheme.value}
-                type="button"
-                onClick={() => setColorScheme(scheme.value)}
-                aria-pressed={selected}
-                className={`flex items-center gap-3 rounded-lg border-2 p-3 text-left transition-colors hover:bg-accent ${
-                  selected ? "border-primary" : "border-transparent bg-muted/40"
-                }`}
-              >
-                <span className="flex -space-x-2">
-                  <span
-                    className="size-7 rounded-full ring-2 ring-background"
-                    style={{ backgroundColor: scheme.swatch }}
-                  />
-                  {scheme.secondary && (
-                    <span
-                      className="size-7 rounded-full ring-2 ring-background"
-                      style={{ backgroundColor: scheme.secondary }}
-                    />
-                  )}
-                  <span
-                    className="size-7 rounded-full ring-2 ring-background"
-                    style={{ backgroundColor: scheme.accent }}
-                  />
-                </span>
-                <span className="flex flex-col">
-                  <span className="text-sm font-medium leading-tight">
-                    {scheme.label}
-                  </span>
-                  <span
-                    className={`text-xs leading-tight ${
-                      selected ? "text-muted-foreground" : "text-transparent"
-                    }`}
-                  >
-                    Active
-                  </span>
-                </span>
-              </button>
-            );
-          })}
-        </CardContent>
-      </Card>
+      <SubjectsCard />
 
       <Card>
         <CardHeader>

@@ -16,6 +16,8 @@ components:
       $ref: './schemas/common/Role.yaml'
     ReminderLeadTime:
       $ref: './schemas/common/ReminderLeadTime.yaml'
+    Subject:
+      $ref: './schemas/common/Subject.yaml'
     # Auth Common Schemas
     JwtPayload:
       $ref: './schemas/auth/JwtPayload.yaml'

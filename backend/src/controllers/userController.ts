@@ -6,6 +6,7 @@ import {
   updateUserCurrency,
   updateUserReminderLeadTime,
   updateUserWorkingHours,
+  updateUserSubjects,
   updateUserName,
   markOnboardingComplete,
   markTourSeen,
@@ -84,6 +85,7 @@ export async function updateMe(
       currency,
       reminderLeadTime,
       workingHours,
+      subjects,
       onboardingComplete,
       tourSeen,
     } = req.body ?? {};
@@ -112,6 +114,12 @@ export async function updateMe(
     // as provided when explicitly passed (undefined = skip).
     if (workingHours !== undefined) {
       updated = await updateUserWorkingHours(uid, normalizeWorkingHours(workingHours));
+    }
+
+    // `subjects` is the full replacement for the tutor's subject catalogue.
+    // Removed subjects are cascaded off tagged students server-side.
+    if (subjects !== undefined) {
+      updated = await updateUserSubjects(uid, subjects);
     }
 
     if (typeof onboardingComplete === "boolean" && onboardingComplete) {

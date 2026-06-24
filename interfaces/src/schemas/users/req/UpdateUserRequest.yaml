@@ -30,6 +30,14 @@ properties:
       The tutor's weekly working hours. Pass null to clear (no working hours
       configured). Each weekday is either a {start,end} window or null (day
       off).
+  subjects:
+    type: array
+    description: >-
+      Full replacement for the tutor's subject catalogue. Each entry needs a
+      stable `id` (preserve existing ids when renaming so student tags stay
+      intact) and a non-empty `name`; `color` is optional.
+    items:
+      $ref: '../../common/Subject.yaml'
   onboardingComplete:
     type: boolean
     description: Mark the user's onboarding as finished (or dismissed)

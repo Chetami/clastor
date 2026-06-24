@@ -30,10 +30,13 @@ properties:
       Email used as the default recipient when creating invoices for this
       student. Send null to clear and fall back to parent/student email.
     example: billing.johnson@example.com
-  subject:
-    type: string
-    description: Subject(s) the student is being tutored in
-    example: Mathematics
+  subjectIds:
+    type: array
+    description: >-
+      Ids of the subjects (from the tutor's catalogue) the student is being
+      tutored in. Replaces the existing set when provided.
+    items:
+      type: string
   expectedAmount:
     type: number
     format: double

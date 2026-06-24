@@ -3,12 +3,14 @@ import {
   User,
   Role,
   UserInfo,
+  Subject,
   ReminderLeadTime,
   WorkingHours,
 } from "@examify-tms/interfaces";
 import { generateToken } from "../utils/jwt";
 import { parse, isValid } from "date-fns";
 import admin from "firebase-admin";
+import crypto from "crypto";
 
 /** The seven weekday keys stored on WorkingHours, Monday-first. */
 const WORKING_DAYS: (keyof WorkingHours)[] = [
@@ -81,6 +83,7 @@ export function toUserInfo(user: User): UserInfo {
     currency: user.currency,
     reminderLeadTime: user.reminderLeadTime ?? null,
     workingHours: user.workingHours ?? null,
+    subjects: user.subjects ?? [],
     onboardingComplete: user.onboardingComplete === true,
     tourSeen: user.tourSeen === true,
   };
@@ -142,6 +145,42 @@ export function normalizeReminderLeadTime(raw: unknown): ReminderLeadTime {
 }
 
 /**
+ * Coerce a raw subjects payload into a clean Subject[]. Drops entries with
+ * missing/empty names, trims names, strips non-string colors, and ensures
+ * stable unique ids (generating one for any entry missing an id). Caps the
+ * catalogue length to keep user documents bounded.
+ */
+const MAX_SUBJECTS = 100;
+
+export function normalizeSubjects(raw: unknown): Subject[] {
+  if (!Array.isArray(raw)) return [];
+  const result: Subject[] = [];
+  const seenIds = new Set<string>();
+  for (const entry of raw) {
+    if (!entry || typeof entry !== "object") continue;
+    const e = entry as Record<string, unknown>;
+    const name =
+      typeof e.name === "string" ? e.name.trim() : "";
+    if (!name) continue;
+    let id = typeof e.id === "string" && e.id.trim() ? e.id.trim() : "";
+    if (!id || seenIds.has(id)) {
+      id = generateSubjectId();
+    }
+    seenIds.add(id);
+    const color =
+      typeof e.color === "string" && e.color.trim() ? e.color.trim() : null;
+    result.push({ id, name, color });
+    if (result.length >= MAX_SUBJECTS) break;
+  }
+  return result;
+}
+
+/** Generate a subject id (used when normalizing id-less entries). */
+function generateSubjectId(): string {
+  return `subj_${crypto.randomBytes(8).toString("hex")}`;
+}
+
+/**
  * Get user document from Firestore
  * @param uid - User UID
  * @returns User object from Firestore
@@ -166,6 +205,7 @@ export async function getUserFromFirestore(uid: string): Promise<User> {
       currency: normalizeCurrency(userData!.currency),
       reminderLeadTime: normalizeReminderLeadTime(userData!.reminderLeadTime),
       workingHours: normalizeWorkingHours(userData!.workingHours),
+      subjects: normalizeSubjects(userData!.subjects),
       // Legacy docs created before onboarding existed lack this field; treat
       // anything missing/non-true as incomplete so existing users get prompted.
       onboardingComplete: userData!.onboardingComplete === true,
@@ -333,6 +373,61 @@ export async function updateUserWorkingHours(
 }
 
 /**
+ * Replace the tutor's subject catalogue. Detects subjects that were removed
+ * and cascades: any student of this tutor still tagged with a removed subject
+ * id has that id stripped from their `subjectIds` so no dangling references
+ * remain.
+ * @param uid - User UID
+ * @param subjects - Raw subjects payload (normalized server-side)
+ * @returns Updated User object
+ */
+export async function updateUserSubjects(
+  uid: string,
+  subjects: unknown,
+): Promise<User> {
+  try {
+    const firestore = getFirebaseFirestore();
+    const normalized = normalizeSubjects(subjects);
+
+    const userDoc = await firestore.collection("users").doc(uid).get();
+    if (!userDoc.exists) {
+      throw new Error("User not found");
+    }
+    const prev = normalizeSubjects(userDoc.data()?.subjects);
+    const removedIds = prev
+      .map((s) => s.id)
+      .filter((id) => !normalized.some((s) => s.id === id));
+
+    await firestore.collection("users").doc(uid).update({
+      subjects: normalized,
+      updatedAt: admin.firestore.Timestamp.now(),
+    });
+
+    // Cascade: strip removed subject ids from the tutor's students.
+    for (const removedId of removedIds) {
+      const affected = await firestore
+        .collection("students")
+        .where("tutorId", "==", uid)
+        .where("subjectIds", "array-contains", removedId)
+        .get();
+      if (affected.empty) continue;
+      const batch = firestore.batch();
+      affected.forEach((doc) => {
+        batch.update(doc.ref, {
+          subjectIds: admin.firestore.FieldValue.arrayRemove(removedId),
+        });
+      });
+      await batch.commit();
+    }
+
+    return getUserFromFirestore(uid);
+  } catch (error) {
+    console.error("Failed to update user subjects:", error);
+    throw new Error("Failed to update subjects");
+  }
+}
+
+/**
  * Mark the user's onboarding as finished (they completed or dismissed it).
  * Sets `onboardingComplete: true` and bumps `updatedAt`.
  * @param uid - User UID
@@ -402,6 +497,7 @@ export async function createUserInFirestore(
       avatarUrl,
       currency: normalizedCurrency,
       reminderLeadTime: null,
+      subjects: [] as Subject[],
       onboardingComplete: false,
       tourSeen: false,
       createdAt: now,
@@ -420,6 +516,7 @@ export async function createUserInFirestore(
       avatarUrl,
       currency: normalizedCurrency,
       reminderLeadTime: null,
+      subjects: [],
       onboardingComplete: false,
       tourSeen: false,
       createdAt: now.toDate() as any,

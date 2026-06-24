@@ -24,7 +24,9 @@ export const studentFormSchema = z
       .or(z.literal("")),
     useParentEmailAsBilling: z.boolean(),
     billingEmail: z.string().trim().optional().or(z.literal("")),
-    subject: z.string().min(1, "Subject is required").trim(),
+    subjectIds: z
+      .array(z.string().min(1))
+      .min(1, "Select at least one subject"),
     expectedAmount: z
       .union([z.number(), z.string()])
       .transform((v) => (typeof v === "string" ? Number(v) : v))
@@ -85,7 +87,7 @@ export const EMPTY_STUDENT_FORM: StudentFormData = {
   parentEmail: "",
   useParentEmailAsBilling: false,
   billingEmail: "",
-  subject: "",
+  subjectIds: [],
   expectedAmount: 0,
   rateType: "hourly",
   frequencyPerWeek: 0,
@@ -102,7 +104,7 @@ export function formToUpdateRequest(data: StudentFormData): Record<string, any> 
     phone: data.phone || null,
     parentEmail: data.parentEmail || null,
     billingEmail: data.useParentEmailAsBilling ? data.parentEmail : (data.billingEmail || null),
-    subject: data.subject,
+    subjectIds: data.subjectIds,
     expectedAmount: data.expectedAmount,
     rateType: data.rateType,
     frequencyPerWeek: data.frequencyPerWeek,

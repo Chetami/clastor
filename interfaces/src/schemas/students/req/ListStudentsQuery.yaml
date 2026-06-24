@@ -20,10 +20,10 @@ properties:
     type: string
     description: Search query to filter by name or email
     example: johnson
-  subject:
+  subjectId:
     type: string
-    description: Filter by subject
-    example: Mathematics
+    description: Filter to students tagged with this subject id
+    example: subj_abc123
 description: |-
   Query parameters for listing students
   All parameters are optional and used for filtering and pagination

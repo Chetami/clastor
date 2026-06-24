@@ -37,6 +37,7 @@ import {
 import { StudentForm } from "./StudentForm";
 import type { StudentFormData } from "./student-schema";
 import { useCreateStudent, useListStudents } from "./api";
+import { useSubjectMap } from "@/lib/subjects";
 import {
   compactCurrency,
   formatCurrency,
@@ -72,6 +73,7 @@ export default function Students() {
   const navigate = useNavigate();
   const currency = useUserCurrency();
   const { data: students = [], isLoading, error } = useListStudents();
+  const subjectMap = useSubjectMap();
   const studentIds = students.map((s) => s.id);
   const debtQueries = useStudentsDebts(studentIds);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("active");
@@ -104,7 +106,9 @@ export default function Students() {
         query.length === 0 ||
         s.name.toLowerCase().includes(query) ||
         s.email.toLowerCase().includes(query) ||
-        s.subject.toLowerCase().includes(query);
+        (s.subjectIds ?? []).some((id) =>
+          subjectMap.get(id)?.name.toLowerCase().includes(query),
+        );
       return matchesStatus && matchesSearch;
     });
 
@@ -131,7 +135,7 @@ export default function Students() {
       }
     });
     return sorted;
-  }, [students, statusFilter, search, sortKey, studentDebts]);
+  }, [students, statusFilter, search, sortKey, studentDebts, subjectMap]);
 
   async function handleAdd(values: StudentFormData) {
     try {
@@ -145,7 +149,7 @@ export default function Students() {
         phone: values.phone?.trim() || undefined,
         parentEmail: values.parentEmail?.trim() || undefined,
         billingEmail,
-        subject: values.subject,
+        subjectIds: values.subjectIds,
         expectedAmount: values.expectedAmount,
         rateType: values.rateType,
         frequencyPerWeek: values.frequencyPerWeek,
