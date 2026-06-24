@@ -9,7 +9,7 @@ import Dashboard from "@/features/dashboard/Dashboard";
 import Students from "@/features/students/Students";
 import StudentDetail from "@/features/students/StudentDetail";
 import Schedule from "@/features/schedule/Schedule";
-import EventDetail from "@/features/lessons/EventDetail";
+import EventDetail from "@/features/lessons/LessonDetail";
 import Payments from "@/features/payments/Payments";
 import CreateInvoice from "@/features/payments/CreateInvoice";
 import EditInvoice from "@/features/payments/EditInvoice";
@@ -51,9 +51,17 @@ export const router = createBrowserRouter([
               { path: "lessons/:eventId", element: <EventDetail /> },
               { path: "settings", element: <Settings /> },
               { path: "account", element: <Account /> },
-              { path: "settings/payments", element: <StripePaymentsSettings /> },
+              {
+                path: "settings/payments",
+                element: <StripePaymentsSettings />,
+              },
               ...(isFeatureEnabled("publicProfile")
-                ? [{ path: "profile" as const, element: <TutorProfileEditor /> }]
+                ? [
+                    {
+                      path: "profile" as const,
+                      element: <TutorProfileEditor />,
+                    },
+                  ]
                 : []),
             ],
           },
