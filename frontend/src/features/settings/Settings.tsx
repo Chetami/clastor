@@ -41,7 +41,12 @@ export default function Settings() {
           </CardTitle>
           <CardDescription>
             Automatically remind students before a lesson. Choose when to send,
-            or turn it off. This is a saved preference — sending isn't live yet.
+            or turn it off.{" "}
+            <span className="text-orange-600 dark:text-orange-500">
+              This is a saved preference — automated sending isn't live yet.
+            </span>{" "}
+            Currently you can send manual reminders by pressing the remind
+            button on a lesson.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -62,7 +67,10 @@ export default function Settings() {
           <CardTitle>Online payments</CardTitle>
           <CardDescription>
             Connect Stripe to accept card payments that settle straight to your
-            bank.
+            bank.{" "}
+            <span className="text-orange-600 dark:text-orange-500">
+              Stripe doesn't work for the demo period.
+            </span>
           </CardDescription>
         </CardHeader>
         <CardContent>
