@@ -6,16 +6,19 @@
   "workspaces": [
     "interfaces",
     "backend",
-    "frontend"
+    "frontend",
+    "website"
   ],
   "scripts": {
     "install:all": "npm install",
     "dev:backend": "npm run dev --workspace=backend",
     "dev:frontend": "npm run dev --workspace=frontend",
-    "build:all": "npm run build --workspace=interfaces && npm run build --workspace=backend && npm run build --workspace=frontend",
+    "dev:website": "npm run dev --workspace=website",
+    "build:all": "npm run build --workspace=interfaces && npm run build --workspace=backend && npm run build --workspace=frontend && npm run build --workspace=website",
     "build:interfaces": "npm run build --workspace=interfaces",
     "build:backend": "npm run build --workspace=backend",
-    "build:frontend": "npm run build --workspace=frontend"
+    "build:frontend": "npm run build --workspace=frontend",
+    "build:website": "npm run build --workspace=website"
   },
   "devDependencies": {
     "@types/node": "^20.14.0",

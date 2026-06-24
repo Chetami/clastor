@@ -11,7 +11,7 @@ export function useUserCurrency(): string {
 }
 
 /**
- * The localized symbol for a currency code (e.g. "$" for AUD, "£" for GBP,
+ * The localized symbol for a currency code (e.g. "$" for AUD, "$" for GBP,
  * "€" for EUR). Falls back to the code itself when Intl can't resolve it.
  * Used for input adornments where a full formatted string doesn't fit.
  */

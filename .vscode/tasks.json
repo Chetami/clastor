@@ -60,8 +60,37 @@
       }
     },
     {
+      "label": "Dev: Website",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "dev:website"],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "pattern": {
+          "regexp": "^(.*):(\\d+):(\\d+)\\s+-\\s+(.*)$",
+          "file": 1,
+          "line": 2,
+          "column": 3,
+          "message": 4
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "Local:",
+          "endsPattern": "error"
+        }
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": false
+      }
+    },
+    {
       "label": "Dev: All",
-      "dependsOn": ["Dev: Backend", "Dev: Frontend"],
+      "dependsOn": ["Dev: Backend", "Dev: Frontend", "Dev: Website"],
       "problemMatcher": [],
       "group": {
         "kind": "build",
@@ -97,6 +126,14 @@
       "type": "shell",
       "command": "npm",
       "args": ["run", "build:frontend"],
+      "group": "build",
+      "problemMatcher": ["$tsc", "$eslint-stable"]
+    },
+    {
+      "label": "Build: Website",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "build:website"],
       "group": "build",
       "problemMatcher": ["$tsc", "$eslint-stable"]
     },
