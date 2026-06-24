@@ -54,7 +54,7 @@ coverage/
 
 # Deploy
 backend/.deploy-stage/
-deploy/backend.env.production
-deploy/frontend.env.production
-deploy/firebase-service-account.json
+# Per-environment secrets: ignore everything under deploy/environments/<env>/
+# but keep the committed <env>.psd1 definitions at the top level.
+deploy/environments/*/
 frontend/.env.production

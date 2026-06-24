@@ -1,4 +1,10 @@
 ﻿param(
+    # Which environment to deploy (dev | staging | prod | ...). Maps to a
+    # deploy/environments/<Environment>.psd1 file. See deploy/new-environment.ps1
+    # to scaffold a new one.
+    [Parameter(Mandatory = $true)]
+    [string]$Environment,
+
     [ValidateSet("tms", "all")]
     [string]$Target = "tms",
 
@@ -19,10 +25,12 @@ $repoRoot = $PSScriptRoot
 # Load shared config + helpers (Invoke-Ssh / Invoke-Scp / Die)
 # ---------------------------------------------------------------------------
 . "$repoRoot/deploy/config.ps1"
+$EnvCfg = Import-EnvironmentConfig -Name $Environment
+$envDir = "$repoRoot/deploy/environments/$Environment"
 
 Write-Host ""
 Write-Host "==========================================="
-Write-Host " Deploy FRONTEND  ->  $($Deploy.frontendUrl)"
+Write-Host " Deploy FRONTEND [$Environment]  ->  $($EnvCfg.frontendUrl)"
 Write-Host "==========================================="
 
 # ---------------------------------------------------------------------------
@@ -44,10 +52,12 @@ try {
     npm install
     if ($LASTEXITCODE -ne 0) { Die "frontend npm install failed" }
 
-    $prodEnv = "$repoRoot/deploy/frontend.env.production"
-    if (-not (Test-Path $prodEnv)) { Die "Missing $prodEnv" }
+    $prodEnv = "$envDir/frontend.env"
+    if (-not (Test-Path $prodEnv)) {
+        Die "Missing $prodEnv. Run:  .\deploy\new-environment.ps1 -Name $Environment ..."
+    }
     Copy-Item -Force $prodEnv "$repoRoot/frontend/.env.production"
-    Write-Host "      -> frontend/.env.production (VITE_API_URL=$($Deploy.backendUrl))"
+    Write-Host "      -> frontend/.env.production (VITE_API_URL=$($EnvCfg.backendUrl))"
 
     # 3. Build ---------------------------------------------------------------
     Write-Host "[3/5] Building frontend (vite)..."
@@ -73,7 +83,7 @@ if ($IdentityFile) { $authParams["IdentityFile"] = $IdentityFile }
 if ($Password)     { $authParams["Password"] = $Password }
 
 Write-Host "[4/5] Ensuring remote folder exists + uploading build..."
-$code = Invoke-Ssh "mkdir -p '$($Deploy.frontendRemote)'" @authParams
+$code = Invoke-Ssh "mkdir -p '$($EnvCfg.frontendRemote)'" @authParams
 if ($code -ne 0) { Die "Could not create/access remote folder" }
 
 # Run scp from inside dist/ with a colon-free relative source. An absolute Windows
@@ -81,7 +91,7 @@ if ($code -ne 0) { Die "Could not create/access remote folder" }
 # aborts with a usage error.
 Push-Location "$repoRoot/frontend/dist"
 try {
-    $code = Invoke-Scp "." $Deploy.frontendRemote -Recursive @authParams
+    $code = Invoke-Scp "." $EnvCfg.frontendRemote -Recursive @authParams
     if ($code -ne 0) { Die "Upload of frontend build failed" }
 } finally { Pop-Location }
 
@@ -89,10 +99,10 @@ try {
 # 5. Fix permissions (dirs 755, files 644)
 # ---------------------------------------------------------------------------
 Write-Host "[5/5] Fixing permissions on server..."
-$permCmd = "cd '$($Deploy.frontendRemote)' && find . -type d -exec chmod 755 {} + && find . -type f -exec chmod 644 {} + && echo perms-fixed"
+$permCmd = "cd '$($EnvCfg.frontendRemote)' && find . -type d -exec chmod 755 {} + && find . -type f -exec chmod 644 {} + && echo perms-fixed"
 $code = Invoke-Ssh $permCmd @authParams
 if ($code -ne 0) { Die "Permission fix failed" }
 
 Write-Host ""
 Write-Host "Frontend deployed successfully." -ForegroundColor Green
-Write-Host "Open: $($Deploy.frontendUrl)"
+Write-Host "Open: $($EnvCfg.frontendUrl)"

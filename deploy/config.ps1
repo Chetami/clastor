@@ -5,25 +5,40 @@
 # dot-source this file (`. "$PSScriptRoot/deploy/config.ps1"`).
 # ============================================================================
 
+# Host-only configuration — values shared by EVERY environment (same Verpex
+# cPanel box). Per-environment URLs and remote paths live in
+# deploy/environments/<env>.psd1 and are loaded via Import-EnvironmentConfig.
 $Deploy = @{
     # SSH / cPanel account
     sshUser = "xamify"
     sshHost = "xamify.com.au"
 
-    # Frontend: static Vite build destination (subdomain document root)
-    frontendRemote = "/home/xamify/tms-dev.xamify.com.au"
-
-    # Backend: Phusion Passenger "Application root" for the Node.js app
-    backendRemote  = "/home/xamify/tms-dev-backend.xamify.com.au"
-
-    # Public URLs (used for health checks + wiring env files)
-    frontendUrl = "https://tms-dev.xamify.com.au"
-    backendUrl  = "https://tms-dev-backend.xamify.com.au"
-
     # CloudLinux Node selector script on the server. npm runs over SSH inside
     # this environment. Verpex/CloudLinux typically exposes /opt/alt/alt-nodejsXX/enable.
     # The deploy script tries this first, then falls back to common versions.
     nodeEnable = "/opt/alt/alt-nodejs20/enable"
+}
+
+# ----------------------------------------------------------------------------
+# Environment loader
+# ----------------------------------------------------------------------------
+# Each environment is a pure-data hashtable in deploy/environments/<env>.psd1.
+# The deploy scripts dot-source this file then call:
+#   $EnvCfg = Import-EnvironmentConfig -Name "dev"
+# to get name/frontendUrl/backendUrl/frontendRemote/backendRemote (+ optional
+# description). Secrets live beside it in deploy/environments/<env>/*.env.
+
+function Import-EnvironmentConfig {
+    param([Parameter(Mandatory = $true)][string]$Name)
+    $path = Join-Path $PSScriptRoot "environments/$Name.psd1"
+    if (-not (Test-Path $path)) {
+        Die "Unknown environment '$Name'. No file at $path. See deploy/new-environment.ps1."
+    }
+    $cfg = Import-PowerShellDataFile -Path $path
+    foreach ($k in 'name', 'frontendUrl', 'backendUrl', 'frontendRemote', 'backendRemote') {
+        if (-not $cfg.ContainsKey($k)) { Die "$path is missing required key '$k'." }
+    }
+    return $cfg
 }
 
 # ----------------------------------------------------------------------------

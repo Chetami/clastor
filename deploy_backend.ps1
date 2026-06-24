@@ -1,4 +1,10 @@
 ﻿param(
+    # Which environment to deploy (dev | staging | prod | ...). Maps to a
+    # deploy/environments/<Environment>.psd1 file. See deploy/new-environment.ps1
+    # to scaffold a new one.
+    [Parameter(Mandatory = $true)]
+    [string]$Environment,
+
     [ValidateSet("tms", "all")]
     [string]$Target = "tms",
 
@@ -9,8 +15,9 @@
     [string]$Password,
 
     # Path to the Firebase Admin service-account JSON on your machine.
-    # If omitted, the script resolves it from backend/.env
-    # (FIREBASE_SERVICE_ACCOUNT_KEY_PATH) or backend/firebase-service-account.json.
+    # If omitted, the script resolves it from deploy/environments/<Environment>/
+    # (firebase-service-account.json), backend/.env
+    # (FIREBASE_SERVICE_ACCOUNT_KEY_PATH), or backend/firebase-service-account.json.
     [string]$FirebaseKeyPath,
 
     # Build + stage only, no upload (dry-run)
@@ -24,10 +31,12 @@ $repoRoot = $PSScriptRoot
 # Load shared config + helpers
 # ---------------------------------------------------------------------------
 . "$repoRoot/deploy/config.ps1"
+$EnvCfg = Import-EnvironmentConfig -Name $Environment
+$envDir = "$repoRoot/deploy/environments/$Environment"
 
 Write-Host ""
 Write-Host "==========================================="
-Write-Host " Deploy BACKEND  ->  $($Deploy.backendUrl)"
+Write-Host " Deploy BACKEND [$Environment]  ->  $($EnvCfg.backendUrl)"
 Write-Host "==========================================="
 
 # ---------------------------------------------------------------------------
@@ -58,23 +67,21 @@ New-Item -ItemType Directory -Force -Path $stage | Out-Null
 Copy-Item -Recurse "$repoRoot/backend/dist" "$stage/dist"
 Copy-Item "$repoRoot/deploy/app.js" "$stage/app.js"
 
-# 2b. production .env (create from .example on first run; refuse placeholders)
-$prodEnv   = "$repoRoot/deploy/backend.env.production"
-$prodEnvEx = "$repoRoot/deploy/backend.env.production.example"
+# 2b. production .env for this environment (refuse placeholders)
+$prodEnv   = "$envDir/backend.env"
 if (-not (Test-Path $prodEnv)) {
-    if (Test-Path $prodEnvEx) {
-        Copy-Item $prodEnvEx $prodEnv
-        Die "$prodEnv did not exist - created from .example. Fill in the SECRET values, then re-run."
-    }
-    Die "Missing $prodEnv (and no .example to copy from)."
+    Die "Missing $prodEnv. Run:  .\deploy\new-environment.ps1 -Name $Environment ..."
 }
-if (Select-String -Path $prodEnv -Pattern 'REPLACE_WITH_') {
-    Die "$prodEnv still contains REPLACE_WITH_ placeholders. Fill in real secrets first."
+if (Select-String -Path $prodEnv -Pattern '^\s*[A-Za-z_][A-Za-z0-9_]*\s*=\s*REPLACE_WITH_') {
+    Die "$prodEnv still contains REPLACE_WITH_ placeholder values. Fill in real secrets first."
 }
 Copy-Item $prodEnv "$stage/.env"
 
-# 2c. Firebase service-account key
+# 2c. Firebase service-account key (env dir > -FirebaseKeyPath > backend/.env path)
 $resolvedKey = $FirebaseKeyPath
+if (-not $resolvedKey -and (Test-Path "$envDir/firebase-service-account.json")) {
+    $resolvedKey = "$envDir/firebase-service-account.json"
+}
 if (-not $resolvedKey) {
     $beEnv = "$repoRoot/backend/.env"
     if (Test-Path $beEnv) {
@@ -90,7 +97,7 @@ if (-not $resolvedKey) {
     }
 }
 if (-not $resolvedKey -or -not (Test-Path $resolvedKey)) {
-    Die "Firebase key not found. Pass -FirebaseKeyPath or place deploy/firebase-service-account.json."
+    Die "Firebase key not found. Place deploy/environments/$Environment/firebase-service-account.json or pass -FirebaseKeyPath."
 }
 Copy-Item $resolvedKey "$stage/firebase-service-account.json"
 Write-Host "      Firebase key: $resolvedKey"
@@ -130,8 +137,8 @@ try {
     tar -czf $tarName -C $stage .
     if ($LASTEXITCODE -ne 0) { Die "tar failed" }
 
-    $remoteTar = "$($Deploy.backendRemote)/__deploy.tar.gz"
-    $code = Invoke-Ssh "echo connected && mkdir -p '$($Deploy.backendRemote)' && echo done" @authParams
+    $remoteTar = "$($EnvCfg.backendRemote)/__deploy.tar.gz"
+    $code = Invoke-Ssh "echo connected && mkdir -p '$($EnvCfg.backendRemote)' && echo done" @authParams
     if ($code -ne 0) { Die "Could not create/access remote app root" }
 
     $code = Invoke-Scp $tarName $remoteTar @authParams
@@ -142,7 +149,7 @@ try {
 # 4. Extract on server
 # ---------------------------------------------------------------------------
 Write-Host "[4/7] Extracting bundle on server..."
-$extract = "set -e`ncd '$($Deploy.backendRemote)'`ntar -xzf __deploy.tar.gz`nrm -f __deploy.tar.gz`necho extracted-ok"
+$extract = "set -e`ncd '$($EnvCfg.backendRemote)'`ntar -xzf __deploy.tar.gz`nrm -f __deploy.tar.gz`necho extracted-ok"
 $code = Invoke-Ssh $extract @authParams
 if ($code -ne 0) { Die "Remote extract failed" }
 
@@ -152,7 +159,7 @@ if ($code -ne 0) { Die "Remote extract failed" }
 Write-Host "[5/7] Installing production node_modules on server..."
 $install = @"
 set -e
-cd '$($Deploy.backendRemote)'
+cd '$($EnvCfg.backendRemote)'
 for v in $($Deploy.nodeEnable) /opt/alt/alt-nodejs20/enable /opt/alt/alt-nodejs18/enable /opt/alt/alt-nodejs16/enable; do
   if [ -f "`$v" ]; then source "`$v"; break; fi
 done
@@ -167,7 +174,7 @@ if ($code -ne 0) { Die "Remote npm install failed" }
 # 6. Restart Passenger (touch tmp/restart.txt)
 # ---------------------------------------------------------------------------
 Write-Host "[6/7] Restarting Passenger app..."
-$restart = "cd '$($Deploy.backendRemote)' && mkdir -p tmp && touch tmp/restart.txt && echo restarted"
+$restart = "cd '$($EnvCfg.backendRemote)' && mkdir -p tmp && touch tmp/restart.txt && echo restarted"
 $code = Invoke-Ssh $restart @authParams
 if ($code -ne 0) { Die "Passenger restart trigger failed" }
 
@@ -177,7 +184,7 @@ if ($code -ne 0) { Die "Passenger restart trigger failed" }
 Write-Host "[7/7] Health check..."
 Start-Sleep -Seconds 3
 try {
-    $resp = Invoke-WebRequest -UseBasicParsing "$($Deploy.backendUrl)/health" -TimeoutSec 20
+    $resp = Invoke-WebRequest -UseBasicParsing "$($EnvCfg.backendUrl)/health" -TimeoutSec 20
     if ($resp.StatusCode -eq 200) {
         Write-Host "HEALTH OK: $($resp.Content)" -ForegroundColor Green
     } else {
@@ -185,7 +192,7 @@ try {
     }
 } catch {
     Write-Warning "Health check request failed (app may still be starting): $($_.Exception.Message)"
-    Write-Host "Retry later:  curl $($Deploy.backendUrl)/health"
+    Write-Host "Retry later:  curl $($EnvCfg.backendUrl)/health"
 }
 
 Write-Host ""
