@@ -8,12 +8,14 @@ import { Progress } from "@/components/ui/progress";
 import { useAuthStore } from "@/store/auth-store";
 import { useCompleteOnboarding } from "./api/use-complete-onboarding";
 import { WelcomeStep } from "./steps/WelcomeStep";
+import { AppearanceStep } from "./steps/AppearanceStep";
 import { ProfileStep } from "./steps/ProfileStep";
 import { WorkingHoursStep } from "./steps/WorkingHoursStep";
 import { GoogleConnectStep } from "./steps/GoogleConnectStep";
 
 const STEPS = [
   { key: "welcome", label: "Welcome" },
+  { key: "appearance", label: "Appearance" },
   { key: "profile", label: "Profile" },
   { key: "hours", label: "Working hours" },
   { key: "google", label: "Calendar" },
@@ -111,9 +113,10 @@ export default function OnboardingPage() {
         <Card>
           <CardContent className="p-6">
             {step === 0 && <WelcomeStep />}
-            {step === 1 && <ProfileStep />}
-            {step === 2 && <WorkingHoursStep />}
-            {step === 3 && <GoogleConnectStep />}
+            {step === 1 && <AppearanceStep />}
+            {step === 2 && <ProfileStep />}
+            {step === 3 && <WorkingHoursStep />}
+            {step === 4 && <GoogleConnectStep />}
           </CardContent>
         </Card>
 
