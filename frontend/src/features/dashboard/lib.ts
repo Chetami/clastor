@@ -3,8 +3,15 @@ import type {
   DashboardPeriod,
   DashboardSeriesPoint,
   LessonResponse,
+  LessonTodo,
   StudentResponse,
 } from "@examify-tms/interfaces";
+
+/** A flattened { lesson, todo } pair from a lesson's checklist. */
+export type LessonChecklistItem = {
+  lesson: LessonResponse;
+  todo: LessonTodo;
+};
 
 /** Human label for the immediately preceding period, used in sub-lines. */
 export function previousPeriodLabel(period: DashboardPeriod): string {
@@ -220,6 +227,33 @@ export function todoLessons(
         new Date(b.startDateTime).getTime() - new Date(a.startDateTime).getTime(),
     )
     .slice(0, limit);
+}
+
+/**
+ * Flatten the per-lesson checklists (the "Todos" on each lesson detail page)
+ * into a single dashboard list. Returns only incomplete todos from
+ * non-cancelled lessons, sorted by lesson start time ascending so the soonest
+ * (and overdue) prep surfaces first.
+ */
+export function lessonChecklistTodos(
+  lessons: LessonResponse[],
+  limit = 12,
+): LessonChecklistItem[] {
+  const items: LessonChecklistItem[] = [];
+  for (const lesson of lessons) {
+    if (lesson.isCancelled) continue;
+    if (!lesson.todos || lesson.todos.length === 0) continue;
+    for (const todo of lesson.todos) {
+      if (todo.done) continue;
+      items.push({ lesson, todo });
+    }
+  }
+  items.sort(
+    (a, b) =>
+      new Date(a.lesson.startDateTime).getTime() -
+      new Date(b.lesson.startDateTime).getTime(),
+  );
+  return items.slice(0, limit);
 }
 
 /** "09:00 – 10:00" style range for a lesson. */

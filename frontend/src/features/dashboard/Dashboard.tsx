@@ -16,7 +16,7 @@ import { HoursChart } from "./components/hours-chart";
 import { IncomeChart } from "./components/income-chart";
 import { NextLesson } from "./components/next-lesson";
 import { CurrentLesson } from "./components/current-lesson";
-import { TodoLessons } from "./components/todo-lessons";
+import { ThingsToDo } from "./components/things-to-do";
 import { QuickActions } from "./components/quick-actions";
 import {
   StatCardsSkeleton,
@@ -30,6 +30,7 @@ import {
   nextLesson,
   expectedIncomeFromLessons,
   plannedLessons,
+  lessonChecklistTodos,
 } from "./lib";
 
 export default function Dashboard() {
@@ -58,6 +59,7 @@ export default function Dashboard() {
 
   const currentLesson = useMemo(() => findCurrentLesson(lessons), [lessons]);
   const todos = useMemo(() => todoLessons(lessons), [lessons]);
+  const checklist = useMemo(() => lessonChecklistTodos(lessons), [lessons]);
   const upcoming = useMemo(() => nextLesson(lessons), [lessons]);
   const expectedIncome = useMemo(
     () => expectedIncomeFromLessons(lessons, studentMap, period),
@@ -167,8 +169,9 @@ export default function Dashboard() {
           {lessonsLoading ? (
             <TodoLessonsSkeleton />
           ) : (
-            <TodoLessons
-              lessons={todos}
+            <ThingsToDo
+              attendanceLessons={todos}
+              checklistItems={checklist}
               studentNames={studentNames}
               onConfirm={handleTodoConfirm}
             />

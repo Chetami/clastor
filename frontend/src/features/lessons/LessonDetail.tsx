@@ -1,4 +1,11 @@
-import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  useCallback,
+} from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -602,14 +609,13 @@ export default function EventDetail() {
                             <Square className="h-4 w-4" />
                           )}
                         </button>
-                        <input
-                          type="text"
+                        <AutoGrowTextarea
                           value={todo.text}
                           onChange={(e) =>
                             handleTodoTextChange(todo.id, e.target.value)
                           }
                           onBlur={handleTodoBlur}
-                          className={`min-w-0 flex-1 bg-transparent text-sm outline-none transition-colors ${
+                          className={`min-w-0 flex-1 resize-none overflow-hidden border-none bg-transparent p-0 text-sm outline-none transition-colors ${
                             todo.done
                               ? "text-muted-foreground line-through"
                               : "text-foreground"
@@ -869,5 +875,37 @@ function DetailRow({ icon, label, value, muted, href }: DetailRowProps) {
         )}
       </div>
     </div>
+  );
+}
+
+interface AutoGrowTextareaProps {
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
+  onBlur: () => void;
+  className?: string;
+}
+
+function AutoGrowTextarea({
+  value,
+  onChange,
+  onBlur,
+  className,
+}: AutoGrowTextareaProps) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, [value]);
+  return (
+    <textarea
+      ref={ref}
+      value={value}
+      onChange={onChange}
+      onBlur={onBlur}
+      rows={1}
+      className={className}
+    />
   );
 }
