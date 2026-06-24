@@ -477,7 +477,7 @@ export async function notifyStudent(
       icsUid,
       // SEQUENCE mirrors the bumped RSVP version: each resend is an update.
       sequence,
-      summary: `${lesson.subject} with ${tutor.name}`,
+      summary: `${lesson.subject ?? "Lesson"} with ${tutor.name}`,
       start,
       end,
       location: lesson.location,
@@ -587,7 +587,7 @@ function renderRsvpPage(
       title: "You're confirmed ✓",
       body: lesson
         ? `Thanks! We've let your tutor know you'll be at <strong>${escapeHtmlText(
-            lesson.subject
+            lesson.subject ?? "Lesson"
           )}</strong> on <strong>${escapeHtmlText(when!)}</strong>.`
         : "Thanks! Your tutor has been notified that you've accepted.",
     },
@@ -595,7 +595,7 @@ function renderRsvpPage(
       title: "Marked as declined",
       body: lesson
         ? `We've let your tutor know you can't make <strong>${escapeHtmlText(
-            lesson.subject
+            lesson.subject ?? "Lesson"
           )}</strong> on <strong>${escapeHtmlText(when!)}</strong>.`
         : "We've let your tutor know you can't make this lesson.",
     },

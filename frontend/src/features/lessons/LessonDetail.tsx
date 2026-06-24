@@ -244,6 +244,7 @@ export default function EventDetail() {
         return;
       }
       const { meetingLink } = await generateMeetLinkRequest({
+        lessonId: lesson.id,
         startDateTime: lesson.startDateTime,
         durationMinutes: lesson.durationMinutes,
       });

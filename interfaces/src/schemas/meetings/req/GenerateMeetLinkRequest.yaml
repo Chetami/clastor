@@ -1,5 +1,13 @@
 type: object
 properties:
+  lessonId:
+    type: string
+    description: >-
+      ID of the lesson the Meet link is for. When provided, the Meet
+      conference is attached to the lesson's existing Google Calendar event
+      (avoiding a duplicate calendar entry). If the lesson has no backing
+      event yet, a new event is created and stored on the lesson.
+    example: "lesson_abc123"
   startDateTime:
     type: string
     format: date-time

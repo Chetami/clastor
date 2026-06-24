@@ -305,6 +305,7 @@ export function CreateEventDialog({
         ),
       );
       const { meetingLink } = await generateMeetLinkRequest({
+        lessonId,
         startDateTime,
         durationMinutes,
       });

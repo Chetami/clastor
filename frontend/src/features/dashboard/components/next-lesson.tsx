@@ -80,6 +80,7 @@ export function NextLesson({ lesson, studentName }: Props) {
   const handleGenerate = async () => {
     try {
       const res = await generateMeet.mutateAsync({
+        lessonId: lesson.id,
         startDateTime: lesson.startDateTime,
         durationMinutes: lesson.durationMinutes,
       });

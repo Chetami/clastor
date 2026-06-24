@@ -20,6 +20,14 @@ import {
   PopoverAnchor,
   PopoverContent,
 } from "@/components/ui/popover";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
@@ -94,6 +102,9 @@ export function EventPopover({
   const googleConnected = !!googleStatus?.connected;
   const [actionError, setActionError] = useState<string | null>(null);
   const [meetLoading, setMeetLoading] = useState(false);
+  const [notifyOpen, setNotifyOpen] = useState(false);
+  const [notifyMessage, setNotifyMessage] = useState("");
+  const [notifyError, setNotifyError] = useState<string | null>(null);
 
   const studentName = lesson
     ? (students.find((s) => s.id === lesson.studentId)?.name ?? "Unknown student")
@@ -114,13 +125,26 @@ export function EventPopover({
 
   const ready = !!(lesson && studentName && endDate);
 
+  function openNotifyDialog() {
+    if (!lesson || !studentName) return;
+    setNotifyError(null);
+    const subjectPart = lesson.subject ? ` ${lesson.subject}` : "";
+    setNotifyMessage(
+      `Hi ${studentName},\n\nThis is a reminder about our upcoming${subjectPart} lesson on ${formatDateTime(lesson.startDateTime)}.\n\nLooking forward to seeing you!`,
+    );
+    setNotifyOpen(true);
+  }
+
   async function handleNotify() {
     if (!lessonId) return;
-    setActionError(null);
+    setNotifyError(null);
     try {
-      await notifyStudent.mutateAsync(undefined);
+      await notifyStudent.mutateAsync(notifyMessage || undefined);
+      setNotifyOpen(false);
     } catch {
-      setActionError(notifyStudent.error?.message ?? "Failed to notify student");
+      setNotifyError(
+        notifyStudent.error?.message ?? "Failed to notify student",
+      );
     }
   }
 
@@ -141,6 +165,7 @@ export function EventPopover({
     setMeetLoading(true);
     try {
       const { meetingLink } = await generateMeetLinkRequest({
+        lessonId: lesson.id,
         startDateTime: lesson.startDateTime,
         durationMinutes: lesson.durationMinutes,
       });
@@ -179,6 +204,7 @@ export function EventPopover({
   }
 
   return (
+    <>
     <Popover open={open} onOpenChange={onOpenChange}>
       {anchor && lessonId && (
         <PopoverAnchor virtualRef={{ current: anchor }} />
@@ -228,7 +254,7 @@ export function EventPopover({
             cancelPending={cancelLesson.isPending}
             actionError={actionError}
             lessonId={lesson.id}
-            onNotify={handleNotify}
+            onNotify={openNotifyDialog}
             onCancel={handleCancel}
             onGenerateMeet={handleGenerateMeet}
             meetLoading={meetLoading}
@@ -241,6 +267,48 @@ export function EventPopover({
         </div>
       </PopoverContent>
     </Popover>
+
+      <Dialog open={notifyOpen} onOpenChange={setNotifyOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Notify {studentName ?? "student"}</DialogTitle>
+            <DialogDescription>
+              Send a reminder email to the student. Lesson details are appended
+              automatically. You can resend once every 24 hours.
+            </DialogDescription>
+          </DialogHeader>
+          <textarea
+            value={notifyMessage}
+            onChange={(e) => setNotifyMessage(e.target.value)}
+            rows={6}
+            className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          />
+          {notifyError && (
+            <p className="text-xs text-destructive">{notifyError}</p>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setNotifyOpen(false)}
+              disabled={notifyStudent.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleNotify}
+              disabled={notifyStudent.isPending}
+            >
+              {notifyStudent.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Mail className="mr-2 h-4 w-4" />
+              )}
+              {notifyStudent.isPending ? "Sending…" : "Send email"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
