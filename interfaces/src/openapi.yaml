@@ -84,6 +84,8 @@ components:
     # Lesson Schema
     Lesson:
       $ref: './schemas/lessons/Lesson.yaml'
+    LessonTodo:
+      $ref: './schemas/lessons/LessonTodo.yaml'
     # Lesson Request/Response Schemas
     CreateLessonRequest:
       $ref: './schemas/lessons/req/CreateLessonRequest.yaml'

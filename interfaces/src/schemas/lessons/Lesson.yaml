@@ -50,6 +50,12 @@ properties:
     type: string
     nullable: true
     description: Free-form tutor notes about the lesson
+  todos:
+    type: array
+    description: Checklist items attached to this lesson.
+    items:
+      $ref: './LessonTodo.yaml'
+    default: []
   acceptanceStatus:
     $ref: './LessonAcceptance.yaml'
   attendanceStatus:

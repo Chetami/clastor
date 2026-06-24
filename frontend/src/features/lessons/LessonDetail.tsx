@@ -64,7 +64,7 @@ import {
   isLessonFinished,
   lessonEndDate,
 } from "../schedule/lesson-utils";
-import type { AttendanceStatus } from "@examify-tms/interfaces";
+import type { AttendanceStatus, LessonTodo } from "@examify-tms/interfaces";
 import { meetUrl } from "@/features/lessons/lesson-display";
 
 function formatDateTime(iso: string) {
@@ -92,50 +92,6 @@ const STATUS_TONE: Record<string, string> = {
 
 const NOTIFY_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
-interface TodoItem {
-  id: string;
-  text: string;
-  done: boolean;
-}
-
-const TODO_UNCHECKED = "☐ ";
-const TODO_CHECKED = "☑ ";
-const TODO_DELIMITER = "\n---TODOS---\n";
-
-function parseNotes(raw: string | null): { notes: string; todos: TodoItem[] } {
-  if (!raw) return { notes: "", todos: [] };
-  const idx = raw.indexOf("\n---TODOS---\n");
-  if (idx === -1) return { notes: raw, todos: [] };
-  const notes = raw.slice(0, idx);
-  const todoLines = raw.slice(idx + TODO_DELIMITER.length).split("\n");
-  const todos: TodoItem[] = [];
-  for (const line of todoLines) {
-    if (line.startsWith(TODO_UNCHECKED)) {
-      todos.push({
-        id: crypto.randomUUID(),
-        text: line.slice(TODO_UNCHECKED.length),
-        done: false,
-      });
-    } else if (line.startsWith(TODO_CHECKED)) {
-      todos.push({
-        id: crypto.randomUUID(),
-        text: line.slice(TODO_CHECKED.length),
-        done: true,
-      });
-    }
-  }
-  return { notes, todos };
-}
-
-function serializeNotes(notes: string, todos: TodoItem[]): string {
-  const base = notes.trim();
-  if (todos.length === 0) return base;
-  const todoSection = todos
-    .map((t) => (t.done ? TODO_CHECKED : TODO_UNCHECKED) + t.text)
-    .join("\n");
-  return base + TODO_DELIMITER + todoSection;
-}
-
 export default function EventDetail() {
   const { eventId } = useParams<{ eventId: string }>();
   const navigate = useNavigate();
@@ -154,9 +110,9 @@ export default function EventDetail() {
   const [googleConnected, setGoogleConnected] = useState<boolean | null>(null);
   const [editingNotes, setEditingNotes] = useState(false);
   const [notesDraft, setNotesDraft] = useState("");
-  const [todos, setTodos] = useState<TodoItem[]>([]);
+  const [todos, setTodos] = useState<LessonTodo[]>([]);
   const [newTodoText, setNewTodoText] = useState("");
-  const notesInitialized = useRef(false);
+  const initialized = useRef(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -166,23 +122,36 @@ export default function EventDetail() {
   }, []);
 
   useEffect(() => {
-    if (lesson && !notesInitialized.current) {
-      const parsed = parseNotes(lesson.notes ?? null);
-      setNotesDraft(parsed.notes);
-      setTodos(parsed.todos);
-      notesInitialized.current = true;
+    if (lesson && !initialized.current) {
+      setNotesDraft(lesson.notes ?? "");
+      setTodos(lesson.todos ?? []);
+      initialized.current = true;
     }
   }, [lesson]);
 
   const saveNotes = useCallback(
-    async (notes: string, todos: TodoItem[]) => {
+    async (notes: string) => {
       if (!eventId || saving) return;
       setSaving(true);
       try {
-        const serialized = serializeNotes(notes, todos);
-        await updateLesson.mutateAsync({ notes: serialized || null });
+        await updateLesson.mutateAsync({ notes: notes || null });
       } catch {
         toast.error("Failed to save notes");
+      } finally {
+        setSaving(false);
+      }
+    },
+    [eventId, saving, updateLesson],
+  );
+
+  const saveTodos = useCallback(
+    async (nextTodos: LessonTodo[]) => {
+      if (!eventId || saving) return;
+      setSaving(true);
+      try {
+        await updateLesson.mutateAsync({ todos: nextTodos });
+      } catch {
+        toast.error("Failed to save todos");
       } finally {
         setSaving(false);
       }
@@ -334,40 +303,41 @@ export default function EventDetail() {
 
   function handleNotesSave() {
     setEditingNotes(false);
-    saveNotes(notesDraft, todos);
+    saveNotes(notesDraft);
   }
 
   function handleToggleTodo(id: string) {
-    setTodos((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, done: !t.done } : t)),
+    const next = todos.map((t) =>
+      t.id === id ? { ...t, done: !t.done } : t,
     );
+    setTodos(next);
+    saveTodos(next);
   }
 
   function handleAddTodo() {
     const text = newTodoText.trim();
     if (!text) return;
-    const next: TodoItem[] = [
+    const next: LessonTodo[] = [
       ...todos,
-      { id: crypto.randomUUID(), text, done: false },
+      { id: `todo_${crypto.randomUUID()}`, text, done: false },
     ];
     setTodos(next);
     setNewTodoText("");
-    saveNotes(notesDraft, next);
+    saveTodos(next);
   }
 
   function handleDeleteTodo(id: string) {
     const next = todos.filter((t) => t.id !== id);
     setTodos(next);
-    saveNotes(notesDraft, next);
+    saveTodos(next);
   }
 
   function handleTodoTextChange(id: string, text: string) {
-    const next = todos.map((t) => (t.id === id ? { ...t, text } : t));
-    setTodos(next);
+    setTodos((prev) => prev.map((t) => (t.id === id ? { ...t, text } : t)));
   }
 
   function handleTodoBlur() {
-    saveNotes(notesDraft, todos);
+    saveTodos(todos);
   }
 
   return (

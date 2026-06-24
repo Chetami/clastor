@@ -32,6 +32,7 @@ function mapLesson(id: string, data: admin.firestore.DocumentData): Lesson {
     durationMinutes: data.durationMinutes,
     location: data.location ?? null,
     notes: data.notes ?? null,
+    todos: data.todos ?? [],
     acceptanceStatus: data.acceptanceStatus,
     attendanceStatus: data.attendanceStatus,
     seriesId: data.seriesId ?? null,
@@ -180,6 +181,7 @@ export async function createLessonInFirestore(
       durationMinutes: data.durationMinutes,
       location: data.location ?? null,
       notes: data.notes ?? null,
+      todos: [],
       acceptanceStatus: "pending",
       attendanceStatus: "unrecorded",
       seriesId: null,
@@ -209,6 +211,7 @@ export async function createLessonInFirestore(
       durationMinutes: data.durationMinutes,
       location: data.location ?? null,
       notes: data.notes ?? null,
+      todos: [],
       acceptanceStatus: "pending",
       attendanceStatus: "unrecorded",
       seriesId: null,
@@ -257,6 +260,7 @@ export async function updateLessonInFirestore(
       updateData.durationMinutes = data.durationMinutes;
     if (data.location !== undefined) updateData.location = data.location;
     if (data.notes !== undefined) updateData.notes = data.notes;
+    if (data.todos !== undefined) updateData.todos = data.todos;
     if (data.acceptanceStatus !== undefined)
       updateData.acceptanceStatus = data.acceptanceStatus;
     if (data.remindersEnabled !== undefined)

@@ -210,6 +210,7 @@ export async function createLessonSeriesInFirestore(
           durationMinutes: data.durationMinutes,
           location: data.location ?? null,
           notes: data.notes ?? null,
+          todos: [],
           acceptanceStatus: "pending",
           attendanceStatus: "unrecorded",
           seriesId,

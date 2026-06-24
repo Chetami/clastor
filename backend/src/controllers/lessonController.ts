@@ -53,6 +53,7 @@ function toLessonResponse(lesson: Lesson): LessonResponse {
     durationMinutes: lesson.durationMinutes,
     location: lesson.location ?? null,
     notes: lesson.notes ?? null,
+    todos: lesson.todos ?? [],
     acceptanceStatus: lesson.acceptanceStatus,
     attendanceStatus: lesson.attendanceStatus,
     seriesId: lesson.seriesId ?? null,
