@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { Video, Loader2, TriangleAlert } from "lucide-react";
+import { Video, TriangleAlert, MapPin, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  ToggleGroup,
+  ToggleGroupItem,
+} from "@/components/ui/toggle-group";
 import {
   Dialog,
   DialogContent,
@@ -23,8 +27,7 @@ import { useSubjects } from "@/lib/subjects";
 import { useCreateLesson, useCreateRecurringLesson } from "./api";
 import {
   generateMeetLinkRequest,
-  getGoogleConnectionStatus,
-  getGoogleAuthUrl,
+  updateLessonRequest,
 } from "./api/requests";
 import {
   DAYS,
@@ -90,6 +93,7 @@ function emptyValues(): EventFormData {
   };
 }
 
+type LocationMode = "zoom" | "meet" | "inperson" | "other" | "";
 type FieldErrors = Partial<Record<keyof EventFormData, string>>;
 
 export function CreateEventDialog({
@@ -106,11 +110,8 @@ export function CreateEventDialog({
   const createRecurring = useCreateRecurringLesson();
   const [values, setValues] = useState<EventFormData>(emptyValues);
   const [errors, setErrors] = useState<FieldErrors>({});
-  const [meetLoading, setMeetLoading] = useState(false);
-  const [meetError, setMeetError] = useState<string | null>(null);
+  const [locationMode, setLocationMode] = useState<LocationMode>("");
   // null = unknown, true = connected, false = not connected
-  const [googleConnected, setGoogleConnected] = useState<boolean | null>(null);
-
   const isRecurring = values.repeat !== "none";
   const pending = createLesson.isPending || createRecurring.isPending;
   const submitError =
@@ -174,19 +175,13 @@ export function CreateEventDialog({
   useEffect(() => {
     if (!open) return;
     setErrors({});
-    setMeetError(null);
-    setMeetLoading(false);
-    setGoogleConnected(null);
+    setLocationMode("");
     setValues({
       ...emptyValues(),
       date: start ? toDateStr(start) : "",
       startTime: start ? toTimeStr(start) : "",
       endTime: end ? toTimeStr(end) : "",
     });
-    // Check Google connection status when the dialog opens.
-    getGoogleConnectionStatus()
-      .then((s) => setGoogleConnected(s.connected))
-      .catch(() => setGoogleConnected(false));
   }, [open, start, end]);
 
   function update<K extends keyof EventFormData>(
@@ -197,45 +192,28 @@ export function CreateEventDialog({
     setErrors((prev) => ({ ...prev, [key]: undefined }));
   }
 
-  async function handleGenerateMeet() {
-    setMeetLoading(true);
-    setMeetError(null);
-    try {
-      if (!googleConnected) {
-        // Not connected yet — kick off the Google Calendar OAuth flow.
-        const { authUrl } = await getGoogleAuthUrl();
-        window.location.href = authUrl;
-        return;
-      }
-      // Time the backing calendar event to the chosen slot when available.
-      const hasStart = values.date && values.startTime;
-      const startDateTime = hasStart
-        ? new Date(`${values.date}T${values.startTime}:00`).toISOString()
-        : undefined;
-      const durationMinutes =
-        values.startTime && values.endTime
-          ? Math.max(
-              1,
-              Math.round(
-                (new Date(`${values.date}T${values.endTime}:00`).getTime() -
-                  new Date(`${values.date}T${values.startTime}:00`).getTime()) /
-                  60000,
-              ),
-            )
-          : undefined;
-
-      const { meetingLink } = await generateMeetLinkRequest({
-        startDateTime,
-        durationMinutes,
-      });
-      update("location", meetingLink);
-    } catch (err) {
-      setMeetError(
-        err instanceof Error ? err.message : "Failed to generate link",
-      );
-    } finally {
-      setMeetLoading(false);
+  function handleLocationModeChange(mode: LocationMode) {
+    if (mode === locationMode) {
+      setLocationMode("");
+      update("location", "");
+      return;
     }
+    if (mode === "zoom") {
+      setLocationMode("zoom");
+      return;
+    }
+    if (mode === "inperson") {
+      setLocationMode("inperson");
+      update("location", "In Person");
+      return;
+    }
+    if (mode === "meet") {
+      setLocationMode("meet");
+      update("location", "Google Meet");
+      return;
+    }
+    setLocationMode("other");
+    update("location", "");
   }
 
   function handleStudentChange(id: string) {
@@ -310,6 +288,32 @@ export function CreateEventDialog({
     }));
   }
 
+  async function attachMeetLink(
+    lessonId: string,
+    data: EventFormData,
+  ) {
+    try {
+      const startDateTime = new Date(
+        `${data.date}T${data.startTime}:00`,
+      ).toISOString();
+      const durationMinutes = Math.max(
+        1,
+        Math.round(
+          (new Date(`${data.date}T${data.endTime}:00`).getTime() -
+            new Date(`${data.date}T${data.startTime}:00`).getTime()) /
+            60000,
+        ),
+      );
+      const { meetingLink } = await generateMeetLinkRequest({
+        startDateTime,
+        durationMinutes,
+      });
+      await updateLessonRequest(lessonId, { location: meetingLink });
+    } catch {
+      // best-effort — lesson was created, Meet link just didn't attach
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const result = eventFormSchema.safeParse(values);
@@ -324,7 +328,12 @@ export function CreateEventDialog({
     }
     try {
       if (result.data.repeat === "none") {
-        await createLesson.mutateAsync(toCreateLessonRequest(result.data));
+        const lesson = await createLesson.mutateAsync(
+          toCreateLessonRequest(result.data),
+        );
+        if (locationMode === "meet") {
+          await attachMeetLink(lesson.id, result.data);
+        }
       } else {
         const student = students.find((s) => s.id === result.data.studentId);
         const timezone = student?.timezone || browserTimezone();
@@ -639,48 +648,54 @@ export function CreateEventDialog({
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="location">
+            <Label>
               Location{" "}
               <span className="text-xs font-normal text-muted-foreground">
                 (optional)
               </span>
             </Label>
-            <div className="flex gap-2">
+            <ToggleGroup
+              type="single"
+              variant="outline"
+              value={locationMode}
+              onValueChange={(v) => handleLocationModeChange(v as LocationMode)}
+              className="flex-wrap justify-start gap-2"
+            >
+              <ToggleGroupItem value="zoom" aria-label="Zoom">
+                <Video className="mr-1.5 h-4 w-4" />
+                Zoom
+              </ToggleGroupItem>
+              <ToggleGroupItem
+                value="meet"
+                aria-label="Google Meet"
+              >
+                <Video className="mr-1.5 h-4 w-4" />
+                Meet
+              </ToggleGroupItem>
+              <ToggleGroupItem value="inperson" aria-label="In Person">
+                <MapPin className="mr-1.5 h-4 w-4" />
+                In Person
+              </ToggleGroupItem>
+              <ToggleGroupItem value="other" aria-label="Other">
+                <Globe className="mr-1.5 h-4 w-4" />
+                Other
+              </ToggleGroupItem>
+            </ToggleGroup>
+            {locationMode === "zoom" && (
+              <div className="flex items-start gap-2 rounded-md border border-amber-500/50 bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-400">
+                <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
+                <p className="font-medium">
+                  Zoom integration is not available yet.
+                </p>
+              </div>
+            )}
+            {locationMode === "other" && (
               <Input
                 id="location"
-                placeholder="Online — Zoom"
+                placeholder="e.g. Microsoft Teams, Skype…"
                 value={values.location}
                 onChange={(e) => update("location", e.target.value)}
-                className="flex-1"
               />
-              <Button
-                type="button"
-                variant="outline"
-                className="shrink-0"
-                disabled={meetLoading || googleConnected === null}
-                onClick={handleGenerateMeet}
-                title={
-                  googleConnected
-                    ? "Generate a Google Meet link"
-                    : "Connect your Google account to generate Meet links"
-                }
-              >
-                {meetLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Video className="h-4 w-4" />
-                )}
-                <span className="ml-1.5 hidden sm:inline">
-                  {meetLoading
-                    ? "Generating…"
-                    : googleConnected
-                      ? "Meet link"
-                      : "Connect Google"}
-                </span>
-              </Button>
-            </div>
-            {meetError && (
-              <p className="text-xs text-destructive">{meetError}</p>
             )}
           </div>
 
