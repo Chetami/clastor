@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -17,6 +17,12 @@ import {
   ExternalLink,
   RefreshCw,
   CloudOff,
+  Square,
+  CheckSquare,
+  Plus,
+  Trash2,
+  Pencil,
+  Save,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -84,9 +90,51 @@ const STATUS_TONE: Record<string, string> = {
   cancelled: "bg-rose-100 text-rose-700",
 };
 
-/** Mirrors the backend NOTIFY_COOLDOWN_MS default (24h). Used for the
- *  optimistic button state; the server remains the source of truth. */
 const NOTIFY_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+
+interface TodoItem {
+  id: string;
+  text: string;
+  done: boolean;
+}
+
+const TODO_UNCHECKED = "☐ ";
+const TODO_CHECKED = "☑ ";
+const TODO_DELIMITER = "\n---TODOS---\n";
+
+function parseNotes(raw: string | null): { notes: string; todos: TodoItem[] } {
+  if (!raw) return { notes: "", todos: [] };
+  const idx = raw.indexOf("\n---TODOS---\n");
+  if (idx === -1) return { notes: raw, todos: [] };
+  const notes = raw.slice(0, idx);
+  const todoLines = raw.slice(idx + TODO_DELIMITER.length).split("\n");
+  const todos: TodoItem[] = [];
+  for (const line of todoLines) {
+    if (line.startsWith(TODO_UNCHECKED)) {
+      todos.push({
+        id: crypto.randomUUID(),
+        text: line.slice(TODO_UNCHECKED.length),
+        done: false,
+      });
+    } else if (line.startsWith(TODO_CHECKED)) {
+      todos.push({
+        id: crypto.randomUUID(),
+        text: line.slice(TODO_CHECKED.length),
+        done: true,
+      });
+    }
+  }
+  return { notes, todos };
+}
+
+function serializeNotes(notes: string, todos: TodoItem[]): string {
+  const base = notes.trim();
+  if (todos.length === 0) return base;
+  const todoSection = todos
+    .map((t) => (t.done ? TODO_CHECKED : TODO_UNCHECKED) + t.text)
+    .join("\n");
+  return base + TODO_DELIMITER + todoSection;
+}
 
 export default function EventDetail() {
   const { eventId } = useParams<{ eventId: string }>();
@@ -103,14 +151,49 @@ export default function EventDetail() {
   const [notifyMessage, setNotifyMessage] = useState("");
   const [meetLoading, setMeetLoading] = useState(false);
   const [meetError, setMeetError] = useState<string | null>(null);
-  // null = unknown, true = connected, false = not connected
   const [googleConnected, setGoogleConnected] = useState<boolean | null>(null);
+  const [editingNotes, setEditingNotes] = useState(false);
+  const [notesDraft, setNotesDraft] = useState("");
+  const [todos, setTodos] = useState<TodoItem[]>([]);
+  const [newTodoText, setNewTodoText] = useState("");
+  const notesInitialized = useRef(false);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     getGoogleConnectionStatus()
       .then((s) => setGoogleConnected(s.connected))
       .catch(() => setGoogleConnected(false));
   }, []);
+
+  useEffect(() => {
+    if (lesson && !notesInitialized.current) {
+      const parsed = parseNotes(lesson.notes ?? null);
+      setNotesDraft(parsed.notes);
+      setTodos(parsed.todos);
+      notesInitialized.current = true;
+    }
+  }, [lesson]);
+
+  const saveNotes = useCallback(
+    async (notes: string, todos: TodoItem[]) => {
+      if (!eventId || saving) return;
+      setSaving(true);
+      try {
+        const serialized = serializeNotes(notes, todos);
+        await updateLesson.mutateAsync({ notes: serialized || null });
+      } catch {
+        toast.error("Failed to save notes");
+      } finally {
+        setSaving(false);
+      }
+    },
+    [eventId, saving, updateLesson],
+  );
+
+  const pending = useMemo(
+    () => updateLesson.isPending || saving,
+    [updateLesson.isPending, saving],
+  );
 
   if (isLoading) {
     return (
@@ -150,6 +233,7 @@ export default function EventDetail() {
     lesson.isCancelled,
   );
   const lessonFinished = isLessonFinished(lesson);
+  const subject = lesson.subject;
 
   const notifiedAt = lesson.lastStudentNotifiedAt
     ? new Date(lesson.lastStudentNotifiedAt)
@@ -163,7 +247,8 @@ export default function EventDetail() {
 
   const defaultNotifyMessage = (() => {
     const when = formatDateTime(lesson.startDateTime);
-    return `Hi ${studentName},\n\nThis is a reminder about our upcoming ${lesson.subject} lesson on ${when}.\n\nLooking forward to seeing you!`;
+    const subjectPart = subject ? ` ${subject}` : "";
+    return `Hi ${studentName},\n\nThis is a reminder about our upcoming${subjectPart} lesson on ${when}.\n\nLooking forward to seeing you!`;
   })();
 
   function openNotifyDialog() {
@@ -178,12 +263,10 @@ export default function EventDetail() {
     setMeetError(null);
     try {
       if (!googleConnected) {
-        // Not connected yet — kick off the Google Calendar OAuth flow.
         const { authUrl } = await getGoogleAuthUrl();
         window.location.href = authUrl;
         return;
       }
-      // Time the backing calendar event to this lesson's slot.
       const { meetingLink } = await generateMeetLinkRequest({
         startDateTime: lesson.startDateTime,
         durationMinutes: lesson.durationMinutes,
@@ -249,6 +332,44 @@ export default function EventDetail() {
     }
   }
 
+  function handleNotesSave() {
+    setEditingNotes(false);
+    saveNotes(notesDraft, todos);
+  }
+
+  function handleToggleTodo(id: string) {
+    setTodos((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, done: !t.done } : t)),
+    );
+  }
+
+  function handleAddTodo() {
+    const text = newTodoText.trim();
+    if (!text) return;
+    const next: TodoItem[] = [
+      ...todos,
+      { id: crypto.randomUUID(), text, done: false },
+    ];
+    setTodos(next);
+    setNewTodoText("");
+    saveNotes(notesDraft, next);
+  }
+
+  function handleDeleteTodo(id: string) {
+    const next = todos.filter((t) => t.id !== id);
+    setTodos(next);
+    saveNotes(notesDraft, next);
+  }
+
+  function handleTodoTextChange(id: string, text: string) {
+    const next = todos.map((t) => (t.id === id ? { ...t, text } : t));
+    setTodos(next);
+  }
+
+  function handleTodoBlur() {
+    saveNotes(notesDraft, todos);
+  }
+
   return (
     <div className="space-y-6">
       <Button
@@ -264,7 +385,7 @@ export default function EventDetail() {
       <div className="flex flex-col gap-1">
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-2xl font-semibold tracking-tight">
-            {lesson.subject} — {studentName}
+            {subject ? `${subject} — ${studentName}` : studentName}
           </h1>
           <span
             className={`rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${STATUS_TONE[status]}`}
@@ -303,131 +424,269 @@ export default function EventDetail() {
           )}
         </div>
         <p className="text-sm text-muted-foreground">
-          {lesson.subject} session
+          {subject ? `${subject} session` : "Lesson"}
         </p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="text-base">Details</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
-            <DetailRow
-              icon={<Calendar className="h-4 w-4" />}
-              label="When"
-              value={formatDateTime(lesson.startDateTime)}
-            />
-            <DetailRow
-              icon={<Clock className="h-4 w-4" />}
-              label="Duration"
-              value={`${formatTime(lesson.startDateTime)} – ${formatTime(
-                end.toISOString(),
-              )} (${lesson.durationMinutes} min)`}
-            />
-            <DetailRow
-              icon={<User className="h-4 w-4" />}
-              label="Student"
-              value={studentName}
-            />
-            <div className="flex items-start gap-3">
-              <div className="mt-0.5 text-muted-foreground">
-                {existingMeet ? (
-                  <Video className="h-4 w-4" />
-                ) : (
-                  <MapPin className="h-4 w-4" />
-                )}
-              </div>
-              <div className="min-w-0 space-y-1.5">
-                <p className="text-xs text-muted-foreground">Location</p>
-                {existingMeet ? (
-                  <a
-                    href={existingMeet}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
-                  >
-                    Open Google Meet
-                    <ExternalLink className="h-3.5 w-3.5" />
-                  </a>
-                ) : (
-                  <p
-                    className={
-                      lesson.location
-                        ? "break-words text-sm font-medium"
-                        : "text-sm text-muted-foreground"
-                    }
-                  >
-                    {lesson.location ?? "Not specified"}
-                  </p>
-                )}
-                {!existingMeet && (
-                  <div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-8"
-                      disabled={
-                        meetLoading ||
-                        googleConnected === null ||
-                        updateLesson.isPending
-                      }
-                      onClick={handleGenerateMeet}
-                      title={
-                        googleConnected
-                          ? "Generate a Google Meet link and save it to this lesson"
-                          : "Connect your Google account to generate Meet links"
+        <div className="space-y-6 lg:col-span-2">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Details</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
+              <DetailRow
+                icon={<Calendar className="h-4 w-4" />}
+                label="When"
+                value={formatDateTime(lesson.startDateTime)}
+              />
+              <DetailRow
+                icon={<Clock className="h-4 w-4" />}
+                label="Duration"
+                value={`${formatTime(lesson.startDateTime)} – ${formatTime(
+                  end.toISOString(),
+                )} (${lesson.durationMinutes} min)`}
+              />
+              <DetailRow
+                icon={<User className="h-4 w-4" />}
+                label="Student"
+                value={studentName}
+              />
+              {subject && (
+                <DetailRow
+                  icon={<StickyNote className="h-4 w-4" />}
+                  label="Subject"
+                  value={subject}
+                />
+              )}
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 text-muted-foreground">
+                  {existingMeet ? (
+                    <Video className="h-4 w-4" />
+                  ) : (
+                    <MapPin className="h-4 w-4" />
+                  )}
+                </div>
+                <div className="min-w-0 space-y-1.5">
+                  <p className="text-xs text-muted-foreground">Location</p>
+                  {existingMeet ? (
+                    <a
+                      href={existingMeet}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+                    >
+                      Open Google Meet
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </a>
+                  ) : (
+                    <p
+                      className={
+                        lesson.location
+                          ? "break-words text-sm font-medium"
+                          : "text-sm text-muted-foreground"
                       }
                     >
-                      {meetLoading || updateLesson.isPending ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Video className="h-4 w-4" />
+                      {lesson.location ?? "Not specified"}
+                    </p>
+                  )}
+                  {!existingMeet && (
+                    <div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-8"
+                        disabled={
+                          meetLoading ||
+                          googleConnected === null ||
+                          updateLesson.isPending
+                        }
+                        onClick={handleGenerateMeet}
+                        title={
+                          googleConnected
+                            ? "Generate a Google Meet link and save it to this lesson"
+                            : "Connect your Google account to generate Meet links"
+                        }
+                      >
+                        {meetLoading || updateLesson.isPending ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Video className="h-4 w-4" />
+                        )}
+                        <span className="ml-1.5">
+                          {meetLoading || updateLesson.isPending
+                            ? "Generating…"
+                            : googleConnected
+                              ? "Generate Meet link"
+                              : "Connect Google"}
+                        </span>
+                      </Button>
+                      {meetError && (
+                        <p className="mt-1 text-xs text-destructive">
+                          {meetError}
+                        </p>
                       )}
-                      <span className="ml-1.5">
-                        {meetLoading || updateLesson.isPending
-                          ? "Generating…"
-                          : googleConnected
-                            ? "Generate Meet link"
-                            : "Connect Google"}
-                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="grid gap-6 sm:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between text-base">
+                  <span className="flex items-center gap-2">
+                    <StickyNote className="h-4 w-4" />
+                    Notes
+                  </span>
+                  {!editingNotes && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-7 p-0"
+                      onClick={() => setEditingNotes(true)}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
                     </Button>
-                    {meetError && (
-                      <p className="mt-1 text-xs text-destructive">
-                        {meetError}
-                      </p>
-                    )}
+                  )}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {editingNotes ? (
+                  <div className="space-y-3">
+                    <textarea
+                      value={notesDraft}
+                      onChange={(e) => setNotesDraft(e.target.value)}
+                      rows={5}
+                      placeholder="What to cover, prep notes, etc."
+                      className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                      autoFocus
+                    />
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        onClick={handleNotesSave}
+                        disabled={pending}
+                      >
+                        {pending ? (
+                          <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Save className="mr-1.5 h-3.5 w-3.5" />
+                        )}
+                        Save
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setEditingNotes(false)}
+                        disabled={pending}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                ) : notesDraft ? (
+                  <p className="whitespace-pre-wrap text-sm">{notesDraft}</p>
+                ) : (
+                  <div className="space-y-2">
+                    <p className="text-sm text-muted-foreground">
+                      No notes for this lesson.
+                    </p>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs text-muted-foreground"
+                      onClick={() => setEditingNotes(true)}
+                    >
+                      <Pencil className="mr-1 h-3 w-3" />
+                      Add notes
+                    </Button>
                   </div>
                 )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <StickyNote className="h-4 w-4" />
-              Notes
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {lesson.notes ? (
-              <p className="whitespace-pre-wrap text-sm">{lesson.notes}</p>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                No notes for this lesson.
-              </p>
-            )}
-          </CardContent>
-        </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <CheckSquare className="h-4 w-4" />
+                  Todos
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {todos.length > 0 && (
+                  <ul className="space-y-1">
+                    {todos.map((todo) => (
+                      <li key={todo.id} className="group flex items-start gap-2">
+                        <button
+                          type="button"
+                          className="mt-0.5 shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+                          onClick={() => handleToggleTodo(todo.id)}
+                        >
+                          {todo.done ? (
+                            <CheckSquare className="h-4 w-4 text-primary" />
+                          ) : (
+                            <Square className="h-4 w-4" />
+                          )}
+                        </button>
+                        <input
+                          type="text"
+                          value={todo.text}
+                          onChange={(e) =>
+                            handleTodoTextChange(todo.id, e.target.value)
+                          }
+                          onBlur={handleTodoBlur}
+                          className={`min-w-0 flex-1 bg-transparent text-sm outline-none transition-colors ${
+                            todo.done
+                              ? "text-muted-foreground line-through"
+                              : "text-foreground"
+                          }`}
+                        />
+                        <button
+                          type="button"
+                          className="shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
+                          onClick={() => handleDeleteTodo(todo.id)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={newTodoText}
+                    onChange={(e) => setNewTodoText(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleAddTodo();
+                    }}
+                    placeholder="Add a todo…"
+                    className="min-w-0 flex-1 border-none bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                  />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 w-7 p-0 shrink-0"
+                    disabled={!newTodoText.trim()}
+                    onClick={handleAddTodo}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
 
-        <Card className="lg:col-span-3">
+        <Card className="lg:col-span-1 lg:sticky lg:top-6 lg:self-start">
           <CardHeader>
             <CardTitle className="text-base">Status &amp; attendance</CardTitle>
           </CardHeader>
-          <CardContent className="grid gap-x-6 gap-y-6 sm:grid-cols-2">
+          <CardContent className="space-y-5">
             <div className="space-y-1.5">
               <p className="text-xs text-muted-foreground">
                 Student acceptance
@@ -470,18 +729,19 @@ export default function EventDetail() {
               </p>
             </div>
 
-            <div className="sm:col-span-2">
+            <div className="space-y-2 border-t pt-4">
               {lesson.isCancelled ? (
                 <p className="text-sm text-muted-foreground">
                   This occurrence has been cancelled.
                 </p>
               ) : (
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-col gap-2">
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={openNotifyDialog}
                     disabled={cooldownActive}
+                    className="w-full justify-start"
                     title={
                       cooldownActive && nextAllowedAt
                         ? `Already notified — can resend after ${nextAllowedAt.toLocaleString(
@@ -502,7 +762,7 @@ export default function EventDetail() {
                     size="sm"
                     onClick={handleCancel}
                     disabled={cancelLesson.isPending || lessonFinished}
-                    className="text-destructive hover:text-destructive"
+                    className="w-full justify-start text-destructive hover:text-destructive"
                     title={
                       lessonFinished
                         ? "Cannot cancel finished lessons"
@@ -520,7 +780,7 @@ export default function EventDetail() {
                       size="sm"
                       onClick={handleResync}
                       disabled={resyncLesson.isPending}
-                      className="ml-auto"
+                      className="w-full justify-start"
                       title={
                         lesson.googleCalendarEventId
                           ? "Update the Google Calendar event for this lesson, or recover it if it was deleted"
@@ -542,7 +802,7 @@ export default function EventDetail() {
                 </div>
               )}
               {notifiedAt && (
-                <p className="mt-1.5 text-xs text-muted-foreground">
+                <p className="text-xs text-muted-foreground">
                   Last notified{" "}
                   {notifiedAt.toLocaleString("en-US", {
                     dateStyle: "medium",
@@ -604,7 +864,6 @@ interface DetailRowProps {
   label: string;
   value: string;
   muted?: boolean;
-  /** When set (e.g. a Meet URL), render the value as a clickable link. */
   href?: string | null;
 }
 
