@@ -52,7 +52,7 @@ export default function Lessons() {
   const navigate = useNavigate();
   const { data: lessons = [], isLoading, error } = useListLessons();
   const { data: students = [] } = useListStudents();
-  const [filter, setFilter] = useState<FilterTab>("all");
+  const [filter, setFilter] = useState<FilterTab>("upcoming");
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("upcoming");
   const [expanded, setExpanded] = useState(false);
@@ -170,12 +170,6 @@ export default function Lessons() {
           <CardHeader className="flex flex-col gap-4 space-y-0 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex flex-wrap items-center gap-1 rounded-md border bg-muted/40 p-1">
               <FilterOption
-                checked={filter === "all"}
-                label="All"
-                count={counts.all}
-                onSelect={() => setFilter("all")}
-              />
-              <FilterOption
                 checked={filter === "upcoming"}
                 label="Upcoming"
                 count={counts.upcoming}
@@ -192,6 +186,12 @@ export default function Lessons() {
                 label="Cancelled"
                 count={counts.cancelled}
                 onSelect={() => setFilter("cancelled")}
+              />
+              <FilterOption
+                checked={filter === "all"}
+                label="All"
+                count={counts.all}
+                onSelect={() => setFilter("all")}
               />
             </div>
 
