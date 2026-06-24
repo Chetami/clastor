@@ -315,7 +315,9 @@ export default function EditInvoice() {
                   <SelectContent>
                     <SelectItem value="cash">Cash</SelectItem>
                     <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
-                    <SelectItem value="stripe">Stripe</SelectItem>
+                    <SelectItem value="stripe" disabled>
+                      Stripe (disabled in demo)
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
