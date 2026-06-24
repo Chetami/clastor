@@ -17,15 +17,33 @@ export const TOUR_STEPS: TourStep[] = [
     popover: {
       title: "Welcome to Clastor",
       description:
-        "Here's a quick tour of what you can do. This takes about a minute — you can skip anytime.",
+        "Here's how to get set up in about a minute. You can skip anytime.",
     },
   },
   {
-    element: '[data-sidebar="menu-button"][href="/students"]',
+    route: "/students",
+    element: '[data-tour="add-student"]',
     popover: {
-      title: "The sidebar",
+      title: "Add a student",
       description:
-        "Jump between Students, Schedule, Payments and Lessons from the sidebar, anytime.",
+        "To get started, add a student here to track their lessons, rate and balance.",
+    },
+  },
+  {
+    route: "/schedule",
+    element: '[data-tour="schedule"]',
+    popover: {
+      title: "Book a lesson",
+      description:
+        "Drag across a time slot on the calendar to schedule a lesson.",
+    },
+  },
+  {
+    route: "/payments",
+    element: '[data-tour="create-invoice"]',
+    popover: {
+      title: "Invoices",
+      description: "Turn completed lessons into invoices here.",
     },
   },
   {
@@ -34,43 +52,22 @@ export const TOUR_STEPS: TourStep[] = [
     popover: {
       title: "Quick actions",
       description:
-        "Add a student, schedule a lesson, or create an invoice in a single click from your dashboard.",
+        "Back on your dashboard, reach all three of those actions in a single click.",
     },
   },
   {
-    route: "/students",
-    element: '[data-tour="add-student"]',
+    element: '[data-tour="things-to-do"]',
     popover: {
-      title: "Your students",
+      title: "Things to do",
       description:
-        "Add students here and keep track of their lessons, rates and contact details.",
+        "After a lesson, mark attendance here and invoice it in one click.",
     },
   },
   {
-    route: "/schedule",
-    element: '[data-tour="schedule"]',
     popover: {
-      title: "Your schedule",
+      title: "You're set",
       description:
-        "Drag or select a time slot on the calendar to book a lesson. Connected Google accounts get Meet links automatically.",
-    },
-  },
-  {
-    route: "/payments",
-    element: '[data-tour="create-invoice"]',
-    popover: {
-      title: "Invoices & payments",
-      description:
-        "Create invoices and accept card payments that settle straight to your bank via Stripe.",
-    },
-  },
-  {
-    route: "/dashboard",
-    element: '[data-tour="theme-toggle"]',
-    popover: {
-      title: "Make it yours",
-      description:
-        "Toggle light/dark or pick a colour scheme in Settings anytime. That's the tour — happy tutoring!",
+        "That's the core loop. Add your students and book your first lesson to get going!",
     },
   },
 ];

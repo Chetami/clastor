@@ -13,18 +13,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PhoneInput } from "@/components/ui/phone-input";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   EMPTY_STUDENT_FORM,
   studentFormSchema,
   type StudentFormData,
 } from "./student-schema";
-import { TIMEZONES } from "./timezones";
 import { SubjectMultiSelect } from "@/components/subjects/SubjectMultiSelect";
 import { NumberInput } from "@/components/ui/number-input";
 
@@ -330,34 +322,18 @@ export function StudentForm({
                 id="timezoneEnabled"
                 checked={values.timezoneEnabled}
                 onChange={(e) => update("timezoneEnabled", e.target.checked)}
+                disabled
               />
-              <Label htmlFor="timezoneEnabled" className="cursor-pointer">
+              <Label
+                htmlFor="timezoneEnabled"
+                className="text-muted-foreground/60"
+              >
                 Specify a timezone
               </Label>
             </div>
-            {values.timezoneEnabled && (
-              <div className="space-y-2">
-                <Label htmlFor="timezone">Timezone</Label>
-                <Select
-                  value={values.timezone}
-                  onValueChange={(v) => update("timezone", v)}
-                >
-                  <SelectTrigger id="timezone" aria-invalid={!!errors.timezone}>
-                    <SelectValue placeholder="Select a timezone" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {TIMEZONES.map((tz) => (
-                      <SelectItem key={tz} value={tz}>
-                        {tz}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-            {errors.timezone && (
-              <p className="text-xs text-destructive">{errors.timezone}</p>
-            )}
+            <p className="text-xs text-muted-foreground">
+              We're working on supporting custom timezones in the future.
+            </p>
           </div>
         </CollapsibleContent>
       </Collapsible>

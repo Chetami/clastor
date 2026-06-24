@@ -83,7 +83,7 @@ export function ThingsToDo({
 
   return (
     <>
-      <Card className="flex flex-col">
+      <Card data-tour="things-to-do" className="flex flex-col">
         <CardHeader className="flex flex-row items-center justify-between space-y-0">
           <div className="flex items-center gap-2">
             <ListTodo className="h-4 w-4 text-muted-foreground" />

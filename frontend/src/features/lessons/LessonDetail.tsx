@@ -315,9 +315,7 @@ export default function EventDetail() {
   }
 
   function handleToggleTodo(id: string) {
-    const next = todos.map((t) =>
-      t.id === id ? { ...t, done: !t.done } : t,
-    );
+    const next = todos.map((t) => (t.id === id ? { ...t, done: !t.done } : t));
     setTodos(next);
     saveTodos(next);
   }
@@ -573,15 +571,6 @@ export default function EventDetail() {
                     <p className="text-sm text-muted-foreground">
                       No notes for this lesson.
                     </p>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 text-xs text-muted-foreground"
-                      onClick={() => setEditingNotes(true)}
-                    >
-                      <Pencil className="mr-1 h-3 w-3" />
-                      Add notes
-                    </Button>
                   </div>
                 )}
               </CardContent>
@@ -598,7 +587,10 @@ export default function EventDetail() {
                 {todos.length > 0 && (
                   <ul className="space-y-1">
                     {todos.map((todo) => (
-                      <li key={todo.id} className="group flex items-start gap-2">
+                      <li
+                        key={todo.id}
+                        className="group flex items-start gap-2"
+                      >
                         <button
                           type="button"
                           className="mt-0.5 shrink-0 text-muted-foreground hover:text-foreground transition-colors"
