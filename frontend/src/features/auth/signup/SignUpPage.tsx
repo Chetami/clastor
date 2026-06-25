@@ -1,8 +1,12 @@
-import { useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { CircleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/ui/password-input";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Card,
   CardContent,
@@ -13,16 +17,44 @@ import {
 } from "@/components/ui/card";
 import { useRegister } from "@/features/auth/api";
 import { GoogleSignInButton } from "@/features/auth/GoogleSignInButton";
+import { BrandMark } from "@/features/auth/BrandMark";
+
+const STRENGTH_LEVELS = [
+  { label: "Weak", bar: "bg-red-500", text: "text-red-500" },
+  { label: "Fair", bar: "bg-orange-500", text: "text-orange-500" },
+  { label: "Good", bar: "bg-amber-500", text: "text-amber-600" },
+  { label: "Strong", bar: "bg-emerald-500", text: "text-emerald-600" },
+];
+
+function scorePassword(pw: string): number {
+  if (!pw) return 0;
+  let score = 0;
+  if (pw.length >= 8) score++;
+  if (pw.length >= 12) score++;
+  const variety = [
+    /[a-z]/,
+    /[A-Z]/,
+    /[0-9]/,
+    /[^a-zA-Z0-9]/,
+  ].filter((r) => r.test(pw)).length;
+  if (variety >= 2) score++;
+  if (variety >= 3) score++;
+  return Math.max(1, Math.min(score, 4));
+}
 
 export default function SignUpPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [agreed, setAgreed] = useState(false);
   const [validationError, setValidationError] = useState("");
   const navigate = useNavigate();
 
   const register = useRegister();
+
+  const strength = useMemo(() => scorePassword(password), [password]);
+  const strengthLevel = password ? STRENGTH_LEVELS[strength - 1] : null;
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -49,10 +81,11 @@ export default function SignUpPage() {
   const errorMessage = validationError || register.error?.message;
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>Create account</CardTitle>
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-muted/50 to-background p-4">
+      <Card className="w-full max-w-md shadow-lg">
+        <CardHeader className="items-center text-center">
+          <BrandMark className="mb-2" />
+          <CardTitle className="text-2xl">Create account</CardTitle>
           <CardDescription>
             Enter your information to get started
           </CardDescription>
@@ -74,15 +107,16 @@ export default function SignUpPage() {
                 <span className="w-full border-t" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">
-                  Or
-                </span>
+                <span className="bg-card px-2 text-muted-foreground">Or</span>
               </div>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
               {errorMessage && (
-                <p className="text-sm text-destructive">{errorMessage}</p>
+                <Alert variant="destructive">
+                  <CircleAlert className="h-4 w-4" />
+                  <AlertDescription>{errorMessage}</AlertDescription>
+                </Alert>
               )}
 
               <div className="space-y-2">
@@ -93,6 +127,7 @@ export default function SignUpPage() {
                   placeholder="John Doe"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
+                  autoFocus
                   required
                 />
               </div>
@@ -111,29 +146,76 @@ export default function SignUpPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
-                <Input
+                <PasswordInput
                   id="password"
-                  type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
                 />
+                {strengthLevel && (
+                  <div className="pt-1">
+                    <div className="flex gap-1">
+                      {STRENGTH_LEVELS.map((level, i) => (
+                        <div
+                          key={level.label}
+                          className={`h-1.5 flex-1 rounded-full transition-colors ${
+                            i < strength ? strengthLevel.bar : "bg-muted"
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    <p
+                      className={`mt-1 text-xs font-medium ${strengthLevel.text}`}
+                    >
+                      {strengthLevel.label}
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword">Confirm Password</Label>
-                <Input
+                <PasswordInput
                   id="confirmPassword"
-                  type="password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
                 />
               </div>
 
+              <div className="flex items-start gap-2">
+                <Checkbox
+                  id="terms"
+                  checked={agreed}
+                  onChange={(e) => setAgreed(e.target.checked)}
+                  className="mt-0.5"
+                />
+                <Label htmlFor="terms" className="text-xs leading-relaxed">
+                  I agree to the{" "}
+                  <a
+                    href="https://clastor.xamify.com.au/terms"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-medium text-primary hover:underline"
+                  >
+                    Terms of Service
+                  </a>{" "}
+                  and{" "}
+                  <a
+                    href="https://clastor.xamify.com.au/privacy"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-medium text-primary hover:underline"
+                  >
+                    Privacy Policy
+                  </a>
+                  .
+                </Label>
+              </div>
+
               <Button
                 type="submit"
-                disabled={register.isPending}
+                disabled={register.isPending || !agreed}
                 className="w-full"
               >
                 {register.isPending ? "Creating account..." : "Create account"}
