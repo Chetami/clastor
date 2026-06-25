@@ -2,6 +2,9 @@ import { Request, Response } from "express";
 import {
   createLessonInFirestore,
   listLessonsFromFirestore,
+  listLessonsPageFromFirestore,
+  LessonPageQuery,
+  LessonFilters,
   getLessonByIdFromFirestore,
   updateLessonInFirestore,
   recordAttendanceInFirestore,
@@ -11,7 +14,6 @@ import {
   bumpRsvpTokenVersion,
   setLessonAcceptanceInFirestore,
   setLessonGoogleEventId,
-  LessonFilters,
 } from "../services/lessonService";
 import { getStudentByIdFromFirestore } from "../services/studentService";
 import { getUserFromFirestore } from "../services/userService";
@@ -108,9 +110,13 @@ export async function createLesson(
 }
 
 /**
- * List lessons controller
- * Supports from/to (calendar window), studentId, acceptanceStatus,
- * attendanceStatus query filters.
+ * List lessons controller.
+ *
+ * Two modes share this endpoint:
+ *   * Paginated (lessons page): `limit` (+ `status`, `cursor`) — returns one
+ *     cursor-paginated page reading only ~limit documents.
+ *   * Unpaginated (calendar window / dashboard / invoices): omit `limit` —
+ *     returns the full matching set with `nextCursor: null`.
  */
 export async function listLessons(
   req: Request,
@@ -122,6 +128,33 @@ export async function listLessons(
       return;
     }
 
+    // Cursor pagination (lessons page).
+    const hasLimit =
+      req.query.limit != null && req.query.limit !== "" &&
+      Number.isFinite(Number(req.query.limit)) && Number(req.query.limit) > 0;
+
+    if (hasLimit) {
+      const query: LessonPageQuery = { limit: Math.min(100, Math.floor(Number(req.query.limit))) };
+      if (typeof req.query.status === "string") {
+        query.status = req.query.status as LessonPageQuery["status"];
+      }
+      if (typeof req.query.cursor === "string" && req.query.cursor) {
+        query.cursor = req.query.cursor;
+      }
+      const result = await listLessonsPageFromFirestore(
+        req.user.uid,
+        req.user.role,
+        query
+      );
+      res.status(200).json({
+        data: result.data.map(toLessonResponse),
+        nextCursor: result.nextCursor,
+        hasMore: result.hasMore,
+      });
+      return;
+    }
+
+    // Full fetch (calendar window / dashboard / invoices).
     const filters: LessonFilters = {};
     if (typeof req.query.from === "string") {
       filters.from = new Date(req.query.from);
@@ -148,15 +181,20 @@ export async function listLessons(
       filters
     );
 
-    const response: LessonListResponse = {
+    res.status(200).json({
       data: lessons.map(toLessonResponse),
-      total: lessons.length,
-    };
-
-    res.status(200).json(response);
+      nextCursor: null,
+      hasMore: false,
+    });
   } catch (error) {
     console.error("List lessons failed:", error);
-    const message = error instanceof Error ? error.message : "Failed to list lessons";
+    const message =
+      error instanceof Error ? error.message : "Failed to list lessons";
+    // A bad cursor is a client error.
+    if (message === "Invalid cursor") {
+      res.status(400).json({ message });
+      return;
+    }
     res.status(500).json({ message });
   }
 }

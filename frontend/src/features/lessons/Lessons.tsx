@@ -1,26 +1,17 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   CalendarClock,
   ChevronRight,
   Clock,
+  Loader2,
   Repeat,
-  Search,
   Video,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { useListLessons } from "@/features/schedule/api";
+import { useListLessons, useListLessonsInfinite } from "@/features/schedule/api";
 import { useListStudents } from "@/features/students/api";
-import { deriveLessonStatus } from "@/features/schedule/lesson-utils";
 import {
   getInitials,
   formatLessonDate,
@@ -31,31 +22,29 @@ import {
 import { ImportantLessons } from "@/features/lessons/ImportantLessons";
 
 type FilterTab = "upcoming" | "past" | "cancelled" | "all";
-type SortKey =
-  | "upcoming"
-  | "date-desc"
-  | "student-az"
-  | "student-za"
-  | "updated";
 
-const COLLAPSED_LIMIT = 8;
+const PAGE_SIZE = 10;
 
-const SORT_OPTIONS: { value: SortKey; label: string }[] = [
-  { value: "upcoming", label: "Upcoming first" },
-  { value: "date-desc", label: "Date (newest first)" },
-  { value: "student-az", label: "Student (A–Z)" },
-  { value: "student-za", label: "Student (Z–A)" },
-  { value: "updated", label: "Recently updated" },
+const TABS: { value: FilterTab; label: string }[] = [
+  { value: "upcoming", label: "Upcoming" },
+  { value: "past", label: "Past" },
+  { value: "cancelled", label: "Cancelled" },
+  { value: "all", label: "All" },
 ];
 
 export default function Lessons() {
   const navigate = useNavigate();
-  const { data: lessons = [], isLoading, error } = useListLessons();
   const { data: students = [] } = useListStudents();
   const [filter, setFilter] = useState<FilterTab>("upcoming");
-  const [search, setSearch] = useState("");
-  const [sortKey, setSortKey] = useState<SortKey>("upcoming");
-  const [expanded, setExpanded] = useState(false);
+
+  // Cursor-paginated list: each page reads only ~PAGE_SIZE lessons on the
+  // backend; pages accumulate here as the user loads more.
+  const infinite = useListLessonsInfinite({ status: filter }, PAGE_SIZE);
+  const lessons = infinite.data?.pages.flatMap((p) => p.data) ?? [];
+  const isLoading = infinite.isLoading;
+  const isFetchingNextPage = infinite.isFetchingNextPage;
+  const hasNextPage = infinite.hasNextPage;
+  const error = infinite.error;
 
   const studentMap = useMemo(() => {
     const map: Record<string, string> = {};
@@ -63,84 +52,27 @@ export default function Lessons() {
     return map;
   }, [students]);
 
-  const counts = useMemo(() => {
-    const now = Date.now();
-    let upcoming = 0,
-      past = 0,
-      cancelled = 0;
-    for (const l of lessons) {
-      const status = deriveLessonStatus(l.attendanceStatus, l.isCancelled);
-      const start = new Date(l.startDateTime).getTime();
-      if (status === "cancelled") cancelled++;
-      else if (start >= now) upcoming++;
-      else past++;
-    }
-    return { upcoming, past, cancelled, all: lessons.length };
-  }, [lessons]);
-
-  const visibleLessons = useMemo(() => {
-    const now = Date.now();
-    const query = search.trim().toLowerCase();
-
-    const enriched = lessons.map((l) => ({
-      lesson: l,
-      name: studentMap[l.studentId] ?? "Unknown student",
-      start: new Date(l.startDateTime).getTime(),
-    }));
-
-    const filtered = enriched.filter(({ lesson, name, start }) => {
-      const status = deriveLessonStatus(
-        lesson.attendanceStatus,
-        lesson.isCancelled,
-      );
-      const matchesFilter =
-        filter === "all" ||
-        (filter === "upcoming" && status !== "cancelled" && start >= now) ||
-        (filter === "past" && status !== "cancelled" && start < now) ||
-        (filter === "cancelled" && status === "cancelled");
-      const matchesSearch =
-        query.length === 0 ||
-        name.toLowerCase().includes(query) ||
-        (lesson.subject?.toLowerCase() ?? "").includes(query);
-      return matchesFilter && matchesSearch;
-    });
-
-    filtered.sort((a, b) => {
-      switch (sortKey) {
-        case "date-desc":
-          return b.start - a.start;
-        case "student-az":
-          return a.name.localeCompare(b.name);
-        case "student-za":
-          return b.name.localeCompare(a.name);
-        case "updated":
-          return (
-            new Date(b.lesson.updatedAt).getTime() -
-            new Date(a.lesson.updatedAt).getTime()
-          );
-        case "upcoming":
-        default: {
-          const aFuture = a.start >= now;
-          const bFuture = b.start >= now;
-          if (aFuture && !bFuture) return -1;
-          if (!aFuture && bFuture) return 1;
-          if (aFuture) return a.start - b.start;
-          return b.start - a.start;
-        }
-      }
-    });
-
-    return filtered.map((e) => e.lesson);
-  }, [lessons, studentMap, filter, search, sortKey]);
-
-  useEffect(() => {
-    setExpanded(false);
-  }, [filter, search, sortKey]);
-
-  const displayedLessons = expanded
-    ? visibleLessons
-    : visibleLessons.slice(0, COLLAPSED_LIMIT);
-  const hiddenCount = visibleLessons.length - displayedLessons.length;
+  // "Important" summary cards need today's lessons, which sit outside the
+  // active tab's pagination. Fetch just today's window (bounded, cheap) and
+  // only on the upcoming tab where the cards are shown.
+  const showImportant = filter === "upcoming";
+  const todayWindow = useMemo(() => {
+    const n = new Date();
+    const start = new Date(
+      n.getFullYear(),
+      n.getMonth(),
+      n.getDate(),
+    ).toISOString();
+    const end = new Date(
+      n.getFullYear(),
+      n.getMonth(),
+      n.getDate() + 1,
+    ).toISOString();
+    return { from: start, to: end };
+  }, []);
+  const { data: todaysLessons = [] } = useListLessons(todayWindow, {
+    enabled: showImportant,
+  });
 
   return (
     <div className="space-y-6">
@@ -158,178 +90,130 @@ export default function Lessons() {
         </div>
       )}
 
-      {!isLoading &&
-        !error &&
-        filter === "upcoming" &&
-        search.trim().length === 0 && (
-          <ImportantLessons lessons={lessons} studentMap={studentMap} />
-        )}
+      {!isLoading && !error && showImportant && (
+        <ImportantLessons lessons={todaysLessons} studentMap={studentMap} />
+      )}
 
       {!isLoading && !error && (
         <Card>
-          <CardHeader className="flex flex-col gap-4 space-y-0 sm:flex-row sm:items-center sm:justify-between">
+          <CardHeader>
             <div className="flex flex-wrap items-center gap-1 rounded-md border bg-muted/40 p-1">
-              <FilterOption
-                checked={filter === "upcoming"}
-                label="Upcoming"
-                count={counts.upcoming}
-                onSelect={() => setFilter("upcoming")}
-              />
-              <FilterOption
-                checked={filter === "past"}
-                label="Past"
-                count={counts.past}
-                onSelect={() => setFilter("past")}
-              />
-              <FilterOption
-                checked={filter === "cancelled"}
-                label="Cancelled"
-                count={counts.cancelled}
-                onSelect={() => setFilter("cancelled")}
-              />
-              <FilterOption
-                checked={filter === "all"}
-                label="All"
-                count={counts.all}
-                onSelect={() => setFilter("all")}
-              />
-            </div>
-
-            <div className="flex items-center gap-2">
-              <div className="relative">
-                <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search lessons…"
-                  className="w-full pl-8 sm:w-56"
+              {TABS.map((tab) => (
+                <FilterOption
+                  key={tab.value}
+                  checked={filter === tab.value}
+                  label={tab.label}
+                  onSelect={() => setFilter(tab.value)}
                 />
-              </div>
-              <Select
-                value={sortKey}
-                onValueChange={(v) => setSortKey(v as SortKey)}
-              >
-                <SelectTrigger aria-label="Sort lessons" className="sm:w-48">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {SORT_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              ))}
             </div>
           </CardHeader>
           <CardContent>
-            {visibleLessons.length === 0 ? (
+            {lessons.length === 0 ? (
               <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
                 <CalendarClock className="h-8 w-8 text-muted-foreground" />
                 <p className="text-sm text-muted-foreground">
-                  {search.trim()
-                    ? "No lessons match your search."
-                    : "No lessons here yet. Schedule one from the calendar."}
+                  No lessons here yet. Schedule one from the calendar.
                 </p>
               </div>
             ) : (
-              <ul className="-mx-6 divide-y">
-                {displayedLessons.map((lesson) => {
-                  const name =
-                    studentMap[lesson.studentId] ?? "Unknown student";
-                  const badge = lessonBadge(lesson);
-                  const meet = meetUrl(lesson.location);
-                  return (
-                    <li
-                      key={lesson.id}
-                      className="group flex cursor-pointer items-center justify-between gap-4 px-6 py-3 transition-colors hover:bg-accent/40"
-                      onClick={() => navigate(`/lessons/${lesson.id}`)}
-                    >
-                      <div className="flex min-w-0 flex-1 items-center gap-3">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-medium text-primary">
-                          {getInitials(name)}
-                        </div>
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className="truncate font-medium">{name}</p>
-                            {lesson.seriesId && (
-                              <Repeat className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                            )}
+              <>
+                <ul className="-mx-6 divide-y">
+                  {lessons.map((lesson) => {
+                    const name =
+                      studentMap[lesson.studentId] ?? "Unknown student";
+                    const badge = lessonBadge(lesson);
+                    const meet = meetUrl(lesson.location);
+                    return (
+                      <li
+                        key={lesson.id}
+                        className="group flex cursor-pointer items-center justify-between gap-4 px-6 py-3 transition-colors hover:bg-accent/40"
+                        onClick={() => navigate(`/lessons/${lesson.id}`)}
+                      >
+                        <div className="flex min-w-0 flex-1 items-center gap-3">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-medium text-primary">
+                            {getInitials(name)}
                           </div>
-                          <p className="truncate text-sm text-muted-foreground">
-                            {lesson.subject}
-                          </p>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="truncate font-medium">{name}</p>
+                              {lesson.seriesId && (
+                                <Repeat className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                              )}
+                            </div>
+                            <p className="truncate text-sm text-muted-foreground">
+                              {lesson.subject}
+                            </p>
+                          </div>
                         </div>
-                      </div>
 
-                      <div className="hidden items-center gap-1.5 text-sm text-muted-foreground sm:flex">
-                        <CalendarClock className="h-3.5 w-3.5 shrink-0" />
-                        <span>{formatLessonDate(lesson.startDateTime)}</span>
-                        <span className="text-muted-foreground/50">·</span>
-                        <Clock className="h-3.5 w-3.5 shrink-0" />
-                        <span>{formatLessonTime(lesson.startDateTime)}</span>
-                      </div>
+                        <div className="hidden items-center gap-1.5 text-sm text-muted-foreground sm:flex">
+                          <CalendarClock className="h-3.5 w-3.5 shrink-0" />
+                          <span>{formatLessonDate(lesson.startDateTime)}</span>
+                          <span className="text-muted-foreground/50">·</span>
+                          <Clock className="h-3.5 w-3.5 shrink-0" />
+                          <span>{formatLessonTime(lesson.startDateTime)}</span>
+                        </div>
 
-                      <div className="flex items-center gap-3">
-                        {meet && (
-                          <Button
-                            asChild
-                            variant="outline"
-                            size="sm"
-                            className="shrink-0"
-                          >
-                            <a
-                              href={meet}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              onClick={(e) => e.stopPropagation()}
-                              title="Open Google Meet"
+                        <div className="flex items-center gap-3">
+                          {meet && (
+                            <Button
+                              asChild
+                              variant="outline"
+                              size="sm"
+                              className="shrink-0"
                             >
-                              <Video className="h-4 w-4" />
-                              <span className="hidden sm:inline">Meet</span>
-                            </a>
+                              <a
+                                href={meet}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                title="Open Google Meet"
+                              >
+                                <Video className="h-4 w-4" />
+                                <span className="hidden sm:inline">Meet</span>
+                              </a>
+                            </Button>
+                          )}
+                          <span
+                            className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${badge.tone}`}
+                          >
+                            {badge.label}
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="opacity-0 transition-opacity group-hover:opacity-100"
+                            tabIndex={-1}
+                          >
+                            <ChevronRight className="h-4 w-4" />
                           </Button>
-                        )}
-                        <span
-                          className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${badge.tone}`}
-                        >
-                          {badge.label}
-                        </span>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="opacity-0 transition-opacity group-hover:opacity-100"
-                          tabIndex={-1}
-                        >
-                          <ChevronRight className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-            {!expanded && hiddenCount > 0 && (
-              <div className="mt-4 flex justify-center border-t pt-4">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setExpanded(true)}
-                >
-                  View {hiddenCount} more
-                </Button>
-              </div>
-            )}
-            {expanded && visibleLessons.length > COLLAPSED_LIMIT && (
-              <div className="mt-4 flex justify-center border-t pt-4">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setExpanded(false)}
-                >
-                  Show less
-                </Button>
-              </div>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+
+                {hasNextPage && (
+                  <div className="mt-4 flex justify-center border-t pt-4">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={isFetchingNextPage}
+                      onClick={() => infinite.fetchNextPage()}
+                    >
+                      {isFetchingNextPage ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Loading…
+                        </>
+                      ) : (
+                        "Load more"
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </>
             )}
           </CardContent>
         </Card>
@@ -341,11 +225,10 @@ export default function Lessons() {
 interface FilterOptionProps {
   checked: boolean;
   label: string;
-  count: number;
   onSelect: () => void;
 }
 
-function FilterOption({ checked, label, count, onSelect }: FilterOptionProps) {
+function FilterOption({ checked, label, onSelect }: FilterOptionProps) {
   return (
     <button
       type="button"
@@ -358,9 +241,6 @@ function FilterOption({ checked, label, count, onSelect }: FilterOptionProps) {
       }
     >
       {label}
-      <span className="rounded bg-muted px-1.5 text-xs text-muted-foreground">
-        {count}
-      </span>
     </button>
   );
 }

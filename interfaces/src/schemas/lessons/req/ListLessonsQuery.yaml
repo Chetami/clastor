@@ -22,7 +22,41 @@ properties:
     $ref: '../LessonAcceptance.yaml'
   attendanceStatus:
     $ref: '../AttendanceStatus.yaml'
+  status:
+    type: string
+    enum:
+      - upcoming
+      - past
+      - cancelled
+      - all
+    description: >-
+      Lifecycle bucket used by the paginated lessons list. "upcoming" = not
+      cancelled and starting now or later; "past" = not cancelled and already
+      started; "cancelled" = cancelled; "all" = no bucket filter. Only takes
+      effect together with `limit` (paginated mode). Defaults to "all".
+    example: upcoming
+  limit:
+    type: integer
+    minimum: 1
+    maximum: 100
+    description: >-
+      Page size. When provided the response is a single cursor-paginated page
+      (read-efficient: only ~`limit` documents are fetched). Omit to return
+      every matching lesson in one response — used by the calendar window,
+      dashboard and invoice creation.
+    example: 10
+  cursor:
+    type: string
+    description: >-
+      Opaque cursor returned as `nextCursor` by the previous page. Pass it back
+      to fetch the next page. Only used together with `limit`.
+    example: eyJzIjoiMjAyNi0wNi0wM1Q...
 description: |-
-  Query parameters for listing lessons
-  All parameters are optional; most commonly used with from/to to
-  fetch the lessons visible in a calendar window.
+  Query parameters for listing lessons.
+
+  Two modes:
+    * Paginated (lessons page): pass `status`, `limit` and, for pages after
+      the first, the `cursor` from the previous response. The backend reads
+      only ~`limit` documents via a Firestore cursor query.
+    * Unpaginated (calendar window / dashboard / invoices): omit `limit` to
+      receive every matching lesson. `from`/`to` bound the calendar window.

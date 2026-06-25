@@ -32,12 +32,30 @@ export async function createRecurringLessonRequest(
   return response.data;
 }
 
-export async function listLessonsRequest(params?: {
+/**
+ * Query parameters accepted by GET /api/lessons. All optional.
+ *
+ * Two modes:
+ *  - Paginated (lessons list): `status` + `limit` + `cursor` (for pages
+ *    after the first). Returns one cursor-paginated page.
+ *  - Unpaginated (calendar window / dashboard / invoices): omit `limit` to
+ *    receive the full matching set.
+ */
+export interface ListLessonsParams {
   from?: string;
   to?: string;
   studentId?: string;
   unpaid?: boolean;
-}): Promise<LessonListResponse> {
+  acceptanceStatus?: string;
+  attendanceStatus?: string;
+  status?: "upcoming" | "past" | "cancelled" | "all";
+  limit?: number;
+  cursor?: string;
+}
+
+export async function listLessonsRequest(
+  params?: ListLessonsParams,
+): Promise<LessonListResponse> {
   const response = await api.get<LessonListResponse>("/api/lessons", {
     params,
   });

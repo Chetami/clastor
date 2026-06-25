@@ -10,6 +10,15 @@ import {
 import admin from "firebase-admin";
 import crypto from "crypto";
 
+/** Default page size for the cursor-paginated lessons list. */
+const DEFAULT_PAGE_SIZE = 10;
+
+/** Attendance values that represent a tutor cancellation. */
+const TUTOR_CANCELLED_ATTENDANCE: readonly AttendanceStatus[] = [
+  "tutor_cancelled",
+  "tutor_cancelled_makeup_issued",
+];
+
 /**
  * Generate a unique lesson ID with prefix
  * @returns Lesson ID (e.g., lesson_a1b2c3d4e5f6)
@@ -67,9 +76,12 @@ export interface LessonFilters {
 
 /**
  * List lesson documents from Firestore, scoped to the authenticated user.
- * Filters (date window, student, status) are applied in memory to avoid
- * composite-index requirements; a tutor's lesson volume is small enough
- * that fetching by owner then filtering is practical.
+ *
+ * The date window (`from`/`to`) is pushed into the Firestore query so the
+ * calendar and Google sync only read lessons inside the window rather than
+ * the tutor's entire history. The remaining filters (student, acceptance,
+ * attendance, unpaid) are applied in memory; the result is sorted ascending
+ * by start time.
  */
 export async function listLessonsFromFirestore(
   userId: string,
@@ -78,33 +90,43 @@ export async function listLessonsFromFirestore(
 ): Promise<Lesson[]> {
   try {
     const firestore = getFirebaseFirestore();
-    let snapshot: admin.firestore.QuerySnapshot;
 
+    let query: admin.firestore.Query = firestore.collection("lessons");
     if (role === "tutor") {
-      snapshot = await firestore
-        .collection("lessons")
-        .where("tutorId", "==", userId)
-        .get();
+      query = query.where("tutorId", "==", userId);
     } else if (role === "system_admin") {
-      snapshot = await firestore.collection("lessons").get();
+      // admins see all lessons
     } else {
       throw new Error("Invalid role");
     }
+
+    // A range filter on startDateTime requires an orderBy on the same field.
+    if (filters.from) {
+      query = query.where(
+        "startDateTime",
+        ">=",
+        admin.firestore.Timestamp.fromDate(filters.from)
+      );
+    }
+    if (filters.to) {
+      query = query.where(
+        "startDateTime",
+        "<",
+        admin.firestore.Timestamp.fromDate(filters.to)
+      );
+    }
+    if (filters.from || filters.to) {
+      query = query.orderBy("startDateTime", "asc");
+    }
+
+    const snapshot = await query.get();
 
     const lessons: Lesson[] = [];
     snapshot.forEach((doc) => {
       const data = doc.data();
       const lesson = mapLesson(doc.id, data);
 
-      // Apply in-memory filters
-      if (filters.from) {
-        const start = new Date(lesson.startDateTime as any);
-        if (start < filters.from) return;
-      }
-      if (filters.to) {
-        const start = new Date(lesson.startDateTime as any);
-        if (start >= filters.to) return;
-      }
+      // Remaining filters are applied in memory.
       if (filters.studentId && lesson.studentId !== filters.studentId) return;
       if (
         filters.acceptanceStatus &&
@@ -121,7 +143,8 @@ export async function listLessonsFromFirestore(
       lessons.push(lesson);
     });
 
-    // Sort ascending by start time
+    // Sort ascending by start time (a no-op when the query already ordered
+    // by startDateTime, but required when no window was supplied).
     lessons.sort(
       (a, b) =>
         new Date(a.startDateTime as any).getTime() -
@@ -133,6 +156,152 @@ export async function listLessonsFromFirestore(
     console.error("Failed to list lessons from Firestore:", error);
     throw new Error("Failed to list lessons");
   }
+}
+
+export type LessonStatusFilter = "upcoming" | "past" | "cancelled" | "all";
+
+export interface LessonPageQuery {
+  status?: LessonStatusFilter;
+  limit?: number;
+  cursor?: string;
+}
+
+export interface LessonPageResult {
+  data: Lesson[];
+  nextCursor: string | null;
+  hasMore: boolean;
+}
+
+interface LessonCursor {
+  s: string; // ISO startDateTime of the last doc on the previous page
+  id: string; // document id (tiebreaker)
+}
+
+const CURSOR_ENCODING = "base64url";
+
+/** Encode an opaque pagination cursor from a lesson. */
+function encodeCursor(lesson: Lesson): string {
+  const payload: LessonCursor = {
+    s: new Date(lesson.startDateTime as any).toISOString(),
+    id: lesson.id,
+  };
+  return Buffer.from(JSON.stringify(payload), "utf8").toString(CURSOR_ENCODING);
+}
+
+/** Decode + validate an opaque pagination cursor. Throws on malformed input. */
+function decodeCursor(cursor: string): LessonCursor {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(
+      Buffer.from(cursor, CURSOR_ENCODING).toString("utf8")
+    );
+  } catch {
+    throw new Error("Invalid cursor");
+  }
+  if (
+    typeof parsed !== "object" ||
+    parsed === null ||
+    typeof (parsed as LessonCursor).s !== "string" ||
+    typeof (parsed as LessonCursor).id !== "string"
+  ) {
+    throw new Error("Invalid cursor");
+  }
+  const decoded = parsed as LessonCursor;
+  if (Number.isNaN(new Date(decoded.s).getTime())) {
+    throw new Error("Invalid cursor");
+  }
+  return decoded;
+}
+
+/**
+ * Cursor-paginated lesson listing for the lessons page.
+ *
+ * Each status bucket maps to a single Firestore query that the server can
+ * satisfy from a composite index, reading only ~`limit` documents per page
+ * (one extra is fetched to detect a following page). Ordering is implicit
+ * per bucket so it is indexable alongside the date range:
+ *   - upcoming  → startDateTime ascending  (soonest first)
+ *   - past      → startDateTime descending (most recent first)
+ *   - cancelled → startDateTime descending
+ *   - all       → startDateTime descending
+ *
+ * A document-id tiebreaker is appended to the orderBy so pages are stable
+ * even when several lessons share the same start time. The cursor carries
+ * the last document's (startDateTime, id) pair.
+ *
+ * `isCancelled` is treated as the single source of truth for "cancelled"
+ * (tutor-cancelled attendance also flips it — see `recordAttendanceInFirestore`
+ * and the backfill script), so each bucket is a clean equality predicate.
+ *
+ * Requires composite indexes — see `firestore.indexes.json`.
+ */
+export async function listLessonsPageFromFirestore(
+  userId: string,
+  role: string,
+  query: LessonPageQuery
+): Promise<LessonPageResult> {
+  const firestore = getFirebaseFirestore();
+  const now = admin.firestore.Timestamp.now();
+  const status: LessonStatusFilter = query.status ?? "all";
+
+  const limit = Math.max(
+    1,
+    Math.min(100, Math.floor(query.limit ?? DEFAULT_PAGE_SIZE))
+  );
+
+  let q: admin.firestore.Query = firestore.collection("lessons");
+  if (role === "tutor") {
+    q = q.where("tutorId", "==", userId);
+  } else if (role !== "system_admin") {
+    throw new Error("Invalid role");
+  }
+
+  let dir: "asc" | "desc" = "desc";
+  switch (status) {
+    case "upcoming":
+      q = q.where("isCancelled", "==", false).where("startDateTime", ">=", now);
+      dir = "asc";
+      break;
+    case "past":
+      q = q.where("isCancelled", "==", false).where("startDateTime", "<", now);
+      break;
+    case "cancelled":
+      q = q.where("isCancelled", "==", true);
+      break;
+    case "all":
+    default:
+      // no bucket filter — include everything
+      break;
+  }
+
+  // Tiebreak on the document id so identical start times paginate safely.
+  q = q
+    .orderBy("startDateTime", dir)
+    .orderBy(admin.firestore.FieldPath.documentId(), dir);
+
+  if (query.cursor) {
+    const cursor = decodeCursor(query.cursor);
+    q = q.startAfter(
+      admin.firestore.Timestamp.fromDate(new Date(cursor.s)),
+      cursor.id
+    );
+  }
+
+  // Fetch one extra to determine whether another page exists.
+  const snapshot = await q.limit(limit + 1).get();
+  const docs = snapshot.docs;
+
+  const hasMore = docs.length > limit;
+  const pageDocs = hasMore ? docs.slice(0, limit) : docs;
+  const lessons = pageDocs.map((doc) => mapLesson(doc.id, doc.data()));
+
+  let nextCursor: string | null = null;
+  if (hasMore && pageDocs.length > 0) {
+    const last = pageDocs[pageDocs.length - 1];
+    nextCursor = encodeCursor(mapLesson(last.id, last.data()));
+  }
+
+  return { data: lessons, nextCursor, hasMore };
 }
 
 /**
@@ -321,7 +490,12 @@ export async function setLessonInvoiceIdInFirestore(
 }
 
 /**
- * Record the attendance/outcome for a lesson
+ * Record the attendance/outcome for a lesson.
+ *
+ * Tutor-cancelled outcomes also flip `isCancelled` to true so that the
+ * "cancelled" bucket — which the paginated lessons query filters on with a
+ * single equality predicate — includes them. This keeps `isCancelled` as the
+ * single source of truth for the cancelled lifecycle state.
  */
 export async function recordAttendanceInFirestore(
   lessonId: string,
@@ -331,13 +505,18 @@ export async function recordAttendanceInFirestore(
     const firestore = getFirebaseFirestore();
     const now = admin.firestore.Timestamp.now();
 
+    const updateData: Record<string, unknown> = {
+      attendanceStatus,
+      updatedAt: now,
+    };
+    if (TUTOR_CANCELLED_ATTENDANCE.includes(attendanceStatus)) {
+      updateData.isCancelled = true;
+    }
+
     await firestore
       .collection("lessons")
       .doc(lessonId)
-      .update({
-        attendanceStatus,
-        updatedAt: now,
-      });
+      .update(updateData);
   } catch (error) {
     console.error("Failed to record attendance in Firestore:", error);
     throw new Error("Failed to record attendance");

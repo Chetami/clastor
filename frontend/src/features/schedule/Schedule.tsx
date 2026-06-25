@@ -24,16 +24,24 @@ export default function Schedule() {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const now = new Date();
 
-  const { data: lessons = [] } = useListLessons();
-  const { data: students = [] } = useListStudents();
-  const { data: googleStatus } = useGoogleConnectionStatus();
-  const googleConnected = !!googleStatus?.connected;
-  const user = useAuthStore((s) => s.user);
-
   const [visibleWindow, setVisibleWindow] = useState<{
     from: string;
     to: string;
   } | null>(null);
+
+  // Lessons are scoped to the calendar's visible window so navigating
+  // weeks/days only fetches what's in view. Disabled until FullCalendar
+  // reports its first window via `datesSet`.
+  const { data: lessons = [] } = useListLessons(
+    visibleWindow
+      ? { from: visibleWindow.from, to: visibleWindow.to }
+      : undefined,
+    { enabled: !!visibleWindow },
+  );
+  const { data: students = [] } = useListStudents();
+  const { data: googleStatus } = useGoogleConnectionStatus();
+  const googleConnected = !!googleStatus?.connected;
+  const user = useAuthStore((s) => s.user);
 
   const { data: externalEvents = [] } = useExternalCalendarEvents(
     visibleWindow,

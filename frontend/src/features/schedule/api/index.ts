@@ -1,6 +1,7 @@
 export { useCreateLesson } from "./use-create-lesson";
 export { useCreateRecurringLesson } from "./use-create-recurring-lesson";
 export { useListLessons } from "./use-list-lessons";
+export { useListLessonsInfinite } from "./use-list-lessons-infinite";
 export { useGetLesson } from "./use-get-lesson";
 export { useUpdateLesson } from "./use-update-lesson";
 export { useRecordAttendance } from "./use-record-attendance";
@@ -25,3 +26,4 @@ export {
   resyncLessonRequest,
 } from "./requests";
 export type { ResyncLessonAction } from "./requests";
+export type { ListLessonsParams } from "./requests";
