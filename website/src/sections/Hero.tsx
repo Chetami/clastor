@@ -48,7 +48,7 @@ export function Hero() {
               size="lg"
               className="w-full sm:w-auto"
             >
-              <a href="#how-it-works">See how it works</a>
+              <a href="/#how-it-works">See how it works</a>
             </Button>
           </div>
 

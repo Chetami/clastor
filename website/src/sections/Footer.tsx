@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { Logo } from "@/components/Logo";
 import { APP_URL, BRAND_NAME } from "@/lib/site";
 
@@ -21,19 +22,19 @@ export function Footer() {
             aria-label="Footer"
           >
             <a
-              href="#features"
+              href="/#features"
               className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
             >
               Features
             </a>
             <a
-              href="#how-it-works"
+              href="/#how-it-works"
               className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
             >
               How it works
             </a>
             <a
-              href="#why-clastor"
+              href="/#why-clastor"
               className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
             >
               Why Clastor
@@ -44,6 +45,18 @@ export function Footer() {
             >
               Sign in
             </a>
+            <Link
+              to="/privacy"
+              className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Privacy Policy
+            </Link>
+            <Link
+              to="/terms"
+              className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Terms of Service
+            </Link>
           </nav>
         </div>
 
