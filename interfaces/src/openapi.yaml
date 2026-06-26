@@ -99,6 +99,8 @@ components:
       $ref: './schemas/lessons/req/RecordAttendanceRequest.yaml'
     NotifyStudentRequest:
       $ref: './schemas/lessons/req/NotifyStudentRequest.yaml'
+    CancelLessonRequest:
+      $ref: './schemas/lessons/req/CancelLessonRequest.yaml'
     ListLessonsQuery:
       $ref: './schemas/lessons/req/ListLessonsQuery.yaml'
     LessonResponse:

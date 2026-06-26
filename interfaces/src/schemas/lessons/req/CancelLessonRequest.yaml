@@ -1,0 +1,19 @@
+type: object
+properties:
+  notifyStudent:
+    type: boolean
+    description: >-
+      Whether to email the student that the lesson has been cancelled. When
+      true, a cancellation email is sent (and, if the student was previously
+      sent an invite, a METHOD:CANCEL calendar update so the event is removed
+      from their calendar). Omitted / false for a plain cancel with no email.
+  message:
+    type: string
+    nullable: true
+    description: >-
+      Optional custom message body for the cancellation email. If omitted, a
+      default cancellation message is used.
+description: |-
+  Request body for PATCH /api/lessons/:id/cancel.
+  Soft-cancels a single lesson occurrence. The notifyStudent flag optionally
+  emails the student about the cancellation.

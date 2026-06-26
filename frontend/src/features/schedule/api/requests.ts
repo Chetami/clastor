@@ -4,6 +4,7 @@ import type {
   UpdateLessonRequest,
   RescheduleLessonRequest,
   RecordAttendanceRequest,
+  CancelLessonRequest,
   NotifyStudentRequest,
   AttendanceStatus,
   CreateRecurringLessonRequest,
@@ -101,8 +102,12 @@ export async function recordAttendanceRequest(
 
 export async function cancelLessonRequest(
   id: string,
+  data?: CancelLessonRequest,
 ): Promise<LessonResponse> {
-  const response = await api.patch<LessonResponse>(`/api/lessons/${id}/cancel`);
+  const response = await api.patch<LessonResponse>(
+    `/api/lessons/${id}/cancel`,
+    data ?? {},
+  );
   return response.data;
 }
 

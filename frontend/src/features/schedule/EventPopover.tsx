@@ -50,6 +50,7 @@ import {
 } from "./lesson-utils";
 import { meetUrl } from "@/features/lessons/lesson-display";
 import { RescheduleDialog } from "./RescheduleDialog";
+import { CancelLessonDialog } from "./CancelLessonDialog";
 
 export interface EventAnchor {
   getBoundingClientRect: () => DOMRect;
@@ -108,6 +109,7 @@ export function EventPopover({
   const [notifyMessage, setNotifyMessage] = useState("");
   const [notifyError, setNotifyError] = useState<string | null>(null);
   const [rescheduleOpen, setRescheduleOpen] = useState(false);
+  const [cancelOpen, setCancelOpen] = useState(false);
 
   const studentName = lesson
     ? (students.find((s) => s.id === lesson.studentId)?.name ?? "Unknown student")
@@ -152,13 +154,18 @@ export function EventPopover({
   }
 
   async function handleCancel() {
-    if (!lessonId) return;
+    if (!lessonId || !lesson) return;
     setActionError(null);
+    // When the student already accepted, confirm and offer to notify them.
+    if (lesson.acceptanceStatus === "accepted") {
+      setCancelOpen(true);
+      return;
+    }
     try {
       await cancelLesson.mutateAsync();
       onOpenChange(false);
-    } catch {
-      setActionError(cancelLesson.error?.message ?? "Failed to cancel lesson");
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Failed to cancel lesson");
     }
   }
 
@@ -318,6 +325,14 @@ export function EventPopover({
           lesson={lesson}
           open={rescheduleOpen}
           onOpenChange={setRescheduleOpen}
+        />
+      )}
+
+      {lesson && (
+        <CancelLessonDialog
+          lesson={lesson}
+          open={cancelOpen}
+          onOpenChange={setCancelOpen}
         />
       )}
     </>

@@ -17,8 +17,8 @@ import {
 } from "../services/lessonService";
 import { getStudentByIdFromFirestore } from "../services/studentService";
 import { getUserFromFirestore } from "../services/userService";
-import { sendLessonNotification } from "../services/emailService";
-import { buildLessonInvite } from "../services/icalService";
+import { sendLessonNotification, sendLessonCancellation } from "../services/emailService";
+import { buildLessonInvite, buildLessonCancellation } from "../services/icalService";
 import {
   syncLessonToCalendar,
   deleteLessonCalendarEvent,
@@ -32,6 +32,7 @@ import {
   UpdateLessonRequest,
   RescheduleLessonRequest,
   RecordAttendanceRequest,
+  CancelLessonRequest,
   NotifyStudentRequest,
   LessonAcceptance,
   Lesson,
@@ -533,10 +534,13 @@ export async function recordAttendance(
 }
 
 /**
- * Cancel a single lesson occurrence (soft cancel).
+ * Cancel a single lesson occurrence (soft cancel). Optionally notifies the
+ * student — typically offered by the UI when the student had already accepted
+ * the lesson — sending a cancellation email and, if they were previously sent
+ * an invite, a METHOD:CANCEL calendar update.
  */
 export async function cancelLesson(
-  req: Request<{ id: string }>,
+  req: Request<{ id: string }, {}, CancelLessonRequest>,
   res: Response<LessonResponse | ApiError>
 ): Promise<void> {
   try {
@@ -581,6 +585,21 @@ export async function cancelLesson(
       }
     } catch {
       /* logged inside deleteLessonCalendarEvent */
+    }
+
+    // Optional student cancellation notification. Best-effort: the cancel
+    // itself always succeeds even if the email can't go out.
+    if (req.body?.notifyStudent === true) {
+      const cancelled = await getLessonByIdFromFirestore(req.params.id);
+      if (cancelled) {
+        try {
+          await dispatchLessonCancellation(cancelled, {
+            message: req.body?.message,
+          });
+        } catch (notifyError) {
+          console.error("Cancel notify failed:", notifyError);
+        }
+      }
     }
 
     const updated = await getLessonByIdFromFirestore(req.params.id);
@@ -714,6 +733,61 @@ async function dispatchLessonNotification(
   });
 
   await markStudentNotifiedInFirestore(lesson.id);
+}
+
+/**
+ * Send a cancellation email to the student linked to the lesson. Used by the
+ * cancel endpoint when the tutor opts to notify. When the student was
+ * previously sent an invite (has an `icsUid`), a METHOD:CANCEL calendar update
+ * is attached so the event is removed from their calendar; the RSVP version is
+ * bumped to give it a SEQUENCE higher than the last REQUEST. Best-effort
+ * callers should catch the thrown {@link StudentEmailMissingError} / generic
+ * errors.
+ */
+async function dispatchLessonCancellation(
+  lesson: Lesson,
+  opts: { message?: string | null } = {},
+): Promise<void> {
+  const student = await getStudentByIdFromFirestore(lesson.studentId);
+  if (!student || !student.email) {
+    throw new StudentEmailMissingError();
+  }
+
+  const tutor = await getUserFromFirestore(lesson.tutorId);
+
+  const start = new Date(lesson.startDateTime as any);
+  const end = new Date(start.getTime() + lesson.durationMinutes * 60_000);
+
+  // Only attach a CANCEL iCal if the student was ever sent an invite —
+  // otherwise there's no calendar entry to remove. Bumping the RSVP version
+  // yields a SEQUENCE higher than the last REQUEST send.
+  let icsContent: string | undefined;
+  if (lesson.icsUid) {
+    const sequence = await bumpRsvpTokenVersion(lesson.id);
+    icsContent = buildLessonCancellation({
+      icsUid: lesson.icsUid,
+      sequence,
+      summary: `${lesson.subject ?? "Lesson"} with ${tutor.name}`,
+      start,
+      end,
+      location: lesson.location,
+      organizer: { name: tutor.name, email: tutor.email },
+      attendee: { name: student.name, email: student.email },
+    });
+  }
+
+  await sendLessonCancellation({
+    to: student.email,
+    studentName: student.name,
+    tutorName: tutor.name,
+    tutorEmail: tutor.email,
+    subject: lesson.subject ?? null,
+    startDateTime: start,
+    durationMinutes: lesson.durationMinutes,
+    location: lesson.location,
+    message: opts.message,
+    icsContent,
+  });
 }
 
 /**

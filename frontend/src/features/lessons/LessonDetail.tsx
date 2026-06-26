@@ -74,6 +74,7 @@ import {
 import type { AttendanceStatus, LessonTodo } from "@examify-tms/interfaces";
 import { meetUrl } from "@/features/lessons/lesson-display";
 import { RescheduleDialog } from "@/features/schedule/RescheduleDialog";
+import { CancelLessonDialog } from "@/features/schedule/CancelLessonDialog";
 
 function formatDateTime(iso: string) {
   return new Date(iso).toLocaleString("en-US", {
@@ -120,6 +121,7 @@ export default function EventDetail() {
   const [notesDraft, setNotesDraft] = useState("");
   const [todos, setTodos] = useState<LessonTodo[]>([]);
   const [rescheduleOpen, setRescheduleOpen] = useState(false);
+  const [cancelOpen, setCancelOpen] = useState(false);
   const [newTodoText, setNewTodoText] = useState("");
   const initialized = useRef(false);
   const [saving, setSaving] = useState(false);
@@ -285,11 +287,16 @@ export default function EventDetail() {
   }
 
   async function handleCancel() {
-    if (!eventId) return;
+    if (!eventId || !lesson) return;
+    // When the student already accepted, confirm and offer to notify them.
+    if (lesson.acceptanceStatus === "accepted") {
+      setCancelOpen(true);
+      return;
+    }
     try {
       await cancelLesson.mutateAsync();
-    } catch {
-      setPickerError(cancelLesson.error?.message ?? "Failed to cancel lesson");
+    } catch (err) {
+      setPickerError(err instanceof Error ? err.message : "Failed to cancel lesson");
     }
   }
 
@@ -846,6 +853,12 @@ export default function EventDetail() {
         lesson={lesson}
         open={rescheduleOpen}
         onOpenChange={setRescheduleOpen}
+      />
+
+      <CancelLessonDialog
+        lesson={lesson}
+        open={cancelOpen}
+        onOpenChange={setCancelOpen}
       />
     </div>
   );
