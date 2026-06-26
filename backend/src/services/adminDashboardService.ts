@@ -217,6 +217,8 @@ export async function listTutorsWithStats(): Promise<AdminTutorSummary[]> {
       lastActive: t.lastActive ? t.lastActive.toISOString() : null,
       studentCount: studentCountByTutor.get(t.id) ?? 0,
       outstandingAmount: round2(outstandingByTutor.get(t.id) ?? 0),
+      googleConnected: t.googleConnected,
+      googleEmail: t.googleEmail,
     }))
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }

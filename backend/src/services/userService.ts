@@ -243,6 +243,8 @@ export interface TutorRecord {
   avatarUrl: string | null;
   createdAt: Date;
   lastActive: Date | null;
+  googleConnected: boolean;
+  googleEmail: string | null;
 }
 
 /**
@@ -259,6 +261,9 @@ export async function listTutorsFromFirestore(): Promise<TutorRecord[]> {
   const tutors: TutorRecord[] = [];
   snapshot.forEach((doc) => {
     const d = doc.data();
+    const conn = d.googleConnection;
+    const hasRefresh =
+      !!conn && typeof conn.refreshToken === "string" && conn.refreshToken.length > 0;
     tutors.push({
       id: doc.id,
       name: d.name ?? "Unknown",
@@ -266,6 +271,9 @@ export async function listTutorsFromFirestore(): Promise<TutorRecord[]> {
       avatarUrl: typeof d.avatarUrl === "string" ? d.avatarUrl : null,
       createdAt: d.createdAt?.toDate() ?? new Date(0),
       lastActive: d.lastActive?.toDate() ?? null,
+      googleConnected: hasRefresh,
+      googleEmail:
+        hasRefresh && typeof conn.googleEmail === "string" ? conn.googleEmail : null,
     });
   });
   return tutors;

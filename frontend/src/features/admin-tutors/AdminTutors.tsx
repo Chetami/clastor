@@ -26,7 +26,7 @@ import { useUserCurrency } from "@/lib/use-currency";
 import { formatCurrency } from "@/features/dashboard/lib";
 import { useListAdminTutors } from "./api";
 
-type SortField = "name" | "studentCount" | "outstandingAmount" | "lastActive" | "createdAt";
+type SortField = "name" | "studentCount" | "outstandingAmount" | "googleConnected" | "lastActive" | "createdAt";
 type SortOrder = "asc" | "desc";
 
 function initials(name: string): string {
@@ -75,6 +75,8 @@ export default function AdminTutors() {
           return t.studentCount;
         case "outstandingAmount":
           return t.outstandingAmount;
+        case "googleConnected":
+          return t.googleConnected ? 1 : 0;
         case "lastActive":
           return t.lastActive ? new Date(t.lastActive).getTime() : 0;
         case "createdAt":
@@ -180,6 +182,9 @@ export default function AdminTutors() {
                         <SortHeader field="outstandingAmount" label="Outstanding" />
                       </TableHead>
                       <TableHead className="hidden md:table-cell">
+                        <SortHeader field="googleConnected" label="Google" />
+                      </TableHead>
+                      <TableHead className="hidden md:table-cell">
                         <SortHeader field="lastActive" label="Last active" />
                       </TableHead>
                       <TableHead className="hidden lg:table-cell">
@@ -219,6 +224,26 @@ export default function AdminTutors() {
                           }
                         >
                           {formatCurrency(t.outstandingAmount, currency)}
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          {t.googleConnected ? (
+                            <span className="inline-flex items-center gap-1.5 text-sm">
+                              <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" />
+                              <span>
+                                Connected
+                                {t.googleEmail ? (
+                                  <span className="block text-xs text-muted-foreground">
+                                    {t.googleEmail}
+                                  </span>
+                                ) : null}
+                              </span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
+                              <span className="inline-block h-2 w-2 rounded-full bg-muted-foreground/30" />
+                              Not connected
+                            </span>
+                          )}
                         </TableCell>
                         <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
                           {formatDate(t.lastActive)}
