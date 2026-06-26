@@ -71,7 +71,11 @@ import {
   isLessonFinished,
   lessonEndDate,
 } from "../schedule/lesson-utils";
-import type { AttendanceStatus, LessonTodo } from "@examify-tms/interfaces";
+import type {
+  AttendanceStatus,
+  LessonAcceptance,
+  LessonTodo,
+} from "@examify-tms/interfaces";
 import { meetUrl } from "@/features/lessons/lesson-display";
 import { RescheduleDialog } from "@/features/schedule/RescheduleDialog";
 import { CancelLessonDialog } from "@/features/schedule/CancelLessonDialog";
@@ -282,6 +286,18 @@ export default function EventDetail() {
     } catch {
       setPickerError(
         recordAttendance.error?.message ?? "Failed to record attendance",
+      );
+    }
+  }
+
+  async function handleAcceptanceChange(value: LessonAcceptance) {
+    if (!eventId) return;
+    setPickerError(null);
+    try {
+      await updateLesson.mutateAsync({ acceptanceStatus: value });
+    } catch (err) {
+      setPickerError(
+        err instanceof Error ? err.message : "Failed to update acceptance",
       );
     }
   }
@@ -669,12 +685,30 @@ export default function EventDetail() {
               <p className="text-xs text-muted-foreground">
                 Student acceptance
               </p>
-              <div className="flex items-center gap-2 text-sm font-medium">
-                {lesson.acceptanceStatus === "accepted" && (
-                  <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                )}
-                {ACCEPTANCE_LABELS[lesson.acceptanceStatus]}
-              </div>
+              <Select
+                value={lesson.acceptanceStatus}
+                onValueChange={(v) =>
+                  handleAcceptanceChange(v as LessonAcceptance)
+                }
+                disabled={updateLesson.isPending}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {(
+                    ["pending", "accepted", "declined"] as LessonAcceptance[]
+                  ).map((opt) => (
+                    <SelectItem key={opt} value={opt}>
+                      {ACCEPTANCE_LABELS[opt]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Updated automatically when the student responds — change it
+                here to override.
+              </p>
             </div>
 
             <div className="space-y-1.5">
