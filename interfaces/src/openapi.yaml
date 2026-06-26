@@ -199,3 +199,10 @@ components:
       $ref: './schemas/users/res/AdminTutorSummary.yaml'
     AdminTutorListResponse:
       $ref: './schemas/users/res/AdminTutorListResponse.yaml'
+    # Template (read-only previews) Schemas
+    TemplateType:
+      $ref: './schemas/templates/TemplateType.yaml'
+    TemplateSummary:
+      $ref: './schemas/templates/res/TemplateSummary.yaml'
+    EmailTemplatePreview:
+      $ref: './schemas/templates/res/EmailTemplatePreview.yaml'

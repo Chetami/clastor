@@ -25,7 +25,11 @@ export default function Settings() {
           <CardTitle>Currency</CardTitle>
           <CardDescription>
             The currency you charge in. Used across your dashboard, invoices,
-            emails and public profile.
+            emails and public profile.{" "}
+            <span className="text-orange-600 dark:text-orange-500">
+              Please note: while you can update this display preference,
+              automated billing is currently only supported in AUD.{" "}
+            </span>{" "}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -69,7 +73,7 @@ export default function Settings() {
             Connect Stripe to accept card payments that settle straight to your
             bank.{" "}
             <span className="text-orange-600 dark:text-orange-500">
-              Stripe doesn't work for the demo period.
+              Automated Stripe billing does not work in the demo period.
             </span>
           </CardDescription>
         </CardHeader>

@@ -13,6 +13,7 @@ import dashboardRoutes from "./routes/dashboardRoutes";
 import calendarRoutes from "./routes/calendarRoutes";
 import feedbackRoutes from "./routes/feedbackRoutes";
 import adminRoutes from "./routes/adminRoutes";
+import templateRoutes from "./routes/templateRoutes";
 import { authenticateJWT, requireSystemAdmin } from "./middleware/auth";
 import { initializeFirebase } from "./config/firebase";
 import { ApiError } from "@examify-tms/interfaces";
@@ -58,6 +59,7 @@ app.use("/api/tutor-profiles", tutorProfileRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/calendar", calendarRoutes);
 app.use("/api/feedback", feedbackRoutes);
+app.use("/api/templates", templateRoutes);
 // Admin-only API surface. Both gates are applied here so every route under
 // /api/admin is authenticated and restricted to system_admin by default.
 app.use("/api/admin", authenticateJWT, requireSystemAdmin, adminRoutes);

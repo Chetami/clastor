@@ -1,0 +1,27 @@
+type: object
+required:
+  - subject
+  - text
+  - html
+properties:
+  subject:
+    type: string
+    description: Email subject line as the recipient would see it.
+  text:
+    type: string
+    description: Plain-text fallback body.
+  html:
+    type: string
+    description: >-
+      Full HTML body. Intended to be rendered verbatim inside a sandboxed
+      iframe so the preview matches the delivered email exactly.
+  ics:
+    type: string
+    nullable: true
+    description: >-
+      Raw iCalendar (METHOD:REQUEST) invite text when the email carries a
+      calendar attachment (e.g. a Meet invite). Null for plain reminders.
+description: >-
+  Rendered preview of an email-based template, produced from fixed sample
+  data so the output is deterministic. The HTML mirrors exactly what the
+  recipient receives.
