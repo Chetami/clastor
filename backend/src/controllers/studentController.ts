@@ -1,7 +1,8 @@
 import { Request, Response } from "express";
 import { createStudentInFirestore, listStudentsFromFirestore, getStudentByIdFromFirestore, updateStudentInFirestore, importStudentsFromCsv } from "../services/studentService";
-import { CreateStudentRequest, UpdateStudentRequest, StudentResponse, StudentListResponse, StudentImportSummary, ApiError } from "@examify-tms/interfaces";
+import { CreateStudentRequest, UpdateStudentRequest, StudentResponse, StudentListResponse, StudentImportSummary, Student, ApiError } from "@examify-tms/interfaces";
 import { canViewStudent, canEditStudent } from "../permissions/studentPermissions";
+import { resolveTutorNames } from "../services/tutorResolver";
 
 /**
  * Create student controller
@@ -65,19 +66,46 @@ export async function listStudents(
       return;
     }
 
-    // List students based on user role
+    // Admins may drill into a single tutor via ?tutorId=…; otherwise they see
+    // all students. Tutors are always scoped to their own uid.
     const subjectId =
       typeof req.query.subjectId === "string" ? req.query.subjectId : undefined;
+    const drillTutorId =
+      typeof req.query.tutorId === "string" ? req.query.tutorId : null;
+    const scopeUid =
+      req.user.role === "system_admin" && drillTutorId
+        ? drillTutorId
+        : req.user.uid;
+    const scopeRole =
+      req.user.role === "system_admin" && drillTutorId
+        ? "tutor"
+        : req.user.role;
+
     const students = await listStudentsFromFirestore(
-      req.user.uid,
-      req.user.role,
+      scopeUid,
+      scopeRole,
       subjectId
     );
 
+    // Resolve tutor names for the admin (system-wide) view so the client can
+    // render a "Tutor" column. Skipped for the tutor's own (single-tutor) view.
+    let data: Student[] = students;
+    if (req.user.role === "system_admin") {
+      const names = await resolveTutorNames(students.map((s) => s.tutorId));
+      data = students.map((s) => {
+        const info = names.get(s.tutorId);
+        return {
+          ...s,
+          tutorName: info?.name ?? null,
+          tutorEmail: info?.email ?? null,
+        };
+      });
+    }
+
     // Return StudentListResponse
     const response: StudentListResponse = {
-      data: students,
-      total: students.length,
+      data,
+      total: data.length,
     };
 
     res.status(200).json(response);

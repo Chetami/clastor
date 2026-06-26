@@ -26,6 +26,10 @@ export function AppSidebar() {
   const { user } = useAuth();
   const [feedbackOpen, setFeedbackOpen] = useState(false);
 
+  const items = navItems.filter(
+    (item) => !item.roles || (user?.role && item.roles.includes(user.role)),
+  );
+
   return (
     <>
       <Sidebar variant="inset" collapsible="icon">
@@ -56,7 +60,7 @@ export function AppSidebar() {
             <SidebarGroupLabel>Menu</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {navItems.map((item) => (
+                {items.map((item) => (
                   <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton
                       asChild

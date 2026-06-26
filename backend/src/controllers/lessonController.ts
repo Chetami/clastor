@@ -39,6 +39,7 @@ import {
   ApiError,
 } from "@examify-tms/interfaces";
 import { canViewLesson, canEditLesson } from "../permissions/lessonPermissions";
+import { resolveTutorNames } from "../services/tutorResolver";
 
 /**
  * Convert a Lesson (Date-typed) to a LessonResponse (ISO string-typed),
@@ -128,6 +129,19 @@ export async function listLessons(
       return;
     }
 
+    // Admins may drill into a single tutor via ?tutorId=…; otherwise they see
+    // all lessons. Tutors are always scoped to their own uid.
+    const drillTutorId =
+      typeof req.query.tutorId === "string" ? req.query.tutorId : null;
+    const scopeUid =
+      req.user.role === "system_admin" && drillTutorId
+        ? drillTutorId
+        : req.user.uid;
+    const scopeRole =
+      req.user.role === "system_admin" && drillTutorId
+        ? "tutor"
+        : req.user.role;
+
     // Cursor pagination (lessons page).
     const hasLimit =
       req.query.limit != null && req.query.limit !== "" &&
@@ -142,12 +156,27 @@ export async function listLessons(
         query.cursor = req.query.cursor;
       }
       const result = await listLessonsPageFromFirestore(
-        req.user.uid,
-        req.user.role,
+        scopeUid,
+        scopeRole,
         query
       );
+      let data = result.data.map(toLessonResponse);
+      if (req.user.role === "system_admin") {
+        const names = await resolveTutorNames(
+          result.data.map((l) => l.tutorId),
+        );
+        data = data.map((r, i) => {
+          const info = names.get(result.data[i].tutorId);
+          return {
+            ...r,
+            tutorId: result.data[i].tutorId,
+            tutorName: info?.name ?? null,
+            tutorEmail: info?.email ?? null,
+          };
+        });
+      }
       res.status(200).json({
-        data: result.data.map(toLessonResponse),
+        data,
         nextCursor: result.nextCursor,
         hasMore: result.hasMore,
       });
@@ -176,13 +205,27 @@ export async function listLessons(
     }
 
     const lessons = await listLessonsFromFirestore(
-      req.user.uid,
-      req.user.role,
+      scopeUid,
+      scopeRole,
       filters
     );
 
+    let data = lessons.map(toLessonResponse);
+    if (req.user.role === "system_admin") {
+      const names = await resolveTutorNames(lessons.map((l) => l.tutorId));
+      data = data.map((r, i) => {
+        const info = names.get(lessons[i].tutorId);
+        return {
+          ...r,
+          tutorId: lessons[i].tutorId,
+          tutorName: info?.name ?? null,
+          tutorEmail: info?.email ?? null,
+        };
+      });
+    }
+
     res.status(200).json({
-      data: lessons.map(toLessonResponse),
+      data,
       nextCursor: null,
       hasMore: false,
     });

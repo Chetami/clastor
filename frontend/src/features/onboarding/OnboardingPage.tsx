@@ -60,11 +60,12 @@ export default function OnboardingPage() {
   }, [step]);
 
   // If onboarding is already complete, there's nothing to do here.
+  // Onboarding is tutor-only — admins are bounced to the dashboard.
   useEffect(() => {
-    if (user?.onboardingComplete) {
+    if (user?.role !== "tutor" || user?.onboardingComplete) {
       navigate("/dashboard", { replace: true });
     }
-  }, [user?.onboardingComplete, navigate]);
+  }, [user?.role, user?.onboardingComplete, navigate]);
 
   const isFirst = step === 0;
   const isLast = step === STEPS.length - 1;

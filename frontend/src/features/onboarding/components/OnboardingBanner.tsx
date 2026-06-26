@@ -15,7 +15,8 @@ export function OnboardingBanner() {
   const user = useAuthStore((s) => s.user);
   const complete = useCompleteOnboarding();
 
-  if (!user || user.onboardingComplete) return null;
+  // Onboarding is tutor-only; admins never see this nudge.
+  if (!user || user.onboardingComplete || user.role !== "tutor") return null;
 
   return (
     <div className="mb-4 flex flex-col gap-3 rounded-lg border border-primary/30 bg-primary/5 p-4 sm:flex-row sm:items-center sm:justify-between lg:mb-6">

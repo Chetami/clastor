@@ -1,5 +1,13 @@
 import { api } from "@/lib/api";
-import type { FeedbackResponse } from "@examify-tms/interfaces";
+import type {
+  FeedbackResponse,
+  FeedbackListResponse,
+} from "@examify-tms/interfaces";
+
+export async function listFeedbackRequest(): Promise<FeedbackListResponse> {
+  const response = await api.get<FeedbackListResponse>("/api/feedback");
+  return response.data;
+}
 
 export async function createFeedbackRequest(params: {
   type: string;

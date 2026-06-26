@@ -1,0 +1,129 @@
+type: object
+required:
+  - period
+  - rangeStart
+  - rangeEnd
+  - totalTutors
+  - activeTutors
+  - previousActiveTutors
+  - newTutorsThisPeriod
+  - activeStudents
+  - topTutors
+  - recentTutors
+  - feedback
+properties:
+  period:
+    $ref: '../DashboardPeriod.yaml'
+  rangeStart:
+    type: string
+    format: date-time
+    description: Inclusive start of the selected period (ISO 8601).
+  rangeEnd:
+    type: string
+    format: date-time
+    description: Exclusive end of the selected period (ISO 8601).
+  totalTutors:
+    type: integer
+    minimum: 0
+    description: Total number of tutor accounts on the platform.
+  activeTutors:
+    type: integer
+    minimum: 0
+    description: Tutors with at least one attended lesson in the selected period.
+  previousActiveTutors:
+    type: integer
+    minimum: 0
+    description: Active-tutor count in the immediately preceding period (for delta %).
+  newTutorsThisPeriod:
+    type: integer
+    minimum: 0
+    description: Tutors whose account was created within the selected period.
+  activeStudents:
+    type: integer
+    minimum: 0
+    description: Active students across the whole platform (point-in-time).
+  topTutors:
+    type: array
+    description: Top tutors by income collected in the selected period (max 5).
+    items:
+      type: object
+      required:
+        - tutorId
+        - name
+        - income
+        - hoursWorked
+        - lessonsTaught
+        - studentCount
+      properties:
+        tutorId:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+          nullable: true
+        avatarUrl:
+          type: string
+          nullable: true
+        income:
+          type: number
+          format: double
+          minimum: 0
+        hoursWorked:
+          type: number
+          format: double
+          minimum: 0
+        lessonsTaught:
+          type: integer
+          minimum: 0
+        studentCount:
+          type: integer
+          minimum: 0
+  recentTutors:
+    type: array
+    description: Most recently signed-up tutors (max 5).
+    items:
+      type: object
+      required:
+        - tutorId
+        - name
+        - createdAt
+      properties:
+        tutorId:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+          nullable: true
+        avatarUrl:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        lastActive:
+          type: string
+          format: date-time
+          nullable: true
+  feedback:
+    type: object
+    required:
+      - openCount
+      - resolvedCount
+      - recent
+    properties:
+      openCount:
+        type: integer
+        minimum: 0
+      resolvedCount:
+        type: integer
+        minimum: 0
+      recent:
+        type: array
+        maxItems: 3
+        items:
+          $ref: '../../feedback/FeedbackResponse.yaml'
+description: |-
+  Admin platform-overview response. Platform-wide rollups plus the admin-only
+  widgets (top tutors, feedback snapshot, recent signups) for the selected period.

@@ -3,6 +3,7 @@ required:
   - id
   - type
   - message
+  - tutorId
   - createdAt
 properties:
   id:
@@ -14,6 +15,17 @@ properties:
   message:
     type: string
     description: The feedback message body.
+  tutorId:
+    type: string
+    description: The UID of the tutor who submitted the feedback.
+  tutorName:
+    type: string
+    nullable: true
+    description: Display name of the submitting tutor (populated on list responses).
+  tutorEmail:
+    type: string
+    nullable: true
+    description: Email of the submitting tutor (populated on list responses).
   images:
     type: array
     description: Base64 data URLs of attached screenshots (max 2).

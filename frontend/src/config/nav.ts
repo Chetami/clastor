@@ -6,8 +6,11 @@ import {
   BookOpen,
   Settings,
   Globe,
+  MessageSquareText,
+  GraduationCap,
   type LucideIcon,
 } from "lucide-react";
+import type { Role } from "@examify-tms/interfaces";
 import { isFeatureEnabled, type FeatureFlagKey } from "./features";
 
 export type NavItem = {
@@ -15,21 +18,35 @@ export type NavItem = {
   href: string;
   icon: LucideIcon;
   feature?: FeatureFlagKey;
+  roles?: Role[];
 };
 
 const allNavItems: NavItem[] = [
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { title: "Students", href: "/students", icon: Users },
-  { title: "Schedule", href: "/schedule", icon: CalendarDays },
-  { title: "Lessons", href: "/lessons", icon: BookOpen },
-  { title: "Payments", href: "/payments", icon: CreditCard },
+  { title: "Students", href: "/students", icon: Users, roles: ["tutor"] },
+  { title: "Schedule", href: "/schedule", icon: CalendarDays, roles: ["tutor"] },
+  { title: "Lessons", href: "/lessons", icon: BookOpen, roles: ["tutor"] },
+  { title: "Payments", href: "/payments", icon: CreditCard, roles: ["tutor"] },
   {
     title: "Public Profile",
     href: "/profile",
     icon: Globe,
     feature: "publicProfile",
+    roles: ["tutor"],
   },
-  { title: "Settings", href: "/settings", icon: Settings },
+  {
+    title: "Feedback",
+    href: "/admin/feedback",
+    icon: MessageSquareText,
+    roles: ["system_admin"],
+  },
+  {
+    title: "Tutors",
+    href: "/admin/tutors",
+    icon: GraduationCap,
+    roles: ["system_admin"],
+  },
+  { title: "Settings", href: "/settings", icon: Settings, roles: ["tutor"] },
 ];
 
 export const navItems = allNavItems.filter(

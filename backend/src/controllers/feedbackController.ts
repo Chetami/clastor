@@ -3,9 +3,13 @@ import sharp from "sharp";
 import {
   FeedbackType,
   FeedbackResponse,
+  FeedbackListResponse,
   ApiError,
 } from "@examify-tms/interfaces";
-import { createFeedbackInFirestore } from "../services/feedbackService";
+import {
+  createFeedbackInFirestore,
+  listFeedbackFromFirestore,
+} from "../services/feedbackService";
 
 const MAX_IMAGES = 2;
 const IMAGE_MAX_WIDTH = 1200;
@@ -84,11 +88,44 @@ export async function createFeedback(
       userAgent: feedback.userAgent,
       status: feedback.status,
       createdAt: feedback.createdAt.toISOString(),
+      tutorId: req.user.uid,
+      tutorName: null,
+      tutorEmail: null,
     });
   } catch (error) {
     console.error("Create feedback failed:", error);
     const message =
       error instanceof Error ? error.message : "Failed to submit feedback";
+    res.status(500).json({ message });
+  }
+}
+
+export async function listFeedback(
+  _req: Request,
+  res: Response<FeedbackListResponse | ApiError>,
+): Promise<void> {
+  try {
+    const items = await listFeedbackFromFirestore();
+
+    const data: FeedbackResponse[] = items.map((f) => ({
+      id: f.id,
+      type: f.type,
+      message: f.message,
+      images: f.images,
+      pageUrl: f.pageUrl,
+      userAgent: f.userAgent,
+      status: f.status,
+      createdAt: f.createdAt.toISOString(),
+      tutorId: f.tutorId,
+      tutorName: f.tutorName,
+      tutorEmail: f.tutorEmail,
+    }));
+
+    res.status(200).json({ data, total: data.length });
+  } catch (error) {
+    console.error("List feedback failed:", error);
+    const message =
+      error instanceof Error ? error.message : "Failed to load feedback";
     res.status(500).json({ message });
   }
 }

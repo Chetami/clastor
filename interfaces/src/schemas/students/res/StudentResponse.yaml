@@ -102,6 +102,16 @@ properties:
     type: string
     format: date-time
     description: When the student record was last updated
+  tutorName:
+    type: string
+    nullable: true
+    description: >-
+      Display name of the owning tutor. Populated only on admin (system-wide)
+      list responses; null otherwise.
+  tutorEmail:
+    type: string
+    nullable: true
+    description: Email of the owning tutor. Populated only on admin list responses.
 description: |-
   Student response object
   Represents a student in the Firestore students collection as returned by the API

@@ -26,6 +26,8 @@ function getScreenTitle(pathname: string): string {
   if (path === "/settings/payments") return "Payment Settings";
   if (path === "/settings") return "Settings";
   if (path === "/account") return "Account";
+  if (path === "/admin/feedback") return "Feedback";
+  if (path === "/admin/tutors") return "Tutors";
   if (path === "/profile") return "Profile";
   return "Clastor";
 }
