@@ -111,10 +111,12 @@ export function NavUser({ user }: { user: UserInfo | null }) {
                 <Palette />
                 Appearance
               </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => startTour()}>
-                <Compass />
-                Take a tour
-              </DropdownMenuItem>
+              {user.role !== "system_admin" && (
+                <DropdownMenuItem onSelect={() => startTour()}>
+                  <Compass />
+                  Take a tour
+                </DropdownMenuItem>
+              )}
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem

@@ -20,7 +20,10 @@ export function TourBoot() {
   startRef.current = start;
 
   const ready =
-    !!user && user.onboardingComplete && !user.tourSeen;
+    !!user &&
+    user.role !== "system_admin" &&
+    user.onboardingComplete &&
+    !user.tourSeen;
 
   useEffect(() => {
     if (!ready) return;
