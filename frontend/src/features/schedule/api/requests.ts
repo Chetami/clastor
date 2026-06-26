@@ -2,6 +2,7 @@ import { api } from "@/lib/api";
 import type {
   CreateLessonRequest,
   UpdateLessonRequest,
+  RescheduleLessonRequest,
   RecordAttendanceRequest,
   NotifyStudentRequest,
   AttendanceStatus,
@@ -72,6 +73,17 @@ export async function updateLessonRequest(
   data: UpdateLessonRequest,
 ): Promise<LessonResponse> {
   const response = await api.patch<LessonResponse>(`/api/lessons/${id}`, data);
+  return response.data;
+}
+
+export async function rescheduleLessonRequest(
+  id: string,
+  data: RescheduleLessonRequest,
+): Promise<LessonResponse> {
+  const response = await api.patch<LessonResponse>(
+    `/api/lessons/${id}/reschedule`,
+    data,
+  );
   return response.data;
 }
 

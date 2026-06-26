@@ -73,6 +73,7 @@ import {
 } from "../schedule/lesson-utils";
 import type { AttendanceStatus, LessonTodo } from "@examify-tms/interfaces";
 import { meetUrl } from "@/features/lessons/lesson-display";
+import { RescheduleDialog } from "@/features/schedule/RescheduleDialog";
 
 function formatDateTime(iso: string) {
   return new Date(iso).toLocaleString("en-US", {
@@ -118,6 +119,7 @@ export default function EventDetail() {
   const [editingNotes, setEditingNotes] = useState(false);
   const [notesDraft, setNotesDraft] = useState("");
   const [todos, setTodos] = useState<LessonTodo[]>([]);
+  const [rescheduleOpen, setRescheduleOpen] = useState(false);
   const [newTodoText, setNewTodoText] = useState("");
   const initialized = useRef(false);
   const [saving, setSaving] = useState(false);
@@ -708,6 +710,21 @@ export default function EventDetail() {
                   <Button
                     variant="outline"
                     size="sm"
+                    onClick={() => setRescheduleOpen(true)}
+                    disabled={lessonFinished}
+                    className="w-full justify-start"
+                    title={
+                      lessonFinished
+                        ? "Cannot reschedule finished lessons"
+                        : "Move this lesson to a new time"
+                    }
+                  >
+                    <CalendarClock className="h-4 w-4" />
+                    Reschedule
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={openNotifyDialog}
                     disabled={cooldownActive}
                     className="w-full justify-start"
@@ -824,6 +841,12 @@ export default function EventDetail() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <RescheduleDialog
+        lesson={lesson}
+        open={rescheduleOpen}
+        onOpenChange={setRescheduleOpen}
+      />
     </div>
   );
 }

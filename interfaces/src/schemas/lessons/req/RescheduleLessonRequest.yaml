@@ -1,0 +1,36 @@
+type: object
+required:
+  - startDateTime
+properties:
+  startDateTime:
+    type: string
+    format: date-time
+    description: The new lesson start time (ISO 8601). Required.
+  durationMinutes:
+    type: integer
+    minimum: 1
+    nullable: true
+    description: >-
+      New lesson duration in minutes. If omitted, the existing duration is
+      kept. (End time is always derived: start + durationMinutes.)
+  notifyStudent:
+    type: boolean
+    default: true
+    description: >-
+      Whether to email the student an updated calendar invite for the new
+      time. When true, the student's acceptance status is reset to `pending`,
+      the iCal SEQUENCE is bumped (so existing calendar entries update rather
+      than duplicate), prior Accept/Decline links are invalidated, and a fresh
+      invite with new RSVP links is sent. Defaults to true.
+  message:
+    type: string
+    nullable: true
+    description: >-
+      Optional custom message body for the reschedule email. If omitted, a
+      reschedule-appropriate default is used. Lesson details are always
+      appended as a footer.
+description: |-
+  Request body for PATCH /api/lessons/:id/reschedule.
+  Moves a single lesson occurrence to a new time and (optionally) re-notifies
+  the student. For a recurring-series occurrence this reschedules only that
+  occurrence (marking it an exception).

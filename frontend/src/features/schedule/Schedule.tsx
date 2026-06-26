@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
-import type { EventInput } from "@fullcalendar/core";
-import { useListLessons, useExternalCalendarEvents } from "./api";
+import type { EventApi, EventInput } from "@fullcalendar/core";
+import { useListLessons, useExternalCalendarEvents, useRescheduleLesson } from "./api";
 import { useListStudents } from "@/features/students/api";
 import { useGoogleConnectionStatus } from "@/features/settings/api/use-google-connect";
 import { useAuthStore } from "@/store/auth-store";
@@ -18,6 +19,15 @@ import { CreateEventDialog } from "./CreateEventDialog";
 import { EventPopover, type EventAnchor } from "./EventPopover";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 export default function Schedule() {
   const calendarRef = useRef<FullCalendar>(null);
@@ -68,8 +78,13 @@ export default function Schedule() {
   );
 
   // Merge lessons + external events into a single EventInput[] for FullCalendar.
+  // External (read-only) events are marked non-editable so they can't be
+  // dragged/resized; lesson events inherit the calendar's `editable` flag.
   const allEvents: EventInput[] = useMemo(
-    () => [...lessonEvents, ...externalCalendarEvents],
+    () => [
+      ...lessonEvents,
+      ...externalCalendarEvents.map((e) => ({ ...e, editable: false })),
+    ],
     [lessonEvents, externalCalendarEvents],
   );
 
@@ -86,6 +101,78 @@ export default function Schedule() {
   const [eventAnchor, setEventAnchor] = useState<EventAnchor | null>(null);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [eventPopoverOpen, setEventPopoverOpen] = useState(false);
+
+  // Pending drag/resize reschedule: holds the proposed new slot + a revert
+  // callback so the calendar event snaps back if the tutor cancels or the
+  // save fails.
+  const [dropPending, setDropPending] = useState<{
+    lessonId: string;
+    startDateTime: string;
+    durationMinutes: number;
+    label: string;
+    revert: () => void;
+  } | null>(null);
+  const [dropNotify, setDropNotify] = useState(true);
+  const reschedule = useRescheduleLesson(dropPending?.lessonId ?? "");
+
+  function openDropConfirm(event: EventApi, revert: () => void) {
+    const start = event.start;
+    const end = event.end;
+    if (!start || !end) {
+      revert();
+      return;
+    }
+    const durationMinutes = Math.max(
+      1,
+      Math.round((end.getTime() - start.getTime()) / 60000),
+    );
+    const studentName = event.extendedProps.studentName as string | undefined;
+    setDropNotify(true);
+    setDropPending({
+      lessonId: event.id,
+      startDateTime: start.toISOString(),
+      durationMinutes,
+      label: `${start.toLocaleString("en-US", {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      })} · ${durationMinutes} min${
+        studentName ? ` · ${studentName}` : ""
+      }`,
+      revert,
+    });
+  }
+
+  function cancelDrop() {
+    dropPending?.revert();
+    setDropPending(null);
+  }
+
+  async function confirmDrop() {
+    if (!dropPending) return;
+    try {
+      await reschedule.mutateAsync({
+        startDateTime: dropPending.startDateTime,
+        durationMinutes: dropPending.durationMinutes,
+        notifyStudent: dropNotify,
+        message: null,
+      });
+      toast.success(
+        dropNotify
+          ? "Lesson rescheduled — student notified."
+          : "Lesson rescheduled.",
+      );
+      setDropPending(null);
+    } catch (err) {
+      dropPending.revert();
+      toast.error(
+        err instanceof Error ? err.message : "Failed to reschedule lesson",
+      );
+      setDropPending(null);
+    }
+  }
 
   const changeView = (next: string) => {
     calendarRef.current?.getApi().changeView(next);
@@ -202,6 +289,7 @@ export default function Schedule() {
           nowIndicator
           selectable
           selectMirror
+          editable
           headerToolbar={false}
           businessHours={businessHours}
           datesSet={(info) => {
@@ -273,6 +361,20 @@ export default function Schedule() {
             setSelectedEventId(info.event.id);
             setEventPopoverOpen(true);
           }}
+          eventDrop={(info) => {
+            if (info.event.extendedProps.kind === "external") {
+              info.revert();
+              return;
+            }
+            openDropConfirm(info.event, info.revert);
+          }}
+          eventResize={(info) => {
+            if (info.event.extendedProps.kind === "external") {
+              info.revert();
+              return;
+            }
+            openDropConfirm(info.event, info.revert);
+          }}
           select={(info) => {
             if (info.allDay) return;
             setDraft({ start: info.start, end: info.end });
@@ -295,6 +397,41 @@ export default function Schedule() {
         onOpenChange={setEventPopoverOpen}
         anchor={eventAnchor}
       />
+      <Dialog
+        open={!!dropPending}
+        onOpenChange={(o) => {
+          if (!o) cancelDrop();
+        }}
+      >
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Reschedule lesson?</DialogTitle>
+            <DialogDescription>{dropPending?.label}</DialogDescription>
+          </DialogHeader>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <Checkbox
+              checked={dropNotify}
+              onChange={(e) => setDropNotify(e.target.checked)}
+            />
+            <span className="text-sm">Notify student about the new time</span>
+          </label>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={cancelDrop}
+              disabled={reschedule.isPending}
+            >
+              Cancel
+            </Button>
+            <Button onClick={confirmDrop} disabled={reschedule.isPending}>
+              {reschedule.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : null}
+              Confirm
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

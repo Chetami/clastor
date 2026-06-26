@@ -4,6 +4,7 @@ import {
   listLessons,
   getLessonById,
   updateLesson,
+  rescheduleLesson,
   recordAttendance,
   cancelLesson,
   notifyStudent,
@@ -102,6 +103,19 @@ router.delete(
   authenticateJWT,
   requireRole("tutor", "system_admin"),
   cancelLessonSeries
+);
+
+/**
+ * PATCH /api/lessons/:id/reschedule
+ * Move a single lesson occurrence to a new time. Optionally re-notifies the
+ * student (resets acceptance, bumps the iCal SEQUENCE, sends an updated
+ * invite). Marks a series occurrence as an exception.
+ */
+router.patch(
+  "/:id/reschedule",
+  authenticateJWT,
+  requireRole("tutor", "system_admin"),
+  rescheduleLesson
 );
 
 /**
