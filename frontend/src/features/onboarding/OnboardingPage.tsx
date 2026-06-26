@@ -6,20 +6,28 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { useAuthStore } from "@/store/auth-store";
+import { useListStudents } from "@/features/students/api/use-list-students";
+import { useListLessons } from "@/features/schedule/api/use-list-lessons";
 import { useCompleteOnboarding } from "./api/use-complete-onboarding";
 import { WelcomeStep } from "./steps/WelcomeStep";
-import { AppearanceStep } from "./steps/AppearanceStep";
-import { ProfileStep } from "./steps/ProfileStep";
-import { WorkingHoursStep } from "./steps/WorkingHoursStep";
+import { SubjectsStep } from "./steps/SubjectsStep";
+import { AddStudentStep } from "./steps/AddStudentStep";
+import { ScheduleLessonStep } from "./steps/ScheduleLessonStep";
 import { GoogleConnectStep } from "./steps/GoogleConnectStep";
+import { FinishStep } from "./steps/FinishStep";
 
 const STEPS = [
   { key: "welcome", label: "Welcome" },
-  { key: "appearance", label: "Appearance" },
-  { key: "profile", label: "Profile" },
-  { key: "hours", label: "Working hours" },
+  { key: "subjects", label: "Subjects" },
+  { key: "student", label: "First student" },
+  { key: "lesson", label: "First lesson" },
   { key: "google", label: "Calendar" },
+  { key: "finish", label: "All set" },
 ] as const;
+
+const GOOGLE_STEP_INDEX = STEPS.findIndex((s) => s.key === "google");
+const STUDENT_STEP_INDEX = STEPS.findIndex((s) => s.key === "student");
+const LESSON_STEP_INDEX = STEPS.findIndex((s) => s.key === "lesson");
 
 const STEP_STORAGE_KEY = "onboardingStep";
 
@@ -38,13 +46,17 @@ export default function OnboardingPage() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const complete = useCompleteOnboarding();
+  const studentsQuery = useListStudents();
+  const hasStudents = (studentsQuery.data?.length ?? 0) > 0;
+  const lessonsQuery = useListLessons();
+  const hasLessons = (lessonsQuery.data?.length ?? 0) > 0;
 
   const [step, setStep] = useState<number>(() => {
     // Returning from the Google consent flow comes back with a `google` param;
     // resume on the calendar step so the success banner is visible there.
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
-      if (params.has("google")) return STEPS.length - 1;
+      if (params.has("google")) return GOOGLE_STEP_INDEX;
     }
     return readStoredStep();
   });
@@ -70,6 +82,20 @@ export default function OnboardingPage() {
   const isFirst = step === 0;
   const isLast = step === STEPS.length - 1;
   const progressValue = ((step + 1) / STEPS.length) * 100;
+
+  // Gated steps: the student step requires a student to exist, and the lesson
+  // step requires a booked lesson (the next step is calendar/sync, but the
+  // whole point of the wizard is to land that first lesson).
+  const canAdvance =
+    (step !== STUDENT_STEP_INDEX || hasStudents) &&
+    (step !== LESSON_STEP_INDEX || hasLessons);
+
+  const gateMessage =
+    step === STUDENT_STEP_INDEX
+      ? "Add a student to continue."
+      : step === LESSON_STEP_INDEX
+        ? "Book a lesson to continue."
+        : null;
 
   function skipToDashboard() {
     // Leave the wizard without completing; the dashboard banner will nudge
@@ -114,22 +140,26 @@ export default function OnboardingPage() {
         <Card>
           <CardContent className="p-6">
             {step === 0 && <WelcomeStep />}
-            {step === 1 && <AppearanceStep />}
-            {step === 2 && <ProfileStep />}
-            {step === 3 && <WorkingHoursStep />}
+            {step === 1 && <SubjectsStep />}
+            {step === 2 && <AddStudentStep />}
+            {step === 3 && <ScheduleLessonStep />}
             {step === 4 && <GoogleConnectStep />}
+            {step === 5 && <FinishStep />}
           </CardContent>
         </Card>
 
         <div className="flex items-center justify-between">
-          <Button
-            variant="ghost"
-            disabled={isFirst}
-            onClick={() => setStep((s) => Math.max(0, s - 1))}
-          >
-            <ArrowLeft className="size-4" />
-            Back
-          </Button>
+          {!isFirst ? (
+            <Button
+              variant="ghost"
+              onClick={() => setStep((s) => Math.max(0, s - 1))}
+            >
+              <ArrowLeft className="size-4" />
+              Back
+            </Button>
+          ) : (
+            <div />
+          )}
 
           {isLast ? (
             <Button onClick={handleFinish} disabled={complete.isPending}>
@@ -141,12 +171,22 @@ export default function OnboardingPage() {
               Finish
             </Button>
           ) : (
-            <Button onClick={() => setStep((s) => Math.min(STEPS.length - 1, s + 1))}>
+            <Button
+              onClick={() => setStep((s) => Math.min(STEPS.length - 1, s + 1))}
+              disabled={!canAdvance}
+              title={!canAdvance ? gateMessage ?? undefined : undefined}
+            >
               {step === 0 ? "Get started" : "Continue"}
               <ArrowRight className="size-4" />
             </Button>
           )}
         </div>
+
+        {!canAdvance && gateMessage && (
+          <p className="text-center text-xs text-muted-foreground">
+            {gateMessage}
+          </p>
+        )}
 
         {complete.isError && (
           <p className="text-center text-sm text-destructive">
