@@ -9,9 +9,13 @@ import {
   buildLessonNotificationSubject,
   buildLessonNotificationBody,
   buildLessonNotificationHtml,
+  buildLessonCancellationSubject,
+  buildLessonCancellationBody,
+  buildLessonCancellationHtml,
   type LessonNotificationInput,
+  type LessonCancellationInput,
 } from "./emailService";
-import { buildLessonInvite } from "./icalService";
+import { buildLessonInvite, buildLessonCancellation } from "./icalService";
 
 /**
  * Read-only template previews.
@@ -45,6 +49,20 @@ export const TEMPLATE_LIST: TemplateSummary[] = [
     type: "email",
     description:
       "Lesson reminder that also carries a calendar invite with a Google Meet link and RSVP buttons.",
+  },
+  {
+    id: "reschedule",
+    name: "Reschedule notice",
+    type: "email",
+    description:
+      "Sent automatically when you reschedule a lesson with “notify student” on — an updated invite with the new time.",
+  },
+  {
+    id: "cancellation",
+    name: "Cancellation notice",
+    type: "email",
+    description:
+      "Sent when you cancel a lesson and choose to notify the student — removes the event from their calendar.",
   },
 ];
 
@@ -220,5 +238,58 @@ export function previewMeetInvite(): EmailTemplatePreview {
     text: buildLessonNotificationBody(input),
     html: buildLessonNotificationHtml(input),
     ics: ics ?? null,
+  };
+}
+
+export function previewReschedule(): EmailTemplatePreview {
+  const { input, ics } = sampleLessonInput({ withMeet: true });
+  // Mirrors dispatchLessonNotification({ reason: "reschedule" }): the subject
+  // becomes "Lesson time updated" and the greeting notes the time change.
+  const rescheduleInput: LessonNotificationInput = {
+    ...input,
+    reason: "reschedule",
+    message: `Hi ${input.studentName},\n\nThe time for our upcoming lesson has changed. The updated details are below.`,
+  };
+  return {
+    subject: buildLessonNotificationSubject(rescheduleInput),
+    text: buildLessonNotificationBody(rescheduleInput),
+    html: buildLessonNotificationHtml(rescheduleInput),
+    ics: ics ?? null,
+  };
+}
+
+export function previewCancellation(): EmailTemplatePreview {
+  const { input } = sampleLessonInput({ withMeet: false });
+  const start = input.startDateTime;
+  const end = new Date(start.getTime() + input.durationMinutes * 60_000);
+  // A CANCEL iCal is attached when the student was previously invited, so the
+  // preview reflects the real cancellation email (event removed from calendar).
+  const icsContent = buildLessonCancellation({
+    icsUid: "lesson-sample-uid@clastor",
+    sequence: 1,
+    summary: `${input.subject ?? "Lesson"} with ${input.tutorName}`,
+    start,
+    end,
+    location: input.location,
+    organizer: { name: input.tutorName, email: input.tutorEmail },
+    attendee: { name: input.studentName, email: input.to },
+  });
+  const cancelInput: LessonCancellationInput = {
+    to: input.to,
+    studentName: input.studentName,
+    tutorName: input.tutorName,
+    tutorEmail: input.tutorEmail,
+    subject: input.subject,
+    startDateTime: start,
+    durationMinutes: input.durationMinutes,
+    location: input.location,
+    message: null,
+    icsContent,
+  };
+  return {
+    subject: buildLessonCancellationSubject(cancelInput),
+    text: buildLessonCancellationBody(cancelInput),
+    html: buildLessonCancellationHtml(cancelInput),
+    ics: icsContent,
   };
 }

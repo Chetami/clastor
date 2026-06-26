@@ -9,6 +9,8 @@ import {
   previewInvoicePdf,
   previewLessonReminder,
   previewMeetInvite,
+  previewReschedule,
+  previewCancellation,
 } from "../services/templateService";
 
 /**
@@ -83,6 +85,47 @@ export function getMeetInvitePreview(
         ? error.message
         : "Failed to render meet invite preview";
     console.error("getMeetInvitePreview error:", error);
+    res.status(500).json({ message });
+  }
+}
+
+/**
+ * GET /api/templates/reschedule/preview
+ * Render the reschedule notice email against sample data.
+ */
+export function getReschedulePreview(
+  _req: Request,
+  res: Response<EmailTemplatePreview | ApiError>,
+): void {
+  try {
+    res.status(200).json(previewReschedule());
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Failed to render reschedule preview";
+    console.error("getReschedulePreview error:", error);
+    res.status(500).json({ message });
+  }
+}
+
+/**
+ * GET /api/templates/cancellation/preview
+ * Render the cancellation notice email (with a calendar removal) against
+ * sample data.
+ */
+export function getCancellationPreview(
+  _req: Request,
+  res: Response<EmailTemplatePreview | ApiError>,
+): void {
+  try {
+    res.status(200).json(previewCancellation());
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Failed to render cancellation preview";
+    console.error("getCancellationPreview error:", error);
     res.status(500).json({ message });
   }
 }

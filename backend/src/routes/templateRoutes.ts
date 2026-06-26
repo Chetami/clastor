@@ -4,6 +4,8 @@ import {
   getInvoicePreview,
   getLessonReminderPreview,
   getMeetInvitePreview,
+  getReschedulePreview,
+  getCancellationPreview,
 } from "../controllers/templateController";
 import { authenticateJWT, requireRole } from "../middleware/auth";
 
@@ -20,5 +22,7 @@ router.get("/", listAllTemplates);
 router.get("/invoice/preview", getInvoicePreview);
 router.get("/lesson-reminder/preview", getLessonReminderPreview);
 router.get("/meet-invite/preview", getMeetInvitePreview);
+router.get("/reschedule/preview", getReschedulePreview);
+router.get("/cancellation/preview", getCancellationPreview);
 
 export default router;

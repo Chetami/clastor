@@ -730,6 +730,7 @@ async function dispatchLessonNotification(
     message,
     icsContent,
     rsvpLinks,
+    reason: opts.reason,
   });
 
   await markStudentNotifiedInFirestore(lesson.id);

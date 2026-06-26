@@ -1,5 +1,12 @@
 import { useMemo, useState } from "react";
-import { FileText, Mail, Video, type LucideIcon } from "lucide-react";
+import {
+  FileText,
+  Mail,
+  Video,
+  CalendarClock,
+  CalendarX,
+  type LucideIcon,
+} from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   useTemplates,
@@ -13,6 +20,8 @@ const TEMPLATE_ICONS: Record<string, LucideIcon> = {
   invoice: FileText,
   "lesson-reminder": Mail,
   "meet-invite": Video,
+  reschedule: CalendarClock,
+  cancellation: CalendarX,
 };
 
 export default function Templates() {
@@ -46,7 +55,7 @@ export default function Templates() {
         <nav className="space-y-2">
           {isLoading ? (
             <div className="space-y-2">
-              {[0, 1, 2].map((i) => (
+              {[0, 1, 2, 3, 4].map((i) => (
                 <Skeleton key={i} className="h-20 w-full rounded-lg" />
               ))}
             </div>

@@ -31,6 +31,12 @@ export interface LessonNotificationInput {
    * the invite can be sent without response buttons if ever needed.
    */
   rsvpLinks?: { accept: string; decline: string };
+  /**
+   * Why this notification is being sent. Selects the subject-line prefix and
+   * (when no explicit message is supplied) the default greeting — a reschedule
+   * reads differently from a plain reminder. Defaults to a reminder.
+   */
+  reason?: "reminder" | "reschedule";
 }
 
 function formatStart(d: Date): string {
@@ -45,10 +51,12 @@ function formatStart(d: Date): string {
 }
 
 /**
- * Build the subject line for a lesson reminder.
+ * Build the subject line for a lesson reminder / reschedule notice.
  */
 export function buildLessonNotificationSubject(input: LessonNotificationInput): string {
-  return `Lesson reminder${input.subject ? `: ${input.subject}` : ""} with ${input.tutorName} on ${formatStart(input.startDateTime)}`;
+  const prefix =
+    input.reason === "reschedule" ? "Lesson time updated" : "Lesson reminder";
+  return `${prefix}${input.subject ? `: ${input.subject}` : ""} with ${input.tutorName} on ${formatStart(input.startDateTime)}`;
 }
 
 /**
