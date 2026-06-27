@@ -4,15 +4,24 @@ import {
   ArrowUp,
   ArrowUpDown,
   Bug,
+  Check,
   ChevronRight,
   Lightbulb,
+  Loader2,
   MessageSquare,
   MessageSquareText,
+  RotateCcw,
   Search,
 } from "lucide-react";
-import type { FeedbackResponse, FeedbackType } from "@examify-tms/interfaces";
+import { toast } from "sonner";
+import type {
+  FeedbackResponse,
+  FeedbackType,
+  UpdateFeedbackStatusRequest,
+} from "@examify-tms/interfaces";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -26,10 +35,11 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useListFeedback } from "./api";
+import { useListFeedback, useUpdateFeedbackStatus } from "./api";
 
 type StatusFilter = "all" | "open" | "resolved";
 type TypeFilter = "all" | FeedbackType;
@@ -91,6 +101,7 @@ function formatDateTime(iso: string): string {
 
 export default function AdminFeedback() {
   const { data: feedback = [], isLoading, error } = useListFeedback();
+  const updateStatus = useUpdateFeedbackStatus();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
   const [search, setSearch] = useState("");
@@ -140,6 +151,31 @@ export default function AdminFeedback() {
         : (bv as number) - (av as number);
     });
   }, [feedback, statusFilter, typeFilter, search, sortField, sortOrder]);
+
+  function toggleStatus(
+    item: FeedbackResponse,
+    e?: React.MouseEvent,
+  ): void {
+    e?.stopPropagation();
+    const next: UpdateFeedbackStatusRequest["status"] =
+      item.status === "open" ? "resolved" : "open";
+    updateStatus.mutate(
+      { id: item.id, status: next },
+      {
+        onSuccess: (updated) => {
+          setSelected((prev) =>
+            prev && prev.id === updated.id ? updated : prev,
+          );
+          toast.success(
+            next === "resolved" ? "Marked as resolved" : "Reopened",
+          );
+        },
+        onError: () => {
+          toast.error("Failed to update status. Please try again.");
+        },
+      },
+    );
+  }
 
   function toggleSort(field: SortField) {
     if (sortField === field) {
@@ -306,9 +342,33 @@ export default function AdminFeedback() {
                             </div>
                           </TableCell>
                           <TableCell>
-                            <Badge variant={statusMeta.variant}>
-                              {statusMeta.label}
-                            </Badge>
+                            <button
+                              type="button"
+                              title={
+                                f.status === "open"
+                                  ? "Mark as resolved"
+                                  : "Reopen"
+                              }
+                              disabled={
+                                updateStatus.isPending &&
+                                updateStatus.variables?.id === f.id
+                              }
+                              onClick={(e) => toggleStatus(f, e)}
+                              className="inline-flex items-center gap-1.5 rounded-full transition-opacity hover:opacity-80 disabled:opacity-50"
+                            >
+                              <Badge variant={statusMeta.variant}>
+                                {updateStatus.isPending &&
+                                  updateStatus.variables?.id === f.id && (
+                                    <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                                  )}
+                                {statusMeta.label}
+                              </Badge>
+                              {f.status === "open" ? (
+                                <Check className="h-3.5 w-3.5 text-muted-foreground" />
+                              ) : (
+                                <RotateCcw className="h-3.5 w-3.5 text-muted-foreground" />
+                              )}
+                            </button>
                           </TableCell>
                           <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
                             {formatDate(f.createdAt)}
@@ -336,6 +396,12 @@ export default function AdminFeedback() {
       <FeedbackDetailDialog
         feedback={selected}
         onOpenChange={(open) => !open && setSelected(null)}
+        onToggleStatus={toggleStatus}
+        isToggling={
+          !!selected &&
+          updateStatus.isPending &&
+          updateStatus.variables?.id === selected.id
+        }
       />
     </div>
   );
@@ -344,23 +410,42 @@ export default function AdminFeedback() {
 function FeedbackDetailDialog({
   feedback,
   onOpenChange,
+  onToggleStatus,
+  isToggling,
 }: {
   feedback: FeedbackResponse | null;
   onOpenChange: (open: boolean) => void;
+  onToggleStatus: (feedback: FeedbackResponse) => void;
+  isToggling: boolean;
 }) {
   return (
     <Dialog open={!!feedback} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
-        {feedback && <FeedbackDetailBody feedback={feedback} />}
+        {feedback && (
+          <FeedbackDetailBody
+            feedback={feedback}
+            onToggleStatus={onToggleStatus}
+            isToggling={isToggling}
+          />
+        )}
       </DialogContent>
     </Dialog>
   );
 }
 
-function FeedbackDetailBody({ feedback }: { feedback: FeedbackResponse }) {
+function FeedbackDetailBody({
+  feedback,
+  onToggleStatus,
+  isToggling,
+}: {
+  feedback: FeedbackResponse;
+  onToggleStatus: (feedback: FeedbackResponse) => void;
+  isToggling: boolean;
+}) {
   const typeMeta = TYPE_META[feedback.type];
   const statusMeta = STATUS_META[feedback.status];
   const TypeIcon = typeMeta.icon;
+  const isOpen = feedback.status === "open";
 
   return (
     <>
@@ -435,6 +520,24 @@ function FeedbackDetailBody({ feedback }: { feedback: FeedbackResponse }) {
           )}
         </dl>
       </div>
+
+      <DialogFooter>
+        <Button
+          type="button"
+          variant={isOpen ? "default" : "outline"}
+          disabled={isToggling}
+          onClick={() => onToggleStatus(feedback)}
+        >
+          {isToggling ? (
+            <Loader2 className="animate-spin" />
+          ) : isOpen ? (
+            <Check />
+          ) : (
+            <RotateCcw />
+          )}
+          {isOpen ? "Resolve" : "Reopen"}
+        </Button>
+      </DialogFooter>
     </>
   );
 }

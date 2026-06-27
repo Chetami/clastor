@@ -9,6 +9,8 @@ import {
 import {
   createFeedbackInFirestore,
   listFeedbackFromFirestore,
+  updateFeedbackStatusInFirestore,
+  type FeedbackStatus,
 } from "../services/feedbackService";
 
 const MAX_IMAGES = 2;
@@ -126,6 +128,51 @@ export async function listFeedback(
     console.error("List feedback failed:", error);
     const message =
       error instanceof Error ? error.message : "Failed to load feedback";
+    res.status(500).json({ message });
+  }
+}
+
+export async function updateFeedbackStatus(
+  req: Request,
+  res: Response<FeedbackResponse | ApiError>,
+): Promise<void> {
+  try {
+    const { id } = req.params;
+    const status = req.body.status as FeedbackStatus;
+
+    if (!id) {
+      res.status(400).json({ message: "Feedback id is required" });
+      return;
+    }
+
+    if (status !== "open" && status !== "resolved") {
+      res.status(400).json({ message: "Invalid status" });
+      return;
+    }
+
+    const updated = await updateFeedbackStatusInFirestore(id, status);
+    if (!updated) {
+      res.status(404).json({ message: "Feedback not found" });
+      return;
+    }
+
+    res.status(200).json({
+      id: updated.id,
+      type: updated.type,
+      message: updated.message,
+      images: updated.images,
+      pageUrl: updated.pageUrl,
+      userAgent: updated.userAgent,
+      status: updated.status,
+      createdAt: updated.createdAt.toISOString(),
+      tutorId: updated.tutorId,
+      tutorName: updated.tutorName,
+      tutorEmail: updated.tutorEmail,
+    });
+  } catch (error) {
+    console.error("Update feedback status failed:", error);
+    const message =
+      error instanceof Error ? error.message : "Failed to update feedback";
     res.status(500).json({ message });
   }
 }

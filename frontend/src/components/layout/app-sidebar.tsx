@@ -11,6 +11,7 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
+  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarSeparator,
@@ -20,6 +21,16 @@ import { navItems } from "@/config/nav";
 import { useAuth } from "@/hooks/use-auth";
 import { NavUser } from "./nav-user";
 import { FeedbackDialog } from "@/features/feedback/FeedbackDialog";
+import { useListFeedback } from "@/features/feedback/api";
+
+const FEEDBACK_HREF = "/admin/feedback";
+
+function FeedbackOpenCount() {
+  const { data: feedback = [] } = useListFeedback();
+  const openCount = feedback.filter((f) => f.status === "open").length;
+  if (openCount === 0) return null;
+  return <SidebarMenuBadge>{openCount}</SidebarMenuBadge>;
+}
 
 export function AppSidebar() {
   const location = useLocation();
@@ -72,6 +83,7 @@ export function AppSidebar() {
                         <span>{item.title}</span>
                       </Link>
                     </SidebarMenuButton>
+                    {item.href === FEEDBACK_HREF && <FeedbackOpenCount />}
                   </SidebarMenuItem>
                 ))}
               </SidebarMenu>

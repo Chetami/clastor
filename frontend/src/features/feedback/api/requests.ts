@@ -2,6 +2,7 @@ import { api } from "@/lib/api";
 import type {
   FeedbackResponse,
   FeedbackListResponse,
+  UpdateFeedbackStatusRequest,
 } from "@examify-tms/interfaces";
 
 export async function listFeedbackRequest(): Promise<FeedbackListResponse> {
@@ -25,5 +26,16 @@ export async function createFeedbackRequest(params: {
   const response = await api.post<FeedbackResponse>("/api/feedback", form, {
     headers: { "Content-Type": undefined },
   });
+  return response.data;
+}
+
+export async function updateFeedbackStatusRequest(
+  id: string,
+  data: UpdateFeedbackStatusRequest,
+): Promise<FeedbackResponse> {
+  const response = await api.patch<FeedbackResponse>(
+    `/api/feedback/${id}/status`,
+    data,
+  );
   return response.data;
 }

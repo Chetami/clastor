@@ -1,3 +1,8 @@
 export { useCreateFeedback } from "./use-create-feedback";
 export { useListFeedback } from "./use-list-feedback";
-export { createFeedbackRequest, listFeedbackRequest } from "./requests";
+export { useUpdateFeedbackStatus } from "./use-update-feedback-status";
+export {
+  createFeedbackRequest,
+  listFeedbackRequest,
+  updateFeedbackStatusRequest,
+} from "./requests";

@@ -1,6 +1,6 @@
 import { Router, Request, Response, NextFunction } from "express";
 import multer from "multer";
-import { createFeedback, listFeedback } from "../controllers/feedbackController";
+import { createFeedback, listFeedback, updateFeedbackStatus } from "../controllers/feedbackController";
 import { authenticateJWT, requireSystemAdmin } from "../middleware/auth";
 import type { ApiError } from "@examify-tms/interfaces";
 
@@ -42,5 +42,12 @@ router.post(
 );
 
 router.get("/", authenticateJWT, requireSystemAdmin, listFeedback);
+
+router.patch(
+  "/:id/status",
+  authenticateJWT,
+  requireSystemAdmin,
+  updateFeedbackStatus,
+);
 
 export default router;

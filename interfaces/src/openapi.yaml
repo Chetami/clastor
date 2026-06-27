@@ -199,6 +199,8 @@ components:
       $ref: './schemas/feedback/FeedbackType.yaml'
     CreateFeedbackRequest:
       $ref: './schemas/feedback/CreateFeedbackRequest.yaml'
+    UpdateFeedbackStatusRequest:
+      $ref: './schemas/feedback/UpdateFeedbackStatusRequest.yaml'
     FeedbackResponse:
       $ref: './schemas/feedback/FeedbackResponse.yaml'
     FeedbackListResponse:

@@ -58,6 +58,25 @@ export async function createFeedbackInFirestore(
   };
 }
 
+export type FeedbackStatus = "open" | "resolved";
+
+export async function updateFeedbackStatusInFirestore(
+  id: string,
+  status: FeedbackStatus,
+): Promise<FeedbackRecord | null> {
+  const firestore = getFirebaseFirestore();
+  const ref = firestore.collection("feedback").doc(id);
+  const snapshot = await ref.get();
+  if (!snapshot.exists) return null;
+
+  await ref.update({ status });
+
+  return listFeedbackFromFirestore().then((items) => {
+    const updated = items.find((f) => f.id === id);
+    return updated ?? null;
+  });
+}
+
 export async function listFeedbackFromFirestore(): Promise<FeedbackRecord[]> {
   const firestore = getFirebaseFirestore();
   const snapshot = await firestore
