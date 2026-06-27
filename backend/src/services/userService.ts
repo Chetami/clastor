@@ -236,6 +236,49 @@ export async function updateLastActive(uid: string): Promise<void> {
   }
 }
 
+export interface TutorRecord {
+  id: string;
+  name: string;
+  email: string;
+  avatarUrl: string | null;
+  createdAt: Date;
+  lastActive: Date | null;
+  googleConnected: boolean;
+  googleEmail: string | null;
+}
+
+/**
+ * List all tutor accounts. Used by admin surfaces (dashboard overview +
+ * tutors management page). System-admin accounts are excluded.
+ */
+export async function listTutorsFromFirestore(): Promise<TutorRecord[]> {
+  const firestore = getFirebaseFirestore();
+  const snapshot = await firestore
+    .collection("users")
+    .where("role", "==", "tutor")
+    .get();
+
+  const tutors: TutorRecord[] = [];
+  snapshot.forEach((doc) => {
+    const d = doc.data();
+    const conn = d.googleConnection;
+    const hasRefresh =
+      !!conn && typeof conn.refreshToken === "string" && conn.refreshToken.length > 0;
+    tutors.push({
+      id: doc.id,
+      name: d.name ?? "Unknown",
+      email: d.email ?? "",
+      avatarUrl: typeof d.avatarUrl === "string" ? d.avatarUrl : null,
+      createdAt: d.createdAt?.toDate() ?? new Date(0),
+      lastActive: d.lastActive?.toDate() ?? null,
+      googleConnected: hasRefresh,
+      googleEmail:
+        hasRefresh && typeof conn.googleEmail === "string" ? conn.googleEmail : null,
+    });
+  });
+  return tutors;
+}
+
 /**
  * Update a user's avatar URL and bump updatedAt.
  * @param uid - User UID

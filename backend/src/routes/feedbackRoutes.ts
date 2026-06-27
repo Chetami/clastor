@@ -1,7 +1,7 @@
 import { Router, Request, Response, NextFunction } from "express";
 import multer from "multer";
-import { createFeedback } from "../controllers/feedbackController";
-import { authenticateJWT } from "../middleware/auth";
+import { createFeedback, listFeedback } from "../controllers/feedbackController";
+import { authenticateJWT, requireSystemAdmin } from "../middleware/auth";
 import type { ApiError } from "@examify-tms/interfaces";
 
 const router = Router();
@@ -40,5 +40,7 @@ router.post(
   uploadFeedbackImages,
   createFeedback,
 );
+
+router.get("/", authenticateJWT, requireSystemAdmin, listFeedback);
 
 export default router;

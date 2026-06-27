@@ -4,16 +4,12 @@ import {
   AlarmClock,
   ChevronRight,
   CircleCheck,
-  CircleDollarSign,
 } from "lucide-react";
 import type { LessonResponse } from "@examify-tms/interfaces";
 import { deriveLessonStatus } from "@/features/schedule/lesson-utils";
-import { lessonEndDate } from "@/features/schedule/lesson-utils";
 import {
-  formatLessonDate,
   formatLessonTime,
   getInitials,
-  isToday,
   lessonBadge,
   meetUrl,
 } from "@/features/lessons/lesson-display";
@@ -26,7 +22,7 @@ interface ImportantLessonsProps {
 }
 
 interface Group {
-  key: "upcoming-today" | "completed-today" | "unpaid";
+  key: "upcoming-today" | "completed-today";
   title: string;
   icon: typeof AlarmClock;
   accent: string;
@@ -34,13 +30,14 @@ interface Group {
 }
 
 /**
- * Build the three "important" groups shown above the main list:
+ * Today's snapshot shown above the lessons list:
  *   1. Upcoming today  — today's lessons that haven't started yet
- *   2. Completed today — today's lessons that have already ended
- *   3. Unpaid          — settled (past) lessons not yet marked paid
+ *   2. Completed today — today's lessons that have already started
  *
- * Groups are kept disjoint: a lesson in group 1 or 2 is excluded from
- * group 3 so nothing appears twice.
+ * Fed by a bounded "today" window fetch so it never reads the tutor's full
+ * history. (The previous "awaiting payment" card was removed because it
+ * required scanning all past lessons — incompatible with read-efficient
+ * pagination. Unpaid lessons are still surfaced during invoice creation.)
  */
 function buildGroups(
   lessons: LessonResponse[],
@@ -53,25 +50,12 @@ function buildGroups(
     if (deriveLessonStatus(l.attendanceStatus, l.isCancelled) === "cancelled")
       continue;
     const start = new Date(l.startDateTime);
-    if (!isToday(start)) continue;
     if (start.getTime() >= now) {
       upcomingToday.push(l);
     } else {
       completedToday.push(l);
     }
   }
-
-  const todayIds = new Set<string>();
-  for (const l of upcomingToday) todayIds.add(l.id);
-  for (const l of completedToday) todayIds.add(l.id);
-
-  const unpaid = lessons.filter((l) => {
-    if (l.isPaid) return false;
-    if (deriveLessonStatus(l.attendanceStatus, l.isCancelled) === "cancelled")
-      return false;
-    if (todayIds.has(l.id)) return false;
-    return lessonEndDate(l).getTime() < now;
-  });
 
   upcomingToday.sort(
     (a, b) =>
@@ -81,15 +65,10 @@ function buildGroups(
     (a, b) =>
       new Date(b.startDateTime).getTime() - new Date(a.startDateTime).getTime(),
   );
-  unpaid.sort(
-    (a, b) =>
-      new Date(b.startDateTime).getTime() - new Date(a.startDateTime).getTime(),
-  );
 
   return [
     { key: "upcoming-today", lessons: upcomingToday },
     { key: "completed-today", lessons: completedToday },
-    { key: "unpaid", lessons: unpaid },
   ];
 }
 
@@ -115,11 +94,6 @@ export function ImportantLessons({
         icon: CircleCheck,
         accent: "text-emerald-600 dark:text-emerald-400",
       },
-      unpaid: {
-        title: "Awaiting payment",
-        icon: CircleDollarSign,
-        accent: "text-amber-600 dark:text-amber-400",
-      },
     };
     return built.map((g) => ({ ...g, ...meta[g.key] }));
   }, [lessons]);
@@ -128,7 +102,7 @@ export function ImportantLessons({
   if (nonEmpty.length === 0) return null;
 
   return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
       {groups.map((group) => {
         const Icon = group.icon;
         const count = group.lessons.length;
@@ -157,7 +131,6 @@ export function ImportantLessons({
                     const name =
                       studentMap[lesson.studentId] ?? "Unknown student";
                     const badge = lessonBadge(lesson);
-                    const showDate = group.key === "unpaid";
                     const meet = meetUrl(lesson.location);
                     return (
                       <li
@@ -174,9 +147,7 @@ export function ImportantLessons({
                               {name}
                             </p>
                             <p className="truncate text-xs text-muted-foreground">
-                              {showDate
-                                ? formatLessonDate(lesson.startDateTime)
-                                : formatLessonTime(lesson.startDateTime)}
+                              {formatLessonTime(lesson.startDateTime)}
                               <span className="mx-1 text-muted-foreground/50">
                                 ·
                               </span>

@@ -1,6 +1,7 @@
 import ical, {
   ICalCalendarData,
   ICalCalendarMethod,
+  ICalEventStatus,
 } from "ical-generator";
 
 /**
@@ -48,6 +49,50 @@ export function buildLessonInvite(input: LessonInviteInput): string {
     summary: input.summary,
     location: input.location || undefined,
     description: input.description || undefined,
+    organizer: {
+      name: input.organizer.name,
+      email: input.organizer.email || undefined,
+    },
+    attendees: [
+      {
+        name: input.attendee.name,
+        email: input.attendee.email,
+        rsvp: true,
+      },
+    ],
+  });
+
+  return cal.toString();
+}
+
+/**
+ * Generate a cancellation iCal (`METHOD:CANCEL`, event status `CANCELLED`) for
+ * a lesson. Attached to the cancellation email so the student's calendar
+ * client removes the previously-added event. Uses the same stable UID as the
+ * original invite, with a SEQUENCE higher than the last REQUEST (bumped by the
+ * caller) so clients treat it as an update rather than a new event.
+ */
+export function buildLessonCancellation(input: LessonInviteInput): string {
+  const cal = ical({
+    name: "Clastor",
+    prodId: {
+      company: "Clastor",
+      product: "Lesson Scheduler",
+      language: "EN",
+    },
+    method: ICalCalendarMethod.CANCEL,
+  } satisfies ICalCalendarData);
+
+  cal.createEvent({
+    id: input.icsUid,
+    sequence: input.sequence,
+    start: input.start,
+    end: input.end,
+    stamp: new Date(),
+    summary: input.summary,
+    location: input.location || undefined,
+    description: input.description || undefined,
+    status: ICalEventStatus.CANCELLED,
     organizer: {
       name: input.organizer.name,
       email: input.organizer.email || undefined,

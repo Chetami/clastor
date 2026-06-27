@@ -1,0 +1,27 @@
+type: object
+required:
+  - id
+  - name
+  - type
+  - description
+properties:
+  id:
+    type: string
+    description: >-
+      Stable identifier of the template. Used as the path segment when
+      requesting a preview, e.g. `invoice`, `lesson-reminder`, `meet-invite`.
+    example: invoice
+  name:
+    type: string
+    description: Human-readable template name shown in the UI.
+    example: Invoice
+  type:
+    $ref: '../TemplateType.yaml'
+  description:
+    type: string
+    description: Short explanation of when this template is sent.
+    example: PDF attached to an invoice email sent to a parent/billing contact.
+description: >-
+  Metadata describing a single sendable template. The list endpoint returns
+  an array of these so the frontend can render the template gallery without
+  rendering each (potentially heavy) preview up front.

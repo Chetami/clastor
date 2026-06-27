@@ -83,4 +83,14 @@ properties:
   updatedAt:
     type: string
     format: date-time
-description: Invoice response object (ISO string dates, no tutorId leakage concerns)
+  tutorName:
+    type: string
+    nullable: true
+    description: >-
+      Display name of the owning tutor. Populated only on admin (system-wide)
+      list responses; null otherwise.
+  tutorEmail:
+    type: string
+    nullable: true
+    description: Email of the owning tutor. Populated only on admin list responses.
+description: Invoice response object (ISO string dates).

@@ -1,0 +1,8 @@
+type: string
+enum:
+  - pdf
+  - email
+description: |-
+  How a template is delivered/previewed.
+  - pdf: rendered as a downloadable/embeddable PDF (e.g. an invoice)
+  - email: an HTML email body with subject and plain-text fallback

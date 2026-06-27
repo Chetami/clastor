@@ -1,19 +1,30 @@
 type: object
 required:
   - data
-  - total
+  - nextCursor
+  - hasMore
 properties:
   data:
     type: array
     items:
       $ref: './LessonResponse.yaml'
-    description: Array of lesson records
-  total:
-    type: integer
-    minimum: 0
-    description: Total number of lessons returned
-    example: 12
+    description: >-
+      Lessons for the current page (paginated mode) or every matching lesson
+      (unpaginated mode, when the request omitted `limit`).
+  nextCursor:
+    type: string
+    nullable: true
+    description: >-
+      Opaque cursor for the next page. Pass it back as the `cursor` query
+      parameter to fetch the next page. `null` when there are no more pages
+      (or in unpaginated mode).
+    example: eyJzIjoiMjAyNi0wNi0wM1Q...
+  hasMore:
+    type: boolean
+    description: >-
+      `true` when another page is available (equivalent to `nextCursor`
+      being non-null).
+    example: true
 description: |-
-  List response for lessons
-  Returns all matching lessons within the requested window without
-  pagination.
+  List response for lessons. Cursor-paginated when the request supplied a
+  `limit`; otherwise the full matching set with `nextCursor` null.

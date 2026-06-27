@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import {
   Ban,
   Clock,
+  CalendarClock,
   ExternalLink,
   Loader2,
   Mail,
@@ -48,6 +49,8 @@ import {
   isLessonFinished,
 } from "./lesson-utils";
 import { meetUrl } from "@/features/lessons/lesson-display";
+import { RescheduleDialog } from "./RescheduleDialog";
+import { CancelLessonDialog } from "./CancelLessonDialog";
 
 export interface EventAnchor {
   getBoundingClientRect: () => DOMRect;
@@ -105,6 +108,8 @@ export function EventPopover({
   const [notifyOpen, setNotifyOpen] = useState(false);
   const [notifyMessage, setNotifyMessage] = useState("");
   const [notifyError, setNotifyError] = useState<string | null>(null);
+  const [rescheduleOpen, setRescheduleOpen] = useState(false);
+  const [cancelOpen, setCancelOpen] = useState(false);
 
   const studentName = lesson
     ? (students.find((s) => s.id === lesson.studentId)?.name ?? "Unknown student")
@@ -149,13 +154,18 @@ export function EventPopover({
   }
 
   async function handleCancel() {
-    if (!lessonId) return;
+    if (!lessonId || !lesson) return;
     setActionError(null);
+    // When the student already accepted, confirm and offer to notify them.
+    if (lesson.acceptanceStatus === "accepted") {
+      setCancelOpen(true);
+      return;
+    }
     try {
       await cancelLesson.mutateAsync();
       onOpenChange(false);
-    } catch {
-      setActionError(cancelLesson.error?.message ?? "Failed to cancel lesson");
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Failed to cancel lesson");
     }
   }
 
@@ -255,6 +265,7 @@ export function EventPopover({
             actionError={actionError}
             lessonId={lesson.id}
             onNotify={openNotifyDialog}
+            onReschedule={() => setRescheduleOpen(true)}
             onCancel={handleCancel}
             onGenerateMeet={handleGenerateMeet}
             meetLoading={meetLoading}
@@ -308,6 +319,22 @@ export function EventPopover({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {lesson && (
+        <RescheduleDialog
+          lesson={lesson}
+          open={rescheduleOpen}
+          onOpenChange={setRescheduleOpen}
+        />
+      )}
+
+      {lesson && (
+        <CancelLessonDialog
+          lesson={lesson}
+          open={cancelOpen}
+          onOpenChange={setCancelOpen}
+        />
+      )}
     </>
   );
 }
@@ -333,6 +360,7 @@ interface PopoverBodyProps {
   actionError: string | null;
   lessonId: string;
   onNotify: () => void;
+  onReschedule: () => void;
   onCancel: () => void;
   onGenerateMeet: () => void;
   meetLoading: boolean;
@@ -363,6 +391,7 @@ function PopoverBody({
   actionError,
   lessonId,
   onNotify,
+  onReschedule,
   onCancel,
   onGenerateMeet,
   meetLoading,
@@ -509,6 +538,20 @@ function PopoverBody({
 
       {!isCancelled && (
         <div className="flex flex-wrap items-center gap-2 border-t p-3">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={onReschedule}
+            disabled={lessonFinished}
+            title={
+              lessonFinished
+                ? "Cannot reschedule finished lessons"
+                : "Move this lesson to a new time"
+            }
+          >
+            <CalendarClock className="h-3.5 w-3.5" />
+            Reschedule
+          </Button>
           <Button
             size="sm"
             variant="outline"

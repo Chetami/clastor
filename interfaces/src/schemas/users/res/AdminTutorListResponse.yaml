@@ -1,0 +1,13 @@
+type: object
+required:
+  - data
+  - total
+properties:
+  data:
+    type: array
+    items:
+      $ref: './AdminTutorSummary.yaml'
+  total:
+    type: integer
+    minimum: 0
+description: List of tutors with per-tutor stats for the admin tutors page.

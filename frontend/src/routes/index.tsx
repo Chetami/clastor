@@ -1,11 +1,13 @@
 import { createBrowserRouter, Navigate } from "react-router-dom";
 import { RootLayout } from "./__root";
 import { ProtectedRoute } from "./protected";
+import { DashboardRoute } from "./dashboard-route";
+import { AdminRoute } from "./admin-route";
+import { TutorRoute } from "./tutor-route";
 import { NotFound } from "./not-found";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import LoginPage from "@/features/auth/login/LoginPage";
 import SignUpPage from "@/features/auth/signup/SignUpPage";
-import Dashboard from "@/features/dashboard/Dashboard";
 import Students from "@/features/students/Students";
 import StudentDetail from "@/features/students/StudentDetail";
 import Schedule from "@/features/schedule/Schedule";
@@ -21,6 +23,9 @@ import TutorProfileEditor from "@/features/tutor-profile/TutorProfileEditor";
 import PublicTutorPage from "@/features/public-tutor/PublicTutorPage";
 import StripePaymentsSettings from "@/features/stripe-payments/StripePaymentsSettings";
 import OnboardingPage from "@/features/onboarding/OnboardingPage";
+import AdminFeedback from "@/features/feedback/AdminFeedback";
+import AdminTutors from "@/features/admin-tutors/AdminTutors";
+import Templates from "@/features/templates/Templates";
 import { PaymentResult } from "@/features/public-pay/PaymentResult";
 import { isFeatureEnabled } from "@/config/features";
 
@@ -32,39 +37,57 @@ export const router = createBrowserRouter([
         element: <ProtectedRoute />,
         children: [
           {
-            path: "onboarding",
-            element: <OnboardingPage />,
-          },
-          {
-            element: <DashboardLayout />,
+            element: <TutorRoute />,
             children: [
-              { index: true, element: <Navigate to="/dashboard" replace /> },
-              { path: "dashboard", element: <Dashboard /> },
-              { path: "students", element: <Students /> },
-              { path: "students/:studentId", element: <StudentDetail /> },
-              { path: "schedule", element: <Schedule /> },
-              { path: "payments", element: <Payments /> },
-              { path: "payments/new", element: <CreateInvoice /> },
-              { path: "payments/:invoiceId/edit", element: <EditInvoice /> },
-              { path: "payments/:invoiceId", element: <InvoiceDetail /> },
-              { path: "lessons", element: <Lessons /> },
-              { path: "lessons/:eventId", element: <EventDetail /> },
-              { path: "settings", element: <Settings /> },
-              { path: "account", element: <Account /> },
               {
-                path: "settings/payments",
-                element: <StripePaymentsSettings />,
+                path: "onboarding",
+                element: <OnboardingPage />,
               },
-              ...(isFeatureEnabled("publicProfile")
-                ? [
-                    {
-                      path: "profile" as const,
-                      element: <TutorProfileEditor />,
-                    },
-                  ]
-                : []),
             ],
           },
+            {
+              element: <DashboardLayout />,
+              children: [
+                { index: true, element: <Navigate to="/dashboard" replace /> },
+                { path: "dashboard", element: <DashboardRoute /> },
+                { path: "account", element: <Account /> },
+                {
+                  element: <AdminRoute />,
+                  children: [
+                    { path: "admin/feedback", element: <AdminFeedback /> },
+                    { path: "admin/tutors", element: <AdminTutors /> },
+                  ],
+                },
+                {
+                  element: <TutorRoute />,
+                  children: [
+                    { path: "students", element: <Students /> },
+                    { path: "students/:studentId", element: <StudentDetail /> },
+                    { path: "payments", element: <Payments /> },
+                    { path: "payments/new", element: <CreateInvoice /> },
+                    { path: "payments/:invoiceId/edit", element: <EditInvoice /> },
+                    { path: "payments/:invoiceId", element: <InvoiceDetail /> },
+                    { path: "lessons", element: <Lessons /> },
+                    { path: "lessons/:eventId", element: <EventDetail /> },
+                    { path: "schedule", element: <Schedule /> },
+                    { path: "templates", element: <Templates /> },
+                    { path: "settings", element: <Settings /> },
+                    {
+                      path: "settings/payments",
+                      element: <StripePaymentsSettings />,
+                    },
+                    ...(isFeatureEnabled("publicProfile")
+                      ? [
+                          {
+                            path: "profile" as const,
+                            element: <TutorProfileEditor />,
+                          },
+                        ]
+                      : []),
+                  ],
+                },
+              ],
+            },
         ],
       },
       ...(isFeatureEnabled("publicProfile")

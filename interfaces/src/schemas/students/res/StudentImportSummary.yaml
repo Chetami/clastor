@@ -1,0 +1,39 @@
+type: object
+required:
+  - total
+  - created
+  - skipped
+  - errors
+properties:
+  total:
+    type: integer
+    description: Total number of data rows parsed from the uploaded CSV.
+    example: 10
+  created:
+    type: integer
+    description: Number of students that were successfully created.
+    example: 7
+  skipped:
+    type: integer
+    description: Number of rows skipped due to validation failures or duplicates.
+    example: 3
+  errors:
+    type: array
+    description: Per-row details for rows that were not created.
+    items:
+      type: object
+      required:
+        - row
+        - message
+      properties:
+        row:
+          type: integer
+          description: 1-based CSV row number (excluding the header row).
+          example: 4
+        message:
+          type: string
+          description: Why the row was skipped.
+          example: "Duplicate email: alice@example.com"
+description: |-
+  Summary returned by the student CSV import endpoint. Reports how many rows
+  were processed, created, skipped, along with per-row error reasons.

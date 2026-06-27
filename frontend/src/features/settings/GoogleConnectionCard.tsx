@@ -102,7 +102,7 @@ export function GoogleConnectionCard({ returnTo }: { returnTo?: string }) {
       <CardHeader>
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-lg bg-muted">
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted">
               <GoogleGlyph className="size-5" />
             </div>
             <div>
@@ -116,7 +116,7 @@ export function GoogleConnectionCard({ returnTo }: { returnTo?: string }) {
           {!isLoading && status && (
             <Badge
               variant={connected ? "default" : "secondary"}
-              className={connected ? "hover:bg-primary" : "hover:bg-secondary"}
+              className={`whitespace-nowrap ${connected ? "hover:bg-primary" : "hover:bg-secondary"}`}
             >
               {connected ? "Connected" : "Not connected"}
             </Badge>

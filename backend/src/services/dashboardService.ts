@@ -14,7 +14,7 @@ import { listStudentsFromFirestore } from "./studentService";
  * Attendance outcomes that count as a lesson actually having been taught.
  * Used when computing "hours worked".
  */
-const PRESENT_STATUSES: AttendanceStatus[] = ["present", "present_late"];
+export const PRESENT_STATUSES: AttendanceStatus[] = ["present", "present_late"];
 
 /**
  * Attendance outcomes that count as a student-initiated absence — the
@@ -48,7 +48,7 @@ interface Range {
  * - six_months: the last 6 calendar months including the current one
  * - year: current calendar year
  */
-function getRange(period: DashboardPeriod, now: Date): Range {
+export function getRange(period: DashboardPeriod, now: Date): Range {
   if (period === "week") {
     const start = new Date(
       Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
@@ -83,7 +83,7 @@ function getRange(period: DashboardPeriod, now: Date): Range {
  * Compute the immediately preceding period of the same length, used for the
  * delta (%) shown on the stat cards.
  */
-function getPreviousRange(period: DashboardPeriod, current: Range): Range {
+export function getPreviousRange(period: DashboardPeriod, current: Range): Range {
   const end = current.start;
   if (period === "week") {
     const start = new Date(current.start);

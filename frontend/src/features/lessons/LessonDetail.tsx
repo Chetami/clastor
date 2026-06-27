@@ -71,8 +71,14 @@ import {
   isLessonFinished,
   lessonEndDate,
 } from "../schedule/lesson-utils";
-import type { AttendanceStatus, LessonTodo } from "@examify-tms/interfaces";
+import type {
+  AttendanceStatus,
+  LessonAcceptance,
+  LessonTodo,
+} from "@examify-tms/interfaces";
 import { meetUrl } from "@/features/lessons/lesson-display";
+import { RescheduleDialog } from "@/features/schedule/RescheduleDialog";
+import { CancelLessonDialog } from "@/features/schedule/CancelLessonDialog";
 
 function formatDateTime(iso: string) {
   return new Date(iso).toLocaleString("en-US", {
@@ -118,6 +124,8 @@ export default function EventDetail() {
   const [editingNotes, setEditingNotes] = useState(false);
   const [notesDraft, setNotesDraft] = useState("");
   const [todos, setTodos] = useState<LessonTodo[]>([]);
+  const [rescheduleOpen, setRescheduleOpen] = useState(false);
+  const [cancelOpen, setCancelOpen] = useState(false);
   const [newTodoText, setNewTodoText] = useState("");
   const initialized = useRef(false);
   const [saving, setSaving] = useState(false);
@@ -282,12 +290,29 @@ export default function EventDetail() {
     }
   }
 
-  async function handleCancel() {
+  async function handleAcceptanceChange(value: LessonAcceptance) {
     if (!eventId) return;
+    setPickerError(null);
+    try {
+      await updateLesson.mutateAsync({ acceptanceStatus: value });
+    } catch (err) {
+      setPickerError(
+        err instanceof Error ? err.message : "Failed to update acceptance",
+      );
+    }
+  }
+
+  async function handleCancel() {
+    if (!eventId || !lesson) return;
+    // When the student already accepted, confirm and offer to notify them.
+    if (lesson.acceptanceStatus === "accepted") {
+      setCancelOpen(true);
+      return;
+    }
     try {
       await cancelLesson.mutateAsync();
-    } catch {
-      setPickerError(cancelLesson.error?.message ?? "Failed to cancel lesson");
+    } catch (err) {
+      setPickerError(err instanceof Error ? err.message : "Failed to cancel lesson");
     }
   }
 
@@ -660,12 +685,30 @@ export default function EventDetail() {
               <p className="text-xs text-muted-foreground">
                 Student acceptance
               </p>
-              <div className="flex items-center gap-2 text-sm font-medium">
-                {lesson.acceptanceStatus === "accepted" && (
-                  <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                )}
-                {ACCEPTANCE_LABELS[lesson.acceptanceStatus]}
-              </div>
+              <Select
+                value={lesson.acceptanceStatus}
+                onValueChange={(v) =>
+                  handleAcceptanceChange(v as LessonAcceptance)
+                }
+                disabled={updateLesson.isPending}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {(
+                    ["pending", "accepted", "declined"] as LessonAcceptance[]
+                  ).map((opt) => (
+                    <SelectItem key={opt} value={opt}>
+                      {ACCEPTANCE_LABELS[opt]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Updated automatically when the student responds — change it
+                here to override.
+              </p>
             </div>
 
             <div className="space-y-1.5">
@@ -705,6 +748,21 @@ export default function EventDetail() {
                 </p>
               ) : (
                 <div className="flex flex-col gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setRescheduleOpen(true)}
+                    disabled={lessonFinished}
+                    className="w-full justify-start"
+                    title={
+                      lessonFinished
+                        ? "Cannot reschedule finished lessons"
+                        : "Move this lesson to a new time"
+                    }
+                  >
+                    <CalendarClock className="h-4 w-4" />
+                    Reschedule
+                  </Button>
                   <Button
                     variant="outline"
                     size="sm"
@@ -824,6 +882,18 @@ export default function EventDetail() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <RescheduleDialog
+        lesson={lesson}
+        open={rescheduleOpen}
+        onOpenChange={setRescheduleOpen}
+      />
+
+      <CancelLessonDialog
+        lesson={lesson}
+        open={cancelOpen}
+        onOpenChange={setCancelOpen}
+      />
     </div>
   );
 }

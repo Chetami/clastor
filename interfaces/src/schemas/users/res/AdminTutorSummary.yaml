@@ -1,0 +1,45 @@
+type: object
+required:
+  - tutorId
+  - name
+  - createdAt
+  - studentCount
+  - outstandingAmount
+  - googleConnected
+  - googleEmail
+properties:
+  tutorId:
+    type: string
+  name:
+    type: string
+  email:
+    type: string
+    nullable: true
+  avatarUrl:
+    type: string
+    nullable: true
+  createdAt:
+    type: string
+    format: date-time
+  lastActive:
+    type: string
+    format: date-time
+    nullable: true
+  studentCount:
+    type: integer
+    minimum: 0
+    description: Number of students belonging to this tutor.
+  outstandingAmount:
+    type: number
+    format: double
+    minimum: 0
+    description: Total outstanding (open + overdue) invoice amount for this tutor.
+  googleConnected:
+    type: boolean
+    description: Whether the tutor has connected a Google Calendar account.
+  googleEmail:
+    type: string
+    nullable: true
+    description: The connected Google account email, or null if not connected.
+description: |-
+  A tutor row in the admin tutors list, with light per-tutor stats.

@@ -31,6 +31,12 @@ export interface LessonNotificationInput {
    * the invite can be sent without response buttons if ever needed.
    */
   rsvpLinks?: { accept: string; decline: string };
+  /**
+   * Why this notification is being sent. Selects the subject-line prefix and
+   * (when no explicit message is supplied) the default greeting — a reschedule
+   * reads differently from a plain reminder. Defaults to a reminder.
+   */
+  reason?: "reminder" | "reschedule";
 }
 
 function formatStart(d: Date): string {
@@ -45,10 +51,12 @@ function formatStart(d: Date): string {
 }
 
 /**
- * Build the subject line for a lesson reminder.
+ * Build the subject line for a lesson reminder / reschedule notice.
  */
 export function buildLessonNotificationSubject(input: LessonNotificationInput): string {
-  return `Lesson reminder${input.subject ? `: ${input.subject}` : ""} with ${input.tutorName} on ${formatStart(input.startDateTime)}`;
+  const prefix =
+    input.reason === "reschedule" ? "Lesson time updated" : "Lesson reminder";
+  return `${prefix}${input.subject ? `: ${input.subject}` : ""} with ${input.tutorName} on ${formatStart(input.startDateTime)}`;
 }
 
 /**
@@ -178,6 +186,132 @@ export async function sendLessonNotification(
           // alternative so email clients treat the message as a meeting invite.
           icalEvent: {
             method: "REQUEST" as const,
+            content: input.icsContent,
+          },
+        }
+      : {}),
+  });
+}
+
+/** Context required to render and send a lesson cancellation email. */
+export interface LessonCancellationInput {
+  to: string;
+  studentName: string;
+  tutorName: string;
+  /** Tutor's real email — used as Reply-To so replies reach the tutor. */
+  tutorEmail?: string | null;
+  subject: string | null;
+  startDateTime: Date;
+  durationMinutes: number;
+  location?: string | null;
+  /** Optional custom body from the tutor; a default is used if absent. */
+  message?: string | null;
+  /**
+   * Optional METHOD:CANCEL iCalendar invite. When attached, the student's
+   * calendar client removes the previously-added event. Omitted when the
+   * student was never sent an invite.
+   */
+  icsContent?: string;
+}
+
+/**
+ * Build the subject line for a lesson cancellation.
+ */
+export function buildLessonCancellationSubject(
+  input: LessonCancellationInput,
+): string {
+  return `Lesson cancelled${
+    input.subject ? `: ${input.subject}` : ""
+  } with ${input.tutorName} on ${formatStart(input.startDateTime)}`;
+}
+
+/**
+ * Build the plain-text cancellation body.
+ */
+export function buildLessonCancellationBody(
+  input: LessonCancellationInput,
+): string {
+  const greeting =
+    input.message && input.message.trim().length > 0
+      ? input.message.trim()
+      : `Hi ${input.studentName},\n\nUnfortunately, our upcoming lesson has been cancelled.`;
+
+  const footerLines = [
+    "",
+    "—",
+    "Cancelled lesson",
+    ...(input.subject ? [`Subject: ${input.subject}`] : []),
+    `When: ${formatStart(input.startDateTime)}`,
+    `Tutor: ${input.tutorName}`,
+  ].filter(Boolean);
+
+  return `${greeting}\n${footerLines.join("\n")}`;
+}
+
+/**
+ * Build the HTML cancellation body, mirroring the plain-text footer. No RSVP
+ * buttons — the lesson is cancelled.
+ */
+export function buildLessonCancellationHtml(
+  input: LessonCancellationInput,
+): string {
+  const greeting =
+    input.message && input.message.trim().length > 0
+      ? escapeHtml(input.message.trim())
+      : `Hi ${escapeHtml(
+          input.studentName,
+        )},<br><br>Unfortunately, our upcoming lesson has been cancelled.`;
+
+  const rows = [
+    ...(input.subject ? [["Subject", escapeHtml(input.subject)]] : []),
+    ["When", escapeHtml(formatStart(input.startDateTime))],
+    ["Tutor", escapeHtml(input.tutorName)],
+  ];
+
+  const details = rows
+    .map(
+      ([label, value]) =>
+        `<tr><td style="padding:2px 12px 2px 0;color:#6b7280;white-space:nowrap;vertical-align:top">${label}</td><td style="padding:2px 0">${value}</td></tr>`,
+    )
+    .join("");
+
+  return (
+    `<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#111827;line-height:1.5">` +
+    `<p style="margin:0 0 16px 0;white-space:pre-line">${greeting}</p>` +
+    (input.icsContent
+      ? `<p style="margin:0 0 8px 0;color:#6b7280;font-size:13px">A calendar update is attached — the event will be removed from your calendar.</p>`
+      : "") +
+    `<hr style="border:none;border-top:1px solid #e5e7eb;margin:16px 0">` +
+    `<table style="border-collapse:collapse;font-size:14px">${details}</table>` +
+    `</div>`
+  );
+}
+
+/**
+ * Send a lesson cancellation email. Throws if SMTP is not configured or if the
+ * transporter rejects the send, so the caller can surface the failure.
+ */
+export async function sendLessonCancellation(
+  input: LessonCancellationInput,
+): Promise<void> {
+  if (!isEmailConfigured()) {
+    throw new Error(
+      "Email is not configured. Set SMTP_HOST, SMTP_USER and SMTP_PASS to send notifications."
+    );
+  }
+
+  const transporter = getEmailTransporter();
+  await transporter.sendMail({
+    from: `"${input.tutorName} via ${getSenderDisplayName()}" <${getSenderAddress()}>`,
+    replyTo: input.tutorEmail || undefined,
+    to: input.to,
+    subject: buildLessonCancellationSubject(input),
+    text: buildLessonCancellationBody(input),
+    html: buildLessonCancellationHtml(input),
+    ...(input.icsContent
+      ? {
+          icalEvent: {
+            method: "CANCEL" as const,
             content: input.icsContent,
           },
         }

@@ -1,0 +1,39 @@
+{
+  "// description": "Composite indexes required by the cursor-paginated GET /api/lessons endpoint and the calendar window fetch. Deploy with: firebase deploy --only firestore:indexes (requires a firebase.json referencing this file). Single-field indexes are created automatically by Firestore and are not listed here. If you prefer, run any paginated query once and click the 'Create index' link Firestore logs in the backend error output.",
+  "indexes": [
+    {
+      "collectionGroup": "lessons",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "tutorId", "order": "ASCENDING" },
+        { "fieldPath": "isCancelled", "order": "ASCENDING" },
+        { "fieldPath": "startDateTime", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "lessons",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "tutorId", "order": "ASCENDING" },
+        { "fieldPath": "isCancelled", "order": "ASCENDING" },
+        { "fieldPath": "startDateTime", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "lessons",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "tutorId", "order": "ASCENDING" },
+        { "fieldPath": "startDateTime", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "lessons",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "tutorId", "order": "ASCENDING" },
+        { "fieldPath": "startDateTime", "order": "DESCENDING" }
+      ]
+    }
+  ]
+}

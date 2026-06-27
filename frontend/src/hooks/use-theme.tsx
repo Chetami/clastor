@@ -67,10 +67,10 @@ function getInitialAppearance(): Appearance {
 }
 
 function getInitialColorScheme(): ColorScheme {
-  if (typeof window === "undefined") return "graphite";
+  if (typeof window === "undefined") return "ocean";
   const stored = localStorage.getItem(COLOR_SCHEME_KEY) as ColorScheme | null;
   if (stored && stored in COLOR_SCHEME_CLASSES) return stored;
-  return "graphite";
+  return "ocean";
 }
 
 type ThemeContextValue = {

@@ -2,7 +2,9 @@ import { api } from "@/lib/api";
 import type {
   CreateLessonRequest,
   UpdateLessonRequest,
+  RescheduleLessonRequest,
   RecordAttendanceRequest,
+  CancelLessonRequest,
   NotifyStudentRequest,
   AttendanceStatus,
   CreateRecurringLessonRequest,
@@ -32,12 +34,30 @@ export async function createRecurringLessonRequest(
   return response.data;
 }
 
-export async function listLessonsRequest(params?: {
+/**
+ * Query parameters accepted by GET /api/lessons. All optional.
+ *
+ * Two modes:
+ *  - Paginated (lessons list): `status` + `limit` + `cursor` (for pages
+ *    after the first). Returns one cursor-paginated page.
+ *  - Unpaginated (calendar window / dashboard / invoices): omit `limit` to
+ *    receive the full matching set.
+ */
+export interface ListLessonsParams {
   from?: string;
   to?: string;
   studentId?: string;
   unpaid?: boolean;
-}): Promise<LessonListResponse> {
+  acceptanceStatus?: string;
+  attendanceStatus?: string;
+  status?: "upcoming" | "past" | "cancelled" | "all";
+  limit?: number;
+  cursor?: string;
+}
+
+export async function listLessonsRequest(
+  params?: ListLessonsParams,
+): Promise<LessonListResponse> {
   const response = await api.get<LessonListResponse>("/api/lessons", {
     params,
   });
@@ -57,6 +77,17 @@ export async function updateLessonRequest(
   return response.data;
 }
 
+export async function rescheduleLessonRequest(
+  id: string,
+  data: RescheduleLessonRequest,
+): Promise<LessonResponse> {
+  const response = await api.patch<LessonResponse>(
+    `/api/lessons/${id}/reschedule`,
+    data,
+  );
+  return response.data;
+}
+
 export async function recordAttendanceRequest(
   id: string,
   attendanceStatus: AttendanceStatus,
@@ -71,8 +102,12 @@ export async function recordAttendanceRequest(
 
 export async function cancelLessonRequest(
   id: string,
+  data?: CancelLessonRequest,
 ): Promise<LessonResponse> {
-  const response = await api.patch<LessonResponse>(`/api/lessons/${id}/cancel`);
+  const response = await api.patch<LessonResponse>(
+    `/api/lessons/${id}/cancel`,
+    data ?? {},
+  );
   return response.data;
 }
 

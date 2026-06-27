@@ -24,6 +24,7 @@ import { canViewInvoice, canEditInvoice, canDeleteInvoice } from "../permissions
 import { generateInvoicePdf } from "../services/invoicePdfService";
 import { sendInvoiceEmail } from "../services/emailService";
 import { getUserFromFirestore } from "../services/userService";
+import { resolveTutorNames } from "../services/tutorResolver";
 import { isStripeConfigured } from "../config/stripe";
 import { getPublicApiUrl } from "../config/email";
 import { getStripeAccountRecord } from "../services/stripeConnectService";
@@ -72,7 +73,20 @@ export async function listInvoices(
       return;
     }
 
-    const invoices = await listInvoicesFromFirestore(req.user.uid, req.user.role);
+    // Admins may drill into a single tutor via ?tutorId=…; otherwise they see
+    // all invoices. Tutors are always scoped to their own uid.
+    const drillTutorId =
+      typeof req.query.tutorId === "string" ? req.query.tutorId : null;
+    const scopeUid =
+      req.user.role === "system_admin" && drillTutorId
+        ? drillTutorId
+        : req.user.uid;
+    const scopeRole =
+      req.user.role === "system_admin" && drillTutorId
+        ? "tutor"
+        : req.user.role;
+
+    const invoices = await listInvoicesFromFirestore(scopeUid, scopeRole);
 
     const status = typeof req.query.status === "string" ? req.query.status : null;
     const search =
@@ -119,8 +133,23 @@ export async function listInvoices(
         : (bv as number) - (av as number);
     });
 
+    // Resolve tutor names for the admin (system-wide) view so the client can
+    // render a "Tutor" column. Skipped for the tutor's own (single-tutor) view.
+    let data = filtered.map(toInvoiceResponse);
+    if (req.user.role === "system_admin") {
+      const names = await resolveTutorNames(invoices.map((i) => i.tutorId));
+      data = data.map((r, idx) => {
+        const info = names.get(invoices[idx].tutorId);
+        return {
+          ...r,
+          tutorName: info?.name ?? null,
+          tutorEmail: info?.email ?? null,
+        };
+      });
+    }
+
     const response: InvoiceListResponse = {
-      data: filtered.map(toInvoiceResponse),
+      data,
       total: filtered.length,
     };
 

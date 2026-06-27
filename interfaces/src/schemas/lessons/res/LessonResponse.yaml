@@ -116,7 +116,21 @@ properties:
     type: string
     format: date-time
     description: When the lesson record was last updated
+  tutorId:
+    type: string
+    nullable: true
+    description: >-
+      UID of the owning tutor. Populated only on admin (system-wide) list
+      responses; omitted/null for tutor callers (the owner is implied).
+  tutorName:
+    type: string
+    nullable: true
+    description: Display name of the owning tutor. Populated only on admin list responses.
+  tutorEmail:
+    type: string
+    nullable: true
+    description: Email of the owning tutor. Populated only on admin list responses.
 description: |-
   Lesson response object
-  Represents a lesson as returned by the API. tutorId is excluded
-  (the owning tutor is implied by the authenticated caller).
+  Represents a lesson as returned by the API. tutorId is excluded for tutor
+  callers (the owning tutor is implied) but populated on admin list responses.

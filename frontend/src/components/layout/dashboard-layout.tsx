@@ -21,11 +21,14 @@ function getScreenTitle(pathname: string): string {
   if (path === "/payments/new") return "New Invoice";
   if (path.match(/^\/payments\/[^/]+\/edit$/)) return "Edit Invoice";
   if (path.startsWith("/payments/")) return "Invoice";
+  if (path === "/templates") return "Templates";
   if (path === "/lessons") return "Lessons";
   if (path.startsWith("/lessons/")) return "Event Details";
   if (path === "/settings/payments") return "Payment Settings";
   if (path === "/settings") return "Settings";
   if (path === "/account") return "Account";
+  if (path === "/admin/feedback") return "Feedback";
+  if (path === "/admin/tutors") return "Tutors";
   if (path === "/profile") return "Profile";
   return "Clastor";
 }

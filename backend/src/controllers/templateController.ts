@@ -1,0 +1,131 @@
+import { Request, Response } from "express";
+import {
+  TemplateSummary,
+  EmailTemplatePreview,
+  ApiError,
+} from "@examify-tms/interfaces";
+import {
+  listTemplates,
+  previewInvoicePdf,
+  previewLessonReminder,
+  previewMeetInvite,
+  previewReschedule,
+  previewCancellation,
+} from "../services/templateService";
+
+/**
+ * GET /api/templates
+ * List the sendable templates available for preview.
+ */
+export function listAllTemplates(
+  _req: Request,
+  res: Response<TemplateSummary[] | ApiError>,
+): void {
+  res.status(200).json(listTemplates());
+}
+
+/**
+ * GET /api/templates/invoice/preview
+ * Render the invoice template against sample data and return the PDF.
+ */
+export async function getInvoicePreview(
+  _req: Request,
+  res: Response,
+): Promise<void> {
+  try {
+    const pdf = await previewInvoicePdf();
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      'inline; filename="invoice-template-preview.pdf"',
+    );
+    res.status(200).send(pdf);
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Failed to render invoice preview";
+    console.error("getInvoicePreview error:", error);
+    res.status(500).json({ message });
+  }
+}
+
+/**
+ * GET /api/templates/lesson-reminder/preview
+ * Render the lesson reminder email against sample data.
+ */
+export function getLessonReminderPreview(
+  _req: Request,
+  res: Response<EmailTemplatePreview | ApiError>,
+): void {
+  try {
+    res.status(200).json(previewLessonReminder());
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Failed to render lesson reminder preview";
+    console.error("getLessonReminderPreview error:", error);
+    res.status(500).json({ message });
+  }
+}
+
+/**
+ * GET /api/templates/meet-invite/preview
+ * Render the Google Meet invite email (with calendar attachment) against
+ * sample data.
+ */
+export function getMeetInvitePreview(
+  _req: Request,
+  res: Response<EmailTemplatePreview | ApiError>,
+): void {
+  try {
+    res.status(200).json(previewMeetInvite());
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Failed to render meet invite preview";
+    console.error("getMeetInvitePreview error:", error);
+    res.status(500).json({ message });
+  }
+}
+
+/**
+ * GET /api/templates/reschedule/preview
+ * Render the reschedule notice email against sample data.
+ */
+export function getReschedulePreview(
+  _req: Request,
+  res: Response<EmailTemplatePreview | ApiError>,
+): void {
+  try {
+    res.status(200).json(previewReschedule());
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Failed to render reschedule preview";
+    console.error("getReschedulePreview error:", error);
+    res.status(500).json({ message });
+  }
+}
+
+/**
+ * GET /api/templates/cancellation/preview
+ * Render the cancellation notice email (with a calendar removal) against
+ * sample data.
+ */
+export function getCancellationPreview(
+  _req: Request,
+  res: Response<EmailTemplatePreview | ApiError>,
+): void {
+  try {
+    res.status(200).json(previewCancellation());
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Failed to render cancellation preview";
+    console.error("getCancellationPreview error:", error);
+    res.status(500).json({ message });
+  }
+}

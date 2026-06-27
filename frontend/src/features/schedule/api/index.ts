@@ -1,8 +1,10 @@
 export { useCreateLesson } from "./use-create-lesson";
 export { useCreateRecurringLesson } from "./use-create-recurring-lesson";
 export { useListLessons } from "./use-list-lessons";
+export { useListLessonsInfinite } from "./use-list-lessons-infinite";
 export { useGetLesson } from "./use-get-lesson";
 export { useUpdateLesson } from "./use-update-lesson";
+export { useRescheduleLesson } from "./use-reschedule-lesson";
 export { useRecordAttendance } from "./use-record-attendance";
 export { useCancelLesson } from "./use-cancel-lesson";
 export { useCancelLessonSeries } from "./use-cancel-lesson-series";
@@ -16,6 +18,7 @@ export {
   listLessonsRequest,
   getLessonRequest,
   updateLessonRequest,
+  rescheduleLessonRequest,
   recordAttendanceRequest,
   cancelLessonRequest,
   notifyStudentRequest,
@@ -25,3 +28,4 @@ export {
   resyncLessonRequest,
 } from "./requests";
 export type { ResyncLessonAction } from "./requests";
+export type { ListLessonsParams } from "./requests";

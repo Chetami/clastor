@@ -14,6 +14,7 @@
   "dependencies": {
     "@examify-tms/interfaces": "^1.0.0",
     "cors": "^2.8.5",
+    "csv-parse": "^7.0.0",
     "date-fns": "^4.4.0",
     "date-fns-tz": "^3.2.0",
     "dotenv": "^16.4.5",

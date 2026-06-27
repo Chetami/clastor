@@ -2,6 +2,9 @@ import { Request, Response } from "express";
 import {
   createLessonInFirestore,
   listLessonsFromFirestore,
+  listLessonsPageFromFirestore,
+  LessonPageQuery,
+  LessonFilters,
   getLessonByIdFromFirestore,
   updateLessonInFirestore,
   recordAttendanceInFirestore,
@@ -11,12 +14,11 @@ import {
   bumpRsvpTokenVersion,
   setLessonAcceptanceInFirestore,
   setLessonGoogleEventId,
-  LessonFilters,
 } from "../services/lessonService";
 import { getStudentByIdFromFirestore } from "../services/studentService";
 import { getUserFromFirestore } from "../services/userService";
-import { sendLessonNotification } from "../services/emailService";
-import { buildLessonInvite } from "../services/icalService";
+import { sendLessonNotification, sendLessonCancellation } from "../services/emailService";
+import { buildLessonInvite, buildLessonCancellation } from "../services/icalService";
 import {
   syncLessonToCalendar,
   deleteLessonCalendarEvent,
@@ -28,7 +30,9 @@ import { getNotifyCooldownMs, getPublicApiUrl } from "../config/email";
 import {
   CreateLessonRequest,
   UpdateLessonRequest,
+  RescheduleLessonRequest,
   RecordAttendanceRequest,
+  CancelLessonRequest,
   NotifyStudentRequest,
   LessonAcceptance,
   Lesson,
@@ -37,6 +41,7 @@ import {
   ApiError,
 } from "@examify-tms/interfaces";
 import { canViewLesson, canEditLesson } from "../permissions/lessonPermissions";
+import { resolveTutorNames } from "../services/tutorResolver";
 
 /**
  * Convert a Lesson (Date-typed) to a LessonResponse (ISO string-typed),
@@ -108,9 +113,13 @@ export async function createLesson(
 }
 
 /**
- * List lessons controller
- * Supports from/to (calendar window), studentId, acceptanceStatus,
- * attendanceStatus query filters.
+ * List lessons controller.
+ *
+ * Two modes share this endpoint:
+ *   * Paginated (lessons page): `limit` (+ `status`, `cursor`) — returns one
+ *     cursor-paginated page reading only ~limit documents.
+ *   * Unpaginated (calendar window / dashboard / invoices): omit `limit` —
+ *     returns the full matching set with `nextCursor: null`.
  */
 export async function listLessons(
   req: Request,
@@ -122,6 +131,61 @@ export async function listLessons(
       return;
     }
 
+    // Admins may drill into a single tutor via ?tutorId=…; otherwise they see
+    // all lessons. Tutors are always scoped to their own uid.
+    const drillTutorId =
+      typeof req.query.tutorId === "string" ? req.query.tutorId : null;
+    const scopeUid =
+      req.user.role === "system_admin" && drillTutorId
+        ? drillTutorId
+        : req.user.uid;
+    const scopeRole =
+      req.user.role === "system_admin" && drillTutorId
+        ? "tutor"
+        : req.user.role;
+
+    // Cursor pagination (lessons page).
+    const hasLimit =
+      req.query.limit != null && req.query.limit !== "" &&
+      Number.isFinite(Number(req.query.limit)) && Number(req.query.limit) > 0;
+
+    if (hasLimit) {
+      const query: LessonPageQuery = { limit: Math.min(100, Math.floor(Number(req.query.limit))) };
+      if (typeof req.query.status === "string") {
+        query.status = req.query.status as LessonPageQuery["status"];
+      }
+      if (typeof req.query.cursor === "string" && req.query.cursor) {
+        query.cursor = req.query.cursor;
+      }
+      const result = await listLessonsPageFromFirestore(
+        scopeUid,
+        scopeRole,
+        query
+      );
+      let data = result.data.map(toLessonResponse);
+      if (req.user.role === "system_admin") {
+        const names = await resolveTutorNames(
+          result.data.map((l) => l.tutorId),
+        );
+        data = data.map((r, i) => {
+          const info = names.get(result.data[i].tutorId);
+          return {
+            ...r,
+            tutorId: result.data[i].tutorId,
+            tutorName: info?.name ?? null,
+            tutorEmail: info?.email ?? null,
+          };
+        });
+      }
+      res.status(200).json({
+        data,
+        nextCursor: result.nextCursor,
+        hasMore: result.hasMore,
+      });
+      return;
+    }
+
+    // Full fetch (calendar window / dashboard / invoices).
     const filters: LessonFilters = {};
     if (typeof req.query.from === "string") {
       filters.from = new Date(req.query.from);
@@ -143,20 +207,39 @@ export async function listLessons(
     }
 
     const lessons = await listLessonsFromFirestore(
-      req.user.uid,
-      req.user.role,
+      scopeUid,
+      scopeRole,
       filters
     );
 
-    const response: LessonListResponse = {
-      data: lessons.map(toLessonResponse),
-      total: lessons.length,
-    };
+    let data = lessons.map(toLessonResponse);
+    if (req.user.role === "system_admin") {
+      const names = await resolveTutorNames(lessons.map((l) => l.tutorId));
+      data = data.map((r, i) => {
+        const info = names.get(lessons[i].tutorId);
+        return {
+          ...r,
+          tutorId: lessons[i].tutorId,
+          tutorName: info?.name ?? null,
+          tutorEmail: info?.email ?? null,
+        };
+      });
+    }
 
-    res.status(200).json(response);
+    res.status(200).json({
+      data,
+      nextCursor: null,
+      hasMore: false,
+    });
   } catch (error) {
     console.error("List lessons failed:", error);
-    const message = error instanceof Error ? error.message : "Failed to list lessons";
+    const message =
+      error instanceof Error ? error.message : "Failed to list lessons";
+    // A bad cursor is a client error.
+    if (message === "Invalid cursor") {
+      res.status(400).json({ message });
+      return;
+    }
     res.status(500).json({ message });
   }
 }
@@ -244,6 +327,118 @@ export async function updateLesson(
   } catch (error) {
     console.error("Update lesson failed:", error);
     const message = error instanceof Error ? error.message : "Failed to update lesson";
+    res.status(500).json({ message });
+  }
+}
+
+/**
+ * Reschedule a single lesson occurrence to a new time.
+ *
+ * Unlike the generic PATCH /api/lessons/:id (a "silent" edit), a reschedule
+ * can also re-notify the student: it resets acceptance to `pending`, bumps
+ * the iCal SEQUENCE (so the student's calendar entry updates in place rather
+ * than duplicating), invalidates prior RSVP links, and sends a fresh invite.
+ * The time change itself reuses the standard update path, so Google Calendar
+ * re-syncs and a recurring occurrence is marked as an exception.
+ */
+export async function rescheduleLesson(
+  req: Request<{ id: string }, {}, RescheduleLessonRequest>,
+  res: Response<LessonResponse | ApiError>
+): Promise<void> {
+  try {
+    if (!req.user) {
+      res.status(401).json({ message: "Unauthorized" });
+      return;
+    }
+
+    const lesson = await getLessonByIdFromFirestore(req.params.id);
+    if (!lesson) {
+      res.status(404).json({ message: "Lesson not found" });
+      return;
+    }
+
+    if (!canEditLesson(lesson, req)) {
+      res
+        .status(403)
+        .json({ message: "Forbidden: You do not have permission to reschedule this lesson" });
+      return;
+    }
+
+    // Only active, not-yet-taught lessons can be moved. Cancelled or
+    // attended lessons can't be rescheduled — create a new lesson instead.
+    if (lesson.isCancelled) {
+      res
+        .status(400)
+        .json({ message: "Cannot reschedule a cancelled lesson. Create a new lesson instead." });
+      return;
+    }
+    if (lesson.attendanceStatus !== "unrecorded") {
+      res.status(400).json({
+        message:
+          "Cannot reschedule a lesson that has already been recorded. Create a new lesson instead.",
+      });
+      return;
+    }
+
+    const { startDateTime, durationMinutes, message } = req.body;
+    // notifyStudent defaults to true unless explicitly disabled.
+    const shouldNotify = req.body?.notifyStudent !== false;
+
+    if (!startDateTime) {
+      res.status(400).json({ message: "startDateTime is required" });
+      return;
+    }
+    const newStart = new Date(startDateTime);
+    if (Number.isNaN(newStart.getTime())) {
+      res.status(400).json({ message: "Invalid startDateTime" });
+      return;
+    }
+
+    // Apply the time change via the standard update path. This also marks a
+    // recurring occurrence as an exception and re-stamps updatedAt.
+    const update: UpdateLessonRequest = { startDateTime };
+    if (durationMinutes != null) update.durationMinutes = durationMinutes;
+    await updateLessonInFirestore(req.params.id, update);
+
+    // Reset the student's acceptance: their prior response was for the old slot.
+    if (shouldNotify) {
+      await setLessonAcceptanceInFirestore(req.params.id, "pending");
+    }
+
+    // Re-fetch with the new time so the Google sync + invite use it.
+    let updated = await getLessonByIdFromFirestore(req.params.id);
+    if (!updated) {
+      res.status(404).json({ message: "Lesson not found" });
+      return;
+    }
+
+    // Best-effort Google Calendar re-sync (patches the existing event's time).
+    try {
+      await syncLessonToCalendar(req.user.uid, updated);
+    } catch {
+      /* logged inside syncLessonToCalendar */
+    }
+
+    // Best-effort student re-notify. The reschedule itself always succeeds
+    // even if the email can't go out (e.g. SMTP unconfigured / no email).
+    if (shouldNotify) {
+      updated = (await getLessonByIdFromFirestore(req.params.id)) ?? updated;
+      try {
+        await dispatchLessonNotification(updated, {
+          message,
+          bypassCooldown: true,
+          reason: "reschedule",
+        });
+      } catch (notifyError) {
+        console.error("Reschedule notify failed:", notifyError);
+      }
+    }
+
+    const finalLesson = (await getLessonByIdFromFirestore(req.params.id)) ?? updated;
+    res.status(200).json(toLessonResponse(finalLesson));
+  } catch (error) {
+    console.error("Reschedule lesson failed:", error);
+    const message = error instanceof Error ? error.message : "Failed to reschedule lesson";
     res.status(500).json({ message });
   }
 }
@@ -339,10 +534,13 @@ export async function recordAttendance(
 }
 
 /**
- * Cancel a single lesson occurrence (soft cancel).
+ * Cancel a single lesson occurrence (soft cancel). Optionally notifies the
+ * student — typically offered by the UI when the student had already accepted
+ * the lesson — sending a cancellation email and, if they were previously sent
+ * an invite, a METHOD:CANCEL calendar update.
  */
 export async function cancelLesson(
-  req: Request<{ id: string }>,
+  req: Request<{ id: string }, {}, CancelLessonRequest>,
   res: Response<LessonResponse | ApiError>
 ): Promise<void> {
   try {
@@ -389,6 +587,21 @@ export async function cancelLesson(
       /* logged inside deleteLessonCalendarEvent */
     }
 
+    // Optional student cancellation notification. Best-effort: the cancel
+    // itself always succeeds even if the email can't go out.
+    if (req.body?.notifyStudent === true) {
+      const cancelled = await getLessonByIdFromFirestore(req.params.id);
+      if (cancelled) {
+        try {
+          await dispatchLessonCancellation(cancelled, {
+            message: req.body?.message,
+          });
+        } catch (notifyError) {
+          console.error("Cancel notify failed:", notifyError);
+        }
+      }
+    }
+
     const updated = await getLessonByIdFromFirestore(req.params.id);
     if (!updated) {
       res.status(404).json({ message: "Lesson not found" });
@@ -401,6 +614,181 @@ export async function cancelLesson(
     const message = error instanceof Error ? error.message : "Failed to cancel lesson";
     res.status(500).json({ message });
   }
+}
+
+/**
+ * Thrown by {@link dispatchLessonNotification} when the notify cooldown has
+ * not yet elapsed. Carries the ISO time at which the next send is allowed.
+ */
+class NotifyCooldownError extends Error {
+  constructor(public nextAllowedAt: string) {
+    super("notify-cooldown");
+    this.name = "NotifyCooldownError";
+  }
+}
+
+/**
+ * Thrown by {@link dispatchLessonNotification} when the linked student has no
+ * email address to send to.
+ */
+class StudentEmailMissingError extends Error {
+  constructor() {
+    super("student-email-missing");
+    this.name = "StudentEmailMissingError";
+  }
+}
+
+/**
+ * Shared core of the notify-student flow, used by both the standalone "Notify
+ * student" endpoint and the reschedule endpoint.
+ *
+ * Resolves the student + tutor, ensures a stable iCal UID, bumps the RSVP
+ * token version (invalidating Accept/Decline links from every previously-sent
+ * email), builds the calendar invite, and sends the email. On success the
+ * lesson is stamped as notified.
+ *
+ * `reason` selects the default greeting used when no explicit `message` is
+ * supplied (a reschedule reads differently from a plain reminder). Throws
+ * {@link NotifyCooldownError} / {@link StudentEmailMissingError} for the
+ * caller to map to an HTTP status.
+ */
+async function dispatchLessonNotification(
+  lesson: Lesson,
+  opts: {
+    message?: string | null;
+    bypassCooldown?: boolean;
+    reason?: "reminder" | "reschedule";
+  } = {},
+): Promise<void> {
+  if (!opts.bypassCooldown && lesson.lastStudentNotifiedAt) {
+    const cooldownMs = getNotifyCooldownMs();
+    const elapsed =
+      Date.now() - new Date(lesson.lastStudentNotifiedAt as any).getTime();
+    if (elapsed < cooldownMs) {
+      const nextAllowedAt = new Date(
+        new Date(lesson.lastStudentNotifiedAt as any).getTime() + cooldownMs,
+      ).toISOString();
+      throw new NotifyCooldownError(nextAllowedAt);
+    }
+  }
+
+  const student = await getStudentByIdFromFirestore(lesson.studentId);
+  if (!student || !student.email) {
+    throw new StudentEmailMissingError();
+  }
+
+  const tutor = await getUserFromFirestore(lesson.tutorId);
+
+  // Stamp a stable iCal UID (reused across sends so calendar clients see
+  // updates, not duplicates) and bump the RSVP token version, which
+  // invalidates the Accept/Decline links from every previously-sent email.
+  const icsUid = await ensureLessonIcsUid(lesson.id);
+  const sequence = await bumpRsvpTokenVersion(lesson.id);
+
+  const start = new Date(lesson.startDateTime as any);
+  const end = new Date(start.getTime() + lesson.durationMinutes * 60_000);
+
+  const rsvpToken = signRsvpToken(lesson.id, sequence);
+  const rsvpBase = `${getPublicApiUrl()}/api/lessons/rsvp`;
+  const rsvpLinks = {
+    accept: `${rsvpBase}?token=${encodeURIComponent(rsvpToken)}&status=accepted`,
+    decline: `${rsvpBase}?token=${encodeURIComponent(rsvpToken)}&status=declined`,
+  };
+
+  const icsContent = buildLessonInvite({
+    icsUid,
+    // SEQUENCE mirrors the bumped RSVP version: each send is an update.
+    sequence,
+    summary: `${lesson.subject ?? "Lesson"} with ${tutor.name}`,
+    start,
+    end,
+    location: lesson.location,
+    organizer: { name: tutor.name, email: tutor.email },
+    attendee: { name: student.name, email: student.email },
+  });
+
+  // An explicit message always wins; otherwise use a reason-appropriate
+  // default. A null message lets the email service render its own reminder
+  // greeting.
+  let message = opts.message ?? null;
+  if (!message || message.trim().length === 0) {
+    message =
+      opts.reason === "reschedule"
+        ? `Hi ${student.name},\n\nThe time for our upcoming lesson has changed. The updated details are below.`
+        : null;
+  }
+
+  await sendLessonNotification({
+    to: student.email,
+    studentName: student.name,
+    tutorName: tutor.name,
+    tutorEmail: tutor.email,
+    subject: lesson.subject ?? null,
+    startDateTime: start,
+    durationMinutes: lesson.durationMinutes,
+    location: lesson.location,
+    message,
+    icsContent,
+    rsvpLinks,
+    reason: opts.reason,
+  });
+
+  await markStudentNotifiedInFirestore(lesson.id);
+}
+
+/**
+ * Send a cancellation email to the student linked to the lesson. Used by the
+ * cancel endpoint when the tutor opts to notify. When the student was
+ * previously sent an invite (has an `icsUid`), a METHOD:CANCEL calendar update
+ * is attached so the event is removed from their calendar; the RSVP version is
+ * bumped to give it a SEQUENCE higher than the last REQUEST. Best-effort
+ * callers should catch the thrown {@link StudentEmailMissingError} / generic
+ * errors.
+ */
+async function dispatchLessonCancellation(
+  lesson: Lesson,
+  opts: { message?: string | null } = {},
+): Promise<void> {
+  const student = await getStudentByIdFromFirestore(lesson.studentId);
+  if (!student || !student.email) {
+    throw new StudentEmailMissingError();
+  }
+
+  const tutor = await getUserFromFirestore(lesson.tutorId);
+
+  const start = new Date(lesson.startDateTime as any);
+  const end = new Date(start.getTime() + lesson.durationMinutes * 60_000);
+
+  // Only attach a CANCEL iCal if the student was ever sent an invite —
+  // otherwise there's no calendar entry to remove. Bumping the RSVP version
+  // yields a SEQUENCE higher than the last REQUEST send.
+  let icsContent: string | undefined;
+  if (lesson.icsUid) {
+    const sequence = await bumpRsvpTokenVersion(lesson.id);
+    icsContent = buildLessonCancellation({
+      icsUid: lesson.icsUid,
+      sequence,
+      summary: `${lesson.subject ?? "Lesson"} with ${tutor.name}`,
+      start,
+      end,
+      location: lesson.location,
+      organizer: { name: tutor.name, email: tutor.email },
+      attendee: { name: student.name, email: student.email },
+    });
+  }
+
+  await sendLessonCancellation({
+    to: student.email,
+    studentName: student.name,
+    tutorName: tutor.name,
+    tutorEmail: tutor.email,
+    subject: lesson.subject ?? null,
+    startDateTime: start,
+    durationMinutes: lesson.durationMinutes,
+    location: lesson.location,
+    message: opts.message,
+    icsContent,
+  });
 }
 
 /**
@@ -434,72 +822,25 @@ export async function notifyStudent(
       return;
     }
 
-    // Cooldown check — prevents spamming / accidental double-sends.
-    if (lesson.lastStudentNotifiedAt) {
-      const cooldownMs = getNotifyCooldownMs();
-      const elapsed = Date.now() - new Date(lesson.lastStudentNotifiedAt as any).getTime();
-      if (elapsed < cooldownMs) {
-        const nextAllowedAt = new Date(
-          new Date(lesson.lastStudentNotifiedAt as any).getTime() + cooldownMs
-        ).toISOString();
+    try {
+      await dispatchLessonNotification(lesson, {
+        message: req.body?.message,
+        bypassCooldown: false,
+        reason: "reminder",
+      });
+    } catch (e) {
+      if (e instanceof NotifyCooldownError) {
         res.status(409).json({
-          message: `This student was already notified. You can send another reminder after ${nextAllowedAt}.`,
+          message: `This student was already notified. You can send another reminder after ${e.nextAllowedAt}.`,
         });
         return;
       }
+      if (e instanceof StudentEmailMissingError) {
+        res.status(400).json({ message: "This student has no email address on file" });
+        return;
+      }
+      throw e;
     }
-
-    const student = await getStudentByIdFromFirestore(lesson.studentId);
-    if (!student || !student.email) {
-      res.status(400).json({ message: "This student has no email address on file" });
-      return;
-    }
-
-    const tutor = await getUserFromFirestore(lesson.tutorId);
-
-    // Stamp a stable iCal UID (reused across resends so calendar clients see
-    // updates, not duplicates) and bump the RSVP token version, which
-    // invalidates the Accept/Decline links from every previously-sent email.
-    const icsUid = await ensureLessonIcsUid(req.params.id);
-    const sequence = await bumpRsvpTokenVersion(req.params.id);
-
-    const start = new Date(lesson.startDateTime as any);
-    const end = new Date(start.getTime() + lesson.durationMinutes * 60_000);
-
-    const rsvpToken = signRsvpToken(req.params.id, sequence);
-    const rsvpBase = `${getPublicApiUrl()}/api/lessons/rsvp`;
-    const rsvpLinks = {
-      accept: `${rsvpBase}?token=${encodeURIComponent(rsvpToken)}&status=accepted`,
-      decline: `${rsvpBase}?token=${encodeURIComponent(rsvpToken)}&status=declined`,
-    };
-
-    const icsContent = buildLessonInvite({
-      icsUid,
-      // SEQUENCE mirrors the bumped RSVP version: each resend is an update.
-      sequence,
-      summary: `${lesson.subject ?? "Lesson"} with ${tutor.name}`,
-      start,
-      end,
-      location: lesson.location,
-      organizer: { name: tutor.name, email: tutor.email },
-      attendee: { name: student.name, email: student.email },
-    });
-
-    await sendLessonNotification({
-      to: student.email,
-      studentName: student.name,
-      tutorName: tutor.name,
-      tutorEmail: tutor.email,
-      subject: lesson.subject ?? null,
-      startDateTime: start,
-      durationMinutes: lesson.durationMinutes,
-      location: lesson.location,
-      message: req.body?.message,
-      icsContent,
-      rsvpLinks,
-    });
-
-    await markStudentNotifiedInFirestore(req.params.id);
 
     const updated = await getLessonByIdFromFirestore(req.params.id);
     if (!updated) {

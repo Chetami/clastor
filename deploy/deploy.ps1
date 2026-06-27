@@ -34,7 +34,7 @@ function Run-Script([string]$Script, [string]$Label) {
 
     # Run each deploy script in its own powershell process so its `exit` (on Die)
     # does not kill the whole "both" run.
-    & powershell.exe @scriptArgs
+    & pwsh @scriptArgs
     if ($LASTEXITCODE -ne 0) {
         Write-Host ""
         Write-Host "ERROR: $Label failed (exit $LASTEXITCODE). Aborting." -ForegroundColor Red
