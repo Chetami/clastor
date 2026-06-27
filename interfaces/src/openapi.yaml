@@ -165,6 +165,15 @@ components:
       $ref: './schemas/stripe/CreateAccountLinkResponse.yaml'
     DashboardLinkResponse:
       $ref: './schemas/stripe/DashboardLinkResponse.yaml'
+    # Facebook (Pages) Schemas
+    FacebookConnectionStatus:
+      $ref: './schemas/facebook/res/FacebookConnectionStatus.yaml'
+    FacebookPage:
+      $ref: './schemas/facebook/res/FacebookPage.yaml'
+    PublishFacebookPostRequest:
+      $ref: './schemas/facebook/req/PublishFacebookPostRequest.yaml'
+    PublishFacebookPostResponse:
+      $ref: './schemas/facebook/res/PublishFacebookPostResponse.yaml'
     # Tutor Profile Enums
     TutorTemplate:
       $ref: './schemas/tutors/TutorTemplate.yaml'

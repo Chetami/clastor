@@ -1,0 +1,14 @@
+type: object
+required:
+  - id
+  - name
+properties:
+  id:
+    type: string
+    description: Facebook Page id (the user manages this Page).
+    example: "109876543210"
+  name:
+    type: string
+    description: Facebook Page display name.
+    example: Jane's Tutoring
+description: A Facebook Page the authenticated user manages.

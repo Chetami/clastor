@@ -1,0 +1,24 @@
+type: object
+required:
+  - message
+properties:
+  message:
+    type: string
+    description: The post text. Required (a post needs either text or an image; text drives the caption).
+    example: "📣 New slots open for Year 10 Maths — first lesson half price! Book now."
+    minLength: 1
+  imageUrl:
+    description: >-
+      Optional public image URL(s) to attach to the post. A single string
+      produces a single-photo post; an array produces a multi-photo post.
+      Image URLs must be publicly reachable by Facebook's crawlers.
+    oneOf:
+      - type: string
+        format: uri
+      - type: array
+        items:
+          type: string
+          format: uri
+description: |-
+  Request body for publishing a post to the tutor's connected Facebook Page.
+  In Phase 1 images are supplied as public URLs only (no file upload).

@@ -3,6 +3,8 @@ import cors from "cors";
 import dotenv from "dotenv";
 import authRoutes from "./routes/authRoutes";
 import googleAuthRoutes from "./routes/googleAuthRoutes";
+import facebookAuthRoutes from "./routes/facebookAuthRoutes";
+import facebookRoutes from "./routes/facebookRoutes";
 import studentRoutes from "./routes/studentRoutes";
 import lessonRoutes from "./routes/lessonRoutes";
 import paymentRoutes from "./routes/paymentRoutes";
@@ -50,6 +52,8 @@ app.get("/health", (req, res) => {
 // API routes
 app.use("/api/auth", authRoutes);
 app.use("/api/auth/google", googleAuthRoutes);
+app.use("/api/auth/facebook", facebookAuthRoutes);
+app.use("/api/facebook", facebookRoutes);
 app.use("/api/students", studentRoutes);
 app.use("/api/lessons", lessonRoutes);
 app.use("/api/payments", paymentRoutes);

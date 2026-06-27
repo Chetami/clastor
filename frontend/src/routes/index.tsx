@@ -26,6 +26,7 @@ import OnboardingPage from "@/features/onboarding/OnboardingPage";
 import AdminFeedback from "@/features/feedback/AdminFeedback";
 import AdminTutors from "@/features/admin-tutors/AdminTutors";
 import Templates from "@/features/templates/Templates";
+import Facebook from "@/features/facebook/Facebook";
 import { PaymentResult } from "@/features/public-pay/PaymentResult";
 import { isFeatureEnabled } from "@/config/features";
 
@@ -71,6 +72,7 @@ export const router = createBrowserRouter([
                     { path: "lessons/:eventId", element: <EventDetail /> },
                     { path: "schedule", element: <Schedule /> },
                     { path: "templates", element: <Templates /> },
+                    { path: "marketing", element: <Facebook /> },
                     { path: "settings", element: <Settings /> },
                     {
                       path: "settings/payments",

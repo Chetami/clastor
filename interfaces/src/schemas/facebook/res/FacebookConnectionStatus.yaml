@@ -1,0 +1,23 @@
+type: object
+required:
+  - connected
+  - pageId
+  - pageName
+properties:
+  connected:
+    type: boolean
+    description: Whether the tutor has connected a Facebook account and selected a Page.
+    example: true
+  pageId:
+    type: string
+    nullable: true
+    description: The connected Facebook Page id, or null if not connected.
+    example: "109876543210"
+  pageName:
+    type: string
+    nullable: true
+    description: The connected Facebook Page name, or null if not connected.
+    example: Jane's Tutoring
+description: |-
+  Status of the authenticated user's Facebook connection. The access token
+  itself is never exposed; only whether a Page is connected and its id/name.

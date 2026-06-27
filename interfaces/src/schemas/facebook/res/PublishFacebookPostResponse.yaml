@@ -1,0 +1,14 @@
+type: object
+required:
+  - postId
+  - permalink
+properties:
+  postId:
+    type: string
+    description: The id of the created post (or photo id for photo-only posts).
+    example: "109876543210_112233445566"
+  permalink:
+    type: string
+    description: Absolute URL to the published post on Facebook.
+    example: https://www.facebook.com/109876543210/posts/112233445566
+description: Response for a successfully published Facebook Page post.

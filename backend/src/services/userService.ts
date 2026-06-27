@@ -642,3 +642,141 @@ export async function clearGoogleConnection(uid: string): Promise<void> {
       { merge: true },
     );
 }
+
+export interface FacebookConnection {
+  pageId: string;
+  pageName: string;
+  /** Long-lived Page access token (~60 days) used to publish posts. */
+  pageAccessToken: string;
+  /** Long-lived user access token, kept so we can re-list/switch Pages. */
+  userAccessToken: string | null;
+  connectedAt: Date;
+}
+
+/**
+ * Persist a tutor's Facebook connection (selected Page + tokens) onto their
+ * user document. Mirrors {@link setGoogleConnection}. Tokens are stored in
+ * plaintext, consistent with the existing Google connection pattern.
+ */
+export async function setFacebookConnection(
+  uid: string,
+  data: {
+    pageId: string;
+    pageName: string;
+    pageAccessToken: string;
+    userAccessToken?: string | null;
+  },
+): Promise<void> {
+  const firestore = getFirebaseFirestore();
+  await firestore.collection("users").doc(uid).set(
+    {
+      facebookConnection: {
+        pageId: data.pageId,
+        pageName: data.pageName,
+        pageAccessToken: data.pageAccessToken,
+        userAccessToken: data.userAccessToken ?? null,
+        connectedAt: admin.firestore.Timestamp.now(),
+      },
+      updatedAt: admin.firestore.Timestamp.now(),
+    },
+    { merge: true },
+  );
+}
+
+/**
+ * Read a tutor's Facebook connection, or null if they haven't connected a
+ * Page. Server-side only — never exposed to the client.
+ */
+export async function getFacebookConnection(
+  uid: string,
+): Promise<FacebookConnection | null> {
+  const firestore = getFirebaseFirestore();
+  const snap = await firestore.collection("users").doc(uid).get();
+  const conn = snap.data()?.facebookConnection;
+  if (!conn?.pageAccessToken) {
+    return null;
+  }
+  return {
+    pageId: conn.pageId,
+    pageName: conn.pageName ?? "",
+    pageAccessToken: conn.pageAccessToken,
+    userAccessToken: conn.userAccessToken ?? null,
+    connectedAt: conn.connectedAt?.toDate?.() ?? new Date(0),
+  };
+}
+
+/**
+ * Remove a tutor's Facebook connection (disconnect).
+ */
+export async function clearFacebookConnection(uid: string): Promise<void> {
+  const firestore = getFirebaseFirestore();
+  await firestore
+    .collection("users")
+    .doc(uid)
+    .set(
+      { facebookConnection: admin.firestore.FieldValue.delete() },
+      { merge: true },
+    );
+}
+
+/**
+ * Pending Facebook connection: when a tutor manages several Pages, we stash the
+ * long-lived user token + candidate Pages here right after the OAuth callback,
+ * so the frontend Page-picker can finalize the choice via
+ * {@link setFacebookConnection}. Cleared once a Page is selected or on
+ * disconnect.
+ */
+export interface FacebookPendingConnection {
+  userAccessToken: string;
+  pages: { id: string; name: string; access_token: string }[];
+  createdAt: Date;
+}
+
+export async function setFacebookPendingConnection(
+  uid: string,
+  data: {
+    userAccessToken: string;
+    pages: { id: string; name: string; access_token: string }[];
+  },
+): Promise<void> {
+  const firestore = getFirebaseFirestore();
+  await firestore.collection("users").doc(uid).set(
+    {
+      facebookPendingConnection: {
+        userAccessToken: data.userAccessToken,
+        pages: data.pages,
+        createdAt: admin.firestore.Timestamp.now(),
+      },
+    },
+    { merge: true },
+  );
+}
+
+export async function getFacebookPendingConnection(
+  uid: string,
+): Promise<FacebookPendingConnection | null> {
+  const firestore = getFirebaseFirestore();
+  const snap = await firestore.collection("users").doc(uid).get();
+  const pending = snap.data()?.facebookPendingConnection;
+  if (!pending?.userAccessToken || !Array.isArray(pending.pages)) {
+    return null;
+  }
+  return {
+    userAccessToken: pending.userAccessToken,
+    pages: pending.pages,
+    createdAt: pending.createdAt?.toDate?.() ?? new Date(0),
+  };
+}
+
+export async function clearFacebookPendingConnection(
+  uid: string,
+): Promise<void> {
+  const firestore = getFirebaseFirestore();
+  await firestore
+    .collection("users")
+    .doc(uid)
+    .set(
+      { facebookPendingConnection: admin.firestore.FieldValue.delete() },
+      { merge: true },
+    );
+}
