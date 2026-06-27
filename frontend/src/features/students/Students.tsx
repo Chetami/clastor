@@ -41,7 +41,12 @@ import {
 } from "@/components/ui/select";
 import { StudentForm } from "./StudentForm";
 import type { StudentFormData } from "./student-schema";
-import { useCreateStudent, useImportStudents, useListStudents } from "./api";
+import {
+  useCreateStudent,
+  useImportStudents,
+  useListStudents,
+  useUpdateStudent,
+} from "./api";
 import { useSubjectMap, useSubjects } from "@/lib/subjects";
 import {
   compactCurrency,
@@ -96,6 +101,7 @@ export default function Students() {
     useState<StudentImportSummary | null>(null);
 
   const createStudent = useCreateStudent();
+  const updateStudent = useUpdateStudent();
   const importStudents = useImportStudents();
 
   const activeCount = students.filter((s) => s.status === "active").length;
@@ -181,10 +187,38 @@ export default function Students() {
     }
   }
 
-  function handleEdit(_values: StudentFormData) {
-    // TODO: Implement update endpoint
-    // For now, just close the dialog
-    setEditing(null);
+  async function handleEdit(values: StudentFormData) {
+    if (!editing) return;
+    try {
+      const billingEmail = values.useParentEmailAsBilling
+        ? values.parentEmail?.trim() || null
+        : values.billingEmail?.trim() || null;
+
+      await updateStudent.mutateAsync({
+        id: editing.id,
+        data: {
+          name: values.name,
+          email: values.email,
+          phone: values.phone?.trim() || null,
+          parentEmail: values.parentEmail?.trim() || null,
+          billingEmail,
+          subjectIds: values.subjectIds,
+          expectedAmount: values.expectedAmount,
+          rateType: values.rateType,
+          frequencyPerWeek: values.frequencyPerWeek,
+          status: values.status,
+          timezone: values.timezoneEnabled
+            ? (values.timezone ?? null)
+            : null,
+          notes: values.notes?.trim() || null,
+        },
+      });
+
+      setEditing(null);
+    } catch (error) {
+      console.error("Failed to update student:", error);
+      // Error will be handled by react-query automatically
+    }
   }
 
   function handleExport() {
@@ -477,9 +511,12 @@ export default function Students() {
             <StudentForm
               key={editing.id}
               defaultValues={studentToFormValues(editing)}
-              submitLabel="Save Changes"
+              submitLabel={
+                updateStudent.isPending ? "Saving..." : "Save Changes"
+              }
               onCancel={() => setEditing(null)}
               onSubmit={handleEdit}
+              disabled={updateStudent.isPending}
             />
           )}
         </DialogContent>
