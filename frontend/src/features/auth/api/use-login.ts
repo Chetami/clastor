@@ -13,7 +13,7 @@ export function useLogin() {
       // Clear any data left over from a previous session before establishing
       // the new identity, so no other user's data is ever shown.
       queryClient.clear();
-      setAuth(data.user, data.jwtToken);
+      setAuth(data.user, data.jwtToken, data.refreshToken);
     },
   });
 }

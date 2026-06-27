@@ -10,7 +10,7 @@ export function useGoogleSignIn() {
     mutationFn: () => googleSignInRequest(),
     onSuccess: (data) => {
       queryClient.clear();
-      setAuth(data.user, data.jwtToken);
+      setAuth(data.user, data.jwtToken, data.refreshToken);
     },
   });
 }

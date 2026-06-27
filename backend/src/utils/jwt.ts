@@ -1,4 +1,5 @@
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
 import { JwtPayload, Role } from "@examify-tms/interfaces";
 
 /**
@@ -6,7 +7,25 @@ import { JwtPayload, Role } from "@examify-tms/interfaces";
  */
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-super-secret-jwt-key-change-in-production";
-const JWT_EXPIRY = "1h";
+const JWT_EXPIRY = "15m";
+
+/**
+ * Refresh tokens use a SEPARATE secret from access tokens so a refresh token
+ * can never be mistaken for an access token (and vice versa) by the verifier.
+ */
+const REFRESH_TOKEN_SECRET =
+  process.env.REFRESH_TOKEN_SECRET || "your-super-secret-refresh-key-change-in-production";
+const REFRESH_TOKEN_EXPIRY = "30d";
+
+/** Payload embedded in a signed refresh token. */
+export interface RefreshTokenPayload {
+  uid: string;
+  /** Groups all refresh tokens minted from a single login; used for reuse
+   * detection (revoking the whole chain when a revoked token is replayed). */
+  familyId: string;
+  /** Unique id of this token; also the Firestore doc id. */
+  jti: string;
+}
 
 /**
  * Generate a JWT token for a user
@@ -32,6 +51,42 @@ export function verifyToken(token: string): JwtPayload {
     return decoded;
   } catch (error) {
     throw new Error("Invalid or expired token");
+  }
+}
+
+/**
+ * Generate a random opaque id (used for token `jti` and `familyId`).
+ */
+export function generateJti(): string {
+  return crypto.randomBytes(24).toString("hex");
+}
+
+/**
+ * Generate a signed refresh token bound to a user, family, and jti.
+ */
+export function generateRefreshToken(
+  uid: string,
+  familyId: string,
+  jti: string,
+): string {
+  const payload: RefreshTokenPayload = { uid, familyId, jti };
+  return jwt.sign(payload, REFRESH_TOKEN_SECRET, {
+    expiresIn: REFRESH_TOKEN_EXPIRY,
+  });
+}
+
+/**
+ * Verify a refresh token's signature and expiry. Returns the decoded payload,
+ * or null if invalid/expired. Callers must additionally check the Firestore
+ * record (revoked / hash match) before trusting it.
+ */
+export function verifyRefreshToken(token: string): RefreshTokenPayload | null {
+  try {
+    const decoded = jwt.verify(token, REFRESH_TOKEN_SECRET) as RefreshTokenPayload;
+    if (!decoded.uid || !decoded.familyId || !decoded.jti) return null;
+    return decoded;
+  } catch {
+    return null;
   }
 }
 

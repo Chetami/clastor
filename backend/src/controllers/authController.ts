@@ -1,8 +1,9 @@
 import { Request, Response } from "express";
 import { verifyFirebaseToken } from "../services/authService";
-import { getUserFromFirestore, generateJWTForUser, updateLastActive, createUserInFirestore, toUserInfo } from "../services/userService";
+import { getUserFromFirestore, updateLastActive, createUserInFirestore, toUserInfo } from "../services/userService";
+import { issueNewTokenPair, rotateRefreshToken, revokeRefreshToken } from "../services/tokenService";
 import { LoginResponse, UserInfo, ApiError } from "@examify-tms/interfaces";
-import { RegisterRequest } from "@examify-tms/interfaces";
+import { RegisterRequest, RefreshTokenResponse } from "@examify-tms/interfaces";
 
 /**
  * Login controller
@@ -24,8 +25,8 @@ export async function login(req: Request, res: Response<LoginResponse | ApiError
     // Get user from Firestore
     const user = await getUserFromFirestore(decodedFirebase.uid);
 
-    // Generate custom JWT
-    const jwtToken = generateJWTForUser(user);
+    // Generate access + refresh token pair
+    const { jwtToken, refreshToken } = await issueNewTokenPair(user);
 
     // Update last active timestamp
     await updateLastActive(user.id);
@@ -34,6 +35,7 @@ export async function login(req: Request, res: Response<LoginResponse | ApiError
 
     return res.status(200).json({
       jwtToken,
+      refreshToken,
       user: userInfo,
     });
   } catch (error) {
@@ -100,12 +102,12 @@ export async function googleAuth(
       user = await createUserInFirestore(decodedFirebase.uid, email, name, 'tutor', avatarUrl);
     }
 
-    const jwtToken = generateJWTForUser(user);
+    const { jwtToken, refreshToken } = await issueNewTokenPair(user);
     await updateLastActive(user.id);
 
     const userInfo: UserInfo = toUserInfo(user);
 
-    res.status(200).json({ jwtToken, user: userInfo });
+    res.status(200).json({ jwtToken, refreshToken, user: userInfo });
   } catch (error) {
     console.error('Google authentication failed:', error);
     const message = error instanceof Error ? error.message : 'Google authentication failed';
@@ -158,8 +160,8 @@ export async function register(
       'tutor' // Default role for new users
     );
 
-    // 5. Generate custom JWT
-    const jwtToken = generateJWTForUser(user);
+    // 5. Generate access + refresh token pair
+    const { jwtToken, refreshToken } = await issueNewTokenPair(user);
 
     // 6. Update last active timestamp (consistent with login endpoint)
     await updateLastActive(user.id);
@@ -167,9 +169,49 @@ export async function register(
     // 7. Return UserInfo (not full User, consistent with login endpoint)
     const userInfo: UserInfo = toUserInfo(user);
 
-    res.status(200).json({ jwtToken, user: userInfo });
+    res.status(200).json({ jwtToken, refreshToken, user: userInfo });
   } catch (error) {
     console.error('Registration error:', error);
     res.status(500).json({ message: 'Registration failed' });
   }
+}
+
+/**
+ * Refresh controller
+ * Accepts a (rotating) refresh token, validates + rotates it, and returns a
+ * fresh access token + refresh token pair. No Authorization header required —
+ * the refresh token itself is the credential.
+ */
+export async function refresh(
+  req: Request<{}, {}, { refreshToken?: string }>,
+  res: Response<RefreshTokenResponse | ApiError>,
+): Promise<void> {
+  const presentedToken = req.body?.refreshToken;
+  if (!presentedToken) {
+    res.status(400).json({ message: 'Refresh token is required' });
+    return;
+  }
+
+  try {
+    const result = await rotateRefreshToken(presentedToken);
+    res.status(200).json(result);
+  } catch (error) {
+    // Invalid/expired/revoked/replayed — client must re-authenticate.
+    res
+      .status(401)
+      .json({ message: error instanceof Error ? error.message : 'Invalid refresh token' });
+  }
+}
+
+/**
+ * Logout controller
+ * Revokes the presented refresh token server-side. Best-effort and always
+ * returns 200 so the client can complete its local sign-out regardless.
+ */
+export async function logout(
+  req: Request<{}, {}, { refreshToken?: string }>,
+  res: Response<{ message: string }>,
+): Promise<void> {
+  await revokeRefreshToken(req.body?.refreshToken);
+  res.status(200).json({ message: 'Logged out' });
 }

@@ -1,0 +1,12 @@
+type: object
+required:
+  - refreshToken
+properties:
+  refreshToken:
+    type: string
+    description: Long-lived opaque refresh token issued at login/previous refresh
+    example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+description: |-
+  Refresh token request body
+  Sent from frontend to backend /api/auth/refresh endpoint to obtain a new
+  access token (and a rotated refresh token).

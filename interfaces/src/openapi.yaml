@@ -28,6 +28,8 @@ components:
       $ref: './schemas/auth/req/RegisterRequest.yaml'
     VerifyTokenRequest:
       $ref: './schemas/auth/req/VerifyTokenRequest.yaml'
+    RefreshTokenRequest:
+      $ref: './schemas/auth/req/RefreshTokenRequest.yaml'
     # Auth Response Schemas
     LoginResponse:
       $ref: './schemas/auth/res/LoginResponse.yaml'
@@ -35,6 +37,8 @@ components:
       $ref: './schemas/auth/res/RegisterResponse.yaml'
     VerifyTokenResponse:
       $ref: './schemas/auth/res/VerifyTokenResponse.yaml'
+    RefreshTokenResponse:
+      $ref: './schemas/auth/res/RefreshTokenResponse.yaml'
     GoogleConnectionStatus:
       $ref: './schemas/auth/res/GoogleConnectionStatus.yaml'
     UserInfo:

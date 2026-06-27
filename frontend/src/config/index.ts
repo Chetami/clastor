@@ -28,3 +28,4 @@ export const env = parsed.data;
 export const API_URL = env.VITE_API_URL;
 
 export const TOKEN_KEY = "jwtToken";
+export const REFRESH_TOKEN_KEY = "refreshToken";

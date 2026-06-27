@@ -7,7 +7,7 @@ import {
 } from "firebase/auth";
 import { api } from "@/lib/api";
 import { getFirebaseAuth } from "@/config/firebase";
-import type { LoginResponse, UserInfo } from "@examify-tms/interfaces";
+import type { LoginResponse, UserInfo, RefreshTokenResponse } from "@examify-tms/interfaces";
 
 const firebaseAuthErrorMap: Record<string, string> = {
   "auth/email-already-in-use": "Email already registered",
@@ -107,7 +107,35 @@ export async function verifyRequest(): Promise<UserInfo> {
   return response.data.user;
 }
 
-export async function logoutRequest(): Promise<void> {
+/**
+ * Exchange a refresh token for a fresh access + refresh token pair. Tagged with
+ * the skip header so the api.ts response interceptor never tries to refresh it.
+ */
+export async function refreshRequest(
+  refreshToken: string,
+): Promise<RefreshTokenResponse> {
+  const response = await api.post<RefreshTokenResponse>(
+    "/api/auth/refresh",
+    { refreshToken },
+    { headers: { "X-Skip-Auth-Refresh": "true" } },
+  );
+  return response.data;
+}
+
+export async function logoutRequest(refreshToken?: string | null): Promise<void> {
+  // Best-effort server-side revocation; never block logout on it.
+  if (refreshToken) {
+    try {
+      await api.post(
+        "/api/auth/logout",
+        { refreshToken },
+        { headers: { "X-Skip-Auth-Refresh": "true" } },
+      );
+    } catch {
+      // ignore — local sign-out proceeds regardless
+    }
+  }
+
   const firebaseAuth = getFirebaseAuth();
   await firebaseSignOut(firebaseAuth);
 }

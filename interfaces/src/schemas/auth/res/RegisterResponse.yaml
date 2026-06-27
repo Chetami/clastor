@@ -1,15 +1,20 @@
 type: object
 required:
   - jwtToken
+  - refreshToken
   - user
 properties:
   jwtToken:
     type: string
-    description: Custom JWT token (expires in 1 hour)
+    description: Short-lived custom JWT access token (expires in 15 minutes)
+    example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+  refreshToken:
+    type: string
+    description: Long-lived opaque refresh token (expires in 30 days), rotated on each refresh
     example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
   user:
     $ref: './UserInfo.yaml'
 description: |-
   Register response body
   Returned from backend /api/auth/register endpoint
-  Contains JWT token and user information
+  Contains access token, refresh token, and user information

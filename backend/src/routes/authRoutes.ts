@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { login, verifyToken, register, googleAuth } from "../controllers/authController";
+import { login, verifyToken, register, googleAuth, refresh, logout } from "../controllers/authController";
 import { authenticateJWT } from "../middleware/auth";
 
 const router = Router();
@@ -29,5 +29,18 @@ router.post('/register', register);
  * Verify JWT endpoint - returns user info if token is valid
  */
 router.get("/verify", authenticateJWT, verifyToken);
+
+/**
+ * POST /api/auth/refresh
+ * Exchange a (rotating) refresh token for a fresh access + refresh token pair.
+ * Does not use authenticateJWT — the refresh token is the credential.
+ */
+router.post("/refresh", refresh);
+
+/**
+ * POST /api/auth/logout
+ * Revoke the presented refresh token server-side. Always succeeds (200).
+ */
+router.post("/logout", logout);
 
 export default router;

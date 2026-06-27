@@ -7,7 +7,10 @@ export function useLogout() {
   const clearAuth = useAuthStore((s) => s.clearAuth);
 
   return useMutation({
-    mutationFn: () => logoutRequest(),
+    mutationFn: () => {
+      const refreshToken = useAuthStore.getState().refreshToken;
+      return logoutRequest(refreshToken);
+    },
     onSettled: () => {
       // Drop all cached query data so the next user doesn't see the
       // previous user's students/lessons until the app is refreshed.

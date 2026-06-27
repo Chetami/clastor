@@ -18,7 +18,7 @@ export function useRegister() {
     }) => registerRequest(name, email, password),
     onSuccess: (data) => {
       queryClient.clear();
-      setAuth(data.user, data.jwtToken);
+      setAuth(data.user, data.jwtToken, data.refreshToken);
     },
   });
 }
