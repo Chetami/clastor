@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,7 +6,8 @@ import { Video, Radio, ExternalLink, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import type { LessonResponse } from "@examify-tms/interfaces";
 import { useGenerateMeetLink } from "../api";
-import { lessonTimeRange } from "../lib";
+import { useUpdateLesson } from "@/features/schedule/api";
+import { lessonTimeRange, extractCallLink, isGoogleMeet } from "../lib";
 
 type Props = {
   lesson: LessonResponse;
@@ -16,7 +16,10 @@ type Props = {
 
 export function CurrentLesson({ lesson, studentName }: Props) {
   const generateMeet = useGenerateMeetLink();
-  const [meetLink, setMeetLink] = useState<string | null>(null);
+  const updateLesson = useUpdateLesson(lesson.id);
+
+  const callLink = extractCallLink(lesson.location);
+  const isMeet = callLink ? isGoogleMeet(callLink) : false;
 
   const handleGenerate = async () => {
     try {
@@ -25,7 +28,9 @@ export function CurrentLesson({ lesson, studentName }: Props) {
         startDateTime: lesson.startDateTime,
         durationMinutes: lesson.durationMinutes,
       });
-      setMeetLink(res.meetingLink);
+      // Persist the link on the lesson so the button becomes "Join Meet" on
+      // the next render and the calendar/schedule can display it too.
+      await updateLesson.mutateAsync({ location: res.meetingLink });
       toast.success("Google Meet link created");
     } catch (err) {
       toast.error(
@@ -65,10 +70,11 @@ export function CurrentLesson({ lesson, studentName }: Props) {
           </div>
         </div>
 
-        {meetLink ? (
-          <Button asChild size="sm" className="shrink-0">
-            <a href={meetLink} target="_blank" rel="noopener noreferrer">
-              <Video className="h-4 w-4" /> Join Meet
+        {callLink ? (
+          <Button asChild size="sm" className="shrink-0 gap-1.5">
+            <a href={callLink} target="_blank" rel="noopener noreferrer">
+              <Video className="h-4 w-4" />
+              {isMeet ? "Join Meet" : "Join call"}
               <ExternalLink className="h-3 w-3" />
             </a>
           </Button>
@@ -76,11 +82,11 @@ export function CurrentLesson({ lesson, studentName }: Props) {
           <Button
             size="sm"
             variant="secondary"
-            className="shrink-0"
+            className="shrink-0 gap-1.5"
             onClick={handleGenerate}
-            disabled={generateMeet.isPending}
+            disabled={generateMeet.isPending || updateLesson.isPending}
           >
-            {generateMeet.isPending ? (
+            {generateMeet.isPending || updateLesson.isPending ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <Video className="h-4 w-4" />
