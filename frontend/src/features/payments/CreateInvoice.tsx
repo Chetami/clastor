@@ -139,7 +139,7 @@ export default function CreateInvoice() {
             : defaultUnitAmount(selectedStudent.expectedAmount);
         return {
           lessonId: lesson.id,
-          description: `${lesson.subject} — ${lesson.durationMinutes} min on ${formatDate(
+          description: `${lesson.subject || "Lesson"} — ${lesson.durationMinutes} min on ${formatDate(
             lesson.startDateTime,
           )}`,
           durationMinutes: lesson.durationMinutes,
