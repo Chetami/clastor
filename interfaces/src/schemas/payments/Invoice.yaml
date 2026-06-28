@@ -82,6 +82,13 @@ properties:
     format: date-time
     nullable: true
     description: Timestamp payment was recorded, or null if not yet paid
+  sentAt:
+    type: string
+    format: date-time
+    nullable: true
+    description: >-
+      Timestamp the invoice was last emailed to the billing contact, or null
+      if it has never been sent.
   notes:
     type: string
     nullable: true

@@ -51,6 +51,7 @@ function mapInvoice(
     issueDate: data.issueDate ? data.issueDate.toDate() : (null as any),
     dueDate: data.dueDate ? data.dueDate.toDate() : (null as any),
     paidAt: data.paidAt ? data.paidAt.toDate() : null,
+    sentAt: data.sentAt ? data.sentAt.toDate() : null,
     notes: data.notes ?? null,
     stripePaymentIntentId: data.stripePaymentIntentId ?? null,
     createdAt: data.createdAt ? data.createdAt.toDate() : (null as any),
@@ -221,6 +222,7 @@ export async function createInvoiceInFirestore(
       issueDate,
       dueDate,
       paidAt: null,
+      sentAt: null,
       notes: data.notes ?? null,
       createdAt: now,
       updatedAt: now,
@@ -252,6 +254,7 @@ export async function createInvoiceInFirestore(
       issueDate: issueDate.toDate() as any,
       dueDate: dueDate.toDate() as any,
       paidAt: null,
+      sentAt: null,
       notes: data.notes ?? null,
       createdAt: now.toDate() as any,
       updatedAt: now.toDate() as any,
@@ -377,6 +380,28 @@ export async function markInvoicePaidInFirestore(
     throw new Error(
       error instanceof Error ? error.message : "Failed to mark invoice paid"
     );
+  }
+}
+
+/**
+ * Record that an invoice was emailed to its billing contact. Stamps
+ * `sentAt` with the current time (overwriting any prior value so resends
+ * reflect the most recent delivery). Called by the send endpoint after a
+ * successful delivery.
+ */
+export async function markInvoiceSentInFirestore(
+  invoiceId: string
+): Promise<void> {
+  try {
+    const firestore = getFirebaseFirestore();
+    const now = admin.firestore.Timestamp.now();
+    await firestore.collection("invoices").doc(invoiceId).update({
+      sentAt: now,
+      updatedAt: now,
+    });
+  } catch (error) {
+    console.error("Failed to mark invoice sent in Firestore:", error);
+    throw new Error("Failed to mark invoice sent");
   }
 }
 

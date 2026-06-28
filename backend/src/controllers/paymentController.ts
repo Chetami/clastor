@@ -5,6 +5,7 @@ import {
   createInvoiceInFirestore,
   updateInvoiceInFirestore,
   markInvoicePaidInFirestore,
+  markInvoiceSentInFirestore,
   voidInvoiceInFirestore,
   deleteInvoiceFromFirestore,
   getStudentInvoicesFromFirestore,
@@ -51,6 +52,7 @@ function toInvoiceResponse(invoice: Invoice): InvoiceResponse {
     issueDate: toIso(invoice.issueDate),
     dueDate: toIso(invoice.dueDate),
     paidAt: invoice.paidAt ? toIso(invoice.paidAt) : null,
+    sentAt: invoice.sentAt ? toIso(invoice.sentAt) : null,
     notes: invoice.notes,
     stripePaymentIntentId: invoice.stripePaymentIntentId ?? null,
     createdAt: toIso(invoice.createdAt),
@@ -316,6 +318,10 @@ export async function sendInvoice(
     if (invoice.status === "draft") {
       await updateInvoiceInFirestore(req.params.id, { status: "open" });
     }
+
+    // Stamp the delivery timestamp so the UI can distinguish sent vs.
+    // unsent invoices (e.g. those opened without sending).
+    await markInvoiceSentInFirestore(req.params.id);
 
     const updated = await getInvoiceByIdFromFirestore(req.params.id);
     if (!updated) {

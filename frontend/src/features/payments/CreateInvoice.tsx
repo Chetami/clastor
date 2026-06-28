@@ -179,7 +179,7 @@ export default function CreateInvoice() {
     }));
   }
 
-  async function handleSubmit(status: "draft" | "open") {
+  async function handleSubmit(status: "draft" | "open", sendEmail: boolean) {
     const values: CreateInvoiceFormData = {
       studentId,
       lineItems: lineItems.map((li) => ({
@@ -219,10 +219,10 @@ export default function CreateInvoice() {
         status: result.data.status,
       });
 
-      // "Create & Send" (status === "open") must email the invoice, not just
-      // persist it. The create endpoint only writes to Firestore; the email is
-      // sent by the dedicated /send endpoint (same path Resend uses).
-      if (status === "open") {
+      // Only the "Create & Send" path emails the invoice. The create
+      // endpoint just persists to Firestore; the email is sent by the
+      // dedicated /send endpoint (same path Resend uses).
+      if (sendEmail) {
         await sendInvoice.mutateAsync({ id: created.id });
       }
 
@@ -611,7 +611,7 @@ export default function CreateInvoice() {
               </div>
               <div className="flex flex-col gap-2 pt-2">
                 <Button
-                  onClick={() => handleSubmit("open")}
+                  onClick={() => handleSubmit("open", true)}
                   disabled={
                     createInvoice.isPending ||
                     sendInvoice.isPending ||
@@ -628,7 +628,19 @@ export default function CreateInvoice() {
                 </Button>
                 <Button
                   variant="outline"
-                  onClick={() => handleSubmit("draft")}
+                  onClick={() => handleSubmit("open", false)}
+                  disabled={
+                    createInvoice.isPending ||
+                    sendInvoice.isPending ||
+                    lineItems.length === 0 ||
+                    !studentId
+                  }
+                >
+                  {createInvoice.isPending ? "Creating..." : "Create"}
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => handleSubmit("draft", false)}
                   disabled={
                     createInvoice.isPending ||
                     sendInvoice.isPending ||

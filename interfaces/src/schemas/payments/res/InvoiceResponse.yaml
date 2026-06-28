@@ -69,6 +69,13 @@ properties:
     type: string
     format: date-time
     nullable: true
+  sentAt:
+    type: string
+    format: date-time
+    nullable: true
+    description: >-
+      Timestamp the invoice was last emailed to the billing contact, or null
+      if it has never been sent.
   notes:
     type: string
     nullable: true

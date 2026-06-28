@@ -116,6 +116,7 @@ export default function InvoiceDetail() {
 
   const meta = STATUS_META[invoice.status];
   const isDraft = invoice.status === "draft";
+  const hasBeenSent = invoice.sentAt !== null && invoice.sentAt !== undefined;
   const canSend = invoice.status !== "paid" && invoice.status !== "void";
   const canMarkPaid = invoice.status === "open" || invoice.status === "overdue";
   const canVoid = invoice.status !== "paid" && invoice.status !== "void";
@@ -234,6 +235,27 @@ export default function InvoiceDetail() {
                   <div className="font-medium">
                     <Badge variant={meta.variant}>{meta.label}</Badge>
                   </div>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Mail className="h-3 w-3" />
+                  Email
+                </div>
+                <div className="text-sm font-medium">
+                  {hasBeenSent ? (
+                    <span>
+                      Sent{" "}
+                      <span className="text-muted-foreground">
+                        on {formatDate(invoice.sentAt as string)}
+                      </span>
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground">
+                      Not sent yet
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -391,7 +413,7 @@ export default function InvoiceDetail() {
                   ) : (
                     <>
                       <Send className="h-4 w-4 mr-2" />
-                      {isDraft ? "Send invoice" : "Resend invoice"}
+                      {hasBeenSent ? "Resend invoice" : "Send invoice"}
                     </>
                   )}
                 </Button>
