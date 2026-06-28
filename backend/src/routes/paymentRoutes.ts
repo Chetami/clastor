@@ -3,6 +3,7 @@ import {
   listInvoices,
   getInvoiceById,
   getInvoicePdf,
+  getInvoiceEvents,
   createInvoice,
   updateInvoice,
   markInvoicePaid,
@@ -34,6 +35,12 @@ router.get("/:id", authenticateJWT, getInvoiceById);
  * Used for printing and downloading.
  */
 router.get("/:id/pdf", authenticateJWT, getInvoicePdf);
+
+/**
+ * GET /api/payments/:id/events
+ * Activity timeline for an invoice (created, sent, paid, etc.), oldest-first.
+ */
+router.get("/:id/events", authenticateJWT, getInvoiceEvents);
 
 /**
  * GET /api/payments/student/:studentId/invoices

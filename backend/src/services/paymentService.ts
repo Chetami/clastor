@@ -9,6 +9,7 @@ import {
 import { getStudentByIdFromFirestore } from "./studentService";
 import { getUserFromFirestore } from "./userService";
 import { updateLessonInFirestore, setLessonInvoiceIdInFirestore } from "./lessonService";
+import { recordInvoiceEventSafe } from "./invoiceEventService";
 import admin from "firebase-admin";
 import crypto from "crypto";
 
@@ -450,6 +451,14 @@ export async function markInvoicePaidFromStripe(
 
     await ref.update(updateData);
     await markLinkedLessonsPaid(invoice.lineItems);
+
+    // Record on the timeline. No actor name — this is system-initiated.
+    await recordInvoiceEventSafe(
+      invoiceId,
+      "paid_online",
+      "Paid online via Stripe",
+      null
+    );
   } catch (error) {
     console.error("Failed to mark invoice paid from Stripe webhook:", error);
     throw new Error(

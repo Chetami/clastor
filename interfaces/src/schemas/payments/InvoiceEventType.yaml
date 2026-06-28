@@ -1,0 +1,18 @@
+type: string
+enum:
+  - created
+  - updated
+  - sent
+  - resent
+  - payment_received
+  - paid_online
+  - voided
+description: |-
+  The kind of action recorded on an invoice timeline.
+  - created: invoice was first created
+  - updated: invoice details or line items were edited
+  - sent: invoice was emailed to the billing contact (first delivery)
+  - resent: invoice was emailed again
+  - payment_received: invoice marked as paid manually
+  - paid_online: invoice paid via Stripe online checkout
+  - voided: invoice was voided

@@ -1,0 +1,31 @@
+type: object
+required:
+  - id
+  - invoiceId
+  - type
+  - summary
+  - timestamp
+properties:
+  id:
+    type: string
+    description: Unique event identifier
+  invoiceId:
+    type: string
+    description: ID of the invoice this event belongs to
+  type:
+    $ref: './InvoiceEventType.yaml'
+  summary:
+    type: string
+    description: Human-readable description of what happened
+    example: Sent to parent.johnson@example.com
+  actorName:
+    type: string
+    nullable: true
+    description: >-
+      Display name of who performed the action (the tutor/admin). Null for
+      system-initiated actions like Stripe webhooks.
+  timestamp:
+    type: string
+    format: date-time
+    description: When the event occurred
+description: A single entry in an invoice's activity timeline.

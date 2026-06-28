@@ -1,0 +1,27 @@
+type: object
+required:
+  - id
+  - invoiceId
+  - type
+  - summary
+  - timestamp
+properties:
+  id:
+    type: string
+  invoiceId:
+    type: string
+  type:
+    $ref: '../InvoiceEventType.yaml'
+  summary:
+    type: string
+    example: Sent to parent.johnson@example.com
+  actorName:
+    type: string
+    nullable: true
+    description: >-
+      Display name of who performed the action. Null for system-initiated
+      actions like Stripe webhooks.
+  timestamp:
+    type: string
+    format: date-time
+description: Invoice timeline event response object (ISO string timestamp).

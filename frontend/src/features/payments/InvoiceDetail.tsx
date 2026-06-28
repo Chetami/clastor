@@ -32,6 +32,7 @@ import {
   useSendInvoice,
   getInvoicePdfRequest,
 } from "./api";
+import { InvoiceTimeline } from "./InvoiceTimeline";
 import {
   STATUS_META,
   PAYMENT_METHOD_LABELS,
@@ -67,7 +68,7 @@ export default function InvoiceDetail() {
       setTimeout(() => URL.revokeObjectURL(url), 60_000);
     } catch (err) {
       setActionError(
-        err instanceof Error ? err.message : "Failed to generate invoice PDF"
+        err instanceof Error ? err.message : "Failed to generate invoice PDF",
       );
     }
   }
@@ -79,7 +80,7 @@ export default function InvoiceDetail() {
       await sendInvoice.mutateAsync({ id: invoice.id });
     } catch (err) {
       setActionError(
-        err instanceof Error ? err.message : "Failed to send invoice"
+        err instanceof Error ? err.message : "Failed to send invoice",
       );
     }
   }
@@ -252,9 +253,7 @@ export default function InvoiceDetail() {
                       </span>
                     </span>
                   ) : (
-                    <span className="text-muted-foreground">
-                      Not sent yet
-                    </span>
+                    <span className="text-muted-foreground">Not sent yet</span>
                   )}
                 </div>
               </div>
@@ -329,11 +328,15 @@ export default function InvoiceDetail() {
                 <div className="w-full max-w-xs space-y-1 text-sm">
                   <div className="flex justify-between text-muted-foreground">
                     <span>Subtotal</span>
-                    <span>{formatCurrency(invoice.subtotal, invoice.currency)}</span>
+                    <span>
+                      {formatCurrency(invoice.subtotal, invoice.currency)}
+                    </span>
                   </div>
                   <div className="flex justify-between border-t pt-1 text-base font-semibold">
                     <span>Total</span>
-                    <span>{formatCurrency(invoice.total, invoice.currency)}</span>
+                    <span>
+                      {formatCurrency(invoice.total, invoice.currency)}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -392,7 +395,9 @@ export default function InvoiceDetail() {
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Subtotal</span>
-                  <span>{formatCurrency(invoice.subtotal, invoice.currency)}</span>
+                  <span>
+                    {formatCurrency(invoice.subtotal, invoice.currency)}
+                  </span>
                 </div>
                 <div className="flex justify-between border-t pt-2 text-lg font-semibold">
                   <span>Total</span>
@@ -420,6 +425,8 @@ export default function InvoiceDetail() {
               )}
             </CardContent>
           </Card>
+
+          <InvoiceTimeline invoiceId={invoice.id} />
         </div>
       </div>
     </div>

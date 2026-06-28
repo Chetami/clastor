@@ -5,6 +5,7 @@ import type {
   MarkPaidRequest,
   InvoiceResponse,
   InvoiceListResponse,
+  InvoiceEventListResponse,
   InvoiceStatus,
 } from "@examify-tms/interfaces";
 
@@ -85,5 +86,14 @@ export async function deleteInvoiceRequest(
   id: string,
 ): Promise<{ message: string }> {
   const response = await api.delete<{ message: string }>(`/api/payments/${id}`);
+  return response.data;
+}
+
+export async function listInvoiceEventsRequest(
+  id: string,
+): Promise<InvoiceEventListResponse> {
+  const response = await api.get<InvoiceEventListResponse>(
+    `/api/payments/${id}/events`,
+  );
   return response.data;
 }

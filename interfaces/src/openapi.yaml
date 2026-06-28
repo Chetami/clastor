@@ -158,6 +158,14 @@ components:
       $ref: './schemas/payments/res/InvoiceResponse.yaml'
     InvoiceListResponse:
       $ref: './schemas/payments/res/InvoiceListResponse.yaml'
+    InvoiceEventType:
+      $ref: './schemas/payments/InvoiceEventType.yaml'
+    InvoiceEvent:
+      $ref: './schemas/payments/InvoiceEvent.yaml'
+    InvoiceEventResponse:
+      $ref: './schemas/payments/res/InvoiceEventResponse.yaml'
+    InvoiceEventListResponse:
+      $ref: './schemas/payments/res/InvoiceEventListResponse.yaml'
     # Stripe Connect Schemas
     StripeConnectStatusResponse:
       $ref: './schemas/stripe/StripeConnectStatusResponse.yaml'

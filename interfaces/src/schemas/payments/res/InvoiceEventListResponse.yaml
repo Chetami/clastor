@@ -1,0 +1,12 @@
+type: object
+required:
+  - data
+  - total
+properties:
+  data:
+    type: array
+    items:
+      $ref: './InvoiceEventResponse.yaml'
+  total:
+    type: integer
+description: A chronologically ordered list of invoice timeline events.

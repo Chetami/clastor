@@ -19,6 +19,9 @@ import {
   InvoiceResponse,
   InvoiceListResponse,
   InvoiceStatus,
+  InvoiceEvent,
+  InvoiceEventResponse,
+  InvoiceEventListResponse,
   ApiError,
 } from "@examify-tms/interfaces";
 import { canViewInvoice, canEditInvoice, canDeleteInvoice } from "../permissions/paymentPermissions";
@@ -29,6 +32,10 @@ import { resolveTutorNames } from "../services/tutorResolver";
 import { isStripeConfigured } from "../config/stripe";
 import { getPublicApiUrl } from "../config/email";
 import { getStripeAccountRecord } from "../services/stripeConnectService";
+import {
+  recordInvoiceEventSafe,
+  listInvoiceEventsFromFirestore,
+} from "../services/invoiceEventService";
 
 /**
  * Convert an Invoice (Date-typed) to an InvoiceResponse (ISO string-typed).
@@ -323,6 +330,15 @@ export async function sendInvoice(
     // unsent invoices (e.g. those opened without sending).
     await markInvoiceSentInFirestore(req.params.id);
 
+    const wasAlreadySent =
+      invoice.sentAt !== null && invoice.sentAt !== undefined;
+    await recordInvoiceEventSafe(
+      req.params.id,
+      wasAlreadySent ? "resent" : "sent",
+      `${wasAlreadySent ? "Resent" : "Sent"} to ${invoice.billingEmail}`,
+      await safeGetActorName(req.user.uid)
+    );
+
     const updated = await getInvoiceByIdFromFirestore(req.params.id);
     if (!updated) {
       res.status(404).json({ message: "Invoice not found" });
@@ -351,6 +367,61 @@ async function safeGetUser(uid: string) {
 }
 
 /**
+ * Resolve the display name of the authenticated user for timeline events.
+ * Best-effort: returns null if the user record can't be loaded (the event
+ * is still recorded, just without an actor attribution).
+ */
+async function safeGetActorName(uid: string | undefined): Promise<string | null> {
+  if (!uid) return null;
+  const user = await safeGetUser(uid);
+  return user?.name ?? null;
+}
+
+/**
+ * Build a short human-readable summary of which fields an update touched,
+ * for the invoice timeline. Only mentions keys that were actually provided.
+ */
+function summarizeInvoiceUpdate(data: UpdateInvoiceRequest): string {
+  const parts: string[] = [];
+  if (data.lineItems !== undefined && data.lineItems !== null) {
+    parts.push("line items");
+  }
+  if (data.dueDate !== undefined && data.dueDate !== null) {
+    parts.push("due date");
+  }
+  if (data.paymentMethod !== undefined) {
+    parts.push("payment method");
+  }
+  if (data.notes !== undefined) {
+    parts.push("notes");
+  }
+  if (data.status !== undefined) {
+    parts.push(`status to ${data.status}`);
+  }
+  if (parts.length === 0) return "Invoice updated";
+  return `Updated ${parts.join(", ")}`;
+}
+
+/**
+ * Convert an InvoiceEvent (Date-typed) to an InvoiceEventResponse
+ * (ISO string-typed).
+ */
+function toInvoiceEventResponse(
+  event: InvoiceEvent
+): InvoiceEventResponse {
+  const toIso = (v: any) =>
+    v instanceof Date ? v.toISOString() : v;
+  return {
+    id: event.id,
+    invoiceId: event.invoiceId,
+    type: event.type,
+    summary: event.summary,
+    actorName: event.actorName ?? null,
+    timestamp: toIso(event.timestamp),
+  };
+}
+
+/**
  * Create a new invoice.
  */
 export async function createInvoice(
@@ -364,6 +435,14 @@ export async function createInvoice(
     }
 
     const invoice = await createInvoiceInFirestore(req.body, req.user.uid);
+
+    await recordInvoiceEventSafe(
+      invoice.id,
+      "created",
+      `Invoice created for ${invoice.customerName}`,
+      await safeGetActorName(req.user.uid)
+    );
+
     res.status(201).json(toInvoiceResponse(invoice));
   } catch (error) {
     console.error("Create invoice failed:", error);
@@ -400,6 +479,13 @@ export async function updateInvoice(
     }
 
     await updateInvoiceInFirestore(req.params.id, req.body);
+
+    await recordInvoiceEventSafe(
+      req.params.id,
+      "updated",
+      summarizeInvoiceUpdate(req.body),
+      await safeGetActorName(req.user.uid)
+    );
 
     const updated = await getInvoiceByIdFromFirestore(req.params.id);
     if (!updated) {
@@ -447,6 +533,15 @@ export async function updateInvoice(
 
     await markInvoicePaidInFirestore(req.params.id, req.body ?? {});
 
+    await recordInvoiceEventSafe(
+      req.params.id,
+      "payment_received",
+      `Marked as paid${
+        req.body?.paymentMethod ? ` via ${req.body.paymentMethod}` : ""
+      }`,
+      await safeGetActorName(req.user.uid)
+    );
+
     const updated = await getInvoiceByIdFromFirestore(req.params.id);
     if (!updated) {
       res.status(404).json({ message: "Invoice not found" });
@@ -488,6 +583,13 @@ export async function voidInvoice(
     }
 
     await voidInvoiceInFirestore(req.params.id);
+
+    await recordInvoiceEventSafe(
+      req.params.id,
+      "voided",
+      "Invoice voided",
+      await safeGetActorName(req.user.uid)
+    );
 
     const updated = await getInvoiceByIdFromFirestore(req.params.id);
     if (!updated) {
@@ -581,6 +683,42 @@ export async function getStudentDebt(
   } catch (error) {
     console.error("Get student debt failed:", error);
     const message = error instanceof Error ? error.message : "Failed to get student debt";
+    res.status(500).json({ message });
+  }
+}
+
+/**
+ * Get the activity timeline for a single invoice (created, sent, paid, etc.),
+ * oldest-first. Visibility follows the same invoice-view permission.
+ */
+export async function getInvoiceEvents(
+  req: Request<{ id: string }>,
+  res: Response<InvoiceEventListResponse | ApiError>
+): Promise<void> {
+  try {
+    if (!req.user) {
+      res.status(401).json({ message: "Unauthorized" });
+      return;
+    }
+
+    const invoice = await getInvoiceByIdFromFirestore(req.params.id);
+    if (!invoice) {
+      res.status(404).json({ message: "Invoice not found" });
+      return;
+    }
+
+    if (!canViewInvoice(invoice, req)) {
+      res.status(403).json({ message: "Forbidden" });
+      return;
+    }
+
+    const events = await listInvoiceEventsFromFirestore(req.params.id);
+    const data = events.map(toInvoiceEventResponse);
+
+    res.status(200).json({ data, total: data.length });
+  } catch (error) {
+    console.error("Get invoice events failed:", error);
+    const message = error instanceof Error ? error.message : "Failed to get invoice events";
     res.status(500).json({ message });
   }
 }

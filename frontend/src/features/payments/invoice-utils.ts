@@ -52,6 +52,17 @@ export function formatDate(iso: string): string {
   });
 }
 
+export function formatDateTime(iso: string): string {
+  return new Date(iso).toLocaleString("en-AU", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+}
+
 export function isOverdue(invoice: InvoiceResponse): boolean {
   return (
     (invoice.status === "open" || invoice.status === "overdue") &&
