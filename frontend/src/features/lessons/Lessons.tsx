@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {
   CalendarClock,
   ChevronRight,
+  CircleDollarSign,
   Clock,
   Loader2,
   Repeat,
@@ -36,11 +37,19 @@ export default function Lessons() {
   const navigate = useNavigate();
   const { data: students = [] } = useListStudents();
   const [filter, setFilter] = useState<FilterTab>("upcoming");
+  const [unpaidOnly, setUnpaidOnly] = useState(false);
 
   // Cursor-paginated list: each page reads only ~PAGE_SIZE lessons on the
   // backend; pages accumulate here as the user loads more.
   const infinite = useListLessonsInfinite({ status: filter }, PAGE_SIZE);
-  const lessons = infinite.data?.pages.flatMap((p) => p.data) ?? [];
+  const lessons = useMemo(
+    () => infinite.data?.pages.flatMap((p) => p.data) ?? [],
+    [infinite.data],
+  );
+  const visibleLessons = useMemo(
+    () => (unpaidOnly ? lessons.filter((l) => !l.isPaid) : lessons),
+    [lessons, unpaidOnly],
+  );
   const isLoading = infinite.isLoading;
   const isFetchingNextPage = infinite.isFetchingNextPage;
   const hasNextPage = infinite.hasNextPage;
@@ -97,15 +106,27 @@ export default function Lessons() {
       {!isLoading && !error && (
         <Card>
           <CardHeader>
-            <div className="flex flex-wrap items-center gap-1 rounded-md border bg-muted/40 p-1">
-              {TABS.map((tab) => (
-                <FilterOption
-                  key={tab.value}
-                  checked={filter === tab.value}
-                  label={tab.label}
-                  onSelect={() => setFilter(tab.value)}
-                />
-              ))}
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center gap-1 rounded-md border bg-muted/40 p-1">
+                {TABS.map((tab) => (
+                  <FilterOption
+                    key={tab.value}
+                    checked={filter === tab.value}
+                    label={tab.label}
+                    onSelect={() => setFilter(tab.value)}
+                  />
+                ))}
+              </div>
+              <Button
+                variant={unpaidOnly ? "default" : "outline"}
+                size="sm"
+                className="h-8 shrink-0"
+                aria-pressed={unpaidOnly}
+                onClick={() => setUnpaidOnly((v) => !v)}
+              >
+                <CircleDollarSign className="h-4 w-4" />
+                Unpaid only
+              </Button>
             </div>
           </CardHeader>
           <CardContent>
@@ -118,8 +139,18 @@ export default function Lessons() {
               </div>
             ) : (
               <>
+                {visibleLessons.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
+                    <CircleDollarSign className="h-8 w-8 text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground">
+                      {hasNextPage
+                        ? "No unpaid lessons on the loaded pages — load more to keep looking."
+                        : "No unpaid lessons in this view."}
+                    </p>
+                  </div>
+                ) : (
                 <ul className="-mx-6 divide-y">
-                  {lessons.map((lesson) => {
+                  {visibleLessons.map((lesson) => {
                     const name =
                       studentMap[lesson.studentId] ?? "Unknown student";
                     const badge = lessonBadge(lesson);
@@ -193,6 +224,7 @@ export default function Lessons() {
                     );
                   })}
                 </ul>
+                )}
 
                 {hasNextPage && (
                   <div className="mt-4 flex justify-center border-t pt-4">
