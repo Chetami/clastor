@@ -63,6 +63,7 @@ import {
   getGoogleAuthUrl,
 } from "../schedule/api/requests";
 import { useListStudents } from "@/features/students/api";
+import { useSubjects } from "@/lib/subjects";
 import {
   ACCEPTANCE_LABELS,
   ATTENDANCE_LABELS,
@@ -110,12 +111,14 @@ export default function EventDetail() {
   const navigate = useNavigate();
   const { data: lesson, isLoading } = useGetLesson(eventId);
   const { data: students = [] } = useListStudents();
+  const subjects = useSubjects();
   const recordAttendance = useRecordAttendance(eventId!);
   const cancelLesson = useCancelLesson(eventId!);
   const notifyStudent = useNotifyStudent(eventId!);
   const updateLesson = useUpdateLesson(eventId!);
   const resyncLesson = useResyncLesson(eventId!);
   const [pickerError, setPickerError] = useState<string | null>(null);
+  const [subjectError, setSubjectError] = useState<string | null>(null);
   const [notifyOpen, setNotifyOpen] = useState(false);
   const [notifyMessage, setNotifyMessage] = useState("");
   const [meetLoading, setMeetLoading] = useState(false);
@@ -210,14 +213,21 @@ export default function EventDetail() {
 
   const end = lessonEndDate(lesson);
   const existingMeet = meetUrl(lesson.location);
-  const studentName =
-    students.find((s) => s.id === lesson.studentId)?.name ?? "Unknown student";
+  const student = students.find((s) => s.id === lesson.studentId);
+  const studentName = student?.name ?? "Unknown student";
+  const studentSubjects = student
+    ? subjects.filter((s) => student.subjectIds?.includes(s.id))
+    : [];
   const status = deriveLessonStatus(
     lesson.attendanceStatus,
     lesson.isCancelled,
   );
   const lessonFinished = isLessonFinished(lesson);
   const subject = lesson.subject;
+  const subjectOptions =
+    subject && !studentSubjects.some((s) => s.name === subject)
+      ? [{ id: "__current__", name: subject, color: null }, ...studentSubjects]
+      : studentSubjects;
 
   const notifiedAt = lesson.lastStudentNotifiedAt
     ? new Date(lesson.lastStudentNotifiedAt)
@@ -298,6 +308,18 @@ export default function EventDetail() {
     } catch (err) {
       setPickerError(
         err instanceof Error ? err.message : "Failed to update acceptance",
+      );
+    }
+  }
+
+  async function handleSubjectChange(value: string) {
+    if (!eventId) return;
+    setSubjectError(null);
+    try {
+      await updateLesson.mutateAsync({ subject: value || null });
+    } catch (err) {
+      setSubjectError(
+        err instanceof Error ? err.message : "Failed to update subject",
       );
     }
   }
@@ -453,13 +475,40 @@ export default function EventDetail() {
                 label="Student"
                 value={studentName}
               />
-              {subject && (
-                <DetailRow
-                  icon={<StickyNote className="h-4 w-4" />}
-                  label="Subject"
-                  value={subject}
-                />
-              )}
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 text-muted-foreground">
+                  <StickyNote className="h-4 w-4" />
+                </div>
+                <div className="min-w-0 space-y-1">
+                  <p className="text-xs text-muted-foreground">Subject</p>
+                  <Select
+                    value={subject ?? ""}
+                    onValueChange={handleSubjectChange}
+                    disabled={updateLesson.isPending}
+                  >
+                    <SelectTrigger className="h-8 w-full max-w-[220px]">
+                      <SelectValue
+                        placeholder={
+                          studentSubjects.length > 0
+                            ? "Select a subject"
+                            : "No subjects assigned"
+                        }
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">No subject</SelectItem>
+                      {subjectOptions.map((s) => (
+                        <SelectItem key={s.id} value={s.name}>
+                          {s.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {subjectError && (
+                    <p className="text-xs text-destructive">{subjectError}</p>
+                  )}
+                </div>
+              </div>
               <div className="flex items-start gap-3">
                 <div className="mt-0.5 text-muted-foreground">
                   {existingMeet ? (
