@@ -72,6 +72,9 @@ export default function CreateInvoice() {
   const [lineItemAmounts, setLineItemAmounts] = useState<
     Record<string, number>
   >({});
+  const [lineItemQuantities, setLineItemQuantities] = useState<
+    Record<string, number>
+  >({});
   const [billingEmail, setBillingEmail] = useState("");
   const [dueDate, setDueDate] = useState(() => {
     const d = new Date();
@@ -131,7 +134,10 @@ export default function CreateInvoice() {
       .filter((l) => selectedLessonIds.has(l.id))
       .map((lesson) => {
         const rateType = selectedStudent.rateType;
-        const quantity = defaultQuantity(rateType, lesson.durationMinutes);
+        const defaultQty = defaultQuantity(rateType, lesson.durationMinutes);
+        const quantityOverride = lineItemQuantities[lesson.id];
+        const quantity =
+          quantityOverride !== undefined ? quantityOverride : defaultQty;
         const override = lineItemAmounts[lesson.id];
         const unitAmount =
           override !== undefined
@@ -148,7 +154,7 @@ export default function CreateInvoice() {
           quantity,
         };
       });
-  }, [selectedStudent, unpaidLessons, selectedLessonIds, lineItemAmounts]);
+  }, [selectedStudent, unpaidLessons, selectedLessonIds, lineItemAmounts, lineItemQuantities]);
 
   const subtotal = useMemo(
     () =>
@@ -174,6 +180,14 @@ export default function CreateInvoice() {
   function updateAmount(lessonId: string, value: string) {
     const num = Number(value);
     setLineItemAmounts((prev) => ({
+      ...prev,
+      [lessonId]: Number.isNaN(num) ? 0 : num,
+    }));
+  }
+
+  function updateQuantity(lessonId: string, value: string) {
+    const num = Number(value);
+    setLineItemQuantities((prev) => ({
       ...prev,
       [lessonId]: Number.isNaN(num) ? 0 : num,
     }));
@@ -266,6 +280,7 @@ export default function CreateInvoice() {
                   setStudentId(v);
                   setSelectedLessonIds(new Set());
                   setLineItemAmounts({});
+                  setLineItemQuantities({});
                 }}
               >
                 <SelectTrigger>
@@ -470,8 +485,20 @@ export default function CreateInvoice() {
                             <TableCell className="text-sm">
                               {li.description}
                             </TableCell>
-                            <TableCell className="text-right text-sm text-muted-foreground">
-                              {li.quantity}
+                            <TableCell className="text-right">
+                              <Input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={
+                                  lineItemQuantities[li.lessonId] ??
+                                  li.quantity
+                                }
+                                onChange={(e) =>
+                                  updateQuantity(li.lessonId, e.target.value)
+                                }
+                                className="h-8 w-20 text-right"
+                              />
                             </TableCell>
                             <TableCell className="text-right">
                               <div className="flex items-center justify-end gap-1">
