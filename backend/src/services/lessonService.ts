@@ -31,7 +31,7 @@ function generateLessonId(): string {
 /**
  * Map a Firestore lesson document to a Lesson object
  */
-function mapLesson(id: string, data: admin.firestore.DocumentData): Lesson {
+export function mapLesson(id: string, data: admin.firestore.DocumentData): Lesson {
   return {
     id,
     tutorId: data.tutorId,
@@ -180,7 +180,7 @@ interface LessonCursor {
 const CURSOR_ENCODING = "base64url";
 
 /** Encode an opaque pagination cursor from a lesson. */
-function encodeCursor(lesson: Lesson): string {
+export function encodeCursor(lesson: Lesson): string {
   const payload: LessonCursor = {
     s: new Date(lesson.startDateTime as any).toISOString(),
     id: lesson.id,
@@ -189,7 +189,7 @@ function encodeCursor(lesson: Lesson): string {
 }
 
 /** Decode + validate an opaque pagination cursor. Throws on malformed input. */
-function decodeCursor(cursor: string): LessonCursor {
+export function decodeCursor(cursor: string): LessonCursor {
   let parsed: unknown;
   try {
     parsed = JSON.parse(

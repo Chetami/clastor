@@ -19,7 +19,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
  * tutor's catalogue (case-insensitive, trimmed). Returns the matched ids and
  * the names that could not be resolved so callers can report them.
  */
-function resolveSubjectIdsByName(
+export function resolveSubjectIdsByName(
   raw: string,
   subjects: Subject[]
 ): { ids: string[]; unresolved: string[] } {
@@ -54,7 +54,7 @@ function generateStudentId(): string {
  * the tutor's explicit override if set, otherwise the parent email,
  * otherwise the student's own email (which is always required).
  */
-function resolveBillingEmail(
+export function resolveBillingEmail(
   explicit: string | null | undefined,
   parentEmail: string | null | undefined,
   email: string
@@ -68,7 +68,7 @@ function resolveBillingEmail(
  * Coerce a raw subjectIds value into a clean string[]. Handles docs created
  * before the field existed (missing) or malformed values.
  */
-function coalesceSubjectIds(raw: unknown): string[] {
+export function coalesceSubjectIds(raw: unknown): string[] {
   return Array.isArray(raw)
     ? raw.filter((id): id is string => typeof id === "string")
     : [];
