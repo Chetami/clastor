@@ -1,0 +1,17 @@
+type: object
+required:
+  - name
+properties:
+  name:
+    type: string
+    description: Organisation display name
+    example: Acme Tutoring
+  logoUrl:
+    type: string
+    nullable: true
+    description: Optional organisation logo URL
+    example: https://example.com/logo.png
+description: |-
+  Request body for creating a new organisation
+  The caller becomes the first org_admin and their currentOrgId is set to the
+  new organisation (a fresh JWT is issued).

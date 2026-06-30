@@ -9,7 +9,7 @@ import {
 import {
   generateJWTForUser,
   getUserFromFirestore,
-  toUserInfo,
+  toUserInfoResolved,
   updateLastActive,
 } from "./userService";
 import type { User, UserInfo } from "@examify-tms/interfaces";
@@ -136,7 +136,7 @@ export async function rotateRefreshToken(
   await updateLastActive(user.id);
 
   const pair = await issueTokenPair(user, payload.familyId);
-  return { ...pair, user: toUserInfo(user) };
+  return { ...pair, user: await toUserInfoResolved(user) };
 }
 
 /**

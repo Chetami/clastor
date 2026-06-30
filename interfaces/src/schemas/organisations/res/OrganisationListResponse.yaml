@@ -1,0 +1,14 @@
+type: object
+required:
+  - organisations
+properties:
+  organisations:
+    type: array
+    description: >-
+      Organisations the caller is a member of (soft-deleted orgs excluded).
+      joinCode is omitted (members are not necessarily admins).
+    items:
+      $ref: '../Organisation.yaml'
+description: |-
+  Response listing the organisations the caller belongs to. Drives the org
+  switcher in the UI.

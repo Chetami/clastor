@@ -22,6 +22,13 @@ properties:
     example: user@example.com
   role:
     $ref: '../common/Role.yaml'
+  currentOrgId:
+    type: string
+    nullable: true
+    description: >-
+      ID of the organisation the user is currently operating in, or null for
+      personal mode. Switching re-issues the JWT with the new value baked in.
+    example: org_abc123
   avatarUrl:
     type: string
     nullable: true

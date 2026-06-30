@@ -1,0 +1,9 @@
+type: object
+required:
+  - organisation
+properties:
+  organisation:
+    $ref: '../Organisation.yaml'
+description: |-
+  Response wrapping a single organisation. The `joinCode` field is populated
+  only when the caller is an org_admin of the organisation.

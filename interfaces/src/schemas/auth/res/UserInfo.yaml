@@ -22,6 +22,22 @@ properties:
     example: admin@example.com
   role:
     $ref: '../../common/Role.yaml'
+  currentOrgId:
+    type: string
+    nullable: true
+    description: >-
+      ID of the organisation the user is currently operating in, or null for
+      personal mode. Present so the client knows which scope to render
+      without an extra fetch.
+    example: org_abc123
+  currentOrgRole:
+    nullable: true
+    allOf:
+      - $ref: '../../organisations/OrgMemberRole.yaml'
+    description: >-
+      The user's per-membership role in currentOrgId (org_admin | member), or
+      null when in personal mode. Lets the client gate org-admin UI without a
+      round-trip.
   avatarUrl:
     type: string
     nullable: true

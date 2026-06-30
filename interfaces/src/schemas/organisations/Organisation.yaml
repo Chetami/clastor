@@ -1,0 +1,54 @@
+type: object
+required:
+  - id
+  - name
+  - joinCode
+  - createdBy
+  - createdAt
+  - updatedAt
+properties:
+  id:
+    type: string
+    description: Unique organisation identifier
+    example: org_abc123
+  name:
+    type: string
+    description: Organisation display name
+    example: Acme Tutoring
+  logoUrl:
+    type: string
+    nullable: true
+    description: Optional organisation logo URL
+    example: https://example.com/logo.png
+  joinCode:
+    type: string
+    nullable: true
+    description: >-
+      Static, regenerable code tutors use to join the organisation via
+      POST /api/organisations/join. Returned ONLY when the caller is an
+      org_admin of this organisation; null otherwise.
+    example: ABC12345
+  createdBy:
+    type: string
+    description: Firebase Auth UID of the user who created the organisation (audit only).
+    example: abc123xyz456
+  deletedAt:
+    type: string
+    format: date-time
+    nullable: true
+    description: >-
+      Soft-delete timestamp. Non-null means the org is archived: hidden from
+      lists, blocks joins, and members lose access. Restore is a system_admin
+      action.
+  createdAt:
+    type: string
+    format: date-time
+    description: When the organisation was created
+  updatedAt:
+    type: string
+    format: date-time
+    description: When the organisation was last updated
+description: |-
+  Organisation interface
+  Represents a company that can have multiple tutors and multiple students
+  in the Firestore organisations collection

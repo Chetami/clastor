@@ -1,0 +1,46 @@
+type: object
+required:
+  - id
+  - orgId
+  - userId
+  - role
+  - joinedAt
+properties:
+  id:
+    type: string
+    description: Unique membership identifier
+    example: mem_abc123
+  orgId:
+    type: string
+    description: ID of the organisation this membership belongs to
+    example: org_abc123
+  userId:
+    type: string
+    description: Firebase Auth UID of the member user
+    example: abc123xyz456
+  role:
+    $ref: './OrgMemberRole.yaml'
+  name:
+    type: string
+    description: >-
+      Display name of the member user. Denormalised into list responses so the
+      UI can render the members table without extra fetches.
+    example: John Doe
+  email:
+    type: string
+    format: email
+    description: Email of the member user (denormalised for list responses).
+    example: john@example.com
+  avatarUrl:
+    type: string
+    nullable: true
+    description: Optional avatar URL of the member user (denormalised).
+    example: https://example.com/avatar.jpg
+  joinedAt:
+    type: string
+    format: date-time
+    description: When the user joined the organisation
+description: |-
+  Organisation membership interface
+  Represents a user's membership in an organisation in the Firestore
+  orgMembers collection. The role is per-membership, not a global user role.

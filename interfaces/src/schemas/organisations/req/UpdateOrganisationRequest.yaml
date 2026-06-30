@@ -1,0 +1,14 @@
+type: object
+properties:
+  name:
+    type: string
+    description: Organisation display name
+    example: Acme Tutoring
+  logoUrl:
+    type: string
+    nullable: true
+    description: Optional organisation logo URL
+    example: https://example.com/logo.png
+description: |-
+  Request body for updating organisation details
+  All fields optional; only provided fields are updated. org_admin only.

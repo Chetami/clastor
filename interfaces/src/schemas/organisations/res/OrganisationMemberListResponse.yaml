@@ -1,0 +1,12 @@
+type: object
+required:
+  - members
+properties:
+  members:
+    type: array
+    items:
+      $ref: '../OrganisationMember.yaml'
+description: |-
+  Response listing the members of an organisation. Visible to any member of
+  the org (so the members table can render), but role changes/removal are
+  org_admin only.

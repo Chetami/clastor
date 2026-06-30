@@ -8,9 +8,13 @@ import {
   WorkingHours,
 } from "@examify-tms/interfaces";
 import { generateToken } from "../utils/jwt";
+import { getMembershipRole } from "./orgMemberService";
 import { parse, isValid } from "date-fns";
 import admin from "firebase-admin";
 import crypto from "crypto";
+import { getOrganisationById } from "./organisationService";
+import { isMember } from "./orgMemberService";
+import { ValidationError, NotFoundError } from "../utils/httpError";
 
 /** The seven weekday keys stored on WorkingHours, Monday-first. */
 const WORKING_DAYS: (keyof WorkingHours)[] = [
@@ -72,6 +76,10 @@ export function normalizeWorkingHours(raw: unknown): WorkingHours | null {
 /**
  * Map a full User to the trimmed UserInfo returned to clients.
  * Centralized here so auth + user controllers stay in sync.
+ *
+ * `currentOrgRole` is left null here (it requires an orgMembers lookup). Call
+ * {@link toUserInfoResolved} to populate it for responses that need to gate
+ * org-admin UI on the client.
  */
 export function toUserInfo(user: User): UserInfo {
   return {
@@ -79,6 +87,8 @@ export function toUserInfo(user: User): UserInfo {
     name: user.name,
     email: user.email,
     role: user.role,
+    currentOrgId: user.currentOrgId ?? null,
+    currentOrgRole: null,
     avatarUrl: user.avatarUrl,
     currency: user.currency,
     reminderLeadTime: user.reminderLeadTime ?? null,
@@ -87,6 +97,19 @@ export function toUserInfo(user: User): UserInfo {
     onboardingComplete: user.onboardingComplete === true,
     tourSeen: user.tourSeen === true,
   };
+}
+
+/**
+ * Build a UserInfo with the per-org `currentOrgRole` resolved from orgMembers.
+ * When the user has no active org (personal mode) the role stays null. Use this
+ * for any response the client uses to gate org-admin UI (login, refresh,
+ * org switch). Falls back to {@link toUserInfo} if the role lookup fails.
+ */
+export async function toUserInfoResolved(user: User): Promise<UserInfo> {
+  const info = toUserInfo(user);
+  if (!info.currentOrgId) return info;
+  info.currentOrgRole = await getMembershipRole(user.id, info.currentOrgId);
+  return info;
 }
 
 /** Default currency for users who never set one (and for legacy docs). */
@@ -201,6 +224,7 @@ export async function getUserFromFirestore(uid: string): Promise<User> {
       name: userData!.name,
       email: userData!.email,
       role: userData!.role,
+      currentOrgId: typeof userData!.currentOrgId === "string" ? userData!.currentOrgId : null,
       avatarUrl: userData!.avatarUrl,
       currency: normalizeCurrency(userData!.currency),
       reminderLeadTime: normalizeReminderLeadTime(userData!.reminderLeadTime),
@@ -471,6 +495,41 @@ export async function updateUserSubjects(
 }
 
 /**
+ * Set the user's currently active organisation (org switcher). `orgId` null
+ * returns them to personal mode. A non-null orgId must reference an active org
+ * the user is a member of, else NotFoundError/ValidationError. Returns the
+ * refreshed User; the caller re-issues the access JWT to bake in currentOrgId.
+ */
+export async function updateUserCurrentOrg(
+  uid: string,
+  orgId: string | null,
+): Promise<User> {
+  if (orgId !== null) {
+    if (typeof orgId !== "string" || !orgId.trim()) {
+      throw new ValidationError("Invalid organisation id");
+    }
+    const org = await getOrganisationById(orgId);
+    if (!org) throw new NotFoundError("Organisation not found");
+    const member = await isMember(uid, orgId);
+    if (!member) {
+      throw new NotFoundError("Organisation not found");
+    }
+  }
+
+  try {
+    const firestore = getFirebaseFirestore();
+    await firestore.collection("users").doc(uid).update({
+      currentOrgId: orgId,
+      updatedAt: admin.firestore.Timestamp.now(),
+    });
+    return getUserFromFirestore(uid);
+  } catch (error) {
+    console.error("Failed to update current organisation:", error);
+    throw new Error("Failed to update current organisation");
+  }
+}
+
+/**
  * Mark the user's onboarding as finished (they completed or dismissed it).
  * Sets `onboardingComplete: true` and bumps `updatedAt`.
  * @param uid - User UID
@@ -537,6 +596,7 @@ export async function createUserInFirestore(
       name,
       email,
       role,
+      currentOrgId: null,
       avatarUrl,
       currency: normalizedCurrency,
       reminderLeadTime: null,
@@ -556,6 +616,7 @@ export async function createUserInFirestore(
       name,
       email,
       role,
+      currentOrgId: null,
       avatarUrl,
       currency: normalizedCurrency,
       reminderLeadTime: null,
@@ -578,7 +639,7 @@ export async function createUserInFirestore(
  * @returns JWT token string
  */
 export function generateJWTForUser(user: User): string {
-  return generateToken(user.id, user.email, user.role);
+  return generateToken(user.id, user.email, user.role, user.currentOrgId ?? null);
 }
 
 export interface GoogleConnection {

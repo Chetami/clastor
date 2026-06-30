@@ -28,13 +28,23 @@ export interface RefreshTokenPayload {
 }
 
 /**
- * Generate a JWT token for a user
+ * Generate a JWT token for a user.
+ *
+ * `currentOrgId` is baked into the access token so the backend can scope reads
+ * from the verified JWT alone (no per-request DB lookup). Null/undefined means
+ * personal mode. Switching org re-issues the token via this function.
  */
-export function generateToken(uid: string, email: string, role: Role): string {
+export function generateToken(
+  uid: string,
+  email: string,
+  role: Role,
+  currentOrgId?: string | null,
+): string {
   const payload: Omit<JwtPayload, "iat" | "exp"> = {
     uid,
     email,
     role,
+    currentOrgId: currentOrgId ?? null,
   };
 
   return jwt.sign(payload, JWT_SECRET, {

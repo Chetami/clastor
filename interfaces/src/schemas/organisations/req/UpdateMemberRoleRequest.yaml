@@ -1,0 +1,9 @@
+type: object
+required:
+  - role
+properties:
+  role:
+    $ref: '../OrgMemberRole.yaml'
+description: |-
+  Request body for changing a member's per-organisation role. org_admin only.
+  Demoting/removing the last org_admin is forbidden to prevent lockout.

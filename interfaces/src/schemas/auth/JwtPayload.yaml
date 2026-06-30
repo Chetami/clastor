@@ -17,6 +17,14 @@ properties:
     example: admin@example.com
   role:
     $ref: '../common/Role.yaml'
+  currentOrgId:
+    type: string
+    nullable: true
+    description: >-
+      ID of the organisation the user is currently operating in, or null for
+      personal mode. Mirrors users.currentOrgId; baked into the JWT on login
+      and re-issued whenever the user switches organisation.
+    example: org_abc123
   iat:
     type: integer
     description: Issued at timestamp (Unix epoch)

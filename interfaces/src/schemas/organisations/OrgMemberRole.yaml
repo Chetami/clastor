@@ -1,0 +1,10 @@
+type: string
+enum:
+  - org_admin
+  - member
+description: |-
+  Per-organisation membership role (NOT a global user role).
+  - org_admin: sees and manages all data within the organisation (students,
+    lessons, invoices) and can manage members, edit the org, regenerate the
+    join code, and soft-delete the org.
+  - member: a tutor within the org who sees only their own data.

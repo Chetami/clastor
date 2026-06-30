@@ -82,6 +82,27 @@ components:
     # Legacy Student Schema (kept for compatibility)
     Student:
       $ref: './schemas/students/Student.yaml'
+    # Organisation Schemas
+    OrgMemberRole:
+      $ref: './schemas/organisations/OrgMemberRole.yaml'
+    Organisation:
+      $ref: './schemas/organisations/Organisation.yaml'
+    OrganisationMember:
+      $ref: './schemas/organisations/OrganisationMember.yaml'
+    CreateOrganisationRequest:
+      $ref: './schemas/organisations/req/CreateOrganisationRequest.yaml'
+    UpdateOrganisationRequest:
+      $ref: './schemas/organisations/req/UpdateOrganisationRequest.yaml'
+    JoinOrganisationRequest:
+      $ref: './schemas/organisations/req/JoinOrganisationRequest.yaml'
+    UpdateMemberRoleRequest:
+      $ref: './schemas/organisations/req/UpdateMemberRoleRequest.yaml'
+    OrganisationResponse:
+      $ref: './schemas/organisations/res/OrganisationResponse.yaml'
+    OrganisationListResponse:
+      $ref: './schemas/organisations/res/OrganisationListResponse.yaml'
+    OrganisationMemberListResponse:
+      $ref: './schemas/organisations/res/OrganisationMemberListResponse.yaml'
     # Lesson Enums
     AttendanceStatus:
       $ref: './schemas/lessons/AttendanceStatus.yaml'

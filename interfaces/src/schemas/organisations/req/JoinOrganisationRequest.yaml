@@ -1,0 +1,13 @@
+type: object
+required:
+  - joinCode
+properties:
+  joinCode:
+    type: string
+    description: >-
+      The organisation's static join code. Case-insensitive match. Joining an
+      org already a member of is idempotent (returns the existing membership).
+    example: ABC12345
+description: |-
+  Request body for joining an organisation by its join code
+  The caller is added as a `member`.

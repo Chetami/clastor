@@ -20,8 +20,31 @@ properties:
     example: stu_123
   tutorId:
     type: string
-    description: ID of the tutor assigned to this student
+    description: >-
+      Legacy single-tutor field. Kept for backward compatibility with existing
+      writes and personal-mode (non-org) students. For organisation students,
+      prefer `tutorIds`. The read layer falls back to this when `tutorIds`
+      is absent.
     example: tutor_abc123
+  organisationId:
+    type: string
+    nullable: true
+    description: >-
+      ID of the organisation this student belongs to, or null for a legacy /
+      personal-mode student (visible only to its tutor in personal mode).
+    example: org_abc123
+  tutorIds:
+    type: array
+    description: >-
+      Tutors assigned to this organisation student (organisation students can
+      be taught by multiple tutors). Absent for legacy personal students,
+      which use the single `tutorId` field instead; readers should treat
+      absent as an empty array.
+    items:
+      type: string
+    example:
+      - tutor_abc123
+      - tutor_def456
   name:
     type: string
     description: Student's full name
