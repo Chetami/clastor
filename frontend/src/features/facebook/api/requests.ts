@@ -67,15 +67,47 @@ export async function selectFacebookPageRequest(
 }
 
 /**
- * Publish a post (text + optional image URL(s)) to the tutor's connected
- * Facebook Page.
+ * Publish payload: a message, optional public image URL(s), and/or uploaded
+ * image files. When files are present the request is sent as multipart
+ * form-data so the backend can forward the bytes straight to Facebook.
+ */
+export interface PublishPostPayload {
+  message: string;
+  imageUrl?: string | string[];
+  files?: File[];
+}
+
+/**
+ * Publish a post (text + optional images) to the tutor's connected Facebook
+ * Page. Image URLs go as repeated `imageUrl` fields; uploaded files as `images`
+ * multipart parts. Pure-URL/text posts still send as JSON.
  */
 export async function publishFacebookPostRequest(
-  data: PublishFacebookPostRequest,
+  data: PublishPostPayload,
 ): Promise<PublishFacebookPostResponse> {
+  const urls = Array.isArray(data.imageUrl)
+    ? data.imageUrl
+    : data.imageUrl
+      ? [data.imageUrl]
+      : [];
+
+  if (data.files && data.files.length > 0) {
+    const form = new FormData();
+    form.append("message", data.message);
+    for (const url of urls) form.append("imageUrl", url);
+    for (const file of data.files) form.append("images", file);
+    const response = await api.post<PublishFacebookPostResponse>(
+      "/api/facebook/posts",
+      form,
+    );
+    return response.data;
+  }
+
+  const body: PublishFacebookPostRequest = { message: data.message };
+  if (data.imageUrl) body.imageUrl = data.imageUrl;
   const response = await api.post<PublishFacebookPostResponse>(
     "/api/facebook/posts",
-    data,
+    body,
   );
   return response.data;
 }

@@ -26,7 +26,6 @@ vi.mock("../src/config/facebookOAuth", () => ({
 import {
   publishPost,
   publishTextPost,
-  publishPhoto,
   publishMultiPhotoPost,
 } from "../src/services/facebookService";
 
@@ -56,18 +55,31 @@ describe("publishPost routing", () => {
     });
   });
 
-  it("routes a single image to /photos as a published photo", async () => {
-    posts.mockResolvedValueOnce({ data: { post_id: "123_555", id: "777" } });
+  it("routes a single image through staging + a feed post (attached_media)", async () => {
+    // One unpublished staging upload, then the feed post.
+    posts
+      .mockResolvedValueOnce({ data: { id: "fid1" } })
+      .mockResolvedValueOnce({ data: { id: "123_single" } });
 
-    const result = await publishPost(PAGE_ID, TOKEN, "cap", "https://img/a.png");
+    const result = await publishPost(PAGE_ID, TOKEN, "cap", [
+      { kind: "url", url: "https://img/a.png" },
+    ]);
 
-    const [url, body] = posts.mock.calls[0];
-    expect(url).toBe("https://graph.facebook.com/vTEST/123/photos");
-    expect(body.url).toBe("https://img/a.png");
-    expect(body.caption).toBe("cap");
-    expect(body.published).toBe(true);
-    // Prefers post_id over the photo id.
-    expect(result.postId).toBe("123_555");
+    expect(posts).toHaveBeenCalledTimes(2);
+    // First: unpublished staging upload (JSON, not multipart).
+    expect(posts.mock.calls[0][0]).toBe(
+      "https://graph.facebook.com/vTEST/123/photos",
+    );
+    expect(posts.mock.calls[0][1].url).toBe("https://img/a.png");
+    expect(posts.mock.calls[0][1].published).toBe(false);
+    // Then: a feed post referencing the staged media, carrying the message.
+    expect(posts.mock.calls[1][0]).toBe(
+      "https://graph.facebook.com/vTEST/123/feed",
+    );
+    const feedBody = posts.mock.calls[1][1];
+    expect(feedBody.message).toBe("cap");
+    expect(feedBody.attached_media).toEqual([{ media_fbid: "fid1" }]);
+    expect(result.postId).toBe("123_single");
   });
 
   it("routes multiple images to staged uploads + one feed post", async () => {
@@ -78,8 +90,8 @@ describe("publishPost routing", () => {
       .mockResolvedValueOnce({ data: { id: "123_multi" } });
 
     const result = await publishPost(PAGE_ID, TOKEN, "multi", [
-      "https://img/a.png",
-      "https://img/b.png",
+      { kind: "url", url: "https://img/a.png" },
+      { kind: "url", url: "https://img/b.png" },
     ]);
 
     expect(posts).toHaveBeenCalledTimes(3);
@@ -109,12 +121,6 @@ describe("publishTextPost requires a post id", () => {
 });
 
 describe("permalink fallback", () => {
-  it("prefixes a bare photo id with the page id", async () => {
-    posts.mockResolvedValueOnce({ data: { id: "777" } });
-    const result = await publishPhoto(PAGE_ID, TOKEN, "https://img/a.png");
-    expect(result.permalink).toBe("https://www.facebook.com/123_777");
-  });
-
   it("keeps a feed id that already contains the page id", async () => {
     posts.mockResolvedValueOnce({ data: { id: "123_456" } });
     const result = await publishTextPost(PAGE_ID, TOKEN, "hi");
@@ -135,7 +141,10 @@ describe("permalink fallback", () => {
     const result = await publishMultiPhotoPost(
       PAGE_ID,
       TOKEN,
-      ["https://a", "https://b"],
+      [
+        { kind: "url", url: "https://a" },
+        { kind: "url", url: "https://b" },
+      ],
       "m",
     );
     expect(result.permalink).toBe("https://www.facebook.com/123_mult");

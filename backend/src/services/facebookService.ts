@@ -144,62 +144,83 @@ export async function publishTextPost(
   }
 }
 
+/** A single photo to attach to a post, from either a public URL or raw bytes. */
+export type PhotoSource =
+  | { kind: "url"; url: string }
+  | {
+      kind: "file";
+      buffer: Buffer;
+      filename: string;
+      mimetype: string;
+    };
+
 /**
- * Publish a single photo as a post to a Page. `imageUrl` must be publicly
- * reachable by Facebook's crawlers.
+ * Stage a public-URL image to the Page (unpublished) and return its media fid,
+ * so it can be referenced later via `attached_media` on a feed post.
  */
-export async function publishPhoto(
+async function stageUrlToFid(
   pageId: string,
   pageToken: string,
-  imageUrl: string,
-  caption?: string,
-): Promise<PublishedPost> {
-  try {
-    const res = await axios.post(
-      `${graphBaseUrl()}/${pageId}/photos`,
-      {
-        url: imageUrl,
-        caption,
-        published: true,
-        access_token: pageToken,
-        appsecret_proof: appsecretProof(pageToken),
-      },
-    );
-    const postId = res.data?.post_id ?? res.data?.id;
-    if (typeof postId !== "string") {
-      throw new Error("No post id in response");
-    }
-    return { postId, permalink: permalinkFor(pageId, postId) };
-  } catch (error) {
-    throw graphError(error, "Failed to publish Facebook photo");
+  url: string,
+): Promise<string> {
+  const proof = appsecretProof(pageToken);
+  const upload = await axios.post(`${graphBaseUrl()}/${pageId}/photos`, {
+    url,
+    published: false,
+    access_token: pageToken,
+    appsecret_proof: proof,
+  });
+  const fid = upload.data?.id;
+  if (typeof fid !== "string") {
+    throw new Error("Failed to stage a photo for the post");
   }
+  return fid;
 }
 
 /**
- * Publish a multi-photo post: upload each image with `published:false` to get
- * media fids, then create a feed post referencing them via `attached_media`.
+ * Stage raw image bytes to the Page (unpublished) using Graph's multipart
+ * `source` field, returning the media fid. Lets us support uploads without ever
+ * hosting the file ourselves — the bytes go straight to Facebook.
+ */
+async function stageFileToFid(
+  pageId: string,
+  pageToken: string,
+  file: { buffer: Buffer; filename: string; mimetype: string },
+): Promise<string> {
+  const proof = appsecretProof(pageToken);
+  const form = new FormData();
+  form.append("source", new Blob([file.buffer], { type: file.mimetype }), file.filename);
+  form.append("published", "false");
+  form.append("access_token", pageToken);
+  form.append("appsecret_proof", proof);
+  const upload = await axios.post(`${graphBaseUrl()}/${pageId}/photos`, form);
+  const fid = upload.data?.id;
+  if (typeof fid !== "string") {
+    throw new Error("Failed to stage an uploaded photo for the post");
+  }
+  return fid;
+}
+
+/**
+ * Publish a photo post: stage every source (URL or file) with
+ * `published:false` to collect media fids, then create a feed post referencing
+ * them via `attached_media`.
  */
 export async function publishMultiPhotoPost(
   pageId: string,
   pageToken: string,
-  imageUrls: string[],
+  photos: PhotoSource[],
   message?: string,
 ): Promise<PublishedPost> {
   try {
     const proof = appsecretProof(pageToken);
-    // Upload each image unpublished to collect a media fid.
+    // Stage each source (URL or uploaded file) to collect a media fid.
     const mediaFids: string[] = [];
-    for (const url of imageUrls) {
-      const upload = await axios.post(`${graphBaseUrl()}/${pageId}/photos`, {
-        url,
-        published: false,
-        access_token: pageToken,
-        appsecret_proof: proof,
-      });
-      const fid = upload.data?.id;
-      if (typeof fid !== "string") {
-        throw new Error("Failed to stage a photo for the multi-photo post");
-      }
+    for (const photo of photos) {
+      const fid =
+        photo.kind === "url"
+          ? await stageUrlToFid(pageId, pageToken, photo.url)
+          : await stageFileToFid(pageId, pageToken, photo);
       mediaFids.push(fid);
     }
 
@@ -220,26 +241,21 @@ export async function publishMultiPhotoPost(
 }
 
 /**
- * Route a publish request to the right Graph call based on the image input:
- * text-only, single photo, or multi-photo.
+ * Route a publish request to the right Graph call based on the attachments:
+ * text-only goes to `/feed`; anything with images (one or many, URL or file) is
+ * staged then published via one `/feed` post with `attached_media`. The staging
+ * path is used even for a single photo because the `/{page-id}/photos` edge no
+ * longer accepts a caption/message for Pages — `attached_media` on `/feed` is
+ * the supported way to post a photo with text.
  */
 export async function publishPost(
   pageId: string,
   pageToken: string,
   message: string,
-  imageUrl?: string | string[],
+  sources: PhotoSource[] = [],
 ): Promise<PublishedPost> {
-  const urls = Array.isArray(imageUrl)
-    ? imageUrl.filter(Boolean)
-    : imageUrl
-      ? [imageUrl]
-      : [];
-
-  if (urls.length === 0) {
+  if (sources.length === 0) {
     return publishTextPost(pageId, pageToken, message);
   }
-  if (urls.length === 1) {
-    return publishPhoto(pageId, pageToken, urls[0], message || undefined);
-  }
-  return publishMultiPhotoPost(pageId, pageToken, urls, message || undefined);
+  return publishMultiPhotoPost(pageId, pageToken, sources, message || undefined);
 }

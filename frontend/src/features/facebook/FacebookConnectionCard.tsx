@@ -150,6 +150,7 @@ export function FacebookConnectionCard({ returnTo }: { returnTo?: string }) {
             <div className="flex flex-wrap items-center gap-2">
               <Button
                 variant="outline"
+                size="sm"
                 onClick={() => disconnect.mutate()}
                 disabled={disconnect.isPending}
               >
@@ -192,6 +193,7 @@ export function FacebookConnectionCard({ returnTo }: { returnTo?: string }) {
             </p>
             <div>
               <Button
+                size="sm"
                 onClick={() => connect.mutate()}
                 disabled={connect.isPending}
               >
