@@ -61,6 +61,11 @@ components:
       $ref: './schemas/users/WorkingDayWindow.yaml'
     WorkingHours:
       $ref: './schemas/users/WorkingHours.yaml'
+    # Invoice customisation (tutor preference)
+    BankDetails:
+      $ref: './schemas/users/BankDetails.yaml'
+    InvoiceSettings:
+      $ref: './schemas/users/InvoiceSettings.yaml'
     # Student Enums
     RateType:
       $ref: './schemas/students/RateType.yaml'

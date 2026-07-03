@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   FileText,
   Mail,
@@ -45,8 +46,15 @@ export default function Templates() {
       <div>
         <h2 className="text-lg font-semibold tracking-tight">Templates</h2>
         <p className="text-sm text-muted-foreground">
-          A preview of what gets sent to your students and their families. These
-          are for viewing only — customisation is coming soon.
+          A preview of what gets sent to your students and their families.
+          Customise your invoice details in{" "}
+          <Link
+            to="/settings"
+            className="text-foreground underline underline-offset-4"
+          >
+            Settings
+          </Link>
+          .
         </p>
       </div>
 

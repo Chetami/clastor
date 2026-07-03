@@ -1,0 +1,26 @@
+type: object
+nullable: true
+description: |-
+  Bank account details shown on a tutor's invoices so customers know where to
+  send payment. The whole object is nullable: null means no bank details are
+  configured (nothing is printed on the invoice). Individual fields are
+  nullable so a tutor can save partial details without being forced to fill
+  every field.
+properties:
+  accountName:
+    type: string
+    nullable: true
+    description: Account holder name as it appears on the bank account
+    example: Jordan Lee
+  bsb:
+    type: string
+    nullable: true
+    description: >-
+      Australian Bank-State-Branch code. Stored as a free-form string so the
+      tutor can format it however they like (e.g. "123-456").
+    example: "063-000"
+  accountNumber:
+    type: string
+    nullable: true
+    description: Bank account number shown on the invoice
+    example: "12345678"

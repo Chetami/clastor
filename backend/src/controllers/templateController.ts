@@ -27,13 +27,14 @@ export function listAllTemplates(
 /**
  * GET /api/templates/invoice/preview
  * Render the invoice template against sample data and return the PDF.
+ * Personalised with the requesting tutor's name, ABN, and bank details.
  */
 export async function getInvoicePreview(
-  _req: Request,
+  req: Request,
   res: Response,
 ): Promise<void> {
   try {
-    const pdf = await previewInvoicePdf();
+    const pdf = await previewInvoicePdf(req.user?.uid);
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader(
       "Content-Disposition",

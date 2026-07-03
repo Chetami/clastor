@@ -1,6 +1,7 @@
 import { api } from "@/lib/api";
 import type {
   GoogleConnectionStatus,
+  InvoiceSettings,
   ReminderLeadTime,
   UserInfo,
   WorkingHours,
@@ -66,6 +67,20 @@ export async function updateUserWorkingHoursRequest(
   workingHours: WorkingHours | null,
 ): Promise<UserInfo> {
   const response = await api.patch<UserInfo>("/api/users/me", { workingHours });
+  return response.data;
+}
+
+/**
+ * Save the tutor's invoice customisation (ABN + bank details). Persisted on the
+ * user document and read back by the invoice PDF renderer, so invoices and the
+ * invoice template preview reflect the change. Returns the updated user.
+ */
+export async function updateInvoiceSettingsRequest(
+  invoiceSettings: InvoiceSettings,
+): Promise<UserInfo> {
+  const response = await api.patch<UserInfo>("/api/users/me", {
+    invoiceSettings,
+  });
   return response.data;
 }
 
