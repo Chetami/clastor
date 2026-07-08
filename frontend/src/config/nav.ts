@@ -9,6 +9,7 @@ import {
   MessageSquareText,
   GraduationCap,
   LayoutTemplate,
+  Building2,
   type LucideIcon,
 } from "lucide-react";
 import type { Role } from "@examify-tms/interfaces";
@@ -24,6 +25,12 @@ export type NavItem = {
 
 const allNavItems: NavItem[] = [
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  {
+    title: "Organisations",
+    href: "/organisations",
+    icon: Building2,
+    roles: ["tutor"],
+  },
   { title: "Students", href: "/students", icon: Users, roles: ["tutor"] },
   { title: "Schedule", href: "/schedule", icon: CalendarDays, roles: ["tutor"] },
   { title: "Lessons", href: "/lessons", icon: BookOpen, roles: ["tutor"] },

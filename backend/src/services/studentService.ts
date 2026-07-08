@@ -8,6 +8,7 @@ import {
   Subject,
 } from "@examify-tms/interfaces";
 import { getUserFromFirestore } from "./userService";
+import type { OrgScope } from "./orgScope";
 import admin from "firebase-admin";
 import crypto from "crypto";
 
@@ -79,30 +80,57 @@ export function coalesceSubjectIds(raw: unknown): string[] {
  * @param userId - ID of the authenticated user
  * @param role - Role of the authenticated user ('tutor' or 'system_admin')
  * @param subjectId - Optional subject id to filter by (array-contains)
+ * @param scope - Optional organisation read scope (tutors only). When provided
+ *   and not personal, filtering switches from the legacy `tutorId` filter to
+ *   the organisation's `organisationId`. system_admin always sees everything.
  * @returns Array of Student objects
  */
 export async function listStudentsFromFirestore(
   userId: string,
   role: string,
-  subjectId?: string
+  subjectId?: string,
+  scope?: OrgScope,
 ): Promise<Student[]> {
   try {
     const firestore = getFirebaseFirestore();
     let snapshot: admin.firestore.QuerySnapshot;
+    // Whether the subjectId filter is applied post-query in memory (needed when
+    // the query already uses an array-contains for membership, since Firestore
+    // forbids two array-contains clauses in one query).
+    let inMemorySubjectFilter = false;
 
-    // Tutors can only see their own students
-    if (role === "tutor") {
-      let q: admin.firestore.Query = firestore
-        .collection("students")
-        .where("tutorId", "==", userId);
+    // System admins can see all students
+    if (role === "system_admin") {
+      let q: admin.firestore.Query = firestore.collection("students");
       if (subjectId) {
         q = q.where("subjectIds", "array-contains", subjectId);
       }
       snapshot = await q.get();
     }
-    // System admins can see all students
-    else if (role === "system_admin") {
-      let q: admin.firestore.Query = firestore.collection("students");
+    // Org-scoped tutor reads: filter by organisationId instead of tutorId.
+    else if (scope && scope.mode === "org-admin") {
+      let q: admin.firestore.Query = firestore
+        .collection("students")
+        .where("organisationId", "==", scope.orgId);
+      if (subjectId) {
+        q = q.where("subjectIds", "array-contains", subjectId);
+      }
+      snapshot = await q.get();
+    } else if (scope && scope.mode === "org-member") {
+      // A member sees only org students they teach. tutorIds array-contains is
+      // already an array-contains, so the subject filter must run in memory.
+      const q = firestore
+        .collection("students")
+        .where("organisationId", "==", scope.orgId)
+        .where("tutorIds", "array-contains", scope.userId);
+      snapshot = await q.get();
+      inMemorySubjectFilter = !!subjectId;
+    }
+    // Personal mode (no active org): legacy per-tutor filter.
+    else if (role === "tutor") {
+      let q: admin.firestore.Query = firestore
+        .collection("students")
+        .where("tutorId", "==", userId);
       if (subjectId) {
         q = q.where("subjectIds", "array-contains", subjectId);
       }
@@ -115,10 +143,19 @@ export async function listStudentsFromFirestore(
     const students: Student[] = [];
     snapshot.forEach((doc) => {
       const data = doc.data();
+      if (inMemorySubjectFilter && subjectId) {
+        const ids = coalesceSubjectIds(data.subjectIds);
+        if (!ids.includes(subjectId)) return;
+      }
       const parentEmail = data.parentEmail || null;
       students.push({
         id: doc.id,
         tutorId: data.tutorId,
+        organisationId:
+          typeof data.organisationId === "string" ? data.organisationId : null,
+        tutorIds: Array.isArray(data.tutorIds)
+          ? data.tutorIds.filter((t: unknown): t is string => typeof t === "string")
+          : [],
         name: data.name,
         email: data.email,
         phone: data.phone || null,

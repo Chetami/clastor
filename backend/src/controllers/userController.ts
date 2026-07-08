@@ -11,9 +11,19 @@ import {
   markOnboardingComplete,
   markTourSeen,
   toUserInfo,
+  toUserInfoResolved,
   normalizeWorkingHours,
+  updateUserCurrentOrg,
+  generateJWTForUser,
 } from "../services/userService";
 import { syncTutorProfileCurrency } from "../services/tutorProfileService";
+import { HttpError } from "../utils/httpError";
+
+/** Response for the org-switch branch of PATCH /users/me. */
+interface SwitchOrgResponse {
+  user: UserInfo;
+  token: string;
+}
 
 /** Max upload size enforced by multer (5 MB) before processing. */
 const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
@@ -76,7 +86,7 @@ export async function uploadAvatar(
  */
 export async function updateMe(
   req: Request,
-  res: Response<UserInfo | ApiError>,
+  res: Response<UserInfo | SwitchOrgResponse | ApiError>,
 ): Promise<void> {
   try {
     const uid = req.user!.uid;
@@ -88,8 +98,21 @@ export async function updateMe(
       subjects,
       onboardingComplete,
       tourSeen,
+      currentOrgId,
     } = req.body ?? {};
     let updated: User | null = null;
+
+    // Org switch is handled exclusively: if provided, switch active org and
+    // re-issue the access JWT (currentOrgId is baked into it). Other profile
+    // fields in the same request are ignored.
+    if (currentOrgId !== undefined) {
+      const user = await updateUserCurrentOrg(uid, currentOrgId);
+      res.status(200).json({
+        user: await toUserInfoResolved(user),
+        token: generateJWTForUser(user),
+      });
+      return;
+    }
 
     if (typeof name === "string") {
       updated = await updateUserName(uid, name);
@@ -137,6 +160,10 @@ export async function updateMe(
 
     res.status(200).json(toUserInfo(updated));
   } catch (error) {
+    if (error instanceof HttpError) {
+      res.status(error.status).json({ message: error.message });
+      return;
+    }
     const message =
       error instanceof Error ? error.message : "Failed to update user";
     console.error("updateMe error:", error);

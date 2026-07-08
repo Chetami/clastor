@@ -189,13 +189,15 @@ Mock Firestore per the existing test harness conventions.
 
 ## 7. Build Order (phased, each phase independently committable)
 
-1. **Interfaces** — new org schemas + JWT/UserInfo/User/Student edits → `build:types` → commit.
-2. **Backend services + auth** — `organisationService`, `orgMemberService`, `orgScope`, JWT re-issue on `PATCH /users/me`. Unit tests. Commit.
-3. **Backend routes/controller** — wire endpoints, mount `/api/organisations`, extend `/api/users/me`. Commit.
-4. **Org-scoped student reads** — update `studentService.listStudentsFromFirestore` to use `resolveScope`. Tests. Commit.
-5. **Frontend services + store** — typed API client, `currentOrgId` in store. Commit.
-6. **Frontend UI** — list, create, join, settings, members, switcher, nav entry, route guards. Commit.
-7. **Swagger / docs** — new endpoints appear at `/api/docs`. Commit.
+> **Status: Phases 1–6 COMPLETE (2026-07-01).** All green — backend builds to `dist`, 151 tests pass, frontend typechecks + bundles clean. Phase 7 (swagger) was a no-op (`/api/docs` is logged but no docs route is mounted in `server.ts`). Phase 8 deferred work remains.
+
+1. **Interfaces** ✅ — new org schemas + JWT/UserInfo/User/Student edits → `build:types` → commit.
+2. **Backend services + auth** ✅ — `organisationService`, `orgMemberService`, `orgScope`, JWT re-issue on `PATCH /users/me`. Unit tests. Commit.
+3. **Backend routes/controller** ✅ — wire endpoints, mount `/api/organisations`, extend `/api/users/me`. Commit.
+4. **Org-scoped student reads** ✅ — update `studentService.listStudentsFromFirestore` to use `resolveScope`. Tests. Commit.
+5. **Frontend services + store** ✅ — typed API client, `currentOrgId` in store. Commit.
+6. **Frontend UI** ✅ — list, create, join, settings, members, switcher, nav entry, route guards. Commit.
+7. **Swagger / docs** — N/A (no docs route mounted; nothing to do).
 
 Each phase ends green (`npm test` backend, `npm run lint`/`build` frontend) before the next begins.
 

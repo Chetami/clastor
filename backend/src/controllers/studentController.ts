@@ -3,6 +3,7 @@ import { createStudentInFirestore, listStudentsFromFirestore, getStudentByIdFrom
 import { CreateStudentRequest, UpdateStudentRequest, StudentResponse, StudentListResponse, StudentImportSummary, Student, ApiError } from "@examify-tms/interfaces";
 import { canViewStudent, canEditStudent } from "../permissions/studentPermissions";
 import { resolveTutorNames } from "../services/tutorResolver";
+import { resolveScope } from "../services/orgScope";
 
 /**
  * Create student controller
@@ -81,10 +82,23 @@ export async function listStudents(
         ? "tutor"
         : req.user.role;
 
+    // Resolve the org read scope for tutors (org-admin sees all org students,
+    // org-member sees their own within the org, personal = legacy own-students).
+    // system_admin bypasses scoping entirely. Admin drill-down (scopeRole =
+    // "tutor" as a system_admin) deliberately stays in personal scope.
+    const orgScope =
+      req.user.role === "tutor" && scopeRole === "tutor"
+        ? await resolveScope({
+            uid: req.user.uid,
+            currentOrgId: req.user.currentOrgId ?? null,
+          })
+        : undefined;
+
     const students = await listStudentsFromFirestore(
       scopeUid,
       scopeRole,
-      subjectId
+      subjectId,
+      orgScope,
     );
 
     // Resolve tutor names for the admin (system-wide) view so the client can
