@@ -9,7 +9,7 @@ import {
   MessageSquareText,
   GraduationCap,
   LayoutTemplate,
-  Building2,
+  Contact,
   type LucideIcon,
 } from "lucide-react";
 import type { Role } from "@examify-tms/interfaces";
@@ -21,15 +21,18 @@ export type NavItem = {
   icon: LucideIcon;
   feature?: FeatureFlagKey;
   roles?: Role[];
+  /** Only show when an organisation is active in the switcher. */
+  orgOnly?: boolean;
 };
 
 const allNavItems: NavItem[] = [
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   {
-    title: "Organisations",
-    href: "/organisations",
-    icon: Building2,
+    title: "Tutors",
+    href: "/tutors",
+    icon: Contact,
     roles: ["tutor"],
+    orgOnly: true,
   },
   { title: "Students", href: "/students", icon: Users, roles: ["tutor"] },
   { title: "Schedule", href: "/schedule", icon: CalendarDays, roles: ["tutor"] },

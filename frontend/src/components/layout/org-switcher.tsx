@@ -4,7 +4,6 @@ import {
   Check,
   ChevronsUpDown,
   User as UserIcon,
-  Plus,
   LogIn,
   Settings,
 } from "lucide-react";
@@ -29,7 +28,6 @@ import {
   useListOrganisations,
   useSwitchActiveOrg,
 } from "@/features/organisations/api";
-import { CreateOrganisationDialog } from "@/features/organisations/create-organisation-dialog";
 import { JoinOrganisationDialog } from "@/features/organisations/join-organisation-dialog";
 
 /** Notion-style workspace switcher, living at the top of the sidebar. The
@@ -44,7 +42,6 @@ export function OrgSwitcher() {
   const { data: organisations = [], isLoading } = useListOrganisations();
   const switchOrg = useSwitchActiveOrg();
 
-  const [createOpen, setCreateOpen] = useState(false);
   const [joinOpen, setJoinOpen] = useState(false);
 
   const activeOrgId = user?.currentOrgId ?? null;
@@ -156,10 +153,6 @@ export function OrgSwitcher() {
             )}
 
             <DropdownMenuSeparator />
-            <DropdownMenuItem onSelect={() => setCreateOpen(true)}>
-              <Plus />
-              Create organisation
-            </DropdownMenuItem>
             <DropdownMenuItem onSelect={() => setJoinOpen(true)}>
               <LogIn />
               Join with code
@@ -172,7 +165,6 @@ export function OrgSwitcher() {
         </DropdownMenu>
       </SidebarMenuItem>
 
-      <CreateOrganisationDialog open={createOpen} onOpenChange={setCreateOpen} />
       <JoinOrganisationDialog open={joinOpen} onOpenChange={setJoinOpen} />
     </SidebarMenu>
   );

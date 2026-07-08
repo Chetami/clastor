@@ -38,7 +38,9 @@ export function AppSidebar() {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
 
   const items = navItems.filter(
-    (item) => !item.roles || (user?.role && item.roles.includes(user.role)),
+    (item) =>
+      (!item.roles || (user?.role && item.roles.includes(user.role))) &&
+      (!item.orgOnly || !!user?.currentOrgId),
   );
 
   return (

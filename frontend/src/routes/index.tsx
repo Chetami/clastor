@@ -28,6 +28,7 @@ import AdminTutors from "@/features/admin-tutors/AdminTutors";
 import Templates from "@/features/templates/Templates";
 import { Organisations } from "@/features/organisations/Organisations";
 import { OrganisationSettings } from "@/features/organisations/OrganisationSettings";
+import { OrgTutors } from "@/features/organisations/OrgTutors";
 import { PaymentResult } from "@/features/public-pay/PaymentResult";
 import { isFeatureEnabled } from "@/config/features";
 
@@ -68,6 +69,7 @@ export const router = createBrowserRouter([
                       path: "organisations/:orgId",
                       element: <OrganisationSettings />,
                     },
+                    { path: "tutors", element: <OrgTutors /> },
                     { path: "students", element: <Students /> },
                     { path: "students/:studentId", element: <StudentDetail /> },
                     { path: "payments", element: <Payments /> },

@@ -5,8 +5,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth";
 import { useListOrganisations, useSwitchActiveOrg } from "./api";
-import { CreateOrganisationDialog } from "./create-organisation-dialog";
-import { JoinOrganisationDialog } from "./join-organisation-dialog";
 
 /** /organisations — lists orgs the user belongs to, with create + join actions. */
 export function Organisations() {
@@ -23,10 +21,6 @@ export function Organisations() {
           <p className="text-sm text-muted-foreground">
             Companies you belong to. Switch scope from the top bar anytime.
           </p>
-        </div>
-        <div className="flex gap-2">
-          <JoinOrganisationDialog />
-          <CreateOrganisationDialog />
         </div>
       </div>
 
