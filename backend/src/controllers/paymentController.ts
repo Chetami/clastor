@@ -232,6 +232,8 @@ export async function getInvoicePdf(
     const pdfBuffer = await generateInvoicePdf(invoice, {
       tutorName: tutor?.name,
       tutorEmail: tutor?.email,
+      abn: tutor?.invoiceSettings?.abn ?? null,
+      bankDetails: tutor?.invoiceSettings?.bankDetails ?? null,
     });
 
     res.setHeader("Content-Type", "application/pdf");
@@ -292,6 +294,8 @@ export async function sendInvoice(
     const pdfBuffer = await generateInvoicePdf(invoice, {
       tutorName: tutor?.name,
       tutorEmail: tutor?.email,
+      abn: tutor?.invoiceSettings?.abn ?? null,
+      bankDetails: tutor?.invoiceSettings?.bankDetails ?? null,
     });
 
     // Embed a "Pay online" link when the tutor has connected a Stripe account

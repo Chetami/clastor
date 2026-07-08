@@ -14,6 +14,7 @@ import {
 import { SubjectsCard } from "@/features/subjects/SubjectsCard";
 import { GoogleConnectionCard } from "./GoogleConnectionCard";
 import { WorkingHoursCard } from "./WorkingHoursCard";
+import { InvoiceSettingsForm } from "./InvoiceSettingsForm";
 
 export default function Settings() {
   return (
@@ -64,6 +65,7 @@ export default function Settings() {
       </Card>
 
       <WorkingHoursCard />
+      <InvoiceSettingsForm />
       <GoogleConnectionCard />
 
       <Card>

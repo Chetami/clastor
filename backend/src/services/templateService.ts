@@ -5,6 +5,7 @@ import {
   EmailTemplatePreview,
 } from "@examify-tms/interfaces";
 import { generateInvoicePdf } from "./invoicePdfService";
+import { getUserFromFirestore } from "./userService";
 import {
   buildLessonNotificationSubject,
   buildLessonNotificationBody,
@@ -214,10 +215,37 @@ export function listTemplates(): TemplateSummary[] {
   return TEMPLATE_LIST;
 }
 
-export function previewInvoicePdf(): Promise<Buffer> {
+/**
+ * Render the invoice template against sample data, but personalised with the
+ * requesting tutor's own details (name, email, ABN, bank details) so the
+ * preview matches what they will actually send. Falls back to the sample
+ * tutor identity if the user document can't be loaded.
+ */
+export async function previewInvoicePdf(
+  tutorUid?: string,
+): Promise<Buffer> {
+  let tutorName = SAMPLE_TUTOR.name;
+  let tutorEmail = SAMPLE_TUTOR.email;
+  let abn: string | null = null;
+  let bankDetails = null;
+
+  if (tutorUid) {
+    try {
+      const tutor = await getUserFromFirestore(tutorUid);
+      tutorName = tutor.name;
+      tutorEmail = tutor.email;
+      abn = tutor.invoiceSettings?.abn ?? null;
+      bankDetails = tutor.invoiceSettings?.bankDetails ?? null;
+    } catch (error) {
+      console.error("previewInvoicePdf: failed to load tutor, using fallback:", error);
+    }
+  }
+
   return generateInvoicePdf(sampleInvoice(), {
-    tutorName: SAMPLE_TUTOR.name,
-    tutorEmail: SAMPLE_TUTOR.email,
+    tutorName,
+    tutorEmail,
+    abn,
+    bankDetails,
   });
 }
 

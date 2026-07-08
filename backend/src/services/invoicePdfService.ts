@@ -1,5 +1,5 @@
 import PDFDocument from "pdfkit";
-import { Invoice, PaymentMethod } from "@examify-tms/interfaces";
+import { Invoice, PaymentMethod, BankDetails } from "@examify-tms/interfaces";
 
 /**
  * Invoice PDF generation.
@@ -39,6 +39,10 @@ export interface InvoicePdfContext {
   tutorName?: string | null;
   /** Reply-to email shown to the customer. */
   tutorEmail?: string | null;
+  /** Australian Business Number printed under the tutor's name. */
+  abn?: string | null;
+  /** Bank account details printed so the customer knows where to pay. */
+  bankDetails?: BankDetails | null;
 }
 
 /**
@@ -71,8 +75,13 @@ export function generateInvoicePdf(
         .font("Helvetica")
         .fillColor("#6b7280")
         .text(`From: ${fromName}`, 50, 82);
+      let headerY = 97;
       if (context.tutorEmail) {
-        doc.text(context.tutorEmail, 50, 97);
+        doc.text(context.tutorEmail, 50, headerY);
+        headerY += 15;
+      }
+      if (context.abn) {
+        doc.text(`ABN: ${context.abn}`, 50, headerY);
       }
 
       doc.fillColor("#111827");
@@ -231,6 +240,42 @@ export function generateInvoicePdf(
             50,
             y,
           );
+      }
+
+      // ---- Bank details -------------------------------------------------
+      // Only printed when the tutor has saved account details — this is the
+      // customisation seam. Each line is optional so partial details render
+      // without awkward gaps.
+      const bank = context.bankDetails;
+      const hasBankDetails = bank && (bank.accountName || bank.bsb || bank.accountNumber);
+      if (hasBankDetails) {
+        y += 30;
+        if (y > 720) {
+          doc.addPage();
+          y = 50;
+        }
+        doc
+          .font("Helvetica-Bold")
+          .fontSize(10)
+          .fillColor("#6b7280")
+          .text("BANK DETAILS", 50, y);
+        y += 16;
+        doc.font("Helvetica").fontSize(10).fillColor("#111827");
+        if (bank.accountName) {
+          doc.text(`Account name: ${bank.accountName}`, 50, y, {
+            width: PAGE_WIDTH - 100,
+          });
+          y += 14;
+        }
+        if (bank.bsb) {
+          doc.text(`BSB: ${bank.bsb}`, 50, y, { width: PAGE_WIDTH - 100 });
+          y += 14;
+        }
+        if (bank.accountNumber) {
+          doc.text(`Account number: ${bank.accountNumber}`, 50, y, {
+            width: PAGE_WIDTH - 100,
+          });
+        }
       }
 
       // ---- Notes --------------------------------------------------------

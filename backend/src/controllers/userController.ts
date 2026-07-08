@@ -7,6 +7,7 @@ import {
   updateUserReminderLeadTime,
   updateUserWorkingHours,
   updateUserSubjects,
+  updateUserInvoiceSettings,
   updateUserName,
   markOnboardingComplete,
   markTourSeen,
@@ -81,8 +82,9 @@ export async function uploadAvatar(
  * Updates editable fields on the authenticated user's profile. Supports
  * `name` (display name), `currency` (also kept in sync on the public tutor
  * profile), `reminderLeadTime` (lesson reminder preference — stored only,
- * no scheduling), `onboardingComplete`, and `tourSeen`. Only provided fields
- * are applied. Returns the updated UserInfo.
+ * no scheduling), `onboardingComplete`, `tourSeen`, and `invoiceSettings`
+ * (ABN + bank details printed on invoices). Only provided fields are applied.
+ * Returns the updated UserInfo.
  */
 export async function updateMe(
   req: Request,
@@ -99,6 +101,7 @@ export async function updateMe(
       onboardingComplete,
       tourSeen,
       currentOrgId,
+      invoiceSettings,
     } = req.body ?? {};
     let updated: User | null = null;
 
@@ -151,6 +154,12 @@ export async function updateMe(
 
     if (typeof tourSeen === "boolean" && tourSeen) {
       updated = await markTourSeen(uid);
+    }
+
+    // `invoiceSettings` may be a full object or null (clear). Only treat the
+    // key as provided when explicitly passed (undefined = skip).
+    if (invoiceSettings !== undefined) {
+      updated = await updateUserInvoiceSettings(uid, invoiceSettings);
     }
 
     if (!updated) {

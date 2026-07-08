@@ -77,6 +77,12 @@ properties:
     type: boolean
     default: false
     description: Whether the user has seen (or skipped) the in-app product tour
+  invoiceSettings:
+    allOf:
+      - $ref: './InvoiceSettings.yaml'
+    description: >-
+      Invoice customisation preferences (ABN + bank details) printed on this
+      tutor's invoices. Null means no extra details are shown.
 description: |-
   User interface
   Represents a user in the Firestore users collection

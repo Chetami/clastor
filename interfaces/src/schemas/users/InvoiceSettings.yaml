@@ -1,0 +1,18 @@
+type: object
+nullable: true
+description: |-
+  A tutor's invoice customisation preferences. Currently limited to the
+  business identity (ABN) and bank account details printed on each invoice.
+  The whole object is nullable: null means nothing extra is printed. This is
+  the natural seam for future invoice customisation (logo, notes template,
+  etc.).
+properties:
+  abn:
+    type: string
+    nullable: true
+    description: >-
+      Australian Business Number shown on the invoice. Free-form string so
+      the tutor can include spaces (e.g. "12 345 678 901").
+    example: "12 345 678 901"
+  bankDetails:
+    $ref: './BankDetails.yaml'

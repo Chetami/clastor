@@ -6,6 +6,8 @@ import {
   Subject,
   ReminderLeadTime,
   WorkingHours,
+  BankDetails,
+  InvoiceSettings,
 } from "@examify-tms/interfaces";
 import { generateToken } from "../utils/jwt";
 import { getMembershipRole } from "./orgMemberService";
@@ -96,6 +98,7 @@ export function toUserInfo(user: User): UserInfo {
     subjects: user.subjects ?? [],
     onboardingComplete: user.onboardingComplete === true,
     tourSeen: user.tourSeen === true,
+    invoiceSettings: user.invoiceSettings ?? null,
   };
 }
 
@@ -204,6 +207,40 @@ function generateSubjectId(): string {
 }
 
 /**
+ * Coerce a raw bank-details payload into a clean BankDetails object (or null).
+ * Strings are trimmed; empty/whitespace-only values become null. Returns null
+ * when every field is empty so we don't persist a meaningless empty object.
+ */
+function normalizeBankDetails(raw: unknown): BankDetails {
+  if (raw == null || typeof raw !== "object") return null;
+  const r = raw as Record<string, unknown>;
+  const trim = (v: unknown): string | null =>
+    typeof v === "string" && v.trim().length > 0 ? v.trim() : null;
+  const accountName = trim(r.accountName);
+  const bsb = trim(r.bsb);
+  const accountNumber = trim(r.accountNumber);
+  if (!accountName && !bsb && !accountNumber) return null;
+  return { accountName, bsb, accountNumber };
+}
+
+/**
+ * Coerce a raw invoice-settings payload into a clean InvoiceSettings object
+ * (or null). Null input, a missing ABN, and empty bank details all collapse to
+ * null so the PDF simply omits the section.
+ */
+export function normalizeInvoiceSettings(raw: unknown): InvoiceSettings {
+  if (raw == null || typeof raw !== "object") return null;
+  const r = raw as Record<string, unknown>;
+  const abn =
+    typeof r.abn === "string" && r.abn.trim().length > 0
+      ? r.abn.trim()
+      : null;
+  const bankDetails = normalizeBankDetails(r.bankDetails);
+  if (!abn && !bankDetails) return null;
+  return { abn, bankDetails };
+}
+
+/**
  * Get user document from Firestore
  * @param uid - User UID
  * @returns User object from Firestore
@@ -234,6 +271,7 @@ export async function getUserFromFirestore(uid: string): Promise<User> {
       // anything missing/non-true as incomplete so existing users get prompted.
       onboardingComplete: userData!.onboardingComplete === true,
       tourSeen: userData!.tourSeen === true,
+      invoiceSettings: normalizeInvoiceSettings(userData!.invoiceSettings),
       createdAt: userData!.createdAt.toDate(),
       updatedAt: userData!.updatedAt.toDate(),
       lastActive: userData!.lastActive?.toDate(),
@@ -530,6 +568,34 @@ export async function updateUserCurrentOrg(
 }
 
 /**
+ * Update the tutor's invoice customisation preferences (ABN + bank details).
+ * Stored on the user document; the invoice PDF renderer and template preview
+ * read these when generating an invoice. Passing null (or all-empty values)
+ * clears the details so nothing extra is printed.
+ * @param uid - User UID
+ * @param invoiceSettings - Raw invoice settings payload (normalized server-side)
+ * @returns Updated User object
+ */
+export async function updateUserInvoiceSettings(
+  uid: string,
+  invoiceSettings: unknown,
+): Promise<User> {
+  try {
+    const firestore = getFirebaseFirestore();
+    const normalized = normalizeInvoiceSettings(invoiceSettings);
+    await firestore.collection("users").doc(uid).update({
+      invoiceSettings: normalized ?? admin.firestore.FieldValue.delete(),
+      updatedAt: admin.firestore.Timestamp.now(),
+    });
+
+    return getUserFromFirestore(uid);
+  } catch (error) {
+    console.error("Failed to update invoice settings:", error);
+    throw new Error("Failed to update invoice settings");
+  }
+}
+
+/**
  * Mark the user's onboarding as finished (they completed or dismissed it).
  * Sets `onboardingComplete: true` and bumps `updatedAt`.
  * @param uid - User UID
@@ -623,6 +689,7 @@ export async function createUserInFirestore(
       subjects: [],
       onboardingComplete: false,
       tourSeen: false,
+      invoiceSettings: null,
       createdAt: now.toDate() as any,
       updatedAt: now.toDate() as any,
       lastActive: now.toDate() as any,
