@@ -1,0 +1,10 @@
+type: string
+enum:
+  - lesson_notify
+  - lesson_cancel
+  - invoice
+description: |-
+  The kind of outbound email recorded in the sent-email log.
+  - lesson_notify: a lesson reminder / reschedule notice emailed to a student
+  - lesson_cancel: a lesson cancellation notice emailed to a student
+  - invoice: an invoice emailed to the billing contact

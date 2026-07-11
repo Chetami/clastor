@@ -229,3 +229,16 @@ components:
       $ref: './schemas/templates/res/TemplateSummary.yaml'
     EmailTemplatePreview:
       $ref: './schemas/templates/res/EmailTemplatePreview.yaml'
+    # Sent Email (outbound email log) Schemas
+    SentEmailType:
+      $ref: './schemas/emails/SentEmailType.yaml'
+    SentEmailStatus:
+      $ref: './schemas/emails/SentEmailStatus.yaml'
+    SentEmail:
+      $ref: './schemas/emails/SentEmail.yaml'
+    ListSentEmailsQuery:
+      $ref: './schemas/emails/req/ListSentEmailsQuery.yaml'
+    SentEmailResponse:
+      $ref: './schemas/emails/res/SentEmailResponse.yaml'
+    SentEmailListResponse:
+      $ref: './schemas/emails/res/SentEmailListResponse.yaml'

@@ -1,0 +1,8 @@
+type: string
+enum:
+  - sent
+  - failed
+description: |-
+  Delivery outcome of a recorded email.
+  - sent: the SMTP send completed without error
+  - failed: the send threw (SMTP unconfigured, transport rejected, etc.)

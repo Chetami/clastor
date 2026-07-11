@@ -1,0 +1,14 @@
+type: object
+required:
+  - data
+  - total
+properties:
+  data:
+    type: array
+    items:
+      $ref: './SentEmailResponse.yaml'
+  total:
+    type: integer
+description: >-
+  A chronologically ordered list of sent-email records (newest-first by
+  default).

@@ -80,6 +80,7 @@ import type {
 import { meetUrl } from "@/features/lessons/lesson-display";
 import { RescheduleDialog } from "@/features/schedule/RescheduleDialog";
 import { CancelLessonDialog } from "@/features/schedule/CancelLessonDialog";
+import { EmailHistory } from "@/features/emails/EmailHistory";
 
 function formatDateTime(iso: string) {
   return new Date(iso).toLocaleString("en-US", {
@@ -892,6 +893,8 @@ export default function EventDetail() {
             </div>
           </CardContent>
         </Card>
+
+        <EmailHistory lessonId={lesson.id} variant="bare" />
       </div>
 
       <Dialog open={notifyOpen} onOpenChange={setNotifyOpen}>

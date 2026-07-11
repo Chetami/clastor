@@ -36,6 +36,9 @@ import {
   recordInvoiceEventSafe,
   listInvoiceEventsFromFirestore,
 } from "../services/invoiceEventService";
+import {
+  recordSentEmailSafe,
+} from "../services/sentEmailService";
 
 /**
  * Convert an Invoice (Date-typed) to an InvoiceResponse (ISO string-typed).
@@ -316,14 +319,49 @@ export async function sendInvoice(
       }
     }
 
-    await sendInvoiceEmail({
-      to: invoice.billingEmail,
-      invoice,
-      tutorName: tutor?.name,
-      tutorEmail: tutor?.email,
-      pdfBuffer,
-      paymentUrl,
-    });
+    const actorName = await safeGetActorName(req.user.uid);
+
+    try {
+      const content = await sendInvoiceEmail({
+        to: invoice.billingEmail,
+        invoice,
+        tutorName: tutor?.name,
+        tutorEmail: tutor?.email,
+        pdfBuffer,
+        paymentUrl,
+      });
+
+      await recordSentEmailSafe({
+        type: "invoice",
+        to: invoice.billingEmail,
+        subject: content.subject,
+        status: "sent",
+        bodyHtml: content.html,
+        tutorId: invoice.tutorId,
+        invoiceId: invoice.id,
+        studentId: invoice.studentId,
+        sentBy: req.user.uid,
+        sentByName: actorName,
+      });
+    } catch (sendError) {
+      // Record the failed attempt so the history shows why nothing arrived,
+      // then re-throw so the caller maps it to an HTTP status.
+      await recordSentEmailSafe({
+        type: "invoice",
+        to: invoice.billingEmail,
+        subject: "",
+        status: "failed",
+        errorMessage:
+          sendError instanceof Error ? sendError.message : String(sendError),
+        bodyHtml: "",
+        tutorId: invoice.tutorId,
+        invoiceId: invoice.id,
+        studentId: invoice.studentId,
+        sentBy: req.user.uid,
+        sentByName: actorName,
+      });
+      throw sendError;
+    }
 
     // Promote drafts to "open" once successfully delivered.
     if (invoice.status === "draft") {
@@ -340,7 +378,7 @@ export async function sendInvoice(
       req.params.id,
       wasAlreadySent ? "resent" : "sent",
       `${wasAlreadySent ? "Resent" : "Sent"} to ${invoice.billingEmail}`,
-      await safeGetActorName(req.user.uid)
+      actorName
     );
 
     const updated = await getInvoiceByIdFromFirestore(req.params.id);

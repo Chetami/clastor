@@ -1,0 +1,76 @@
+type: object
+required:
+  - id
+  - type
+  - to
+  - subject
+  - status
+  - bodyHtml
+  - tutorId
+  - sentBy
+  - sentAt
+properties:
+  id:
+    type: string
+    description: Unique sent-email record identifier (Firestore doc id)
+  type:
+    $ref: './SentEmailType.yaml'
+  to:
+    type: array
+    items:
+      type: string
+    description: Recipient email addresses the message was sent to
+  subject:
+    type: string
+    description: Subject line of the sent email
+  status:
+    $ref: './SentEmailStatus.yaml'
+  errorMessage:
+    type: string
+    nullable: true
+    description: >-
+      When status is "failed", the underlying error message. Null for
+      successful sends.
+  bodyHtml:
+    type: string
+    description: >-
+      The fully-rendered HTML body exactly as it was handed to SMTP. Stored so
+      the email history view can reproduce what the recipient saw.
+  tutorId:
+    type: string
+    description: >-
+      UID of the tutor who owns the related entity (lesson / invoice /
+      student). Used as the primary ownership scope for visibility checks.
+  lessonId:
+    type: string
+    nullable: true
+    description: >-
+      Linked lesson id, when the email was a lesson_notify or lesson_cancel.
+      Null otherwise.
+  invoiceId:
+    type: string
+    nullable: true
+    description: >-
+      Linked invoice id, when the email was an invoice send. Null otherwise.
+  studentId:
+    type: string
+    nullable: true
+    description: >-
+      Linked student id, when the email was sent to (or on behalf of) a
+      specific student record. Null otherwise.
+  sentBy:
+    type: string
+    description: UID of the authenticated user who triggered the send
+  sentByName:
+    type: string
+    nullable: true
+    description: Display name of the user who triggered the send, if resolvable
+  sentAt:
+    type: string
+    format: date-time
+    description: When the send was attempted (ISO timestamp)
+description: >-
+  A record of a single outbound email attempt — what was sent, to whom, by
+  whom, and whether it succeeded. Lives in the top-level `sent_emails`
+  Firestore collection so it can be queried across any related entity
+  (lesson, invoice, or student).

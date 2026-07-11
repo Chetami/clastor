@@ -9,6 +9,9 @@ export function useRescheduleLesson(id: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["lessons"] });
       queryClient.invalidateQueries({ queryKey: ["lessons", id] });
+      // Refresh the sent-email history panels scoped to this lesson (reschedule
+      // may have re-notified the student).
+      queryClient.invalidateQueries({ queryKey: ["sent-emails"] });
     },
   });
 }

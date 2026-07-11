@@ -1,0 +1,49 @@
+type: object
+required:
+  - id
+  - type
+  - to
+  - subject
+  - status
+  - bodyHtml
+  - tutorId
+  - sentBy
+  - sentAt
+properties:
+  id:
+    type: string
+  type:
+    $ref: '../SentEmailType.yaml'
+  to:
+    type: array
+    items:
+      type: string
+  subject:
+    type: string
+  status:
+    $ref: '../SentEmailStatus.yaml'
+  errorMessage:
+    type: string
+    nullable: true
+  bodyHtml:
+    type: string
+  tutorId:
+    type: string
+  lessonId:
+    type: string
+    nullable: true
+  invoiceId:
+    type: string
+    nullable: true
+  studentId:
+    type: string
+    nullable: true
+  sentBy:
+    type: string
+  sentByName:
+    type: string
+    nullable: true
+  sentAt:
+    type: string
+    format: date-time
+description: Sent-email record response object (ISO string timestamp).

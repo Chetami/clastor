@@ -9,6 +9,9 @@ export function useCancelLesson(id: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["lessons"] });
       queryClient.invalidateQueries({ queryKey: ["lessons", id] });
+      // Refresh the sent-email history panels scoped to this lesson (cancel
+      // may have sent a cancellation email).
+      queryClient.invalidateQueries({ queryKey: ["sent-emails"] });
     },
   });
 }

@@ -33,6 +33,7 @@ import {
   getInvoicePdfRequest,
 } from "./api";
 import { InvoiceTimeline } from "./InvoiceTimeline";
+import { EmailHistory } from "@/features/emails/EmailHistory";
 import {
   STATUS_META,
   PAYMENT_METHOD_LABELS,
@@ -427,6 +428,8 @@ export default function InvoiceDetail() {
           </Card>
 
           <InvoiceTimeline invoiceId={invoice.id} />
+
+          <EmailHistory invoiceId={invoice.id} variant="bare" />
         </div>
       </div>
     </div>

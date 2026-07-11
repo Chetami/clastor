@@ -19,6 +19,7 @@ import { getStudentByIdFromFirestore } from "../services/studentService";
 import { getUserFromFirestore } from "../services/userService";
 import { sendLessonNotification, sendLessonCancellation } from "../services/emailService";
 import { buildLessonInvite, buildLessonCancellation } from "../services/icalService";
+import { recordSentEmailSafe } from "../services/sentEmailService";
 import {
   syncLessonToCalendar,
   deleteLessonCalendarEvent,
@@ -77,6 +78,20 @@ function toLessonResponse(lesson: Lesson): LessonResponse {
     createdAt: toIso(lesson.createdAt),
     updatedAt: toIso(lesson.updatedAt),
   };
+}
+
+/**
+ * Resolve the display name of the authenticated user for the sent-email log.
+ * Best-effort: returns null if the user record can't be loaded.
+ */
+async function safeGetActorName(uid: string | undefined): Promise<string | null> {
+  if (!uid) return null;
+  try {
+    const user = await getUserFromFirestore(uid);
+    return user?.name ?? null;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -428,6 +443,8 @@ export async function rescheduleLesson(
           message,
           bypassCooldown: true,
           reason: "reschedule",
+          actorUid: req.user.uid,
+          actorName: await safeGetActorName(req.user.uid),
         });
       } catch (notifyError) {
         console.error("Reschedule notify failed:", notifyError);
@@ -595,6 +612,8 @@ export async function cancelLesson(
         try {
           await dispatchLessonCancellation(cancelled, {
             message: req.body?.message,
+            actorUid: req.user.uid,
+            actorName: await safeGetActorName(req.user.uid),
           });
         } catch (notifyError) {
           console.error("Cancel notify failed:", notifyError);
@@ -658,7 +677,11 @@ async function dispatchLessonNotification(
     message?: string | null;
     bypassCooldown?: boolean;
     reason?: "reminder" | "reschedule";
-  } = {},
+    /** UID of the user triggering the send, for the sent-email log. */
+    actorUid: string;
+    /** Display name of the user triggering the send, if resolvable. */
+    actorName?: string | null;
+  },
 ): Promise<void> {
   if (!opts.bypassCooldown && lesson.lastStudentNotifiedAt) {
     const cooldownMs = getNotifyCooldownMs();
@@ -718,20 +741,53 @@ async function dispatchLessonNotification(
         : null;
   }
 
-  await sendLessonNotification({
-    to: student.email,
-    studentName: student.name,
-    tutorName: tutor.name,
-    tutorEmail: tutor.email,
-    subject: lesson.subject ?? null,
-    startDateTime: start,
-    durationMinutes: lesson.durationMinutes,
-    location: lesson.location,
-    message,
-    icsContent,
-    rsvpLinks,
-    reason: opts.reason,
-  });
+  try {
+    const content = await sendLessonNotification({
+      to: student.email,
+      studentName: student.name,
+      tutorName: tutor.name,
+      tutorEmail: tutor.email,
+      subject: lesson.subject ?? null,
+      startDateTime: start,
+      durationMinutes: lesson.durationMinutes,
+      location: lesson.location,
+      message,
+      icsContent,
+      rsvpLinks,
+      reason: opts.reason,
+    });
+
+    await recordSentEmailSafe({
+      type: "lesson_notify",
+      to: student.email,
+      subject: content.subject,
+      status: "sent",
+      bodyHtml: content.html,
+      tutorId: lesson.tutorId,
+      lessonId: lesson.id,
+      studentId: lesson.studentId,
+      sentBy: opts.actorUid,
+      sentByName: opts.actorName ?? null,
+    });
+  } catch (sendError) {
+    // Record the failed attempt so the history shows why nothing arrived,
+    // then re-throw so the caller can map it to an HTTP status.
+    await recordSentEmailSafe({
+      type: "lesson_notify",
+      to: student.email,
+      subject: "",
+      status: "failed",
+      errorMessage:
+        sendError instanceof Error ? sendError.message : String(sendError),
+      bodyHtml: "",
+      tutorId: lesson.tutorId,
+      lessonId: lesson.id,
+      studentId: lesson.studentId,
+      sentBy: opts.actorUid,
+      sentByName: opts.actorName ?? null,
+    });
+    throw sendError;
+  }
 
   await markStudentNotifiedInFirestore(lesson.id);
 }
@@ -747,7 +803,13 @@ async function dispatchLessonNotification(
  */
 async function dispatchLessonCancellation(
   lesson: Lesson,
-  opts: { message?: string | null } = {},
+  opts: {
+    message?: string | null;
+    /** UID of the user triggering the send, for the sent-email log. */
+    actorUid: string;
+    /** Display name of the user triggering the send, if resolvable. */
+    actorName?: string | null;
+  },
 ): Promise<void> {
   const student = await getStudentByIdFromFirestore(lesson.studentId);
   if (!student || !student.email) {
@@ -777,18 +839,49 @@ async function dispatchLessonCancellation(
     });
   }
 
-  await sendLessonCancellation({
-    to: student.email,
-    studentName: student.name,
-    tutorName: tutor.name,
-    tutorEmail: tutor.email,
-    subject: lesson.subject ?? null,
-    startDateTime: start,
-    durationMinutes: lesson.durationMinutes,
-    location: lesson.location,
-    message: opts.message,
-    icsContent,
-  });
+  try {
+    const content = await sendLessonCancellation({
+      to: student.email,
+      studentName: student.name,
+      tutorName: tutor.name,
+      tutorEmail: tutor.email,
+      subject: lesson.subject ?? null,
+      startDateTime: start,
+      durationMinutes: lesson.durationMinutes,
+      location: lesson.location,
+      message: opts.message,
+      icsContent,
+    });
+
+    await recordSentEmailSafe({
+      type: "lesson_cancel",
+      to: student.email,
+      subject: content.subject,
+      status: "sent",
+      bodyHtml: content.html,
+      tutorId: lesson.tutorId,
+      lessonId: lesson.id,
+      studentId: lesson.studentId,
+      sentBy: opts.actorUid,
+      sentByName: opts.actorName ?? null,
+    });
+  } catch (sendError) {
+    await recordSentEmailSafe({
+      type: "lesson_cancel",
+      to: student.email,
+      subject: "",
+      status: "failed",
+      errorMessage:
+        sendError instanceof Error ? sendError.message : String(sendError),
+      bodyHtml: "",
+      tutorId: lesson.tutorId,
+      lessonId: lesson.id,
+      studentId: lesson.studentId,
+      sentBy: opts.actorUid,
+      sentByName: opts.actorName ?? null,
+    });
+    throw sendError;
+  }
 }
 
 /**
@@ -827,6 +920,8 @@ export async function notifyStudent(
         message: req.body?.message,
         bypassCooldown: false,
         reason: "reminder",
+        actorUid: req.user.uid,
+        actorName: await safeGetActorName(req.user.uid),
       });
     } catch (e) {
       if (e instanceof NotifyCooldownError) {

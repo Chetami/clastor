@@ -39,6 +39,7 @@ import {
 } from "./student-utils";
 import type { Invoice } from "@examify-tms/interfaces";
 import { useUserCurrency } from "@/lib/use-currency";
+import { EmailHistory } from "@/features/emails/EmailHistory";
 
 export default function StudentDetail() {
   const { studentId } = useParams<{ studentId: string }>();
@@ -382,6 +383,8 @@ export default function StudentDetail() {
           )}
         </CardContent>
       </Card>
+
+      <EmailHistory studentId={student.id} />
 
       <p className="text-xs text-muted-foreground">
         Added {new Date(student.createdAt).toLocaleDateString()} · Updated{" "}

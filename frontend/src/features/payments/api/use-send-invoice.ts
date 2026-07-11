@@ -15,6 +15,8 @@ export function useSendInvoice() {
       queryClient.invalidateQueries({
         queryKey: ["student-debt", response.studentId],
       });
+      // Refresh the sent-email history panels scoped to this invoice/student.
+      queryClient.invalidateQueries({ queryKey: ["sent-emails"] });
     },
   });
 }

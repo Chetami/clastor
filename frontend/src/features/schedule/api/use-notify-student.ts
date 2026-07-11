@@ -9,6 +9,8 @@ export function useNotifyStudent(id: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["lessons"] });
       queryClient.invalidateQueries({ queryKey: ["lessons", id] });
+      // Refresh the sent-email history panels scoped to this lesson.
+      queryClient.invalidateQueries({ queryKey: ["sent-emails"] });
     },
   });
 }

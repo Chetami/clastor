@@ -6,6 +6,17 @@ import {
 } from "../config/email";
 import type { Invoice } from "@examify-tms/interfaces";
 
+/**
+ * The fully-rendered content of an outbound email, returned by every `send*`
+ * function so the caller can record it in the sent-email log. Mirrors the
+ * three nodemailer body fields.
+ */
+export interface SentEmailContent {
+  subject: string;
+  text: string;
+  html: string;
+}
+
 /** Context required to render and send a lesson notification email. */
 export interface LessonNotificationInput {
   to: string;
@@ -160,15 +171,20 @@ export function buildLessonNotificationHtml(input: LessonNotificationInput): str
 /**
  * Send a lesson notification email. Throws if SMTP is not configured or if
  * the transporter rejects the send, so the caller can surface the failure.
+ * Returns the rendered content on success so the caller can log it.
  */
 export async function sendLessonNotification(
   input: LessonNotificationInput
-): Promise<void> {
+): Promise<SentEmailContent> {
   if (!isEmailConfigured()) {
     throw new Error(
       "Email is not configured. Set SMTP_HOST, SMTP_USER and SMTP_PASS to send notifications."
     );
   }
+
+  const subject = buildLessonNotificationSubject(input);
+  const text = buildLessonNotificationBody(input);
+  const html = buildLessonNotificationHtml(input);
 
   const transporter = getEmailTransporter();
   await transporter.sendMail({
@@ -177,9 +193,9 @@ export async function sendLessonNotification(
     from: `"${input.tutorName} via ${getSenderDisplayName()}" <${getSenderAddress()}>`,
     replyTo: input.tutorEmail || undefined,
     to: input.to,
-    subject: buildLessonNotificationSubject(input),
-    text: buildLessonNotificationBody(input),
-    html: buildLessonNotificationHtml(input),
+    subject,
+    text,
+    html,
     ...(input.icsContent
       ? {
           // nodemailer renders this as a proper text/calendar; method=REQUEST
@@ -191,6 +207,8 @@ export async function sendLessonNotification(
         }
       : {}),
   });
+
+  return { subject, text, html };
 }
 
 /** Context required to render and send a lesson cancellation email. */
@@ -289,25 +307,30 @@ export function buildLessonCancellationHtml(
 
 /**
  * Send a lesson cancellation email. Throws if SMTP is not configured or if the
- * transporter rejects the send, so the caller can surface the failure.
+ * transporter rejects the send, so the caller can surface the failure. Returns
+ * the rendered content on success so the caller can log it.
  */
 export async function sendLessonCancellation(
   input: LessonCancellationInput,
-): Promise<void> {
+): Promise<SentEmailContent> {
   if (!isEmailConfigured()) {
     throw new Error(
       "Email is not configured. Set SMTP_HOST, SMTP_USER and SMTP_PASS to send notifications."
     );
   }
 
+  const subject = buildLessonCancellationSubject(input);
+  const text = buildLessonCancellationBody(input);
+  const html = buildLessonCancellationHtml(input);
+
   const transporter = getEmailTransporter();
   await transporter.sendMail({
     from: `"${input.tutorName} via ${getSenderDisplayName()}" <${getSenderAddress()}>`,
     replyTo: input.tutorEmail || undefined,
     to: input.to,
-    subject: buildLessonCancellationSubject(input),
-    text: buildLessonCancellationBody(input),
-    html: buildLessonCancellationHtml(input),
+    subject,
+    text,
+    html,
     ...(input.icsContent
       ? {
           icalEvent: {
@@ -317,6 +340,8 @@ export async function sendLessonCancellation(
         }
       : {}),
   });
+
+  return { subject, text, html };
 }
 
 export interface InvoiceEmailInput {
@@ -347,8 +372,9 @@ function formatCurrency(amount: number, currency: string = "AUD"): string {
  * Send an invoice to the parent/billing contact. Attaches the generated PDF
  * and stamps the tutor's display name on the From line so the recipient
  * recognises the sender. Throws if SMTP is unconfigured or the send fails.
+ * Returns the rendered content on success so the caller can log it.
  */
-export async function sendInvoiceEmail(input: InvoiceEmailInput): Promise<void> {
+export async function sendInvoiceEmail(input: InvoiceEmailInput): Promise<SentEmailContent> {
   if (!isEmailConfigured()) {
     throw new Error(
       "Email is not configured. Set SMTP_HOST, SMTP_USER and SMTP_PASS to send invoices."
@@ -404,5 +430,7 @@ export async function sendInvoiceEmail(input: InvoiceEmailInput): Promise<void> 
       },
     ],
   });
+
+  return { subject, text, html };
 }
 
