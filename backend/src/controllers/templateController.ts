@@ -53,12 +53,12 @@ export async function getInvoicePreview(
  * GET /api/templates/lesson-reminder/preview
  * Render the lesson reminder email against sample data.
  */
-export function getLessonReminderPreview(
-  _req: Request,
+export async function getLessonReminderPreview(
+  req: Request,
   res: Response<EmailTemplatePreview | ApiError>,
-): void {
+): Promise<void> {
   try {
-    res.status(200).json(previewLessonReminder());
+    res.status(200).json(await previewLessonReminder(req.user?.uid));
   } catch (error) {
     const message =
       error instanceof Error
@@ -74,12 +74,12 @@ export function getLessonReminderPreview(
  * Render the Google Meet invite email (with calendar attachment) against
  * sample data.
  */
-export function getMeetInvitePreview(
-  _req: Request,
+export async function getMeetInvitePreview(
+  req: Request,
   res: Response<EmailTemplatePreview | ApiError>,
-): void {
+): Promise<void> {
   try {
-    res.status(200).json(previewMeetInvite());
+    res.status(200).json(await previewMeetInvite(req.user?.uid));
   } catch (error) {
     const message =
       error instanceof Error
@@ -94,12 +94,12 @@ export function getMeetInvitePreview(
  * GET /api/templates/reschedule/preview
  * Render the reschedule notice email against sample data.
  */
-export function getReschedulePreview(
-  _req: Request,
+export async function getReschedulePreview(
+  req: Request,
   res: Response<EmailTemplatePreview | ApiError>,
-): void {
+): Promise<void> {
   try {
-    res.status(200).json(previewReschedule());
+    res.status(200).json(await previewReschedule(req.user?.uid));
   } catch (error) {
     const message =
       error instanceof Error
@@ -115,12 +115,12 @@ export function getReschedulePreview(
  * Render the cancellation notice email (with a calendar removal) against
  * sample data.
  */
-export function getCancellationPreview(
-  _req: Request,
+export async function getCancellationPreview(
+  req: Request,
   res: Response<EmailTemplatePreview | ApiError>,
-): void {
+): Promise<void> {
   try {
-    res.status(200).json(previewCancellation());
+    res.status(200).json(await previewCancellation(req.user?.uid));
   } catch (error) {
     const message =
       error instanceof Error

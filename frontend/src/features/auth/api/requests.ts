@@ -27,6 +27,21 @@ function mapFirebaseError(error: unknown): Error {
   return new Error(firebaseAuthErrorMap[code] ?? "Authentication failed");
 }
 
+/**
+ * Detect the browser's IANA timezone at sign-up so the backend can render
+ * lesson emails and calendar invites in the tutor's local time. Returns null
+ * when the runtime can't resolve one, so we simply omit it rather than send a
+ * bad value.
+ */
+function detectBrowserTimezone(): string | null {
+  try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    return typeof tz === "string" && tz.length > 0 ? tz : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function loginRequest(
   email: string,
   password: string,
@@ -76,7 +91,7 @@ export async function registerRequest(
 
     const response = await api.post<LoginResponse>(
       "/api/auth/register",
-      { name },
+      { name, timezone: detectBrowserTimezone() },
       {
         headers: { Authorization: `Bearer ${firebaseToken}` },
       },
@@ -149,7 +164,7 @@ export async function googleSignInRequest(): Promise<LoginResponse> {
 
     const response = await api.post<LoginResponse>(
       "/api/auth/google",
-      {},
+      { timezone: detectBrowserTimezone() },
       {
         headers: { Authorization: `Bearer ${firebaseToken}` },
       },

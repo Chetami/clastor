@@ -20,6 +20,13 @@ properties:
     type: string
     description: ISO 4217 currency code the tutor charges in (e.g. AUD, USD)
     example: AUD
+  timezone:
+    type: string
+    nullable: true
+    description: >-
+      IANA timezone identifier the tutor is in (e.g. Australia/Sydney).
+      Detected from the browser and pushed so server-rendered emails and
+      calendar invites show the tutor's local time. Pass null to clear.
   reminderLeadTime:
     $ref: '../../common/ReminderLeadTime.yaml'
   workingHours:

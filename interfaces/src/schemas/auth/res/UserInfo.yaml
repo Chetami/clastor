@@ -32,6 +32,15 @@ properties:
     description: ISO 4217 currency code the tutor charges in
     default: AUD
     example: AUD
+  timezone:
+    type: string
+    nullable: true
+    description: >-
+      IANA timezone identifier the tutor's wall-clock times are rendered in
+      (e.g. Australia/Sydney). Present in the auth response so the client can
+      detect drift from the browser timezone and sync it. Null means not set
+      yet (legacy docs); the client should push a detected value.
+    example: Australia/Sydney
   reminderLeadTime:
     $ref: '../../common/ReminderLeadTime.yaml'
   workingHours:

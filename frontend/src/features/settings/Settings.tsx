@@ -3,6 +3,7 @@ import { Bell, ChevronRight, CreditCard } from "lucide-react";
 
 import { CurrencySelect } from "@/components/account/CurrencySelect";
 import { ReminderLeadTimeSelect } from "@/components/account/ReminderLeadTimeSelect";
+import { TimezoneSelect } from "@/components/account/TimezoneSelect";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -35,6 +36,21 @@ export default function Settings() {
         </CardHeader>
         <CardContent>
           <CurrencySelect className="w-full sm:w-72" />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Timezone</CardTitle>
+          <CardDescription>
+            The timezone your lesson times are shown in. Used when emailing
+            students and generating calendar invites so they see your local
+            time. Detected from your browser when you signed up — change it
+            here if it's wrong.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <TimezoneSelect className="w-full sm:w-72" />
         </CardContent>
       </Card>
 

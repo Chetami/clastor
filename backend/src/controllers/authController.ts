@@ -99,7 +99,17 @@ export async function googleAuth(
       const name = decodedFirebase.name || decodedFirebase.email?.split('@')[0] || 'User';
       const email = decodedFirebase.email || '';
       const avatarUrl = decodedFirebase.picture || null;
-      user = await createUserInFirestore(decodedFirebase.uid, email, name, 'tutor', avatarUrl);
+      const tz =
+        typeof req.body?.timezone === 'string' ? req.body.timezone : null;
+      user = await createUserInFirestore(
+        decodedFirebase.uid,
+        email,
+        name,
+        'tutor',
+        avatarUrl,
+        undefined,
+        tz,
+      );
     }
 
     const { jwtToken, refreshToken } = await issueNewTokenPair(user);
@@ -157,7 +167,10 @@ export async function register(
       decodedToken.uid,
       decodedToken.email || '',
       name,
-      'tutor' // Default role for new users
+      'tutor', // Default role for new users
+      null,
+      undefined,
+      typeof req.body.timezone === 'string' ? req.body.timezone : null,
     );
 
     // 5. Generate access + refresh token pair

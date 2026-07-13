@@ -159,10 +159,13 @@ function sampleInvoice(): Invoice {
 interface SampleLessonOptions {
   /** Include a Google Meet link, calendar invite, and RSVP buttons. */
   withMeet: boolean;
+  /** Tutor's IANA timezone, so sample times render in local time. */
+  timezone?: string | null;
 }
 
 function sampleLessonInput({
   withMeet,
+  timezone,
 }: SampleLessonOptions): { input: LessonNotificationInput; ics?: string } {
   const start = nextWeekdayAt(1, 16, 0); // next Monday, 4:00 PM
   const durationMinutes = 60;
@@ -176,6 +179,7 @@ function sampleLessonInput({
         summary: `${SAMPLE_SUBJECT} with ${SAMPLE_TUTOR.name}`,
         start,
         end: new Date(start.getTime() + durationMinutes * 60_000),
+        timezone: timezone ?? null,
         location,
         description: `Online lesson via Google Meet.`,
         organizer: { name: SAMPLE_TUTOR.name, email: SAMPLE_TUTOR.email },
@@ -191,6 +195,7 @@ function sampleLessonInput({
     subject: SAMPLE_SUBJECT,
     startDateTime: start,
     durationMinutes,
+    timezone: timezone ?? null,
     location,
     message: `Hi ${SAMPLE_STUDENT.name},\n\nLooking forward to our ${SAMPLE_SUBJECT} lesson. ${
       withMeet ? "Join the meeting using the link below." : ""
@@ -210,6 +215,24 @@ function sampleLessonInput({
 }
 
 // ---- Public preview API ----------------------------------------------------
+
+/**
+ * Best-effort load of the requesting tutor's timezone so sample preview times
+ * render in their local time. Falls back to null (UTC) if the user can't be
+ * loaded, mirroring previewInvoicePdf's resilience.
+ */
+async function loadTutorTimezone(
+  tutorUid?: string,
+): Promise<string | null> {
+  if (!tutorUid) return null;
+  try {
+    const tutor = await getUserFromFirestore(tutorUid);
+    return tutor.timezone ?? null;
+  } catch (error) {
+    console.error("loadTutorTimezone: failed to load tutor, using UTC:", error);
+    return null;
+  }
+}
 
 export function listTemplates(): TemplateSummary[] {
   return TEMPLATE_LIST;
@@ -249,8 +272,11 @@ export async function previewInvoicePdf(
   });
 }
 
-export function previewLessonReminder(): EmailTemplatePreview {
-  const { input } = sampleLessonInput({ withMeet: false });
+export async function previewLessonReminder(
+  tutorUid?: string,
+): Promise<EmailTemplatePreview> {
+  const timezone = await loadTutorTimezone(tutorUid);
+  const { input } = sampleLessonInput({ withMeet: false, timezone });
   return {
     subject: buildLessonNotificationSubject(input),
     text: buildLessonNotificationBody(input),
@@ -259,8 +285,11 @@ export function previewLessonReminder(): EmailTemplatePreview {
   };
 }
 
-export function previewMeetInvite(): EmailTemplatePreview {
-  const { input, ics } = sampleLessonInput({ withMeet: true });
+export async function previewMeetInvite(
+  tutorUid?: string,
+): Promise<EmailTemplatePreview> {
+  const timezone = await loadTutorTimezone(tutorUid);
+  const { input, ics } = sampleLessonInput({ withMeet: true, timezone });
   return {
     subject: buildLessonNotificationSubject(input),
     text: buildLessonNotificationBody(input),
@@ -269,8 +298,11 @@ export function previewMeetInvite(): EmailTemplatePreview {
   };
 }
 
-export function previewReschedule(): EmailTemplatePreview {
-  const { input, ics } = sampleLessonInput({ withMeet: true });
+export async function previewReschedule(
+  tutorUid?: string,
+): Promise<EmailTemplatePreview> {
+  const timezone = await loadTutorTimezone(tutorUid);
+  const { input, ics } = sampleLessonInput({ withMeet: true, timezone });
   // Mirrors dispatchLessonNotification({ reason: "reschedule" }): the subject
   // becomes "Lesson time updated" and the greeting notes the time change.
   const rescheduleInput: LessonNotificationInput = {
@@ -286,8 +318,11 @@ export function previewReschedule(): EmailTemplatePreview {
   };
 }
 
-export function previewCancellation(): EmailTemplatePreview {
-  const { input } = sampleLessonInput({ withMeet: false });
+export async function previewCancellation(
+  tutorUid?: string,
+): Promise<EmailTemplatePreview> {
+  const timezone = await loadTutorTimezone(tutorUid);
+  const { input } = sampleLessonInput({ withMeet: false, timezone });
   const start = input.startDateTime;
   const end = new Date(start.getTime() + input.durationMinutes * 60_000);
   // A CANCEL iCal is attached when the student was previously invited, so the
@@ -298,6 +333,7 @@ export function previewCancellation(): EmailTemplatePreview {
     summary: `${input.subject ?? "Lesson"} with ${input.tutorName}`,
     start,
     end,
+    timezone: timezone ?? null,
     location: input.location,
     organizer: { name: input.tutorName, email: input.tutorEmail },
     attendee: { name: input.studentName, email: input.to },
@@ -310,6 +346,7 @@ export function previewCancellation(): EmailTemplatePreview {
     subject: input.subject,
     startDateTime: start,
     durationMinutes: input.durationMinutes,
+    timezone: timezone ?? null,
     location: input.location,
     message: null,
     icsContent,

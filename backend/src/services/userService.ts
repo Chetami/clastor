@@ -83,6 +83,7 @@ export function toUserInfo(user: User): UserInfo {
     role: user.role,
     avatarUrl: user.avatarUrl,
     currency: user.currency,
+    timezone: user.timezone ?? null,
     reminderLeadTime: user.reminderLeadTime ?? null,
     workingHours: user.workingHours ?? null,
     subjects: user.subjects ?? [],
@@ -90,6 +91,25 @@ export function toUserInfo(user: User): UserInfo {
     tourSeen: user.tourSeen === true,
     invoiceSettings: user.invoiceSettings ?? null,
   };
+}
+
+/**
+ * Validate a raw IANA timezone identifier. Returns the trimmed string when it
+ * is a real, Intl-resolvable zone (e.g. "Australia/Sydney"), otherwise null.
+ * Null/empty input collapses to null so legacy docs and "clear" requests work.
+ */
+export function normalizeTimezone(raw: unknown): string | null {
+  if (typeof raw !== "string") return null;
+  const tz = raw.trim();
+  if (!tz) return null;
+  try {
+    // Intl only throws on bogus identifiers; resolving the canonical name is a
+    // cheap sanity check that the zone exists in the runtime's tz database.
+    Intl.DateTimeFormat(undefined, { timeZone: tz });
+    return tz;
+  } catch {
+    return null;
+  }
 }
 
 /** Default currency for users who never set one (and for legacy docs). */
@@ -240,6 +260,7 @@ export async function getUserFromFirestore(uid: string): Promise<User> {
       role: userData!.role,
       avatarUrl: userData!.avatarUrl,
       currency: normalizeCurrency(userData!.currency),
+      timezone: normalizeTimezone(userData!.timezone),
       reminderLeadTime: normalizeReminderLeadTime(userData!.reminderLeadTime),
       workingHours: normalizeWorkingHours(userData!.workingHours),
       subjects: normalizeSubjects(userData!.subjects),
@@ -428,6 +449,34 @@ export async function updateUserReminderLeadTime(
 }
 
 /**
+ * Update the timezone the tutor is in (IANA identifier). The value is
+ * validated server-side; invalid/empty values collapse to null so the field
+ * is cleared rather than persisting a bad zone. Used to render lesson emails
+ * and calendar invites in the tutor's local time.
+ * @param uid - User UID
+ * @param timezone - Raw IANA timezone identifier (or null to clear)
+ * @returns Updated User object
+ */
+export async function updateUserTimezone(
+  uid: string,
+  timezone: unknown,
+): Promise<User> {
+  const normalized = normalizeTimezone(timezone);
+  try {
+    const firestore = getFirebaseFirestore();
+    await firestore.collection("users").doc(uid).update({
+      timezone: normalized ?? admin.firestore.FieldValue.delete(),
+      updatedAt: admin.firestore.Timestamp.now(),
+    });
+
+    return getUserFromFirestore(uid);
+  } catch (error) {
+    console.error("Failed to update user timezone:", error);
+    throw new Error("Failed to update timezone");
+  }
+}
+
+/**
  * Update the tutor's weekly working-hours preference. Stored only — drives
  * the Schedule's shaded bands and the out-of-hours booking warning on the
  * client. Passing null clears it.
@@ -584,6 +633,9 @@ export async function markTourSeen(uid: string): Promise<User> {
  * @param email - User email
  * @param name - User display name
  * @param role - User role (defaults to 'tutor')
+ * @param avatarUrl - Optional profile picture URL
+ * @param currency - ISO 4217 currency code (defaults to AUD)
+ * @param timezone - Optional IANA timezone identifier detected at sign-up
  * @returns Created user object
  */
 export async function createUserInFirestore(
@@ -593,13 +645,15 @@ export async function createUserInFirestore(
   role: Role = 'tutor',
   avatarUrl: string | null = null,
   currency: string = DEFAULT_CURRENCY,
+  timezone: string | null = null,
 ): Promise<User> {
   try {
     const firestore = getFirebaseFirestore();
     const now = admin.firestore.Timestamp.now();
     const normalizedCurrency = normalizeCurrency(currency);
+    const normalizedTimezone = normalizeTimezone(timezone);
 
-    const userData = {
+    const userData: Record<string, unknown> = {
       name,
       email,
       role,
@@ -613,6 +667,7 @@ export async function createUserInFirestore(
       updatedAt: now,
       lastActive: now,
     };
+    if (normalizedTimezone) userData.timezone = normalizedTimezone;
 
     await firestore.collection('users').doc(id).set(userData);
 
@@ -624,6 +679,7 @@ export async function createUserInFirestore(
       role,
       avatarUrl,
       currency: normalizedCurrency,
+      timezone: normalizedTimezone,
       reminderLeadTime: null,
       subjects: [],
       onboardingComplete: false,

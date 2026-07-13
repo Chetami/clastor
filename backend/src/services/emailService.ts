@@ -5,6 +5,7 @@ import {
   isEmailConfigured,
 } from "../config/email";
 import type { Invoice } from "@examify-tms/interfaces";
+import { formatInTimeZone } from "date-fns-tz";
 
 /**
  * The fully-rendered content of an outbound email, returned by every `send*`
@@ -28,6 +29,12 @@ export interface LessonNotificationInput {
   startDateTime: Date;
   durationMinutes: number;
   location?: string | null;
+  /**
+   * IANA timezone identifier the tutor is in (e.g. Australia/Sydney). Times
+   * in the subject line and body are rendered in this zone so the student
+   * sees the tutor's local time. Null/undefined falls back to UTC.
+   */
+  timezone?: string | null;
   /** Optional custom body from the tutor; a default greeting is used if absent. */
   message?: string | null;
   /**
@@ -50,15 +57,28 @@ export interface LessonNotificationInput {
   reason?: "reminder" | "reschedule";
 }
 
-function formatStart(d: Date): string {
-  return d.toLocaleString("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
+/**
+ * Resolve the timezone to render times in. Falls back to UTC (matching the
+ * server's default) when none is configured, so legacy tutors without a
+ * stored timezone still get a deterministic, unambiguous time.
+ */
+function resolveTz(tz?: string | null): string {
+  return tz && tz.trim() ? tz.trim() : "Etc/UTC";
+}
+
+/**
+ * Format a full start date/time, e.g. "Monday, July 13, 2026, 8:00 PM",
+ * in the given timezone.
+ */
+function formatStart(d: Date, tz?: string | null): string {
+  return formatInTimeZone(d, resolveTz(tz), "EEEE, MMMM d, yyyy, h:mm a");
+}
+
+/**
+ * Format a short time-of-day, e.g. "8:00 PM", in the given timezone.
+ */
+function formatTime(d: Date, tz?: string | null): string {
+  return formatInTimeZone(d, resolveTz(tz), "h:mm a");
 }
 
 /**
@@ -67,7 +87,7 @@ function formatStart(d: Date): string {
 export function buildLessonNotificationSubject(input: LessonNotificationInput): string {
   const prefix =
     input.reason === "reschedule" ? "Lesson time updated" : "Lesson reminder";
-  return `${prefix}${input.subject ? `: ${input.subject}` : ""} with ${input.tutorName} on ${formatStart(input.startDateTime)}`;
+  return `${prefix}${input.subject ? `: ${input.subject}` : ""} with ${input.tutorName} on ${formatStart(input.startDateTime, input.timezone)}`;
 }
 
 /**
@@ -81,17 +101,14 @@ export function buildLessonNotificationBody(input: LessonNotificationInput): str
       : `Hi ${input.studentName},\n\nThis is a reminder about our upcoming lesson.`;
 
   const end = new Date(input.startDateTime.getTime() + input.durationMinutes * 60_000);
-  const timeRange = `${input.startDateTime.toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-  })} – ${end.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`;
+  const timeRange = `${formatTime(input.startDateTime, input.timezone)} – ${formatTime(end, input.timezone)}`;
 
   const footerLines = [
     "",
     "—",
     "Lesson details",
     ...(input.subject ? [`Subject: ${input.subject}`] : []),
-    `When: ${formatStart(input.startDateTime)} (${timeRange}, ${input.durationMinutes} min)`,
+    `When: ${formatStart(input.startDateTime, input.timezone)} (${timeRange}, ${input.durationMinutes} min)`,
     input.location ? `Location: ${input.location}` : null,
     `Tutor: ${input.tutorName}`,
   ].filter(Boolean);
@@ -119,16 +136,13 @@ export function buildLessonNotificationHtml(input: LessonNotificationInput): str
       : `Hi ${escapeHtml(input.studentName)},<br><br>This is a reminder about our upcoming lesson.`;
 
   const end = new Date(input.startDateTime.getTime() + input.durationMinutes * 60_000);
-  const timeRange = `${input.startDateTime.toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-  })} – ${end.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`;
+  const timeRange = `${formatTime(input.startDateTime, input.timezone)} – ${formatTime(end, input.timezone)}`;
 
   const rows = [
     ...(input.subject ? [["Subject", escapeHtml(input.subject)]] : []),
     [
       "When",
-      `${escapeHtml(formatStart(input.startDateTime))} (${escapeHtml(
+      `${escapeHtml(formatStart(input.startDateTime, input.timezone))} (${escapeHtml(
         timeRange
       )}, ${input.durationMinutes} min)`,
     ],
@@ -222,6 +236,12 @@ export interface LessonCancellationInput {
   startDateTime: Date;
   durationMinutes: number;
   location?: string | null;
+  /**
+   * IANA timezone identifier the tutor is in (e.g. Australia/Sydney). Times
+   * in the subject line and body are rendered in this zone. Null/undefined
+   * falls back to UTC.
+   */
+  timezone?: string | null;
   /** Optional custom body from the tutor; a default is used if absent. */
   message?: string | null;
   /**
@@ -240,7 +260,7 @@ export function buildLessonCancellationSubject(
 ): string {
   return `Lesson cancelled${
     input.subject ? `: ${input.subject}` : ""
-  } with ${input.tutorName} on ${formatStart(input.startDateTime)}`;
+  } with ${input.tutorName} on ${formatStart(input.startDateTime, input.timezone)}`;
 }
 
 /**
@@ -259,7 +279,7 @@ export function buildLessonCancellationBody(
     "—",
     "Cancelled lesson",
     ...(input.subject ? [`Subject: ${input.subject}`] : []),
-    `When: ${formatStart(input.startDateTime)}`,
+    `When: ${formatStart(input.startDateTime, input.timezone)}`,
     `Tutor: ${input.tutorName}`,
   ].filter(Boolean);
 
@@ -282,7 +302,7 @@ export function buildLessonCancellationHtml(
 
   const rows = [
     ...(input.subject ? [["Subject", escapeHtml(input.subject)]] : []),
-    ["When", escapeHtml(formatStart(input.startDateTime))],
+    ["When", escapeHtml(formatStart(input.startDateTime, input.timezone))],
     ["Tutor", escapeHtml(input.tutorName)],
   ];
 

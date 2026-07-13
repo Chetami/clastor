@@ -6,6 +6,15 @@ properties:
     type: string
     description: User's display name
     example: John Doe
+  timezone:
+    type: string
+    nullable: true
+    description: >-
+      IANA timezone identifier the tutor is in (e.g. Australia/Sydney),
+      detected from the browser at sign-up so server-rendered emails and
+      calendar invites show local times. Optional; null/omitted means unset
+      (the tutor can set it later in Settings).
+    example: Australia/Sydney
 description: |-
   Register request body
   Sent from frontend to backend /api/auth/register endpoint

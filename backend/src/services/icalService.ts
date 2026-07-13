@@ -20,6 +20,13 @@ export interface LessonInviteInput {
   summary: string;
   start: Date;
   end: Date;
+  /**
+   * IANA timezone identifier the lesson is booked in (e.g.
+   * "Australia/Sydney"). When set, the event is emitted with a TZID so
+   * calendar clients render it in the tutor's local time and honour DST.
+   * Null/undefined emits floating UTC times (the previous behaviour).
+   */
+  timezone?: string | null;
   location?: string | null;
   description?: string | null;
   organizer: { name: string; email?: string | null };
@@ -47,6 +54,7 @@ export function buildLessonInvite(input: LessonInviteInput): string {
     end: input.end,
     stamp: new Date(),
     summary: input.summary,
+    timezone: input.timezone || undefined,
     location: input.location || undefined,
     description: input.description || undefined,
     organizer: {
@@ -90,6 +98,7 @@ export function buildLessonCancellation(input: LessonInviteInput): string {
     end: input.end,
     stamp: new Date(),
     summary: input.summary,
+    timezone: input.timezone || undefined,
     location: input.location || undefined,
     description: input.description || undefined,
     status: ICalEventStatus.CANCELLED,

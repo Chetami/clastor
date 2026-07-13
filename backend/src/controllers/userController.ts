@@ -4,6 +4,7 @@ import { UserInfo, ApiError, User } from "@examify-tms/interfaces";
 import {
   updateUserAvatar,
   updateUserCurrency,
+  updateUserTimezone,
   updateUserReminderLeadTime,
   updateUserWorkingHours,
   updateUserSubjects,
@@ -85,6 +86,7 @@ export async function updateMe(
     const {
       name,
       currency,
+      timezone,
       reminderLeadTime,
       workingHours,
       subjects,
@@ -105,6 +107,12 @@ export async function updateMe(
       void syncTutorProfileCurrency(uid, updated.currency).catch((err) =>
         console.error("Failed to sync tutor profile currency:", err),
       );
+    }
+
+    // `timezone` may be a string (IANA id) or null (clear). Only treat the
+    // key as provided when explicitly passed (undefined = skip).
+    if (timezone !== undefined) {
+      updated = await updateUserTimezone(uid, timezone);
     }
 
     // `reminderLeadTime` may be null (disable) or a supported value. Only

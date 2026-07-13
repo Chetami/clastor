@@ -116,3 +116,15 @@ export async function connectGoogleRequest(
 export async function disconnectGoogleRequest(): Promise<void> {
   await api.delete("/api/auth/google");
 }
+
+/**
+ * Update the authenticated user's timezone (IANA identifier). Detected from
+ * the browser so server-rendered emails and calendar invites show the tutor's
+ * local time. Returns the updated UserInfo.
+ */
+export async function updateUserTimezoneRequest(
+  timezone: string,
+): Promise<UserInfo> {
+  const response = await api.patch<UserInfo>("/api/users/me", { timezone });
+  return response.data;
+}
