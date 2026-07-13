@@ -68,15 +68,15 @@ export function deltaPercent(current: number, previous: number): number | null {
 }
 
 /**
- * The [start, end) window (ms since epoch) for the NEXT period after the
- * selected one — used for forward-looking "expected income". Anchored to UTC
- * calendar boundaries:
- * - week: next calendar week, Monday → Sunday
- * - month: next calendar month
- * - six_months: the next 6 calendar months
- * - year: next calendar year
+ * The [start, end) window (ms since epoch) for the CURRENT period — used for
+ * forward-looking "expected income this period". Anchored to UTC calendar
+ * boundaries (mirrors the backend getRange):
+ * - week: current calendar week, Monday → Sunday
+ * - month: current calendar month
+ * - six_months: the last 6 calendar months including the current one
+ * - year: current calendar year
  */
-export function nextPeriodRange(
+export function currentPeriodRange(
   period: DashboardPeriod,
   now: Date = new Date(),
 ): { start: number; end: number } {
@@ -87,43 +87,42 @@ export function nextPeriodRange(
     const todayMs = Date.UTC(year, month, day);
     const dow = new Date(todayMs).getUTCDay(); // 0 = Sun .. 6 = Sat
     const diffToMonday = dow === 0 ? -6 : 1 - dow;
-    const thisMonday = Date.UTC(year, month, day + diffToMonday);
-    const start = thisMonday + 7 * 86_400_000;
+    const start = Date.UTC(year, month, day + diffToMonday);
     const end = start + 7 * 86_400_000;
     return { start, end };
   }
   if (period === "month") {
-    return { start: Date.UTC(year, month + 1, 1), end: Date.UTC(year, month + 2, 1) };
+    return { start: Date.UTC(year, month, 1), end: Date.UTC(year, month + 1, 1) };
   }
   if (period === "six_months") {
-    return { start: Date.UTC(year, month + 1, 1), end: Date.UTC(year, month + 7, 1) };
+    return { start: Date.UTC(year, month - 5, 1), end: Date.UTC(year, month + 1, 1) };
   }
-  return { start: Date.UTC(year + 1, 0, 1), end: Date.UTC(year + 2, 0, 1) };
+  return { start: Date.UTC(year, 0, 1), end: Date.UTC(year + 1, 0, 1) };
 }
 
-/** Human label for the next period, e.g. "Next week", "Next month". */
-export function nextPeriodLabel(period: DashboardPeriod): string {
+/** Human label for the current period, e.g. "This week", "This month". */
+export function currentPeriodLabel(period: DashboardPeriod): string {
   switch (period) {
     case "week":
-      return "Next week";
+      return "This week";
     case "month":
-      return "Next month";
+      return "This month";
     case "six_months":
-      return "Next 6 months";
+      return "This period";
     case "year":
-      return "Next year";
+      return "This year";
   }
 }
 
 /**
- * Planned (non-cancelled) lessons that fall within the NEXT period's window.
+ * Planned (non-cancelled) lessons that fall within the CURRENT period's window.
  */
 export function plannedLessons(
   lessons: LessonResponse[],
   period: DashboardPeriod,
   now: Date = new Date(),
 ): LessonResponse[] {
-  const { start, end } = nextPeriodRange(period, now);
+  const { start, end } = currentPeriodRange(period, now);
   return lessons.filter((l) => {
     if (l.isCancelled) return false;
     const t = new Date(l.startDateTime).getTime();
@@ -132,7 +131,7 @@ export function plannedLessons(
 }
 
 /**
- * Expected income for the next period, derived from its planned lessons and
+ * Expected income for the current period, derived from its planned lessons and
  * each student's expectedAmount / rateType. Hourly rates bill per hour
  * (durationMinutes / 60), per_lesson rates bill a flat unit per lesson.
  */

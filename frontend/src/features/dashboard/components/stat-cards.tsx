@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 import { useUserCurrency } from "@/lib/use-currency";
 import type { DashboardPeriod, DashboardSummaryResponse } from "@examify-tms/interfaces";
-import { formatCurrency, formatHours, deltaPercent, previousPeriodLabel, nextPeriodLabel } from "../lib";
+import { formatCurrency, formatHours, deltaPercent, previousPeriodLabel, currentPeriodLabel } from "../lib";
 
 type TileProps = {
   icon: React.ReactNode;
@@ -87,7 +87,6 @@ export function StatCards({
     summary.lessonsTaught,
     summary.previousLessonsTaught,
   );
-  const isWeek = period === "week";
   const prevLabel = previousPeriodLabel(period);
 
   return (
@@ -99,16 +98,9 @@ export function StatCards({
         value={formatCurrency(summary.income, currency)}
         delta={incomeDelta}
       >
-        {isWeek ? (
-          <p>
-            Today {formatCurrency(summary.today.income, currency)} · Yesterday{" "}
-            {formatCurrency(summary.yesterday.income, currency)}
-          </p>
-        ) : (
-          <p>
-            {prevLabel} {formatCurrency(summary.previousIncome, currency)}
-          </p>
-        )}
+        <p>
+          {prevLabel} {formatCurrency(summary.previousIncome, currency)}
+        </p>
         <p>
           Outstanding {formatCurrency(summary.outstandingAmount, currency)}
           {summary.overdueAmount > 0 && (
@@ -127,16 +119,9 @@ export function StatCards({
         value={formatHours(summary.hoursWorked)}
         delta={hoursDelta}
       >
-        {isWeek ? (
-          <p>
-            Today {formatHours(summary.today.hours)} · Yesterday{" "}
-            {formatHours(summary.yesterday.hours)}
-          </p>
-        ) : (
-          <p>
-            {prevLabel} {formatHours(summary.previousHoursWorked)}
-          </p>
-        )}
+        <p>
+          {prevLabel} {formatHours(summary.previousHoursWorked)}
+        </p>
       </Tile>
 
       {/* Lessons */}
@@ -146,15 +131,9 @@ export function StatCards({
         value={String(summary.lessonsTaught)}
         delta={lessonsDelta}
       >
-        {isWeek ? (
-          <p>
-            Today {summary.today.lessonCount} · Yesterday {summary.yesterday.lessonCount}
-          </p>
-        ) : (
-          <p>
-            {prevLabel} {summary.previousLessonsTaught}
-          </p>
-        )}
+        <p>
+          {prevLabel} {summary.previousLessonsTaught}
+        </p>
         <p>{formatRate(summary.attendanceRate)} attendance</p>
       </Tile>
 
@@ -167,10 +146,10 @@ export function StatCards({
         {plannedLessonCount > 0 ? (
           <p>
             {plannedLessonCount} planned{" "}
-            {plannedLessonCount === 1 ? "lesson" : "lessons"} {nextPeriodLabel(period).toLowerCase()}
+            {plannedLessonCount === 1 ? "lesson" : "lessons"} {currentPeriodLabel(period).toLowerCase()}
           </p>
         ) : (
-          <p>Nothing planned {nextPeriodLabel(period).toLowerCase()}</p>
+          <p>Nothing planned {currentPeriodLabel(period).toLowerCase()}</p>
         )}
       </Tile>
     </div>
