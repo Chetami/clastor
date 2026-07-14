@@ -457,23 +457,23 @@ function PopoverBody({
           }
           label="Location"
         >
-          {meetLink ? (
-            <a
-              href={meetLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
-            >
-              Open Google Meet
-              <ExternalLink className="h-3 w-3" />
-            </a>
-          ) : (
-            <div className="flex flex-wrap items-center gap-2">
-              {location ? (
-                <span className="font-medium">{location}</span>
-              ) : (
-                <span className="text-muted-foreground">Not specified</span>
-              )}
+          <div className="flex flex-wrap items-center gap-2">
+            {location ? (
+              <span className="font-medium">{location}</span>
+            ) : (
+              <span className="text-muted-foreground">Not specified</span>
+            )}
+            {meetLink ? (
+              <a
+                href={meetLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
+              >
+                Open Google Meet
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            ) : (
               <Button
                 size="sm"
                 variant="secondary"
@@ -488,8 +488,8 @@ function PopoverBody({
                 )}
                 Generate Meet
               </Button>
-            </div>
-          )}
+            )}
+          </div>
         </Detail>
 
         <Detail icon={<StickyNote className="h-3.5 w-3.5" />} label="Notes">

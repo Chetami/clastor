@@ -1,10 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Video, TriangleAlert, MapPin, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  ToggleGroup,
-  ToggleGroupItem,
-} from "@/components/ui/toggle-group";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   Dialog,
   DialogContent,
@@ -25,10 +22,7 @@ import {
 import { useListStudents } from "@/features/students/api";
 import { useSubjects } from "@/lib/subjects";
 import { useCreateLesson, useCreateRecurringLesson } from "./api";
-import {
-  generateMeetLinkRequest,
-  updateLessonRequest,
-} from "./api/requests";
+import { generateMeetLinkRequest, updateLessonRequest } from "./api/requests";
 import {
   DAYS,
   DAY_LABELS,
@@ -114,7 +108,8 @@ export function CreateEventDialog({
   // null = unknown, true = connected, false = not connected
   const isRecurring = values.repeat !== "none";
   const [meetAttaching, setMeetAttaching] = useState(false);
-  const pending = createLesson.isPending || createRecurring.isPending || meetAttaching;
+  const pending =
+    createLesson.isPending || createRecurring.isPending || meetAttaching;
   const submitError =
     createLesson.error?.message ?? createRecurring.error?.message;
 
@@ -201,6 +196,7 @@ export function CreateEventDialog({
     }
     if (mode === "zoom") {
       setLocationMode("zoom");
+      update("location", "Zoom");
       return;
     }
     if (mode === "inperson") {
@@ -289,10 +285,7 @@ export function CreateEventDialog({
     }));
   }
 
-  async function attachMeetLink(
-    lessonId: string,
-    data: EventFormData,
-  ) {
+  async function attachMeetLink(lessonId: string, data: EventFormData) {
     try {
       const startDateTime = new Date(
         `${data.date}T${data.startTime}:00`,
@@ -310,7 +303,10 @@ export function CreateEventDialog({
         startDateTime,
         durationMinutes,
       });
-      await updateLessonRequest(lessonId, { location: "Google Meet", meetLink: meetingLink });
+      await updateLessonRequest(lessonId, {
+        location: "Google Meet",
+        meetLink: meetingLink,
+      });
     } catch {
       // best-effort — lesson was created, Meet link just didn't attach
     }
@@ -669,10 +665,7 @@ export function CreateEventDialog({
                 <Video className="mr-1.5 h-4 w-4" />
                 Zoom
               </ToggleGroupItem>
-              <ToggleGroupItem
-                value="meet"
-                aria-label="Google Meet"
-              >
+              <ToggleGroupItem value="meet" aria-label="Google Meet">
                 <Video className="mr-1.5 h-4 w-4" />
                 Meet
               </ToggleGroupItem>
