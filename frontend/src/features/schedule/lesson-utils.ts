@@ -118,6 +118,7 @@ export interface FullCalendarLessonEvent {
     attendance: AttendanceStatus;
     acceptance: LessonAcceptance;
     status: DerivedLessonStatus;
+    seriesId: string | null;
   };
 }
 
@@ -146,6 +147,7 @@ export function lessonToCalendarEvent(
       attendance: lesson.attendanceStatus,
       acceptance: lesson.acceptanceStatus,
       status: deriveLessonStatus(lesson.attendanceStatus, lesson.isCancelled),
+      seriesId: lesson.seriesId ?? null,
     },
   };
 }

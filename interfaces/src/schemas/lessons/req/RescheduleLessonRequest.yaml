@@ -29,8 +29,19 @@ properties:
       Optional custom message body for the reschedule email. If omitted, a
       reschedule-appropriate default is used. Lesson details are always
       appended as a footer.
+  scope:
+    type: string
+    enum: ["this", "this_and_future"]
+    description: >-
+      "this" (default) reschedules only this occurrence, marking it an
+      exception. "this_and_future" updates the series slot to match the new
+      day/time and regenerates all future non-exception occurrences. Only
+      valid when the lesson belongs to a series; ignored otherwise. Omitted
+      means "this".
 description: |-
   Request body for PATCH /api/lessons/:id/reschedule.
   Moves a single lesson occurrence to a new time and (optionally) re-notifies
   the student. For a recurring-series occurrence this reschedules only that
-  occurrence (marking it an exception).
+  occurrence (marking it an exception). When scope is "this_and_future", the
+  series rule is updated from the new time and all future occurrences are
+  regenerated.

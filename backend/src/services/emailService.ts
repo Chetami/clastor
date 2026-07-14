@@ -364,6 +364,166 @@ export async function sendLessonCancellation(
   return { subject, text, html };
 }
 
+// ---- Series-level notification emails (one summary email per change) --------
+
+/** Format a weekly slot as a readable day+time, e.g. "Mondays at 4:00 PM". */
+function formatSlot(slot: { dayOfWeek: string; timeOfDay: string }): string {
+  const day = slot.dayOfWeek.charAt(0).toUpperCase() + slot.dayOfWeek.slice(1) + "s";
+  const [h, m] = slot.timeOfDay.split(":").map(Number);
+  const period = h >= 12 ? "PM" : "AM";
+  const hour12 = h % 12 || 12;
+  return `${day} at ${hour12}:${String(m).padStart(2, "0")} ${period}`;
+}
+
+/** Human cadence label from the interval in weeks. */
+function formatCadence(intervalWeeks: number): string {
+  if (intervalWeeks === 1) return "weekly";
+  if (intervalWeeks === 2) return "fortnightly";
+  return `every ${intervalWeeks} weeks`;
+}
+
+export interface SeriesRescheduleEmailInput {
+  to: string;
+  studentName: string;
+  tutorName: string;
+  tutorEmail?: string | null;
+  subject: string | null;
+  timezone?: string | null;
+  slots: { dayOfWeek: string; timeOfDay: string }[];
+  intervalWeeks: number;
+  firstUpcoming?: Date | null;
+  message?: string | null;
+}
+
+/**
+ * Send a single summary email notifying the student that their recurring
+ * lesson schedule has changed. Renders the new slots + cadence and the first
+ * upcoming date, all in the tutor's timezone. No ICS attachment — it's a
+ * schedule summary, not a single event.
+ */
+export async function sendSeriesRescheduleEmail(
+  input: SeriesRescheduleEmailInput,
+): Promise<SentEmailContent> {
+  if (!isEmailConfigured()) {
+    throw new Error(
+      "Email is not configured. Set SMTP_HOST, SMTP_USER and SMTP_PASS to send notifications.",
+    );
+  }
+
+  const subjectLine = `Schedule updated${
+    input.subject ? `: ${input.subject}` : ""
+  } with ${input.tutorName}`;
+
+  const slotSummary = input.slots.map(formatSlot).join(", ");
+  const cadence = formatCadence(input.intervalWeeks);
+  const firstLine = input.firstUpcoming
+    ? `First lesson: ${formatStart(input.firstUpcoming, input.timezone)}`
+    : "";
+
+  const greeting =
+    input.message && input.message.trim().length > 0
+      ? input.message.trim()
+      : `Hi ${input.studentName},\n\nThe schedule for our recurring${input.subject ? ` ${input.subject}` : ""} lessons has changed. Here's your new schedule.`;
+
+  const text =
+    `${greeting}\n\n` +
+    `New schedule: ${slotSummary} (${cadence})\n` +
+    (firstLine ? `${firstLine}\n` : "") +
+    `\nTutor: ${input.tutorName}`;
+
+  const html =
+    `<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#111827;line-height:1.5">` +
+    `<p style="margin:0 0 12px 0;white-space:pre-line">${escapeHtml(greeting)}</p>` +
+    `<p style="margin:0 0 8px 0"><strong>${escapeHtml(slotSummary)}</strong> ` +
+    `<span style="color:#6b7280">(${escapeHtml(cadence)})</span></p>` +
+    (firstLine ? `<p style="margin:0 0 12px 0">${escapeHtml(firstLine)}</p>` : "") +
+    `<p style="margin:0 0 12px 0">Tutor: ${escapeHtml(input.tutorName)}</p>` +
+    `</div>`;
+
+  const transporter = getEmailTransporter();
+  await transporter.sendMail({
+    from: `"${input.tutorName} via ${getSenderDisplayName()}" <${getSenderAddress()}>`,
+    replyTo: input.tutorEmail || undefined,
+    to: input.to,
+    subject: subjectLine,
+    text,
+    html,
+  });
+
+  return { subject: subjectLine, text, html };
+}
+
+export interface SeriesCancellationEmailInput {
+  to: string;
+  studentName: string;
+  tutorName: string;
+  tutorEmail?: string | null;
+  subject: string | null;
+  timezone?: string | null;
+  removedDates: Date[];
+  message?: string | null;
+}
+
+/**
+ * Send a single summary email notifying the student that their recurring
+ * lessons have been cancelled. Lists the removed upcoming dates in the
+ * tutor's timezone.
+ */
+export async function sendSeriesCancellationEmail(
+  input: SeriesCancellationEmailInput,
+): Promise<SentEmailContent> {
+  if (!isEmailConfigured()) {
+    throw new Error(
+      "Email is not configured. Set SMTP_HOST, SMTP_USER and SMTP_PASS to send notifications.",
+    );
+  }
+
+  const subjectLine = `Recurring lessons cancelled${
+    input.subject ? `: ${input.subject}` : ""
+  } with ${input.tutorName}`;
+
+  const dateList = input.removedDates
+    .slice(0, 12) // cap to keep the email readable
+    .map((d) => formatStart(d, input.timezone));
+
+  const greeting =
+    input.message && input.message.trim().length > 0
+      ? input.message.trim()
+      : `Hi ${input.studentName},\n\nOur recurring${input.subject ? ` ${input.subject}` : ""} lessons have been cancelled. The following upcoming ${input.removedDates.length === 1 ? "lesson has" : `lessons have`} been removed:`;
+
+  const text =
+    `${greeting}\n\n` +
+    dateList.map((d) => `• ${d}`).join("\n") +
+    (input.removedDates.length > dateList.length
+      ? `\n…and ${input.removedDates.length - dateList.length} more`
+      : "") +
+    `\n\nTutor: ${input.tutorName}`;
+
+  const html =
+    `<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#111827;line-height:1.5">` +
+    `<p style="margin:0 0 12px 0;white-space:pre-line">${escapeHtml(greeting)}</p>` +
+    `<ul style="margin:0 0 12px 0;padding-left:20px;line-height:1.8">${dateList
+      .map((d) => `<li>${escapeHtml(d)}</li>`)
+      .join("")}</ul>` +
+    (input.removedDates.length > dateList.length
+      ? `<p style="margin:0 0 12px 0;color:#6b7280">…and ${input.removedDates.length - dateList.length} more</p>`
+      : "") +
+    `<p style="margin:0 0 12px 0">Tutor: ${escapeHtml(input.tutorName)}</p>` +
+    `</div>`;
+
+  const transporter = getEmailTransporter();
+  await transporter.sendMail({
+    from: `"${input.tutorName} via ${getSenderDisplayName()}" <${getSenderAddress()}>`,
+    replyTo: input.tutorEmail || undefined,
+    to: input.to,
+    subject: subjectLine,
+    text,
+    html,
+  });
+
+  return { subject: subjectLine, text, html };
+}
+
 export interface InvoiceEmailInput {
   to: string;
   invoice: Invoice;

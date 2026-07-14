@@ -5,10 +5,12 @@ import type {
   LessonSlot,
   DayOfWeek,
   LessonSeries,
+  Lesson,
 } from "@examify-tms/interfaces";
+import { mapLesson } from "./lessonService";
 import admin from "firebase-admin";
 import crypto from "crypto";
-import { fromZonedTime } from "date-fns-tz";
+import { fromZonedTime, formatInTimeZone } from "date-fns-tz";
 import {
   startOfWeek,
   addWeeks,
@@ -355,5 +357,236 @@ export async function cancelLessonSeriesFuture(
   } catch (error) {
     console.error("Failed to cancel lesson series in Firestore:", error);
     throw new Error("Failed to cancel lesson series");
+  }
+}
+
+/** Map an English weekday name to the DayOfWeek enum value. */
+const WEEKDAY_TO_DOW: Record<string, DayOfWeek> = {
+  sunday: "sunday",
+  monday: "monday",
+  tuesday: "tuesday",
+  wednesday: "wednesday",
+  thursday: "thursday",
+  friday: "friday",
+  saturday: "saturday",
+};
+
+/**
+ * Derive the IANA day-of-week (monday…sunday) of a UTC instant as it falls in
+ * the given timezone. Uses date-fns-tz so DST is handled correctly.
+ */
+function dayOfWeekInTz(date: Date, tz: string): DayOfWeek {
+  const name = formatInTimeZone(date, tz, "EEEE").toLowerCase();
+  return WEEKDAY_TO_DOW[name] ?? "monday";
+}
+
+/** Derive the "HH:mm" wall-clock time of a UTC instant in the given timezone. */
+function timeOfDayInTz(date: Date, tz: string): string {
+  return formatInTimeZone(date, tz, "HH:mm");
+}
+
+/**
+ * Hard-delete the series document and all its future (un-taught) occurrence
+ * lesson docs. Past/attended lessons are preserved for history & billing.
+ * Returns the deleted future lessons so the caller can clean up Google
+ * Calendar events and (optionally) notify the student.
+ */
+export async function deleteSeriesAndFuture(
+  seriesId: string,
+): Promise<Lesson[]> {
+  try {
+    const firestore = getFirebaseFirestore();
+    const nowMs = Date.now();
+
+    const snapshot = await firestore
+      .collection("lessons")
+      .where("seriesId", "==", seriesId)
+      .get();
+
+    const futureDocs = snapshot.docs.filter((d) => {
+      const start = d.data()?.startDateTime;
+      if (!start) return false;
+      return start.toDate().getTime() >= nowMs;
+    });
+
+    const removed = futureDocs.map((d) => mapLesson(d.id, d.data()));
+
+    for (let i = 0; i < futureDocs.length; i += 400) {
+      const chunk = futureDocs.slice(i, i + 400);
+      const batch = firestore.batch();
+      for (const doc of chunk) batch.delete(doc.ref);
+      await batch.commit();
+    }
+
+    await firestore.collection("lessonSeries").doc(seriesId).delete();
+
+    return removed;
+  } catch (error) {
+    console.error("Failed to delete lesson series:", error);
+    throw new Error("Failed to delete lesson series");
+  }
+}
+
+interface RescheduleSeriesResult {
+  removed: Lesson[];
+  created: Lesson[];
+}
+
+/**
+ * Reschedule a series from a single occurrence forward: update the matching
+ * slot to the new day/time, delete all future non-exception occurrences, and
+ * regenerate them from the updated rule. Past lessons and individually-edited
+ * exceptions are preserved.
+ *
+ * Returns the removed and created lessons so the caller can sync Google
+ * Calendar and (optionally) notify the student.
+ */
+export async function rescheduleSeriesFromOccurrence(
+  seriesId: string,
+  oldStart: Date,
+  newStart: Date,
+  durationMinutesOverride?: number | null,
+): Promise<RescheduleSeriesResult> {
+  try {
+    const series = await getLessonSeriesByIdFromFirestore(seriesId);
+    if (!series) throw new Error("Lesson series not found");
+
+    const tz = series.timezone;
+    const firestore = getFirebaseFirestore();
+    const nowMs = Date.now();
+    const now = admin.firestore.Timestamp.now();
+
+    // Derive the old slot's day-of-week and the new slot's day + time, all in
+    // the series timezone so the regeneration stays DST-stable.
+    const oldDay = dayOfWeekInTz(oldStart, tz);
+    const newDay = dayOfWeekInTz(newStart, tz);
+    const newTime = timeOfDayInTz(newStart, tz);
+
+    // Replace the matching slot; keep all other slots unchanged.
+    let slotReplaced = false;
+    const updatedSlots: LessonSlot[] = series.slots.map((slot) => {
+      if (slot.dayOfWeek === oldDay && !slotReplaced) {
+        slotReplaced = true;
+        return { dayOfWeek: newDay, timeOfDay: newTime };
+      }
+      return slot;
+    });
+    // If the old day wasn't found (edge case), append the new slot.
+    if (!slotReplaced) {
+      updatedSlots.push({ dayOfWeek: newDay, timeOfDay: newTime });
+    }
+
+    const newDuration = durationMinutesOverride ?? series.durationMinutes;
+
+    // Load all lessons, identify future non-exception non-cancelled ones to
+    // delete (regenerate them with the new time).
+    const snapshot = await firestore
+      .collection("lessons")
+      .where("seriesId", "==", seriesId)
+      .get();
+
+    const toRemove = snapshot.docs.filter((d) => {
+      const data = d.data();
+      if (data.isCancelled) return false;
+      if (data.isException) return false;
+      const start = data.startDateTime;
+      if (!start) return false;
+      return start.toDate().getTime() >= nowMs;
+    });
+
+    const removed = toRemove.map((d) => mapLesson(d.id, d.data()));
+
+    for (let i = 0; i < toRemove.length; i += 400) {
+      const chunk = toRemove.slice(i, i + 400);
+      const batch = firestore.batch();
+      for (const doc of chunk) batch.delete(doc.ref);
+      await batch.commit();
+    }
+
+    // Regenerate from the current week with the updated rule.
+    const todayStr = formatInTimeZone(new Date(), tz, "yyyy-MM-dd");
+    const occurrences = generateOccurrences({
+      startDate: todayStr,
+      timezone: tz,
+      intervalWeeks: series.intervalWeeks,
+      slots: updatedSlots,
+      until: series.until ?? null,
+      count: series.count ?? null,
+    });
+
+    if (occurrences.length > MAX_OCCURRENCES) {
+      throw new Error(
+        `Reschedule produced ${occurrences.length} occurrences (max ${MAX_OCCURRENCES})`,
+      );
+    }
+
+    const created: Lesson[] = [];
+    for (let i = 0; i < occurrences.length; i += 400) {
+      const chunk = occurrences.slice(i, i + 400);
+      const batch = firestore.batch();
+      for (const occ of chunk) {
+        const lessonId = generateLessonId();
+        const ref = firestore.collection("lessons").doc(lessonId);
+        batch.set(ref, {
+          tutorId: series.tutorId,
+          studentId: series.studentId,
+          subject: series.subject,
+          startDateTime: admin.firestore.Timestamp.fromDate(occ),
+          durationMinutes: newDuration,
+          location: series.location ?? null,
+          notes: series.notes ?? null,
+          todos: [],
+          acceptanceStatus: "pending",
+          attendanceStatus: "unrecorded",
+          seriesId,
+          isCancelled: false,
+          isException: false,
+          remindersEnabled: series.remindersEnabled,
+          isPaid: false,
+          createdAt: now,
+          updatedAt: now,
+        });
+        created.push({
+          id: lessonId,
+          tutorId: series.tutorId,
+          studentId: series.studentId,
+          subject: series.subject,
+          startDateTime: occ as any,
+          durationMinutes: newDuration,
+          location: series.location ?? null,
+          notes: series.notes ?? null,
+          todos: [],
+          acceptanceStatus: "pending",
+          attendanceStatus: "unrecorded",
+          seriesId,
+          isCancelled: false,
+          isException: false,
+          remindersEnabled: series.remindersEnabled,
+          lastStudentNotifiedAt: null as any,
+          studentNotifiedCount: 0,
+          isPaid: false,
+          invoiceId: null,
+          googleCalendarEventId: null,
+          googleCalendarSyncedAt: null as any,
+          icsUid: null,
+          rsvpTokenVersion: 0,
+          createdAt: now.toDate() as any,
+          updatedAt: now.toDate() as any,
+        });
+      }
+      await batch.commit();
+    }
+
+    // Update the series rule so future edits reflect the new slot + duration.
+    await firestore.collection("lessonSeries").doc(seriesId).update({
+      slots: updatedSlots,
+      durationMinutes: newDuration,
+      updatedAt: now,
+    });
+
+    return { removed, created };
+  } catch (error) {
+    console.error("Failed to reschedule lesson series:", error);
+    throw error instanceof Error ? error : new Error("Failed to reschedule lesson series");
   }
 }

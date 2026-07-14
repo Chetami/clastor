@@ -13,7 +13,16 @@ properties:
     description: >-
       Optional custom message body for the cancellation email. If omitted, a
       default cancellation message is used.
+  scope:
+    type: string
+    enum: ["this", "this_and_future"]
+    description: >-
+      "this" (default) cancels only this occurrence (soft cancel). 
+      "this_and_future" deletes the series and all future occurrences (hard
+      delete), keeping past/attended lessons. Only valid when the lesson
+      belongs to a series; ignored otherwise. Omitted means "this".
 description: |-
   Request body for PATCH /api/lessons/:id/cancel.
   Soft-cancels a single lesson occurrence. The notifyStudent flag optionally
-  emails the student about the cancellation.
+  emails the student about the cancellation. When scope is
+  "this_and_future", the series and all future occurrences are removed.

@@ -17,7 +17,7 @@ import {
 } from "../services/lessonService";
 import { getStudentByIdFromFirestore } from "../services/studentService";
 import { getUserFromFirestore } from "../services/userService";
-import { sendLessonNotification, sendLessonCancellation } from "../services/emailService";
+import { sendLessonNotification, sendLessonCancellation, sendSeriesRescheduleEmail, sendSeriesCancellationEmail } from "../services/emailService";
 import { buildLessonInvite, buildLessonCancellation } from "../services/icalService";
 import { recordSentEmailSafe } from "../services/sentEmailService";
 import {
@@ -26,6 +26,11 @@ import {
   resyncLessonCalendar,
   GoogleNotConnectedError,
 } from "../services/googleCalendarService";
+import {
+  rescheduleSeriesFromOccurrence,
+  deleteSeriesAndFuture,
+  getLessonSeriesByIdFromFirestore,
+} from "../services/lessonSeriesService";
 import { signRsvpToken, verifyRsvpToken } from "../utils/jwt";
 import { getNotifyCooldownMs, getPublicApiUrl } from "../config/email";
 import {
@@ -409,6 +414,83 @@ export async function rescheduleLesson(
       return;
     }
 
+    // --- Series scope: update the slot + regenerate all future occurrences ---
+    if (req.body?.scope === "this_and_future") {
+      if (!lesson.seriesId) {
+        res.status(400).json({ message: "This lesson is not part of a series." });
+        return;
+      }
+
+      const oldStart = new Date(lesson.startDateTime as any);
+      const { removed, created } = await rescheduleSeriesFromOccurrence(
+        lesson.seriesId,
+        oldStart,
+        newStart,
+        durationMinutes ?? null,
+      );
+
+      // Best-effort calendar cleanup + sync.
+      try {
+        await Promise.all(
+          removed
+            .filter((l) => l.googleCalendarEventId)
+            .map((l) => deleteLessonCalendarEvent(req.user!.uid, l.googleCalendarEventId)),
+        );
+      } catch { /* logged inside */ }
+      try {
+        await Promise.all(created.map((l) => syncLessonToCalendar(req.user!.uid, l)));
+      } catch { /* logged inside */ }
+
+      // Best-effort: one summary email to the student.
+      if (shouldNotify) {
+        try {
+          const [student, tutor, series] = await Promise.all([
+            getStudentByIdFromFirestore(lesson.studentId),
+            getUserFromFirestore(lesson.tutorId),
+            getLessonSeriesByIdFromFirestore(lesson.seriesId),
+          ]);
+          if (student?.email && series) {
+            const firstUpcoming = created.length > 0
+              ? created.reduce((min, l) =>
+                  new Date(l.startDateTime as any) < new Date(min.startDateTime as any) ? l : min)
+              : null;
+            const content = await sendSeriesRescheduleEmail({
+              to: student.email,
+              studentName: student.name,
+              tutorName: tutor.name,
+              tutorEmail: tutor.email,
+              subject: lesson.subject ?? null,
+              timezone: tutor.timezone ?? null,
+              slots: series.slots,
+              intervalWeeks: series.intervalWeeks,
+              firstUpcoming: firstUpcoming ? new Date(firstUpcoming.startDateTime as any) : null,
+              message,
+            });
+            await recordSentEmailSafe({
+              type: "lesson_notify",
+              to: student.email,
+              subject: content.subject,
+              status: "sent",
+              bodyHtml: content.html,
+              tutorId: lesson.tutorId,
+              studentId: lesson.studentId,
+              sentBy: req.user.uid,
+              sentByName: await safeGetActorName(req.user.uid),
+            });
+          }
+        } catch (notifyError) {
+          console.error("Series reschedule notify failed:", notifyError);
+        }
+      }
+
+      const responseLesson = created.length > 0
+        ? created.reduce((min, l) =>
+            new Date(l.startDateTime as any) < new Date(min.startDateTime as any) ? l : min)
+        : lesson;
+      res.status(200).json(toLessonResponse(responseLesson));
+      return;
+    }
+
     // Apply the time change via the standard update path. This also marks a
     // recurring occurrence as an exception and re-stamps updatedAt.
     const update: UpdateLessonRequest = { startDateTime };
@@ -589,6 +671,64 @@ export async function cancelLesson(
       res.status(400).json({ 
         message: "Cannot cancel finished lessons. Only upcoming lessons with unrecorded attendance can be cancelled." 
       });
+      return;
+    }
+
+    // --- Series scope: delete the series + all future occurrences ---
+    if (req.body?.scope === "this_and_future") {
+      if (!lesson.seriesId) {
+        res.status(400).json({ message: "This lesson is not part of a series." });
+        return;
+      }
+
+      const removed = await deleteSeriesAndFuture(lesson.seriesId);
+
+      // Best-effort calendar cleanup.
+      try {
+        await Promise.all(
+          removed
+            .filter((l) => l.googleCalendarEventId)
+            .map((l) => deleteLessonCalendarEvent(req.user!.uid, l.googleCalendarEventId)),
+        );
+      } catch { /* logged inside */ }
+
+      // Best-effort: one summary email to the student.
+      if (req.body?.notifyStudent === true) {
+        try {
+          const [student, tutor] = await Promise.all([
+            getStudentByIdFromFirestore(lesson.studentId),
+            getUserFromFirestore(lesson.tutorId),
+          ]);
+          if (student?.email) {
+            const removedDates = removed.map((l) => new Date(l.startDateTime as any));
+            const content = await sendSeriesCancellationEmail({
+              to: student.email,
+              studentName: student.name,
+              tutorName: tutor.name,
+              tutorEmail: tutor.email,
+              subject: lesson.subject ?? null,
+              timezone: tutor.timezone ?? null,
+              removedDates,
+              message: req.body?.message,
+            });
+            await recordSentEmailSafe({
+              type: "lesson_cancel",
+              to: student.email,
+              subject: content.subject,
+              status: "sent",
+              bodyHtml: content.html,
+              tutorId: lesson.tutorId,
+              studentId: lesson.studentId,
+              sentBy: req.user.uid,
+              sentByName: await safeGetActorName(req.user.uid),
+            });
+          }
+        } catch (notifyError) {
+          console.error("Series cancel notify failed:", notifyError);
+        }
+      }
+
+      res.status(200).json(toLessonResponse(lesson));
       return;
     }
 

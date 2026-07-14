@@ -12,8 +12,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 import { useCancelLesson } from "./api";
-import type { LessonResponse } from "@examify-tms/interfaces";
+import type { LessonResponse, CancelLessonRequest } from "@examify-tms/interfaces";
+
+type Scope = "this" | "this_and_future";
 
 interface CancelLessonDialogProps {
   lesson: LessonResponse;
@@ -23,8 +26,9 @@ interface CancelLessonDialogProps {
 
 /**
  * Cancel a lesson, offering to notify the student (a cancellation email, plus
- * a calendar removal when they were previously invited). Intended for lessons
- * the student had already accepted.
+ * a calendar removal when they were previously invited). When the lesson
+ * belongs to a series, offers a Google Calendar-style scope choice: just this
+ * occurrence or this and all future lessons (which removes the series).
  */
 export function CancelLessonDialog({
   lesson,
@@ -34,27 +38,39 @@ export function CancelLessonDialog({
   const cancelLesson = useCancelLesson(lesson.id);
   const [notifyStudent, setNotifyStudent] = useState(true);
   const [message, setMessage] = useState("");
+  const [scope, setScope] = useState<Scope>("this");
   const [error, setError] = useState<string | null>(null);
+
+  const isSeries = !!lesson.seriesId;
 
   useEffect(() => {
     if (!open) return;
     setNotifyStudent(true);
     setMessage("");
+    setScope("this");
     setError(null);
   }, [open]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+
+    const payload: CancelLessonRequest = {
+      notifyStudent,
+      message: message.trim() ? message : null,
+    };
+    if (isSeries) payload.scope = scope;
+
     try {
-      await cancelLesson.mutateAsync({
-        notifyStudent,
-        message: message.trim() ? message : null,
-      });
+      await cancelLesson.mutateAsync(payload);
       toast.success(
         notifyStudent
-          ? "Lesson cancelled — student notified."
-          : "Lesson cancelled.",
+          ? scope === "this_and_future"
+            ? "Series cancelled — student notified."
+            : "Lesson cancelled — student notified."
+          : scope === "this_and_future"
+            ? "Series cancelled."
+            : "Lesson cancelled.",
       );
       onOpenChange(false);
     } catch (err) {
@@ -74,17 +90,51 @@ export function CancelLessonDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Cancel this lesson?</DialogTitle>
+          <DialogTitle>
+            {scope === "this_and_future" ? "Cancel series?" : "Cancel this lesson?"}
+          </DialogTitle>
           <DialogDescription>
             {lesson.subject ? `${lesson.subject} · ` : ""}
             {when}
-            {lesson.seriesId
-              ? " · This cancels only this occurrence."
-              : ""}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+          {isSeries && (
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setScope("this")}
+                className={cn(
+                  "rounded-md border p-3 text-left text-sm transition-colors",
+                  scope === "this"
+                    ? "border-primary ring-1 ring-primary bg-primary/5"
+                    : "border-muted hover:bg-muted/50",
+                )}
+              >
+                <span className="font-medium block">Just this lesson</span>
+                <span className="text-xs text-muted-foreground">
+                  Only this occurrence
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setScope("this_and_future")}
+                className={cn(
+                  "rounded-md border p-3 text-left text-sm transition-colors",
+                  scope === "this_and_future"
+                    ? "border-primary ring-1 ring-primary bg-primary/5"
+                    : "border-muted hover:bg-muted/50",
+                )}
+              >
+                <span className="font-medium block">This &amp; future</span>
+                <span className="text-xs text-muted-foreground">
+                  Remove all future lessons
+                </span>
+              </button>
+            </div>
+          )}
+
           <div className="space-y-3 rounded-md border p-3">
             <label className="flex items-start gap-2 cursor-pointer">
               <Checkbox
@@ -97,8 +147,9 @@ export function CancelLessonDialog({
                   Notify student about the cancellation
                 </span>
                 <p className="text-xs text-muted-foreground">
-                  Sends a cancellation email and removes the event from their
-                  calendar.
+                  {scope === "this_and_future"
+                    ? "Sends one summary email listing the cancelled lessons."
+                    : "Sends a cancellation email and removes the event from their calendar."}
                 </p>
               </div>
             </label>
@@ -131,7 +182,11 @@ export function CancelLessonDialog({
               {cancelLesson.isPending ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : null}
-              {cancelLesson.isPending ? "Cancelling…" : "Cancel lesson"}
+              {cancelLesson.isPending
+                ? "Cancelling…"
+                : scope === "this_and_future"
+                  ? "Cancel series"
+                  : "Cancel lesson"}
             </Button>
           </DialogFooter>
         </form>

@@ -28,6 +28,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 
 export default function Schedule() {
   const calendarRef = useRef<FullCalendar>(null);
@@ -110,9 +111,11 @@ export default function Schedule() {
     startDateTime: string;
     durationMinutes: number;
     label: string;
+    seriesId: string | null;
     revert: () => void;
   } | null>(null);
   const [dropNotify, setDropNotify] = useState(true);
+  const [dropScope, setDropScope] = useState<"this" | "this_and_future">("this");
   const reschedule = useRescheduleLesson(dropPending?.lessonId ?? "");
 
   function openDropConfirm(event: EventApi, revert: () => void) {
@@ -127,11 +130,14 @@ export default function Schedule() {
       Math.round((end.getTime() - start.getTime()) / 60000),
     );
     const studentName = event.extendedProps.studentName as string | undefined;
+    const seriesId = (event.extendedProps.seriesId as string | null) ?? null;
     setDropNotify(true);
+    setDropScope("this");
     setDropPending({
       lessonId: event.id,
       startDateTime: start.toISOString(),
       durationMinutes,
+      seriesId,
       label: `${start.toLocaleString("en-US", {
         weekday: "short",
         month: "short",
@@ -158,11 +164,16 @@ export default function Schedule() {
         durationMinutes: dropPending.durationMinutes,
         notifyStudent: dropNotify,
         message: null,
+        ...(dropPending.seriesId ? { scope: dropScope } : {}),
       });
       toast.success(
         dropNotify
-          ? "Lesson rescheduled — student notified."
-          : "Lesson rescheduled.",
+          ? dropScope === "this_and_future"
+            ? "Series rescheduled — student notified."
+            : "Lesson rescheduled — student notified."
+          : dropScope === "this_and_future"
+            ? "Series rescheduled."
+            : "Lesson rescheduled.",
       );
       setDropPending(null);
     } catch (err) {
@@ -405,9 +416,41 @@ export default function Schedule() {
       >
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>Reschedule lesson?</DialogTitle>
+            <DialogTitle>
+              {dropScope === "this_and_future"
+                ? "Reschedule series?"
+                : "Reschedule lesson?"}
+            </DialogTitle>
             <DialogDescription>{dropPending?.label}</DialogDescription>
           </DialogHeader>
+          {dropPending?.seriesId && (
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setDropScope("this")}
+                className={cn(
+                  "rounded-md border p-2.5 text-left text-xs transition-colors",
+                  dropScope === "this"
+                    ? "border-primary ring-1 ring-primary bg-primary/5"
+                    : "border-muted hover:bg-muted/50",
+                )}
+              >
+                <span className="font-medium block">Just this lesson</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setDropScope("this_and_future")}
+                className={cn(
+                  "rounded-md border p-2.5 text-left text-xs transition-colors",
+                  dropScope === "this_and_future"
+                    ? "border-primary ring-1 ring-primary bg-primary/5"
+                    : "border-muted hover:bg-muted/50",
+                )}
+              >
+                <span className="font-medium block">This &amp; future</span>
+              </button>
+            </div>
+          )}
           <label className="flex items-center gap-2 cursor-pointer">
             <Checkbox
               checked={dropNotify}
