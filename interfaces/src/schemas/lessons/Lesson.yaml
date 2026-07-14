@@ -44,8 +44,20 @@ properties:
   location:
     type: string
     nullable: true
-    description: Where the lesson takes place
-    example: Online — Zoom
+    description: >-
+      Where the lesson takes place. For Google Meet lessons this is the
+      human-readable label "Google Meet"; the actual URL is stored separately
+      in `meetLink`.
+    example: Google Meet
+  meetLink:
+    type: string
+    nullable: true
+    description: >-
+      The Google Meet URL when this lesson is a Google Meet lesson (e.g.
+      https://meet.google.com/abc-mnop-xyz). Null for non-Meet lessons. Set
+      when the tutor generates a Meet link; the `location` field shows
+      "Google Meet" as a display label.
+    example: https://meet.google.com/abc-mnop-xyz
   notes:
     type: string
     nullable: true

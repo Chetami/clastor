@@ -11,7 +11,6 @@ import {
   formatLessonTime,
   getInitials,
   lessonBadge,
-  meetUrl,
 } from "@/features/lessons/lesson-display";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Video } from "lucide-react";
@@ -131,7 +130,7 @@ export function ImportantLessons({
                     const name =
                       studentMap[lesson.studentId] ?? "Unknown student";
                     const badge = lessonBadge(lesson);
-                    const meet = meetUrl(lesson.location);
+                    const meet = lesson.meetLink;
                     return (
                       <li
                         key={lesson.id}

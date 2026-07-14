@@ -19,8 +19,6 @@ import {
   lessonTimeRange,
   relativeDayLabel,
   timeUntil,
-  extractCallLink,
-  isGoogleMeet,
 } from "../lib";
 
 /** Mirrors the backend NOTIFY_COOLDOWN_MS default (24h). The server remains the
@@ -64,8 +62,8 @@ export function NextLesson({ lesson, studentName }: Props) {
     );
   }
 
-  const callLink = extractCallLink(lesson.location);
-  const isMeet = callLink ? isGoogleMeet(callLink) : false;
+  const callLink = lesson.meetLink;
+  const isMeet = !!lesson.meetLink;
 
   const notifiedAt = lesson.lastStudentNotifiedAt
     ? new Date(lesson.lastStudentNotifiedAt)
@@ -87,7 +85,7 @@ export function NextLesson({ lesson, studentName }: Props) {
       // Persist the link to the lesson so the button becomes "Join Meet" on
       // the next render and the calendar/schedule can display it too. We don't
       // auto-open the room — the user can join via the "Join Meet" button.
-      await updateLesson.mutateAsync({ location: res.meetingLink });
+      await updateLesson.mutateAsync({ location: "Google Meet", meetLink: res.meetingLink });
       toast.success("Google Meet link created");
     } catch (err) {
       toast.error(

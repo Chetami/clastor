@@ -309,7 +309,7 @@ export function CreateEventDialog({
         startDateTime,
         durationMinutes,
       });
-      await updateLessonRequest(lessonId, { location: meetingLink });
+      await updateLessonRequest(lessonId, { location: "Google Meet", meetLink: meetingLink });
     } catch {
       // best-effort — lesson was created, Meet link just didn't attach
     }

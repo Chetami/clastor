@@ -63,6 +63,7 @@ function toLessonResponse(lesson: Lesson): LessonResponse {
     startDateTime: toIso(lesson.startDateTime),
     durationMinutes: lesson.durationMinutes,
     location: lesson.location ?? null,
+    meetLink: lesson.meetLink ?? null,
     notes: lesson.notes ?? null,
     todos: lesson.todos ?? [],
     acceptanceStatus: lesson.acceptanceStatus,
@@ -866,7 +867,9 @@ async function dispatchLessonNotification(
     start,
     end,
     timezone: tutor.timezone ?? null,
-    location: lesson.location,
+    // ICS location uses the actual Meet URL (if any) so calendar clients
+    // render a clickable join link, not just the display label.
+    location: lesson.meetLink ?? lesson.location,
     organizer: { name: tutor.name, email: tutor.email },
     attendee: { name: student.name, email: student.email },
   });
@@ -976,7 +979,7 @@ async function dispatchLessonCancellation(
       start,
       end,
       timezone: tutor.timezone ?? null,
-      location: lesson.location,
+      location: lesson.meetLink ?? lesson.location,
       organizer: { name: tutor.name, email: tutor.email },
       attendee: { name: student.name, email: student.email },
     });

@@ -37,8 +37,15 @@ properties:
   location:
     type: string
     nullable: true
-    description: Where the lesson takes place
-    example: Online — Zoom
+    description: Where the lesson takes place (e.g. "Google Meet", "Room 5")
+    example: Google Meet
+  meetLink:
+    type: string
+    nullable: true
+    description: >-
+      Google Meet URL for Meet lessons (e.g. https://meet.google.com/xxx). Null
+      for non-Meet lessons. Used to render "Join" buttons in the UI.
+    example: https://meet.google.com/abc-mnop-xyz
   notes:
     type: string
     nullable: true

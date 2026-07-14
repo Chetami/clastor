@@ -48,7 +48,6 @@ import {
   deriveLessonStatus,
   isLessonFinished,
 } from "./lesson-utils";
-import { meetUrl } from "@/features/lessons/lesson-display";
 import { RescheduleDialog } from "./RescheduleDialog";
 import { CancelLessonDialog } from "./CancelLessonDialog";
 
@@ -181,7 +180,7 @@ export function EventPopover({
       });
       // Persist so the popover flips to "Open Google Meet" and the
       // dashboard/calendar reflect it. No new tab — user opens it themselves.
-      await updateLesson.mutateAsync({ location: meetingLink });
+      await updateLesson.mutateAsync({ location: "Google Meet", meetLink: meetingLink });
       toast.success("Google Meet link created");
     } catch (err) {
       toast.error(
@@ -248,6 +247,7 @@ export function EventPopover({
               endIso={endDate.toISOString()}
               durationMinutes={lesson.durationMinutes}
               location={lesson.location}
+              lessonMeetLink={lesson.meetLink}
               notes={lesson.notes}
               status={deriveLessonStatus(
                 lesson.attendanceStatus,
@@ -346,6 +346,7 @@ interface PopoverBodyProps {
   endIso: string;
   durationMinutes: number;
   location: string | null | undefined;
+  lessonMeetLink?: string | null;
   notes: string | null | undefined;
   status: "scheduled" | "completed" | "cancelled";
   isRecurring: boolean;
@@ -377,6 +378,7 @@ function PopoverBody({
   endIso,
   durationMinutes,
   location,
+  lessonMeetLink,
   notes,
   status,
   isRecurring,
@@ -400,7 +402,7 @@ function PopoverBody({
   onResync,
   resyncPending,
 }: PopoverBodyProps) {
-  const meetLink = meetUrl(location);
+  const meetLink = lessonMeetLink ?? null;
   const notifiedAt = notifiedAtIso ? new Date(notifiedAtIso) : null;
   const nextAllowedAt = notifiedAt
     ? new Date(notifiedAt.getTime() + NOTIFY_COOLDOWN_MS)

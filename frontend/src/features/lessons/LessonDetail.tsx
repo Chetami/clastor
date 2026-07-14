@@ -77,7 +77,6 @@ import type {
   LessonAcceptance,
   LessonTodo,
 } from "@examify-tms/interfaces";
-import { meetUrl } from "@/features/lessons/lesson-display";
 import { RescheduleDialog } from "@/features/schedule/RescheduleDialog";
 import { CancelLessonDialog } from "@/features/schedule/CancelLessonDialog";
 import { EmailHistory } from "@/features/emails/EmailHistory";
@@ -213,7 +212,7 @@ export default function EventDetail() {
   }
 
   const end = lessonEndDate(lesson);
-  const existingMeet = meetUrl(lesson.location);
+  const existingMeet = lesson.meetLink;
   const student = students.find((s) => s.id === lesson.studentId);
   const studentName = student?.name ?? "Unknown student";
   const studentSubjects = student
@@ -267,7 +266,7 @@ export default function EventDetail() {
         startDateTime: lesson.startDateTime,
         durationMinutes: lesson.durationMinutes,
       });
-      await updateLesson.mutateAsync({ location: meetingLink });
+      await updateLesson.mutateAsync({ location: "Google Meet", meetLink: meetingLink });
     } catch (err) {
       setMeetError(
         err instanceof Error ? err.message : "Failed to generate Meet link",

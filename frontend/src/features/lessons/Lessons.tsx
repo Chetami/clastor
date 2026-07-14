@@ -18,7 +18,6 @@ import {
   formatLessonDate,
   formatLessonTime,
   lessonBadge,
-  meetUrl,
 } from "@/features/lessons/lesson-display";
 import { ImportantLessons } from "@/features/lessons/ImportantLessons";
 
@@ -154,7 +153,7 @@ export default function Lessons() {
                     const name =
                       studentMap[lesson.studentId] ?? "Unknown student";
                     const badge = lessonBadge(lesson);
-                    const meet = meetUrl(lesson.location);
+                    const meet = lesson.meetLink;
                     return (
                       <li
                         key={lesson.id}

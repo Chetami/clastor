@@ -27,23 +27,6 @@ export function previousPeriodLabel(period: DashboardPeriod): string {
   }
 }
 
-/**
- * Extract the first http(s) URL from a free-text lesson location string
- * (e.g. a pasted Google Meet / Zoom link). Returns null when there is none.
- */
-export function extractCallLink(
-  location: string | null | undefined,
-): string | null {
-  if (!location) return null;
-  const match = location.match(/https?:\/\/[^\s,]+/i);
-  return match ? match[0] : null;
-}
-
-/** True when a URL points to a Google Meet room. */
-export function isGoogleMeet(url: string): boolean {
-  return /meet\.google\.com/i.test(url);
-}
-
 /** Format a number as currency (defaults to AUD). Pass the tutor's currency. */
 export function formatCurrency(amount: number, currency: string = "AUD"): string {
   return new Intl.NumberFormat("en-AU", {

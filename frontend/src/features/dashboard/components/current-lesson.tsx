@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import type { LessonResponse } from "@examify-tms/interfaces";
 import { useGenerateMeetLink } from "../api";
 import { useUpdateLesson } from "@/features/schedule/api";
-import { lessonTimeRange, extractCallLink, isGoogleMeet } from "../lib";
+import { lessonTimeRange } from "../lib";
 
 type Props = {
   lesson: LessonResponse;
@@ -18,8 +18,8 @@ export function CurrentLesson({ lesson, studentName }: Props) {
   const generateMeet = useGenerateMeetLink();
   const updateLesson = useUpdateLesson(lesson.id);
 
-  const callLink = extractCallLink(lesson.location);
-  const isMeet = callLink ? isGoogleMeet(callLink) : false;
+  const callLink = lesson.meetLink;
+  const isMeet = !!lesson.meetLink;
 
   const handleGenerate = async () => {
     try {
@@ -30,7 +30,7 @@ export function CurrentLesson({ lesson, studentName }: Props) {
       });
       // Persist the link on the lesson so the button becomes "Join Meet" on
       // the next render and the calendar/schedule can display it too.
-      await updateLesson.mutateAsync({ location: res.meetingLink });
+      await updateLesson.mutateAsync({ location: "Google Meet", meetLink: res.meetingLink });
       toast.success("Google Meet link created");
     } catch (err) {
       toast.error(

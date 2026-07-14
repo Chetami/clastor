@@ -108,17 +108,6 @@ export function lessonBadge(lesson: LessonResponse): LessonBadge {
   };
 }
 
-/** Returns the Meet URL if the location is a Google Meet link, else null. */
-export function meetUrl(location?: string | null): string | null {
-  if (!location) return null;
-  try {
-    const url = new URL(location);
-    return url.hostname === "meet.google.com" ? location : null;
-  } catch {
-    return null;
-  }
-}
-
 /** True when the given date is in the same calendar day (local) as now. */
 export function isToday(date: Date): boolean {
   const now = new Date();

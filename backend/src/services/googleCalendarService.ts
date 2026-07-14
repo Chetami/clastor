@@ -81,6 +81,16 @@ function lessonToStartEnd(lesson: Lesson) {
 }
 
 /**
+ * Resolve the location label to push to Google Calendar. Uses the lesson's
+ * display location (e.g. "Google Meet"), NOT the raw Meet URL — the Meet
+ * conference is attached separately via conferenceData, so putting the URL
+ * here too would show a duplicate on Google Calendar.
+ */
+function lessonLocationForCalendar(lesson: Lesson): string | undefined {
+  return lesson.location ?? undefined;
+}
+
+/**
  * Create a Google Calendar event on the tutor's primary calendar for a lesson.
  * The event is tagged with extendedProperties so inbound sync can skip it.
  *
@@ -99,7 +109,7 @@ export async function createLessonCalendarEvent(
   const requestBody: calendar_v3.Schema$Event = {
     summary,
     description,
-    location: lesson.location ?? undefined,
+    location: lessonLocationForCalendar(lesson),
     start,
     end,
     colorId: "1",
@@ -144,7 +154,7 @@ export async function updateLessonCalendarEvent(
     requestBody: {
       summary,
       description,
-      location: lesson.location ?? undefined,
+      location: lessonLocationForCalendar(lesson),
       start,
       end,
     },

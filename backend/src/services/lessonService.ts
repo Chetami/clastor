@@ -40,6 +40,7 @@ export function mapLesson(id: string, data: admin.firestore.DocumentData): Lesso
     startDateTime: data.startDateTime ? data.startDateTime.toDate() : (null as any),
     durationMinutes: data.durationMinutes,
     location: data.location ?? null,
+    meetLink: data.meetLink ?? null,
     notes: data.notes ?? null,
     todos: data.todos ?? [],
     acceptanceStatus: data.acceptanceStatus,
@@ -349,6 +350,7 @@ export async function createLessonInFirestore(
       startDateTime,
       durationMinutes: data.durationMinutes,
       location: data.location ?? null,
+      meetLink: null,
       notes: data.notes ?? null,
       todos: [],
       acceptanceStatus: "pending",
@@ -379,6 +381,7 @@ export async function createLessonInFirestore(
       startDateTime: startDateTime.toDate() as any,
       durationMinutes: data.durationMinutes,
       location: data.location ?? null,
+      meetLink: null,
       notes: data.notes ?? null,
       todos: [],
       acceptanceStatus: "pending",
@@ -428,6 +431,7 @@ export async function updateLessonInFirestore(
     if (data.durationMinutes !== undefined)
       updateData.durationMinutes = data.durationMinutes;
     if (data.location !== undefined) updateData.location = data.location;
+    if (data.meetLink !== undefined) updateData.meetLink = data.meetLink;
     if (data.notes !== undefined) updateData.notes = data.notes;
     if (data.todos !== undefined) updateData.todos = data.todos;
     if (data.acceptanceStatus !== undefined)

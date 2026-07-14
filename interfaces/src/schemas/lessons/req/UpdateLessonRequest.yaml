@@ -21,7 +21,13 @@ properties:
   location:
     type: string
     nullable: true
-    description: Where the lesson takes place
+    description: Where the lesson takes place (e.g. "Google Meet", "Room 5")
+  meetLink:
+    type: string
+    nullable: true
+    description: >-
+      Google Meet URL for Meet lessons. Set alongside location="Google Meet"
+      when a Meet link is generated. Pass null to clear.
   notes:
     type: string
     nullable: true
