@@ -113,7 +113,8 @@ export function CreateEventDialog({
   const [locationMode, setLocationMode] = useState<LocationMode>("");
   // null = unknown, true = connected, false = not connected
   const isRecurring = values.repeat !== "none";
-  const pending = createLesson.isPending || createRecurring.isPending;
+  const [meetAttaching, setMeetAttaching] = useState(false);
+  const pending = createLesson.isPending || createRecurring.isPending || meetAttaching;
   const submitError =
     createLesson.error?.message ?? createRecurring.error?.message;
 
@@ -333,7 +334,9 @@ export function CreateEventDialog({
           toCreateLessonRequest(result.data),
         );
         if (locationMode === "meet") {
+          setMeetAttaching(true);
           await attachMeetLink(lesson.id, result.data);
+          setMeetAttaching(false);
         }
       } else {
         const student = students.find((s) => s.id === result.data.studentId);
@@ -733,11 +736,13 @@ export function CreateEventDialog({
               Cancel
             </Button>
             <Button type="submit" disabled={pending}>
-              {pending
-                ? "Creating…"
-                : isRecurring
-                  ? "Create series"
-                  : "Create lesson"}
+              {meetAttaching
+                ? "Generating link…"
+                : pending
+                  ? "Creating…"
+                  : isRecurring
+                    ? "Create series"
+                    : "Create lesson"}
             </Button>
           </DialogFooter>
         </form>
