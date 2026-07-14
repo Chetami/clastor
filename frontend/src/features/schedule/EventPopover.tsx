@@ -155,8 +155,9 @@ export function EventPopover({
   async function handleCancel() {
     if (!lessonId || !lesson) return;
     setActionError(null);
-    // When the student already accepted, confirm and offer to notify them.
-    if (lesson.acceptanceStatus === "accepted") {
+    // Open the dialog when the student accepted (to offer notification) or
+    // when the lesson belongs to a series (to offer the scope choice).
+    if (lesson.acceptanceStatus === "accepted" || lesson.seriesId) {
       setCancelOpen(true);
       return;
     }
