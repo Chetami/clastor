@@ -42,10 +42,10 @@ export function EmailPreview({ data, isLoading, isError }: EmailPreviewProps) {
   return (
     <div className="overflow-hidden rounded-lg border bg-white">
       <div className="border-b px-4 py-3">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
           Subject
         </p>
-        <p className="mt-0.5 text-sm font-semibold text-foreground">
+        <p className="mt-0.5 text-sm font-semibold text-gray-900">
           {data.subject}
         </p>
       </div>
