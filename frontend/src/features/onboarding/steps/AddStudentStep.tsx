@@ -5,14 +5,7 @@ import type { CreateStudentRequest } from "@examify-tms/interfaces";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { useSubjects } from "@/lib/subjects";
+import { SubjectMultiSelect } from "@/components/subjects/SubjectMultiSelect";
 import { useCreateStudent } from "@/features/students/api/use-create-student";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -24,13 +17,12 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
  * step. Skippable.
  */
 export function AddStudentStep() {
-  const subjects = useSubjects();
   const createStudent = useCreateStudent();
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [subjectId, setSubjectId] = useState<string>("");
+  const [subjectIds, setSubjectIds] = useState<string[]>([]);
 
   const [createdName, setCreatedName] = useState<string | null>(null);
   const [errors, setErrors] = useState<{ name?: string; email?: string }>({});
@@ -52,7 +44,7 @@ export function AddStudentStep() {
       phone: phone.trim() || null,
       parentEmail: null,
       billingEmail: null,
-      subjectIds: subjectId ? [subjectId] : [],
+      subjectIds,
       expectedAmount: 0,
       rateType: "hourly",
       frequencyPerWeek: 0,
@@ -72,7 +64,7 @@ export function AddStudentStep() {
     setName("");
     setEmail("");
     setPhone("");
-    setSubjectId("");
+    setSubjectIds([]);
     setCreatedName(null);
   }
 
@@ -153,23 +145,10 @@ export function AddStudentStep() {
           />
         </div>
 
-        {subjects.length > 0 && (
-          <div className="flex flex-col gap-1.5">
-            <Label>Subject (optional)</Label>
-            <Select value={subjectId} onValueChange={setSubjectId}>
-              <SelectTrigger>
-                <SelectValue placeholder="No subject" />
-              </SelectTrigger>
-              <SelectContent>
-                {subjects.map((subject) => (
-                  <SelectItem key={subject.id} value={subject.id}>
-                    {subject.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
+        <div className="flex flex-col gap-1.5">
+          <Label>Subjects (optional)</Label>
+          <SubjectMultiSelect value={subjectIds} onChange={setSubjectIds} />
+        </div>
       </div>
 
       <div className="flex items-center gap-3">
