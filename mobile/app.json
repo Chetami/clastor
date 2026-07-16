@@ -1,0 +1,64 @@
+{
+  "expo": {
+    "name": "Examify TMS",
+    "slug": "examify-tms",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "examify-tms",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": false,
+    "ios": {
+      "googleServicesFile": "./GoogleService-Info.plist",
+      "supportsTablet": true,
+      "bundleIdentifier": "com.examifytms.app",
+      "infoPlist": {
+        "NSFaceIDUsageDescription": "Use Face ID to quickly unlock Examify.",
+        "CFBundleURLTypes": [
+          {
+            "CFBundleTypeRole": "Editor",
+            "CFBundleURLName": "google",
+            "CFBundleURLSchemes": [
+              "com.googleusercontent.apps.448534189562-jvd997d80rncmiliqa8u4rg9kgfaq2ip"
+            ]
+          }
+        ]
+      }
+    },
+    "android": {
+      "package": "com.examifytms.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      }
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-notifications",
+        {
+          "color": "#4f46e5"
+        }
+      ],
+      "expo-web-browser",
+      "@react-native-google-signin/google-signin"
+    ],
+    "extra": {
+      "apiUrl": "http://localhost:3001",
+      "eas": {
+        "projectId": "REPLACE_WITH_EAS_PROJECT_ID"
+      }
+    },
+    "experiments": {
+      "tsconfigPaths": true
+    }
+  }
+}
