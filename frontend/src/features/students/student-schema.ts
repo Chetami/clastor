@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { isPossiblePhoneNumber } from "react-phone-number-input";
+import type { UpdateStudentRequest } from "@examify-tms/interfaces";
 
 export const rateTypeSchema = z.enum(["hourly", "per_lesson"]);
 export const studentStatusSchema = z.enum(["active", "past"]);
@@ -97,7 +98,7 @@ export const EMPTY_STUDENT_FORM: StudentFormData = {
   notes: "",
 };
 
-export function formToUpdateRequest(data: StudentFormData): Record<string, any> {
+export function formToUpdateRequest(data: StudentFormData): UpdateStudentRequest {
   return {
     name: data.name,
     email: data.email,

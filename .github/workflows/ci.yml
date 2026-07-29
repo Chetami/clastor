@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel superseded runs on the same branch/PR to keep the queue fast.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        # HUSKY=0 makes the `prepare` script a no-op — no point installing git
+        # hooks on the ephemeral CI runner.
+        env:
+          HUSKY: "0"
+        run: npm ci
+
+      # The frontend + backend both consume compiled output:
+      #   - @examify-tms/interfaces  → generated type declarations
+      #   - @examify-tms/shared      → the runtime data layer (shared/dist)
+      # Build them first, in dependency order, before any check runs.
+      - name: Build shared packages
+        run: |
+          npm run build:interfaces
+          npm run build:shared
+
+      - name: Lint frontend
+        run: npm run lint --workspace=frontend
+
+      - name: Test frontend
+        run: npm run test --workspace=frontend
+
+      - name: Build frontend (tsc + vite)
+        run: npm run build --workspace=frontend
+
+      - name: Test backend
+        run: npm run test --workspace=backend
+
+      - name: Build backend (tsc)
+        run: npm run build --workspace=backend

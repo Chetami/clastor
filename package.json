@@ -12,6 +12,7 @@
   ],
   "scripts": {
     "install:all": "npm install",
+    "prepare": "husky",
     "dev:backend": "npm run dev --workspace=backend",
     "dev:frontend": "npm run dev --workspace=frontend",
     "dev:website": "npm run dev --workspace=website",
@@ -22,8 +23,13 @@
     "build:frontend": "npm run build --workspace=frontend",
     "build:website": "npm run build --workspace=website"
   },
+  "lint-staged": {
+    "frontend/**/*.{ts,tsx}": "eslint --fix"
+  },
   "devDependencies": {
     "@types/node": "^20.14.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.2.0",
     "typescript": "^5.5.0"
   },
   "engines": {
