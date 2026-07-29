@@ -1,0 +1,40 @@
+{
+  "name": "@examify-tms/shared",
+  "version": "1.0.0",
+  "description": "Platform-agnostic data layer shared by web and mobile (API client, auth store, request modules, TanStack Query hooks)",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch --preserveWatchOutput",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@examify-tms/interfaces": "^1.0.0",
+    "@tanstack/react-query": "^5.101.0",
+    "axios": "^1.7.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^3.6.0",
+    "zod": "^4.4.3",
+    "zustand": "^5.0.14"
+  },
+  "peerDependencies": {
+    "@examify-tms/interfaces": "^1.0.0",
+    "@tanstack/react-query": "^5.101.0",
+    "axios": "^1.7.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "typescript": "^5.5.0"
+  }
+}

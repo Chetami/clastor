@@ -5,28 +5,40 @@
   "private": true,
   "workspaces": [
     "interfaces",
+    "shared",
     "backend",
     "frontend",
     "website"
   ],
   "scripts": {
     "install:all": "npm install",
+    "prepare": "husky",
     "dev:backend": "npm run dev --workspace=backend",
     "dev:frontend": "npm run dev --workspace=frontend",
     "dev:website": "npm run dev --workspace=website",
-    "build:all": "npm run build --workspace=interfaces && npm run build --workspace=backend && npm run build --workspace=frontend && npm run build --workspace=website",
+    "build:all": "npm run build --workspace=interfaces && npm run build --workspace=shared && npm run build --workspace=backend && npm run build --workspace=frontend && npm run build --workspace=website",
     "build:interfaces": "npm run build --workspace=interfaces",
+    "build:shared": "npm run build --workspace=shared",
     "build:backend": "npm run build --workspace=backend",
     "build:frontend": "npm run build --workspace=frontend",
     "build:website": "npm run build --workspace=website"
   },
+  "lint-staged": {
+    "frontend/**/*.{ts,tsx}": "eslint --fix"
+  },
   "devDependencies": {
     "@types/node": "^20.14.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.2.0",
     "typescript": "^5.5.0"
   },
   "engines": {
     "node": ">=18.0.0",
     "npm": ">=9.0.0"
+  },
+  "overrides": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0"
   },
   "dependencies": {
     "@tanstack/react-query-devtools": "^5.101.0",

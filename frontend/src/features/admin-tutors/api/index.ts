@@ -1,2 +1,1 @@
-export { useListAdminTutors } from "./use-list-admin-tutors";
-export { listAdminTutorsRequest } from "./requests";
+export * from "@examify-tms/shared";

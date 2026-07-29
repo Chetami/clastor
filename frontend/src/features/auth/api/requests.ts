@@ -5,9 +5,18 @@ import {
   signInWithPopup,
   GoogleAuthProvider,
 } from "firebase/auth";
-import { api } from "@/lib/api";
 import { getFirebaseAuth } from "@/config/firebase";
-import type { LoginResponse, UserInfo, RefreshTokenResponse } from "@examify-tms/interfaces";
+import {
+  exchangeFirebaseToken,
+  revokeRefreshToken,
+  verifyRequest,
+  refreshRequest,
+} from "@examify-tms/shared";
+import type { LoginResponse, RefreshTokenResponse } from "@examify-tms/interfaces";
+
+// Re-export the platform-agnostic auth requests so existing imports
+// (`@/features/auth/api` barrel) keep resolving without touching call sites.
+export { verifyRequest, refreshRequest };
 
 const firebaseAuthErrorMap: Record<string, string> = {
   "auth/email-already-in-use": "Email already registered",
@@ -54,16 +63,7 @@ export async function loginRequest(
       password,
     );
     const firebaseToken = await userCredential.user.getIdToken();
-
-    const response = await api.post<LoginResponse>(
-      "/api/auth/login",
-      {},
-      {
-        headers: { Authorization: `Bearer ${firebaseToken}` },
-      },
-    );
-
-    return response.data;
+    return exchangeFirebaseToken(firebaseToken);
   } catch (error) {
     if (error instanceof Error && error.message) {
       throw error;
@@ -88,16 +88,10 @@ export async function registerRequest(
     );
 
     const firebaseToken = await firebaseUserCredential.user.getIdToken();
-
-    const response = await api.post<LoginResponse>(
-      "/api/auth/register",
-      { name, timezone: detectBrowserTimezone() },
-      {
-        headers: { Authorization: `Bearer ${firebaseToken}` },
-      },
-    );
-
-    return response.data;
+    return exchangeFirebaseToken(firebaseToken, {
+      name,
+      timezone: detectBrowserTimezone(),
+    });
   } catch (error) {
     const code = (error as { code?: string }).code ?? "";
 
@@ -117,35 +111,11 @@ export async function registerRequest(
   }
 }
 
-export async function verifyRequest(): Promise<UserInfo> {
-  const response = await api.get<LoginResponse>("/api/auth/verify");
-  return response.data.user;
-}
-
-/**
- * Exchange a refresh token for a fresh access + refresh token pair. Tagged with
- * the skip header so the api.ts response interceptor never tries to refresh it.
- */
-export async function refreshRequest(
-  refreshToken: string,
-): Promise<RefreshTokenResponse> {
-  const response = await api.post<RefreshTokenResponse>(
-    "/api/auth/refresh",
-    { refreshToken },
-    { headers: { "X-Skip-Auth-Refresh": "true" } },
-  );
-  return response.data;
-}
-
 export async function logoutRequest(refreshToken?: string | null): Promise<void> {
   // Best-effort server-side revocation; never block logout on it.
   if (refreshToken) {
     try {
-      await api.post(
-        "/api/auth/logout",
-        { refreshToken },
-        { headers: { "X-Skip-Auth-Refresh": "true" } },
-      );
+      await revokeRefreshToken(refreshToken);
     } catch {
       // ignore — local sign-out proceeds regardless
     }
@@ -161,16 +131,9 @@ export async function googleSignInRequest(): Promise<LoginResponse> {
     const provider = new GoogleAuthProvider();
     const userCredential = await signInWithPopup(firebaseAuth, provider);
     const firebaseToken = await userCredential.user.getIdToken();
-
-    const response = await api.post<LoginResponse>(
-      "/api/auth/google",
-      { timezone: detectBrowserTimezone() },
-      {
-        headers: { Authorization: `Bearer ${firebaseToken}` },
-      },
-    );
-
-    return response.data;
+    return exchangeFirebaseToken(firebaseToken, {
+      timezone: detectBrowserTimezone(),
+    });
   } catch (error) {
     const code = (error as { code?: string }).code ?? "";
     if (code.startsWith("auth/")) {
@@ -179,3 +142,5 @@ export async function googleSignInRequest(): Promise<LoginResponse> {
     throw error;
   }
 }
+
+export type { RefreshTokenResponse };
