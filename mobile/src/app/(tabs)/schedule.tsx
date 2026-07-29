@@ -1,5 +1,5 @@
-import { BlankScreen } from "@/components/blank-screen";
+import ScheduleScreen from "@/features/schedule/ScheduleScreen";
 
-export default function ScheduleScreen() {
-  return <BlankScreen title="Schedule" />;
+export default function ScheduleTab() {
+  return <ScheduleScreen />;
 }

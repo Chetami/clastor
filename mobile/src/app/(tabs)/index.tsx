@@ -1,5 +1,5 @@
-import { BlankScreen } from "@/components/blank-screen";
+import DashboardScreen from "@/features/dashboard/DashboardScreen";
 
 export default function HomeScreen() {
-  return <BlankScreen title="Home" />;
+  return <DashboardScreen />;
 }
