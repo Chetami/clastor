@@ -8,7 +8,8 @@
     "shared",
     "backend",
     "frontend",
-    "website"
+    "website",
+    "mobile"
   ],
   "scripts": {
     "install:all": "npm install",
@@ -16,6 +17,7 @@
     "dev:backend": "npm run dev --workspace=backend",
     "dev:frontend": "npm run dev --workspace=frontend",
     "dev:website": "npm run dev --workspace=website",
+    "dev:mobile": "npm run start --workspace=mobile",
     "build:all": "npm run build --workspace=interfaces && npm run build --workspace=shared && npm run build --workspace=backend && npm run build --workspace=frontend && npm run build --workspace=website",
     "build:interfaces": "npm run build --workspace=interfaces",
     "build:shared": "npm run build --workspace=shared",
