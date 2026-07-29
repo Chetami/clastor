@@ -8,6 +8,7 @@ import {
 import { getFirebaseAuth } from "@/config/firebase";
 import {
   exchangeFirebaseToken,
+  exchangeGoogleFirebaseToken,
   revokeRefreshToken,
   verifyRequest,
   refreshRequest,
@@ -131,7 +132,9 @@ export async function googleSignInRequest(): Promise<LoginResponse> {
     const provider = new GoogleAuthProvider();
     const userCredential = await signInWithPopup(firebaseAuth, provider);
     const firebaseToken = await userCredential.user.getIdToken();
-    return exchangeFirebaseToken(firebaseToken, {
+    // Route through /api/auth/google (not /api/auth/login) so the backend
+    // creates the Firestore document on first Google sign-in.
+    return exchangeGoogleFirebaseToken(firebaseToken, {
       timezone: detectBrowserTimezone(),
     });
   } catch (error) {
