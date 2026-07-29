@@ -8,6 +8,7 @@ import { colors, spacing } from "@/lib/theme";
 export default function SettingsScreen() {
   const user = useAuthStore((s) => s.user);
   const logout = useLogout();
+  const isAdmin = user?.role === "system_admin";
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -21,7 +22,24 @@ export default function SettingsScreen() {
             <Ionicons name="person" size={26} color={colors.primary} />
           </View>
           <View style={{ flexShrink: 1 }}>
-            <Text style={styles.name}>{user?.name || "Signed in"}</Text>
+            <View style={styles.nameRow}>
+              <Text style={styles.name}>{user?.name || "Signed in"}</Text>
+              <View
+                style={[
+                  styles.roleBadge,
+                  isAdmin ? styles.roleAdmin : styles.roleTutor,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.roleText,
+                    isAdmin ? styles.roleTextAdmin : styles.roleTextTutor,
+                  ]}
+                >
+                  {isAdmin ? "Admin" : "Tutor"}
+                </Text>
+              </View>
+            </View>
             {user?.email ? (
               <Text style={styles.email} numberOfLines={1}>
                 {user.email}
@@ -78,6 +96,18 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   name: { fontSize: 17, fontWeight: "700", color: colors.ink },
+  nameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    flexShrink: 1,
+  },
+  roleBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
+  roleAdmin: { backgroundColor: colors.primaryTint },
+  roleTutor: { backgroundColor: colors.successTint },
+  roleText: { fontSize: 10, fontWeight: "700" },
+  roleTextAdmin: { color: colors.primary },
+  roleTextTutor: { color: colors.success },
   email: { fontSize: 14, color: colors.muted, marginTop: 3 },
 
   button: {
