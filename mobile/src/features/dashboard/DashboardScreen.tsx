@@ -82,7 +82,7 @@ export default function DashboardScreen() {
   const firstName = user?.name?.split(" ")[0];
 
   return (
-    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
       <ScrollView
         contentContainerStyle={styles.scroll}
         refreshControl={

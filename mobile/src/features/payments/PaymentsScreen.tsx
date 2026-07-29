@@ -71,7 +71,7 @@ export default function PaymentsScreen() {
   const refreshing = isFetching && !isLoading;
 
   return (
-    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
         <Text style={styles.title}>Payments</Text>
         <Text style={styles.subtitle}>{invoices.length} invoices</Text>
@@ -100,7 +100,7 @@ export default function PaymentsScreen() {
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        style={{ flexShrink: 0 }}
+        style={{ height: 48, flexGrow: 0, flexShrink: 0 }}
         contentContainerStyle={styles.chipsRow}
       >
         {STATUS_TABS.map((tab) => {
@@ -270,14 +270,14 @@ const styles = StyleSheet.create({
   chipsRow: {
     gap: 6,
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.sm,
   },
   chip: {
     flexDirection: "row",
     alignItems: "center",
+    height: 32,
     gap: 6,
     backgroundColor: colors.surface,
-    paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 8,
     borderWidth: StyleSheet.hairlineWidth,

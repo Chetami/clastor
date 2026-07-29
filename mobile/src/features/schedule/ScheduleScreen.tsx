@@ -44,23 +44,11 @@ export default function ScheduleScreen() {
     (studentsQuery.isFetching && !studentsQuery.isLoading);
 
   return (
-    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
       {/* Header */}
       <View style={styles.header}>
-        <View>
-          <Text style={styles.title}>Schedule</Text>
-          <Text style={styles.subtitle}>{monthYear(now)}</Text>
-        </View>
-        <Pressable
-          style={({ pressed }) => [
-            styles.todayButton,
-            pressed && { opacity: 0.7 },
-          ]}
-          onPress={() => lessonsQuery.refetch()}
-        >
-          <Ionicons name="refresh" size={14} color={colors.primary} />
-          <Text style={styles.todayText}>Refresh</Text>
-        </Pressable>
+        <Text style={styles.title}>Schedule</Text>
+        <Text style={styles.subtitle}>{monthYear(now)}</Text>
       </View>
 
       {lessonsQuery.isLoading ? (
@@ -199,27 +187,13 @@ const styles = StyleSheet.create({
 
   header: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "baseline",
     justifyContent: "space-between",
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    backgroundColor: colors.surface,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.line,
+    paddingTop: spacing.md,
   },
   title: { fontSize: 22, fontWeight: "700", color: colors.ink, letterSpacing: -0.3 },
-  subtitle: { fontSize: 13, color: colors.muted, marginTop: 2 },
-
-  todayButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    backgroundColor: colors.primaryTint,
-    paddingVertical: 7,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-  },
-  todayText: { color: colors.primary, fontSize: 13, fontWeight: "600" },
+  subtitle: { fontSize: 13, color: colors.muted },
 
   loading: { flex: 1, alignItems: "center", justifyContent: "center" },
 
