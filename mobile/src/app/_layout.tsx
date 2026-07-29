@@ -54,6 +54,7 @@ function RootNavigator() {
       <Stack.Screen name="login" />
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="students/[id]" />
+      <Stack.Screen name="payments/[id]" />
     </Stack>
   );
 }

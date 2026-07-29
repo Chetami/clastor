@@ -40,6 +40,16 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="payments"
+        options={{
+          title: "Payments",
+          tabBarLabel: "Payments",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="card" color={color} size={size} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="settings"
         options={{
           title: "Settings",

@@ -1,6 +1,9 @@
 import type {
   DashboardPeriod,
+  InvoiceResponse,
+  InvoiceStatus,
   LessonResponse,
+  PaymentMethod,
 } from "@examify-tms/interfaces";
 
 /**
@@ -322,3 +325,56 @@ export const ACCEPTANCE_LABELS: Record<string, string> = {
   accepted: "Accepted",
   declined: "Declined",
 };
+
+/* -------------------------------------------------------------------------- *
+ * Invoice helpers (mirrors web `features/payments/invoice-utils.ts`).          *
+ * Colours are hex so they work with React Native StyleSheet.                   *
+ * -------------------------------------------------------------------------- */
+
+/** Display label + colour tokens for each invoice lifecycle status. */
+export const INVOICE_STATUS_META: Record<
+  InvoiceStatus,
+  { label: string; bg: string; text: string }
+> = {
+  draft: { label: "Draft", bg: "#f1f5f9", text: "#64748b" },
+  open: { label: "Open", bg: "#EAF3FE", text: "#208AEF" },
+  paid: { label: "Paid", bg: "#d1fae5", text: "#059669" },
+  overdue: { label: "Overdue", bg: "#fee2e2", text: "#b91c1c" },
+  void: { label: "Void", bg: "#f1f5f9", text: "#94a3b8" },
+};
+
+/** Human labels for each payment method. */
+export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+  cash: "Cash",
+  bank_transfer: "Bank Transfer",
+  stripe: "Stripe",
+};
+
+/** "5 Jul 2026" style date (no date-fns dependency). */
+export function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-AU", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+/** "5 Jul 2026, 4:30 pm" style date+time. */
+export function formatDateTime(iso: string): string {
+  return new Date(iso).toLocaleString("en-AU", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+}
+
+/** True when an open/overdue invoice is past its due date. */
+export function isOverdue(invoice: InvoiceResponse): boolean {
+  return (
+    (invoice.status === "open" || invoice.status === "overdue") &&
+    new Date(invoice.dueDate).getTime() < Date.now()
+  );
+}
