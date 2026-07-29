@@ -32,6 +32,26 @@ export async function exchangeFirebaseToken(
 }
 
 /**
+ * Exchange a Firebase ID token (obtained via Google sign-in) for the app's
+ * own JWT + refresh token pair. Unlike {@link exchangeFirebaseToken} this hits
+ * `/api/auth/google`, which creates the Firestore document on first sign-in
+ * using the Google profile, so it works for brand-new users.
+ */
+export async function exchangeGoogleFirebaseToken(
+  firebaseToken: string,
+  body?: Record<string, unknown>,
+): Promise<LoginResponse> {
+  const response = await api.post<LoginResponse>(
+    "/api/auth/google",
+    body,
+    {
+      headers: { Authorization: `Bearer ${firebaseToken}` },
+    },
+  );
+  return response.data;
+}
+
+/**
  * Validate the current session and return the user. Also used as the
  * bootstrap query that hydrates the auth store on app launch.
  */

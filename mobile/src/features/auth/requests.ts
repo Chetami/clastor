@@ -1,6 +1,12 @@
-import { signInWithEmailAndPassword, signOut } from "firebase/auth";
+import {
+  GoogleAuthProvider,
+  signInWithEmailAndPassword,
+  signInWithCredential,
+  signOut,
+} from "firebase/auth";
 import {
   exchangeFirebaseToken,
+  exchangeGoogleFirebaseToken,
   revokeRefreshToken,
 } from "@examify-tms/shared";
 import type { LoginResponse } from "@examify-tms/interfaces";
@@ -15,6 +21,8 @@ const firebaseAuthErrorMap: Record<string, string> = {
   "auth/network-request-failed":
     "Network error. Check your connection and try again.",
   "auth/too-many-requests": "Too many attempts. Please try again later.",
+  "auth/operation-not-allowed":
+    "Google sign-in is not enabled. Contact support.",
   "auth/internal-error": "Authentication failed. Please try again.",
 };
 
@@ -40,6 +48,25 @@ export async function loginRequest(
     );
     const firebaseToken = await credential.user.getIdToken();
     return exchangeFirebaseToken(firebaseToken);
+  } catch (error) {
+    if (error instanceof Error && error.message) throw error;
+    throw mapFirebaseError(error);
+  }
+}
+
+/**
+ * Sign in with Google. Takes a Google ID token (obtained via the native
+ * Google Sign-In SDK in the `useGoogleSignIn` hook) and exchanges it for a
+ * Firebase credential, then for the app's JWT. Mirrors the web client's
+ * `googleSignInRequest`, routing through `/api/auth/google` so the backend
+ * creates the user on first sign-in.
+ */
+export async function googleSignInRequest(idToken: string): Promise<LoginResponse> {
+  try {
+    const credential = GoogleAuthProvider.credential(idToken);
+    const userCredential = await signInWithCredential(firebaseAuth, credential);
+    const firebaseToken = await userCredential.user.getIdToken();
+    return exchangeGoogleFirebaseToken(firebaseToken);
   } catch (error) {
     if (error instanceof Error && error.message) throw error;
     throw mapFirebaseError(error);

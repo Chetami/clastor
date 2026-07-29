@@ -10,14 +10,16 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useLogin } from "@/features/auth/hooks";
+import { useLogin, useGoogleSignIn } from "@/features/auth/hooks";
 
 export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const login = useLogin();
+  const google = useGoogleSignIn();
 
   const disabled = login.isPending || !email || !password;
+  const authError = login.error?.message ?? google.error?.message;
 
   function handleSubmit() {
     if (disabled) return;
@@ -45,9 +47,9 @@ export default function LoginScreen() {
           </View>
 
           <View style={styles.form}>
-            {login.isError && (
+            {authError && (
               <View style={styles.errorBox}>
-                <Text style={styles.errorText}>{login.error.message}</Text>
+                <Text style={styles.errorText}>{authError}</Text>
               </View>
             )}
 
@@ -85,6 +87,23 @@ export default function LoginScreen() {
             >
               <Text style={styles.buttonText}>
                 {login.isPending ? "Signing in…" : "Sign in"}
+              </Text>
+            </Pressable>
+
+            <View style={styles.divider}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>or</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            <Pressable
+              style={[styles.googleButton, google.isPending && styles.buttonDisabled]}
+              onPress={google.signIn}
+              disabled={google.isPending}
+            >
+              <Text style={styles.googleLogo}>G</Text>
+              <Text style={styles.googleText}>
+                {google.isPending ? "Connecting…" : "Continue with Google"}
               </Text>
             </Pressable>
           </View>
@@ -152,4 +171,41 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   errorText: { color: "#b91c1c", fontSize: 14 },
+  divider: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 20,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: "#e2e8f0",
+  },
+  dividerText: {
+    fontSize: 13,
+    color: "#94a3b8",
+    marginHorizontal: 12,
+  },
+  googleButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#cbd5e1",
+    borderRadius: 10,
+    paddingVertical: 12,
+    marginTop: 12,
+  },
+  googleLogo: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#4285F4",
+  },
+  googleText: {
+    color: "#0f172a",
+    fontSize: 16,
+    fontWeight: "600",
+  },
 });
