@@ -8,8 +8,7 @@
     "shared",
     "backend",
     "frontend",
-    "website",
-    "mobile"
+    "website"
   ],
   "scripts": {
     "install:all": "npm install",
