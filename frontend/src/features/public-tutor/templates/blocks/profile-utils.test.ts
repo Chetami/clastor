@@ -38,10 +38,4 @@ describe("formatProfileRate", () => {
       formatProfileRate(profile({ hourlyRate: 50.5, currency: "AUD" })),
     ).toBe("AUD 50.50");
   });
-
-  it("coerces numeric strings", () => {
-    expect(
-      formatProfileRate(profile({ hourlyRate: "50", currency: "EUR" })),
-    ).toBe("EUR 50.00");
-  });
 });

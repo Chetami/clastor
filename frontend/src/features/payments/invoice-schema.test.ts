@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
   createInvoiceFormSchema,
-  type CreateInvoiceFormData,
 } from "@examify-tms/shared";
 
 const validLineItem = {
@@ -13,8 +12,9 @@ const validLineItem = {
   quantity: 1,
 };
 
-/** A complete, valid form — tests spread + delete fields to break things. */
-function validForm(): CreateInvoiceFormData {
+/** A complete, valid form — tests spread + delete fields to break things.
+ *  `status` is intentionally omitted so the defaulting test below is real. */
+function validForm() {
   return {
     studentId: "stu_1",
     lineItems: [validLineItem],

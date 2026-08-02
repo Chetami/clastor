@@ -34,13 +34,22 @@ Write-Host " Deploy FRONTEND [$Environment]  ->  $($EnvCfg.frontendUrl)"
 Write-Host "==========================================="
 
 # ---------------------------------------------------------------------------
-# 1. Build shared types (frontend imports from @examify-tms/interfaces)
+# 1. Build the shared packages the frontend compiles against:
+#    - @examify-tms/interfaces  → generated type declarations
+#    - @examify-tms/shared      → runtime data layer (shared/dist), which Vite
+#                                 bundles into the frontend. shared/dist is
+#                                 gitignored, so it MUST be built here or the
+#                                 frontend resolves stale/missing code.
+#                                 Order matters — shared itself imports from
+#                                 interfaces, so interfaces goes first.
 # ---------------------------------------------------------------------------
-Write-Host "[1/5] Building shared interfaces package..."
+Write-Host "[1/5] Building interfaces + shared packages..."
 Push-Location $repoRoot
 try {
     npm run build:interfaces
     if ($LASTEXITCODE -ne 0) { Die "interfaces build failed" }
+    npm run build:shared
+    if ($LASTEXITCODE -ne 0) { Die "shared build failed" }
 } finally { Pop-Location }
 
 # ---------------------------------------------------------------------------
