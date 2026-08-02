@@ -7,9 +7,11 @@ import { toast } from "sonner";
 import type {
   DashboardPeriod,
   AttendanceStatus,
+  UpdateLessonRequest,
 } from "@examify-tms/interfaces";
-import { useDashboardSummary } from "./api";
-import { useCreateInvoice, useSendInvoice } from "@/features/payments/api";
+import { useDashboardSummary, useUpdateLessonDetails } from "./api";
+import { useInvoiceLesson } from "@/features/payments/api";
+import type { InvoiceLessonEdits } from "@/features/payments/api";
 import { PeriodSelector } from "./components/period-selector";
 import { StatCards } from "./components/stat-cards";
 import { HoursChart } from "./components/hours-chart";
@@ -42,8 +44,8 @@ export default function Dashboard() {
     useDashboardSummary(period);
   const { data: lessons = [], isLoading: lessonsLoading } = useListLessons();
   const { data: students = [] } = useListStudents();
-  const createInvoice = useCreateInvoice();
-  const sendInvoice = useSendInvoice();
+  const invoiceLesson = useInvoiceLesson();
+  const updateLessonDetails = useUpdateLessonDetails();
 
   const studentNames = useMemo(() => {
     const map: Record<string, string> = {};
@@ -70,48 +72,45 @@ export default function Dashboard() {
     [lessons, period],
   );
 
-  const handleCreateInvoice = async (lessonId: string, studentName: string) => {
-    const lesson = lessons.find((l) => l.id === lessonId);
-    if (!lesson) return;
-
-    const student = studentMap[lesson.studentId];
-    if (!student) return;
-
-    const createdInvoice = await createInvoice.mutateAsync({
-      studentId: lesson.studentId,
-      lineItems: [
-        {
-          lessonId: lesson.id,
-          description: `${lesson.subject || "Lesson"}`,
-          durationMinutes: lesson.durationMinutes,
-          rateType: student.rateType || "hourly",
-          unitAmount: student.expectedAmount,
-          quantity:
-            student.rateType === "hourly" ? lesson.durationMinutes / 60 : 1,
-        },
-      ],
-      dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
-      paymentMethod: "bank_transfer" as const,
-      status: "draft" as const,
-    });
-
-    await sendInvoice.mutateAsync({ id: createdInvoice.id });
-
-    toast.success(`Invoice sent to ${studentName}`);
-
-    navigate(`/payments/${createdInvoice.id}`);
-  };
-
   const handleTodoConfirm = async (
     lessonId: string,
     _attendanceStatus: AttendanceStatus,
     shouldInvoice: boolean,
+    edits?: InvoiceLessonEdits,
   ) => {
-    if (!shouldInvoice) return;
     const lesson = lessons.find((l) => l.id === lessonId);
     if (!lesson) return;
-    const name = studentNames[lesson.studentId] ?? "Student";
-    await handleCreateInvoice(lessonId, name);
+
+    // Apply any lesson tweaks first — this happens whether or not an invoice
+    // is sent, since the lesson itself should reflect what was actually done.
+    let effective = lesson;
+    const hasEdits =
+      edits &&
+      (edits.subject !== undefined ||
+        edits.durationMinutes !== undefined);
+    if (hasEdits) {
+      const data: UpdateLessonRequest = {};
+      if (edits!.subject !== undefined) data.subject = edits!.subject;
+      if (edits!.durationMinutes !== undefined) {
+        data.durationMinutes = edits!.durationMinutes;
+      }
+      effective = await updateLessonDetails.mutateAsync({ id: lessonId, data });
+    }
+
+    if (!shouldInvoice) return;
+
+    const student = studentMap[effective.studentId];
+    if (!student) return;
+    const name = studentNames[effective.studentId] ?? "Student";
+
+    const createdInvoice = await invoiceLesson.mutateAsync({
+      lesson: effective,
+      rateType: student.rateType,
+      expectedAmount: student.expectedAmount,
+    });
+
+    toast.success(`Invoice sent to ${name}`);
+    navigate(`/payments/${createdInvoice.id}`);
   };
 
   return (

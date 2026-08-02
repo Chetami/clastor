@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import {
   CalendarClock,
   ChevronRight,
-  CircleDollarSign,
   Clock,
   Loader2,
   Repeat,
@@ -11,7 +10,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { useListLessons, useListLessonsInfinite } from "@/features/schedule/api";
+import { useListLessonsInfinite } from "@/features/schedule/api";
 import { useListStudents } from "@/features/students/api";
 import {
   getInitials,
@@ -19,7 +18,7 @@ import {
   formatLessonTime,
   lessonBadge,
 } from "@/features/lessons/lesson-display";
-import { ImportantLessons } from "@/features/lessons/ImportantLessons";
+import { ActionableLessons } from "@/features/lessons/ActionableLessons";
 
 type FilterTab = "upcoming" | "past" | "cancelled" | "all";
 
@@ -36,7 +35,6 @@ export default function Lessons() {
   const navigate = useNavigate();
   const { data: students = [] } = useListStudents();
   const [filter, setFilter] = useState<FilterTab>("upcoming");
-  const [unpaidOnly, setUnpaidOnly] = useState(false);
 
   // Cursor-paginated list: each page reads only ~PAGE_SIZE lessons on the
   // backend; pages accumulate here as the user loads more.
@@ -44,10 +42,6 @@ export default function Lessons() {
   const lessons = useMemo(
     () => infinite.data?.pages.flatMap((p) => p.data) ?? [],
     [infinite.data],
-  );
-  const visibleLessons = useMemo(
-    () => (unpaidOnly ? lessons.filter((l) => !l.isPaid) : lessons),
-    [lessons, unpaidOnly],
   );
   const isLoading = infinite.isLoading;
   const isFetchingNextPage = infinite.isFetchingNextPage;
@@ -60,30 +54,10 @@ export default function Lessons() {
     return map;
   }, [students]);
 
-  // "Important" summary cards need today's lessons, which sit outside the
-  // active tab's pagination. Fetch just today's window (bounded, cheap) and
-  // only on the upcoming tab where the cards are shown.
-  const showImportant = filter === "upcoming";
-  const todayWindow = useMemo(() => {
-    const n = new Date();
-    const start = new Date(
-      n.getFullYear(),
-      n.getMonth(),
-      n.getDate(),
-    ).toISOString();
-    const end = new Date(
-      n.getFullYear(),
-      n.getMonth(),
-      n.getDate() + 1,
-    ).toISOString();
-    return { from: start, to: end };
-  }, []);
-  const { data: todaysLessons = [] } = useListLessons(todayWindow, {
-    enabled: showImportant,
-  });
-
   return (
     <div className="space-y-6">
+      <ActionableLessons />
+
       {isLoading && (
         <div className="flex items-center justify-center py-12">
           <p className="text-sm text-muted-foreground">Loading lessons…</p>
@@ -98,34 +72,18 @@ export default function Lessons() {
         </div>
       )}
 
-      {!isLoading && !error && showImportant && (
-        <ImportantLessons lessons={todaysLessons} studentMap={studentMap} />
-      )}
-
       {!isLoading && !error && (
         <Card>
           <CardHeader>
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="flex flex-wrap items-center gap-1 rounded-md border bg-muted/40 p-1">
-                {TABS.map((tab) => (
-                  <FilterOption
-                    key={tab.value}
-                    checked={filter === tab.value}
-                    label={tab.label}
-                    onSelect={() => setFilter(tab.value)}
-                  />
-                ))}
-              </div>
-              <Button
-                variant={unpaidOnly ? "default" : "outline"}
-                size="sm"
-                className="h-8 shrink-0"
-                aria-pressed={unpaidOnly}
-                onClick={() => setUnpaidOnly((v) => !v)}
-              >
-                <CircleDollarSign className="h-4 w-4" />
-                Unpaid only
-              </Button>
+            <div className="flex flex-wrap items-center gap-1 rounded-md border bg-muted/40 p-1">
+              {TABS.map((tab) => (
+                <FilterOption
+                  key={tab.value}
+                  checked={filter === tab.value}
+                  label={tab.label}
+                  onSelect={() => setFilter(tab.value)}
+                />
+              ))}
             </div>
           </CardHeader>
           <CardContent>
@@ -138,18 +96,8 @@ export default function Lessons() {
               </div>
             ) : (
               <>
-                {visibleLessons.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
-                    <CircleDollarSign className="h-8 w-8 text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground">
-                      {hasNextPage
-                        ? "No unpaid lessons on the loaded pages — load more to keep looking."
-                        : "No unpaid lessons in this view."}
-                    </p>
-                  </div>
-                ) : (
                 <ul className="-mx-6 divide-y">
-                  {visibleLessons.map((lesson) => {
+                  {lessons.map((lesson) => {
                     const name =
                       studentMap[lesson.studentId] ?? "Unknown student";
                     const badge = lessonBadge(lesson);
@@ -223,7 +171,6 @@ export default function Lessons() {
                     );
                   })}
                 </ul>
-                )}
 
                 {hasNextPage && (
                   <div className="mt-4 flex justify-center border-t pt-4">

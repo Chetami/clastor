@@ -2,8 +2,11 @@ import type {
   InvoiceResponse,
   InvoiceStatus,
   PaymentMethod,
+  LessonResponse,
 } from "@examify-tms/interfaces";
+import type { RateType } from "@examify-tms/interfaces";
 import type { BadgeProps } from "@/components/ui/badge";
+import { defaultQuantity, defaultUnitAmount } from "./invoice-schema";
 
 type BadgeVariant = NonNullable<BadgeProps["variant"]>;
 
@@ -68,4 +71,48 @@ export function isOverdue(invoice: InvoiceResponse): boolean {
     (invoice.status === "open" || invoice.status === "overdue") &&
     new Date(invoice.dueDate).getTime() < Date.now()
   );
+}
+
+/**
+ * A line item draft for a single lesson, ready to post to the create-invoice
+ * endpoint. This is the canonical shape every invoicing entry point builds
+ * from so descriptions/amounts can't drift between surfaces.
+ */
+export interface LessonLineItemDraft {
+  lessonId: string;
+  description: string;
+  durationMinutes: number;
+  rateType: RateType;
+  unitAmount: number;
+  quantity: number;
+}
+
+/**
+ * Build the human-readable description for a lesson line item.
+ * Format: "{subject} — {duration} min on {date}" (matches the invoice page).
+ */
+export function buildLessonDescription(lesson: LessonResponse): string {
+  return `${lesson.subject || "Lesson"} — ${lesson.durationMinutes} min on ${formatDate(
+    lesson.startDateTime,
+  )}`;
+}
+
+/**
+ * Build a complete line item draft from a lesson + the student's rate.
+ * Uses defaultUnitAmount / defaultQuantity so behaviour matches the
+ * Create Invoice page exactly.
+ */
+export function buildLessonLineItem(
+  lesson: LessonResponse,
+  rateType: RateType,
+  expectedAmount: number,
+): LessonLineItemDraft {
+  return {
+    lessonId: lesson.id,
+    description: buildLessonDescription(lesson),
+    durationMinutes: lesson.durationMinutes,
+    rateType,
+    unitAmount: defaultUnitAmount(expectedAmount),
+    quantity: defaultQuantity(rateType, lesson.durationMinutes),
+  };
 }

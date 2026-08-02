@@ -10,8 +10,17 @@ import {
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { FileText, Loader2 } from "lucide-react";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { ChevronDown, FileText, Loader2, Pencil } from "lucide-react";
+import { cn } from "@/lib/utils";
 import type { LessonResponse, AttendanceStatus } from "@examify-tms/interfaces";
+import type { InvoiceLessonEdits } from "@/features/payments/api";
 
 type AttendanceOption = {
   value: AttendanceStatus;
@@ -33,6 +42,7 @@ type Props = {
     lessonId: string,
     attendanceStatus: AttendanceStatus,
     sendInvoice: boolean,
+    edits?: InvoiceLessonEdits,
   ) => Promise<void>;
   isPending: boolean;
 };
@@ -47,13 +57,39 @@ export function MarkAttendanceDialog({
 }: Props) {
   const [selected, setSelected] = useState<AttendanceStatus | null>(null);
   const [sendInvoice, setSendInvoice] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [subject, setSubject] = useState(lesson.subject ?? "");
+  const [duration, setDuration] = useState(String(lesson.durationMinutes));
+
+  const subjectChanged = subject.trim() !== (lesson.subject ?? "");
+  const durationNum = Number(duration);
+  const durationChanged =
+    Number.isFinite(durationNum) &&
+    durationNum >= 1 &&
+    durationNum !== lesson.durationMinutes;
+  const hasEdits = subjectChanged || durationChanged;
+
+  const reset = () => {
+    setSelected(null);
+    setSendInvoice(false);
+    setDetailsOpen(false);
+    setSubject(lesson.subject ?? "");
+    setDuration(String(lesson.durationMinutes));
+  };
 
   const handleConfirm = async () => {
     if (!selected) return;
+    const edits: InvoiceLessonEdits = {};
+    if (subjectChanged) edits.subject = subject.trim();
+    if (durationChanged) edits.durationMinutes = durationNum;
     try {
-      await onConfirm(lesson.id, selected, sendInvoice);
-      setSelected(null);
-      setSendInvoice(false);
+      await onConfirm(
+        lesson.id,
+        selected,
+        sendInvoice,
+        hasEdits ? edits : undefined,
+      );
+      reset();
       onOpenChange(false);
     } catch {
       // handled by caller
@@ -64,10 +100,7 @@ export function MarkAttendanceDialog({
     <Dialog
       open={open}
       onOpenChange={(o) => {
-        if (!o) {
-          setSelected(null);
-          setSendInvoice(false);
-        }
+        if (!o) reset();
         onOpenChange(o);
       }}
     >
@@ -100,6 +133,60 @@ export function MarkAttendanceDialog({
             </ToggleGroupItem>
           ))}
         </ToggleGroup>
+
+        <Collapsible open={detailsOpen} onOpenChange={setDetailsOpen}>
+          <CollapsibleTrigger asChild>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="w-full justify-between"
+            >
+              <span className="flex items-center gap-1.5">
+                <Pencil className="h-3.5 w-3.5" />
+                Edit details
+                {hasEdits && (
+                  <span className="ml-1 rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+                    edited
+                  </span>
+                )}
+              </span>
+              <ChevronDown
+                className={cn(
+                  "h-3.5 w-3.5 text-muted-foreground transition-transform",
+                  detailsOpen && "rotate-180",
+                )}
+              />
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="space-y-3 pt-3 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:slide-in-from-top-1">
+            <div className="space-y-1.5">
+              <Label htmlFor="invoice-subject" className="text-xs">
+                Subject
+              </Label>
+              <Input
+                id="invoice-subject"
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+                placeholder="Lesson"
+                className="h-8"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="invoice-duration" className="text-xs">
+                Duration (minutes)
+              </Label>
+              <Input
+                id="invoice-duration"
+                type="number"
+                min={1}
+                value={duration}
+                onChange={(e) => setDuration(e.target.value)}
+                className="h-8"
+              />
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
 
         <label
           htmlFor="send-invoice"

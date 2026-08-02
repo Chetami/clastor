@@ -31,11 +31,13 @@ import { lessonBadge } from "@/features/lessons/lesson-display";
 import { useCreateInvoice, useSendInvoice } from "./api";
 import {
   createInvoiceFormSchema,
-  defaultQuantity,
-  defaultUnitAmount,
   type CreateInvoiceFormData,
 } from "./invoice-schema";
-import { formatCurrency, formatDate } from "./invoice-utils";
+import {
+  buildLessonLineItem,
+  formatCurrency,
+  formatDate,
+} from "./invoice-utils";
 import { useUserCurrency } from "@/lib/use-currency";
 
 interface LineItemDraft {
@@ -133,25 +135,19 @@ export default function CreateInvoice() {
     return unpaidLessons
       .filter((l) => selectedLessonIds.has(l.id))
       .map((lesson) => {
-        const rateType = selectedStudent.rateType;
-        const defaultQty = defaultQuantity(rateType, lesson.durationMinutes);
+        const base = buildLessonLineItem(
+          lesson,
+          selectedStudent.rateType,
+          selectedStudent.expectedAmount,
+        );
         const quantityOverride = lineItemQuantities[lesson.id];
-        const quantity =
-          quantityOverride !== undefined ? quantityOverride : defaultQty;
-        const override = lineItemAmounts[lesson.id];
-        const unitAmount =
-          override !== undefined
-            ? override
-            : defaultUnitAmount(selectedStudent.expectedAmount);
+        const amountOverride = lineItemAmounts[lesson.id];
         return {
-          lessonId: lesson.id,
-          description: `${lesson.subject || "Lesson"} — ${lesson.durationMinutes} min on ${formatDate(
-            lesson.startDateTime,
-          )}`,
-          durationMinutes: lesson.durationMinutes,
-          rateType,
-          unitAmount,
-          quantity,
+          ...base,
+          quantity:
+            quantityOverride !== undefined ? quantityOverride : base.quantity,
+          unitAmount:
+            amountOverride !== undefined ? amountOverride : base.unitAmount,
         };
       });
   }, [selectedStudent, unpaidLessons, selectedLessonIds, lineItemAmounts, lineItemQuantities]);

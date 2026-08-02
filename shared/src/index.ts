@@ -61,6 +61,7 @@ export {
   useDashboardSummary,
   useGenerateMeetLink,
   useMarkLessonDone,
+  useUpdateLessonDetails,
   getDashboardSummaryRequest,
 } from "./features/dashboard/api";
 
