@@ -32,6 +32,7 @@ type Props = {
   attendanceLessons: LessonResponse[];
   checklistItems: LessonChecklistItem[];
   studentNames: Record<string, string>;
+  studentSubjectOptions: Record<string, string[]>;
   onConfirm: (
     lessonId: string,
     attendanceStatus: AttendanceStatus,
@@ -44,6 +45,7 @@ export function ThingsToDo({
   attendanceLessons,
   checklistItems,
   studentNames,
+  studentSubjectOptions,
   onConfirm,
 }: Props) {
   const markDone = useMarkLessonDone();
@@ -154,6 +156,9 @@ export function ThingsToDo({
           }
           lesson={openDialogLesson}
           studentName={openDialogStudentName}
+          subjectOptions={
+            studentSubjectOptions[openDialogLesson.studentId] ?? []
+          }
           onConfirm={handleConfirm}
           isPending={markDone.isPending}
         />

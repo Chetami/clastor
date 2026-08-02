@@ -17,6 +17,13 @@ import {
 } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ChevronDown, FileText, Loader2, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { LessonResponse, AttendanceStatus } from "@examify-tms/interfaces";
@@ -38,6 +45,8 @@ type Props = {
   onOpenChange: (open: boolean) => void;
   lesson: LessonResponse;
   studentName: string;
+  /** Allowed subject names for this student (from the tutor's catalogue). */
+  subjectOptions: string[];
   onConfirm: (
     lessonId: string,
     attendanceStatus: AttendanceStatus,
@@ -52,6 +61,7 @@ export function MarkAttendanceDialog({
   onOpenChange,
   lesson,
   studentName,
+  subjectOptions,
   onConfirm,
   isPending,
 }: Props) {
@@ -61,13 +71,18 @@ export function MarkAttendanceDialog({
   const [subject, setSubject] = useState(lesson.subject ?? "");
   const [duration, setDuration] = useState(String(lesson.durationMinutes));
 
-  const subjectChanged = subject.trim() !== (lesson.subject ?? "");
+  const subjectChanged = subject !== (lesson.subject ?? "");
   const durationNum = Number(duration);
   const durationChanged =
     Number.isFinite(durationNum) &&
     durationNum >= 1 &&
     durationNum !== lesson.durationMinutes;
   const hasEdits = subjectChanged || durationChanged;
+
+  const subjectChoices =
+    lesson.subject && !subjectOptions.includes(lesson.subject)
+      ? [lesson.subject, ...subjectOptions]
+      : subjectOptions;
 
   const reset = () => {
     setSelected(null);
@@ -80,7 +95,7 @@ export function MarkAttendanceDialog({
   const handleConfirm = async () => {
     if (!selected) return;
     const edits: InvoiceLessonEdits = {};
-    if (subjectChanged) edits.subject = subject.trim();
+    if (subjectChanged) edits.subject = subject || null;
     if (durationChanged) edits.durationMinutes = durationNum;
     try {
       await onConfirm(
@@ -164,13 +179,25 @@ export function MarkAttendanceDialog({
               <Label htmlFor="invoice-subject" className="text-xs">
                 Subject
               </Label>
-              <Input
-                id="invoice-subject"
-                value={subject}
-                onChange={(e) => setSubject(e.target.value)}
-                placeholder="Lesson"
-                className="h-8"
-              />
+              <Select value={subject} onValueChange={setSubject}>
+                <SelectTrigger id="invoice-subject" className="h-8">
+                  <SelectValue
+                    placeholder={
+                      subjectOptions.length > 0
+                        ? "Select a subject"
+                        : "No subjects assigned"
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">No subject</SelectItem>
+                  {subjectChoices.map((name) => (
+                    <SelectItem key={name} value={name}>
+                      {name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="invoice-duration" className="text-xs">

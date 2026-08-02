@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/use-auth";
 import { useListLessons } from "@/features/schedule/api";
 import { useListStudents } from "@/features/students/api";
+import { useSubjects } from "@/lib/subjects";
 import { toast } from "sonner";
 import type {
   DashboardPeriod,
@@ -44,6 +45,7 @@ export default function Dashboard() {
     useDashboardSummary(period);
   const { data: lessons = [], isLoading: lessonsLoading } = useListLessons();
   const { data: students = [] } = useListStudents();
+  const subjects = useSubjects();
   const invoiceLesson = useInvoiceLesson();
   const updateLessonDetails = useUpdateLessonDetails();
 
@@ -52,6 +54,18 @@ export default function Dashboard() {
     for (const s of students) map[s.id] = s.name;
     return map;
   }, [students]);
+
+  // Per-student list of allowed subject names (from the tutor's catalogue),
+  // used to constrain the subject selector in the attendance dialog.
+  const studentSubjectOptions = useMemo(() => {
+    const map: Record<string, string[]> = {};
+    for (const s of students) {
+      map[s.id] = (s.subjectIds ?? [])
+        .map((id) => subjects.find((sub) => sub.id === id)?.name)
+        .filter((n): n is string => !!n);
+    }
+    return map;
+  }, [students, subjects]);
 
   const studentMap = useMemo(() => {
     const map: Record<string, (typeof students)[number]> = {};
@@ -172,6 +186,7 @@ export default function Dashboard() {
               attendanceLessons={todos}
               checklistItems={checklist}
               studentNames={studentNames}
+              studentSubjectOptions={studentSubjectOptions}
               onConfirm={handleTodoConfirm}
             />
           )}

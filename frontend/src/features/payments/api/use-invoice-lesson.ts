@@ -17,7 +17,7 @@ export interface InvoiceLessonInput {
 
 /** Optional lesson fields a caller may tweak before/while invoicing. */
 export interface InvoiceLessonEdits {
-  subject?: string;
+  subject?: string | null;
   durationMinutes?: number;
 }
 
