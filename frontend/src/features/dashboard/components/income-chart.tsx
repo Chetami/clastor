@@ -23,7 +23,7 @@ import {
   peak,
   todayBucketLabel,
   isDenseSeries,
-  formatCurrency,
+  formatCurrencyWhole,
 } from "../lib";
 
 const chartConfig = {
@@ -60,11 +60,11 @@ export function IncomeChart({ summary }: { summary: DashboardSummaryResponse }) 
     const pct = total > 0 ? Math.round((cur / total) * 100) : 0;
     return (
       <div className="rounded-lg border bg-background px-2.5 py-1.5 text-xs shadow-xl">
-        <div className="mb-1 font-medium">{formatCurrency(cur, currency)}</div>
+        <div className="mb-1 font-medium">{formatCurrencyWhole(cur, currency)}</div>
         <div className="text-muted-foreground">{pct}% of period</div>
         {prev > 0 && (
           <div className="text-muted-foreground">
-            Last: {formatCurrency(prev, currency)}
+            Last: {formatCurrencyWhole(prev, currency)}
           </div>
         )}
       </div>
@@ -76,8 +76,8 @@ export function IncomeChart({ summary }: { summary: DashboardSummaryResponse }) 
       <CardHeader className="flex flex-row items-center justify-between space-y-0">
         <CardTitle className="text-base">Income collected</CardTitle>
         <p className="text-xs text-muted-foreground">
-          {formatCurrency(total, currency)} · avg {formatCurrency(avg, currency)} · peak{" "}
-          {formatCurrency(peakVal, currency)}
+          {formatCurrencyWhole(total, currency)} · avg {formatCurrencyWhole(avg, currency)} · peak{" "}
+          {formatCurrencyWhole(peakVal, currency)}
         </p>
       </CardHeader>
       <CardContent className="flex-1">
@@ -101,7 +101,7 @@ export function IncomeChart({ summary }: { summary: DashboardSummaryResponse }) 
               strokeOpacity={0.5}
               strokeDasharray="4 4"
               label={{
-                value: `avg ${formatCurrency(avg, currency)}`,
+                value: `avg ${formatCurrencyWhole(avg, currency)}`,
                 position: "insideTopRight",
                 fill: "hsl(var(--muted-foreground))",
                 fontSize: 10,

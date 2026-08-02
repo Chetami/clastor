@@ -7,6 +7,7 @@ import {
   useCallback,
 } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { STUDENT_NOTIFY_COOLDOWN_MS } from "@examify-tms/shared";
 import {
   ArrowLeft,
   Calendar,
@@ -103,8 +104,6 @@ const STATUS_TONE: Record<string, string> = {
   completed: "bg-emerald-100 text-emerald-700",
   cancelled: "bg-rose-100 text-rose-700",
 };
-
-const NOTIFY_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
 export default function EventDetail() {
   const { eventId } = useParams<{ eventId: string }>();
@@ -233,7 +232,7 @@ export default function EventDetail() {
     ? new Date(lesson.lastStudentNotifiedAt)
     : null;
   const nextAllowedAt = notifiedAt
-    ? new Date(notifiedAt.getTime() + NOTIFY_COOLDOWN_MS)
+    ? new Date(notifiedAt.getTime() + STUDENT_NOTIFY_COOLDOWN_MS)
     : null;
   const cooldownActive = nextAllowedAt
     ? Date.now() < nextAllowedAt.getTime()

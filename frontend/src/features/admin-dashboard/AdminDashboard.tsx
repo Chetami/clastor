@@ -30,22 +30,13 @@ import { HoursChart } from "@/features/dashboard/components/hours-chart";
 import { ChartSkeleton } from "@/features/dashboard/components/skeletons";
 import { useDashboardSummary } from "@/features/dashboard/api";
 import {
-  formatCurrency,
+  formatCurrencyWhole as formatCurrency,
   formatHours,
   deltaPercent,
   previousPeriodLabel,
 } from "@/features/dashboard/lib";
+import { getInitials } from "@examify-tms/shared";
 import { useAdminOverview } from "./api";
-
-function initials(name: string): string {
-  return name
-    .split(" ")
-    .map((p) => p[0])
-    .filter(Boolean)
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
-}
 
 function StatTile({
   icon,
@@ -259,7 +250,7 @@ export default function AdminDashboard() {
                       {t.avatarUrl && (
                         <AvatarImage src={t.avatarUrl} alt={t.name} />
                       )}
-                      <AvatarFallback>{initials(t.name)}</AvatarFallback>
+                      <AvatarFallback>{getInitials(t.name)}</AvatarFallback>
                     </Avatar>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium">{t.name}</p>
@@ -361,7 +352,7 @@ export default function AdminDashboard() {
                         {t.avatarUrl && (
                           <AvatarImage src={t.avatarUrl} alt={t.name} />
                         )}
-                        <AvatarFallback>{initials(t.name)}</AvatarFallback>
+                        <AvatarFallback>{getInitials(t.name)}</AvatarFallback>
                       </Avatar>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium">{t.name}</p>

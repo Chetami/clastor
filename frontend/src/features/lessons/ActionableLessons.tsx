@@ -15,7 +15,6 @@ import {
   compareAsc,
   compareDesc,
   differenceInMilliseconds,
-  intervalToDuration,
 } from "date-fns";
 import type {
   AttendanceStatus,
@@ -46,6 +45,10 @@ import {
   partitionInvoiceableLessons,
 } from "@/features/payments/invoice-utils";
 import {
+  INVOICE_RESEND_COOLDOWN_MS,
+  formatMsRemaining,
+} from "@examify-tms/shared";
+import {
   formatLessonDate,
   formatLessonTime,
   getInitials,
@@ -61,31 +64,6 @@ const ATTENDANCE_LABELS: Record<AttendanceStatus, string> = {
   tutor_cancelled_makeup_issued: "tutor cancelled (makeup issued)",
   unrecorded: "unrecorded",
 };
-
-/**
- * How long after an invoice was last emailed before the customer can be
- * reminded again. Mirrors the backend `INVOICE_RESEND_COOLDOWN_MS` default
- * (24h, same as lesson-notify). The backend enforces this authoritatively;
- * this constant only drives the proactive UI lockout + countdown so the
- * tutor gets immediate feedback instead of a 429.
- */
-const REMIND_COOLDOWN_MS = 24 * 60 * 60 * 1000;
-
-/**
- * Compact countdown label for a millisecond duration: "Xh Ym" / "Xh" / "Ym".
- * Decomposes the duration with date-fns (flooring each unit) and folds days
- * into hours so a 24h cooldown reads "24h" rather than "1 day" — and never
- * shows a stray extra minute from sub-minute remainder.
- */
-function formatRemaining(ms: number): string {
-  if (ms <= 0) return "";
-  const d = intervalToDuration({ start: new Date(0), end: new Date(ms) });
-  const totalHours = (d.days ?? 0) * 24 + (d.hours ?? 0);
-  const minutes = d.minutes ?? 0;
-  if (totalHours > 0)
-    return minutes > 0 ? `${totalHours}h ${minutes}m` : `${totalHours}h`;
-  return `${minutes}m`;
-}
 
 interface OverdueRow {
   key: string;
@@ -451,7 +429,7 @@ export function ActionableLessons() {
                   // The instant the cooldown lifts (last sent + 24h), or null
                   // if the invoice has never been sent.
                   const availableAt = row.sentAt
-                    ? addMilliseconds(new Date(row.sentAt), REMIND_COOLDOWN_MS)
+                    ? addMilliseconds(new Date(row.sentAt), INVOICE_RESEND_COOLDOWN_MS)
                     : null;
                   const remaining = availableAt
                     ? differenceInMilliseconds(availableAt, now)
@@ -506,7 +484,7 @@ export function ActionableLessons() {
                         ) : (
                           <Send className="h-3.5 w-3.5" />
                         )}
-                        {onCooldown ? formatRemaining(remaining) : "Remind"}
+                        {onCooldown ? formatMsRemaining(remaining) : "Remind"}
                       </Button>
                     </li>
                   );
