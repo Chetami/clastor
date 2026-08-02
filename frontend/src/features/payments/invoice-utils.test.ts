@@ -154,3 +154,222 @@ describe("invoice due-date config (single source of truth)", () => {
     ).toBe("2026-01-15");
   });
 });
+
+import {
+  isCancelledLesson,
+  isPastLesson,
+  isExcludedFromInvoicing,
+  isChargeableAttendance,
+  partitionInvoiceableLessons,
+} from "@examify-tms/shared";
+
+describe("isCancelledLesson", () => {
+  it("treats the forward flag and tutor-cancelled outcomes as cancelled", () => {
+    expect(isCancelledLesson(lesson({ isCancelled: true }))).toBe(true);
+    expect(
+      isCancelledLesson(lesson({ attendanceStatus: "tutor_cancelled" })),
+    ).toBe(true);
+    expect(
+      isCancelledLesson(
+        lesson({ attendanceStatus: "tutor_cancelled_makeup_issued" }),
+      ),
+    ).toBe(true);
+  });
+
+  it("is not cancelled for ordinary outcomes", () => {
+    expect(isCancelledLesson(lesson({ attendanceStatus: "present" }))).toBe(
+      false,
+    );
+    expect(isCancelledLesson(lesson({ attendanceStatus: "unrecorded" }))).toBe(
+      false,
+    );
+  });
+});
+
+describe("isPastLesson", () => {
+  it("compares the start time to now", () => {
+    expect(isPastLesson(lesson({ startDateTime: PAST }))).toBe(true);
+    expect(isPastLesson(lesson({ startDateTime: FUTURE }))).toBe(false);
+  });
+});
+
+describe("isExcludedFromInvoicing", () => {
+  it("excludes credited/warned/tutor-cancelled outcomes", () => {
+    expect(
+      isExcludedFromInvoicing(lesson({ attendanceStatus: "absent_makeup_issued" })),
+    ).toBe(true);
+    expect(
+      isExcludedFromInvoicing(lesson({ attendanceStatus: "absent_warning" })),
+    ).toBe(true);
+    expect(
+      isExcludedFromInvoicing(lesson({ attendanceStatus: "tutor_cancelled" })),
+    ).toBe(true);
+    expect(
+      isExcludedFromInvoicing(
+        lesson({ attendanceStatus: "tutor_cancelled_makeup_issued" }),
+      ),
+    ).toBe(true);
+  });
+
+  it("keeps billable and unrecorded outcomes", () => {
+    expect(isExcludedFromInvoicing(lesson({ attendanceStatus: "present" }))).toBe(
+      false,
+    );
+    expect(
+      isExcludedFromInvoicing(lesson({ attendanceStatus: "absent_no_makeup" })),
+    ).toBe(false);
+    expect(
+      isExcludedFromInvoicing(lesson({ attendanceStatus: "unrecorded" })),
+    ).toBe(false);
+  });
+});
+
+describe("isChargeableAttendance", () => {
+  it("charges attended + absent-with-no-make-up only", () => {
+    expect(isChargeableAttendance(lesson({ attendanceStatus: "present" }))).toBe(
+      true,
+    );
+    expect(
+      isChargeableAttendance(lesson({ attendanceStatus: "present_late" })),
+    ).toBe(true);
+    expect(
+      isChargeableAttendance(lesson({ attendanceStatus: "absent_no_makeup" })),
+    ).toBe(true);
+  });
+
+  it("does not charge unrecorded, warned, credited or cancelled", () => {
+    expect(
+      isChargeableAttendance(lesson({ attendanceStatus: "unrecorded" })),
+    ).toBe(false);
+    expect(
+      isChargeableAttendance(lesson({ attendanceStatus: "absent_warning" })),
+    ).toBe(false);
+    expect(
+      isChargeableAttendance(lesson({ attendanceStatus: "absent_makeup_issued" })),
+    ).toBe(false);
+    expect(
+      isChargeableAttendance(lesson({ attendanceStatus: "tutor_cancelled" })),
+    ).toBe(false);
+  });
+});
+
+describe("partitionInvoiceableLessons", () => {
+  // Past lessons use stable 2020 dates so "past" is guaranteed; ordering
+  // assertions rely on the explicit dates below.
+  const chargeablePast = [
+    lesson({
+      id: "old",
+      startDateTime: "2020-01-01T12:00:00.000Z",
+      attendanceStatus: "present",
+    }),
+    lesson({
+      id: "mid",
+      startDateTime: "2020-01-02T12:00:00.000Z",
+      attendanceStatus: "present_late",
+    }),
+    lesson({
+      id: "recent",
+      startDateTime: "2020-01-03T12:00:00.000Z",
+      attendanceStatus: "absent_no_makeup",
+    }),
+  ];
+  const unrecordedPast = lesson({
+    id: "unrecorded",
+    startDateTime: "2020-01-02T12:00:00.000Z",
+    attendanceStatus: "unrecorded",
+  });
+  const upcoming = [
+    lesson({
+      id: "far",
+      startDateTime: "2099-12-01T12:00:00.000Z",
+      attendanceStatus: "unrecorded",
+    }),
+    lesson({
+      id: "soon",
+      startDateTime: "2099-01-01T12:00:00.000Z",
+      attendanceStatus: "unrecorded",
+    }),
+  ];
+  const excluded = [
+    lesson({
+      id: "cancelled-flag",
+      startDateTime: "2020-01-02T12:00:00.000Z",
+      attendanceStatus: "present",
+      isCancelled: true,
+    }),
+    lesson({
+      id: "tutor-cancelled",
+      startDateTime: "2020-01-02T12:00:00.000Z",
+      attendanceStatus: "tutor_cancelled",
+    }),
+    lesson({
+      id: "credited",
+      startDateTime: "2020-01-02T12:00:00.000Z",
+      attendanceStatus: "absent_makeup_issued",
+    }),
+    lesson({
+      id: "warned",
+      startDateTime: "2020-01-02T12:00:00.000Z",
+      attendanceStatus: "absent_warning",
+    }),
+    lesson({
+      id: "tutor-cancelled-makeup",
+      startDateTime: "2020-01-02T12:00:00.000Z",
+      attendanceStatus: "tutor_cancelled_makeup_issued",
+    }),
+  ];
+
+  const result = partitionInvoiceableLessons([
+    ...chargeablePast,
+    unrecordedPast,
+    ...upcoming,
+    ...excluded,
+  ]);
+
+  it("drops cancelled/credited/warned/tutor-cancelled entirely", () => {
+    const allIds = [
+      ...result.completed.chargeable,
+      ...result.completed.unrecorded,
+      ...result.upcoming,
+    ].map((l) => l.id);
+    for (const ex of excluded) {
+      expect(allIds).not.toContain(ex.id);
+    }
+  });
+
+  it("groups recorded billable outcomes into completed.chargeable, newest-first", () => {
+    expect(result.completed.chargeable.map((l) => l.id)).toEqual([
+      "recent",
+      "mid",
+      "old",
+    ]);
+  });
+
+  it("groups unrecorded past lessons into completed.unrecorded", () => {
+    expect(result.completed.unrecorded.map((l) => l.id)).toEqual(["unrecorded"]);
+  });
+
+  it("groups future lessons into upcoming, soonest-first", () => {
+    expect(result.upcoming.map((l) => l.id)).toEqual(["soon", "far"]);
+  });
+
+  it("returns empty groups for an empty list", () => {
+    const empty = partitionInvoiceableLessons([]);
+    expect(empty.upcoming).toEqual([]);
+    expect(empty.completed.chargeable).toEqual([]);
+    expect(empty.completed.unrecorded).toEqual([]);
+  });
+
+  it("never surfaces a warned absence as chargeable (the standardised rule)", () => {
+    const only = partitionInvoiceableLessons([
+      lesson({
+        id: "warned",
+        startDateTime: PAST,
+        attendanceStatus: "absent_warning",
+      }),
+    ]);
+    expect(only.completed.chargeable).toEqual([]);
+    expect(only.completed.unrecorded).toEqual([]);
+  });
+});
+
