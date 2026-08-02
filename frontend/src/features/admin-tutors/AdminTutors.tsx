@@ -23,21 +23,12 @@ import {
   AvatarImage,
 } from "@/components/ui/avatar";
 import { useUserCurrency } from "@/lib/use-currency";
-import { formatCurrency } from "@/features/dashboard/lib";
+import { formatCurrencyWhole as formatCurrency } from "@/features/dashboard/lib";
+import { getInitials } from "@examify-tms/shared";
 import { useListAdminTutors } from "./api";
 
 type SortField = "name" | "studentCount" | "outstandingAmount" | "googleConnected" | "lastActive" | "createdAt";
 type SortOrder = "asc" | "desc";
-
-function initials(name: string): string {
-  return name
-    .split(" ")
-    .map((p) => p[0])
-    .filter(Boolean)
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
-}
 
 function formatDate(iso: string | null | undefined): string {
   if (!iso) return "—";
@@ -202,7 +193,7 @@ export default function AdminTutors() {
                                 <AvatarImage src={t.avatarUrl} alt={t.name} />
                               )}
                               <AvatarFallback>
-                                {initials(t.name)}
+                                {getInitials(t.name)}
                               </AvatarFallback>
                             </Avatar>
                             <div className="flex flex-col">

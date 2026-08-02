@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { STUDENT_NOTIFY_COOLDOWN_MS } from "@examify-tms/shared";
 import {
   Ban,
   Clock,
@@ -67,9 +68,6 @@ const STATUS_TONE: Record<string, string> = {
   completed: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
   cancelled: "bg-rose-500/15 text-rose-700 dark:text-rose-400",
 };
-
-/** Mirrors the backend NOTIFY_COOLDOWN_MS default (24h). */
-const NOTIFY_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
 function formatDateTime(iso: string) {
   return new Date(iso).toLocaleString("en-US", {
@@ -406,7 +404,7 @@ function PopoverBody({
   const meetLink = lessonMeetLink ?? null;
   const notifiedAt = notifiedAtIso ? new Date(notifiedAtIso) : null;
   const nextAllowedAt = notifiedAt
-    ? new Date(notifiedAt.getTime() + NOTIFY_COOLDOWN_MS)
+    ? new Date(notifiedAt.getTime() + STUDENT_NOTIFY_COOLDOWN_MS)
     : null;
   const cooldownActive = nextAllowedAt
     ? Date.now() < nextAllowedAt.getTime()

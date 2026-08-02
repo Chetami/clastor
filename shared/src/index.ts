@@ -21,7 +21,7 @@ export { api } from "./lib/api";
 export { queryClient } from "./lib/query-client";
 
 // ---- Lib utils ----
-export { cn } from "./lib/utils";
+export { cn, getInitials } from "./lib/utils";
 export { useUserCurrency, getCurrencySymbol } from "./lib/use-currency";
 export {
   TIMEZONES,
@@ -52,6 +52,14 @@ export {
   useVerifyToken,
 } from "./features/auth/api";
 
+// ---- Feature: schedule ----
+export * from "./features/schedule/api";
+export * from "./features/schedule/event-schema";
+export * from "./features/schedule/working-hours";
+
+// ---- Feature: lessons (domain utils; schedule owns the API hooks above) ----
+export * from "./features/lessons/lesson-utils";
+
 // ---- Feature: dashboard ----
 // `generateMeetLinkRequest` and `recordAttendanceRequest` are also defined in
 // the schedule feature (identical implementations); they are re-exported via
@@ -61,17 +69,34 @@ export {
   useDashboardSummary,
   useGenerateMeetLink,
   useMarkLessonDone,
+  useUpdateLessonDetails,
   getDashboardSummaryRequest,
 } from "./features/dashboard/api";
+export * from "./features/dashboard/lib";
 
-// ---- Feature: schedule ----
-export * from "./features/schedule/api";
+// ---- Feature: account (mirrors backend enums) ----
+export * from "./features/account/currency-options";
+export * from "./features/account/reminder-options";
 
 // ---- Feature: students ----
 export * from "./features/students/api";
+// `rateTypeSchema` is intentionally NOT re-exported here — an identical schema
+// already ships from the payments module (export * above). Listing the rest
+// explicitly avoids an ambiguous-export collision at the package barrel.
+export {
+  studentStatusSchema,
+  studentFormSchema,
+  EMPTY_STUDENT_FORM,
+  formToUpdateRequest,
+  type StudentFormData,
+} from "./features/students/student-schema";
+export * from "./features/students/student-utils";
 
 // ---- Feature: payments ----
 export * from "./features/payments/api";
+export * from "./features/payments/invoice-config";
+export * from "./features/payments/invoice-schema";
+export * from "./features/payments/invoice-utils";
 
 // ---- Feature: lessons (via schedule) ----
 export * from "./features/emails/api";
@@ -79,6 +104,10 @@ export * from "./features/feedback/api";
 export * from "./features/templates/api";
 export * from "./features/tutor-profile/api";
 export * from "./features/public-tutor/api";
+export {
+  getCtaLabel,
+  formatRate as formatProfileRate,
+} from "./features/public-tutor/profile-utils";
 export * from "./features/onboarding/api";
 export * from "./features/tour/api";
 export * from "./features/subjects/api";

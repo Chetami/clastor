@@ -4,68 +4,33 @@ import type {
   LessonResponse,
   ExternalCalendarEvent,
 } from "@examify-tms/interfaces";
+import {
+  deriveLessonStatus,
+  lessonEndDate,
+  type DerivedLessonStatus,
+} from "@examify-tms/shared";
 
-/**
- * Derived lifecycle status computed from isCancelled + attendanceStatus
- * (not stored on the lesson).
- */
-export type DerivedLessonStatus = "scheduled" | "completed" | "cancelled";
+// Pure lesson domain logic lives in @examify-tms/shared — re-exported here so
+// existing imports from this module keep working.
+export {
+  deriveLessonStatus,
+  lessonEndDate,
+  isLessonFinished,
+  isRangeOverlap,
+  isUpcomingLesson,
+  isToday,
+  ATTENDANCE_LABELS,
+  ACCEPTANCE_LABELS,
+  ATTENDANCE_OPTIONS,
+  STUDENT_NOTIFY_COOLDOWN_MS,
+  INVOICE_RESEND_COOLDOWN_MS,
+  formatMsRemaining,
+  formatLessonDate,
+  formatLessonTime,
+  type DerivedLessonStatus,
+} from "@examify-tms/shared";
 
-export function deriveLessonStatus(
-  attendance: AttendanceStatus,
-  isCancelled = false,
-): DerivedLessonStatus {
-  if (isCancelled) {
-    return "cancelled";
-  }
-  if (
-    attendance === "tutor_cancelled" ||
-    attendance === "tutor_cancelled_makeup_issued"
-  ) {
-    return "cancelled";
-  }
-  if (attendance === "unrecorded") {
-    return "scheduled";
-  }
-  return "completed";
-}
-
-/** Compute the end Date of a lesson from start + duration. */
-export function lessonEndDate(lesson: LessonResponse): Date {
-  return new Date(
-    new Date(lesson.startDateTime).getTime() +
-      lesson.durationMinutes * 60_000,
-  );
-}
-
-export const ATTENDANCE_LABELS: Record<AttendanceStatus, string> = {
-  unrecorded: "Unrecorded",
-  present: "Present",
-  present_late: "Present (late)",
-  absent_no_makeup: "Absent — no make-up credit",
-  absent_makeup_issued: "Absent — make-up credit issued",
-  absent_warning: "Absent — warning issued",
-  tutor_cancelled: "Tutor cancelled",
-  tutor_cancelled_makeup_issued: "Tutor cancelled — make-up credit issued",
-};
-
-export const ACCEPTANCE_LABELS: Record<LessonAcceptance, string> = {
-  pending: "Pending",
-  accepted: "Accepted",
-  declined: "Declined",
-};
-
-/** Ordered options for an attendance picker UI. */
-export const ATTENDANCE_OPTIONS: AttendanceStatus[] = [
-  "unrecorded",
-  "present",
-  "present_late",
-  "absent_no_makeup",
-  "absent_makeup_issued",
-  "absent_warning",
-  "tutor_cancelled",
-  "tutor_cancelled_makeup_issued",
-];
+// --- UI-specific helpers (Tailwind tokens + FullCalendar shapes) stay here ---
 
 /** Tailwind tone classes for an attendance badge. */
 export function attendanceTone(
@@ -88,22 +53,6 @@ export function attendanceTone(
     default:
       return "bg-muted text-muted-foreground";
   }
-}
-
-/**
- * Check if a lesson is finished (cannot be cancelled).
- * A lesson is finished if:
- * 1. It has a recorded attendance status (not "unrecorded")
- * 2. Or its end time has passed
- */
-export function isLessonFinished(lesson: LessonResponse): boolean {
-  const hasRecordedAttendance = lesson.attendanceStatus !== "unrecorded";
-  const endTime = new Date(
-    new Date(lesson.startDateTime).getTime() +
-      lesson.durationMinutes * 60_000,
-  );
-  const isPastEndTime = endTime < new Date();
-  return hasRecordedAttendance || isPastEndTime;
 }
 
 export interface FullCalendarLessonEvent {
@@ -181,21 +130,4 @@ export function externalEventToCalendarEvent(
       location: event.location ?? null,
     },
   };
-}
-
-/**
- * True if the [startA, endA) range overlaps [startB, endB). Touching edges
- * (endA === startB) do not count as an overlap.
- */
-export function isRangeOverlap(
-  startA: Date | string,
-  endA: Date | string,
-  startB: Date | string,
-  endB: Date | string,
-): boolean {
-  const sA = new Date(startA).getTime();
-  const eA = new Date(endA).getTime();
-  const sB = new Date(startB).getTime();
-  const eB = new Date(endB).getTime();
-  return sA < eB && sB < eA;
 }

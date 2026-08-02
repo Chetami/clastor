@@ -160,3 +160,18 @@ describe("plannedLessons + expectedIncomeFromLessons", () => {
     ).toBe(60);
   });
 });
+
+import { formatCurrencyWhole } from "@examify-tms/shared";
+
+describe("formatCurrencyWhole", () => {
+  it("renders whole amounts with no fraction digits (distinct from the 2-dp invoice formatter)", () => {
+    // Rounds to the nearest integer and never shows a decimal point.
+    expect(formatCurrencyWhole(60)).not.toMatch(/\./);
+    expect(formatCurrencyWhole(60.5)).not.toMatch(/\./);
+    expect(formatCurrencyWhole(0)).not.toMatch(/\./);
+  });
+
+  it("honours the passed currency", () => {
+    expect(formatCurrencyWhole(1000, "USD")).toContain("1,000");
+  });
+});

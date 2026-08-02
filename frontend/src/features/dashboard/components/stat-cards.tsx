@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 import { useUserCurrency } from "@/lib/use-currency";
 import type { DashboardPeriod, DashboardSummaryResponse } from "@examify-tms/interfaces";
-import { formatCurrency, formatHours, deltaPercent, previousPeriodLabel, currentPeriodLabel } from "../lib";
+import { formatCurrencyWhole, formatHours, deltaPercent, previousPeriodLabel, currentPeriodLabel } from "../lib";
 
 type TileProps = {
   icon: React.ReactNode;
@@ -95,18 +95,18 @@ export function StatCards({
       <Tile
         icon={<DollarSign className="h-4 w-4" />}
         label="Income"
-        value={formatCurrency(summary.income, currency)}
+        value={formatCurrencyWhole(summary.income, currency)}
         delta={incomeDelta}
       >
         <p>
-          {prevLabel} {formatCurrency(summary.previousIncome, currency)}
+          {prevLabel} {formatCurrencyWhole(summary.previousIncome, currency)}
         </p>
         <p>
-          Outstanding {formatCurrency(summary.outstandingAmount, currency)}
+          Outstanding {formatCurrencyWhole(summary.outstandingAmount, currency)}
           {summary.overdueAmount > 0 && (
             <span className="font-medium text-red-600 dark:text-red-500">
               {" "}
-              · incl. {formatCurrency(summary.overdueAmount, currency)} overdue
+              · incl. {formatCurrencyWhole(summary.overdueAmount, currency)} overdue
             </span>
           )}
         </p>
@@ -141,7 +141,7 @@ export function StatCards({
       <Tile
         icon={<Wallet className="h-4 w-4" />}
         label="Expected income"
-        value={formatCurrency(expectedIncome, currency)}
+        value={formatCurrencyWhole(expectedIncome, currency)}
       >
         {plannedLessonCount > 0 ? (
           <p>

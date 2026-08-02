@@ -67,6 +67,18 @@ export function getNotifyCooldownMs(): number {
 }
 
 /**
+ * The minimum interval between re-sending an already-sent invoice (default
+ * 24h, mirroring {@link getNotifyCooldownMs}). Only applies to resends — the
+ * first send of a draft is never throttled. Prevents a customer being spammed
+ * with repeated invoice/reminder emails.
+ */
+export function getInvoiceResendCooldownMs(): number {
+  const raw = Number(process.env.INVOICE_RESEND_COOLDOWN_MS);
+  if (!Number.isFinite(raw) || raw <= 0) return 24 * 60 * 60 * 1000;
+  return raw;
+}
+
+/**
  * The publicly-reachable base URL of this backend, used to build RSVP links
  * embedded in the invite email (the student clicks Accept/Decline outside
  * any authenticated session). Defaults to the local dev origin.

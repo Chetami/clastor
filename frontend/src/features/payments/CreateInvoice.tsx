@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Check, ChevronDown, DollarSign, Lock } from "lucide-react";
 import type { LessonResponse } from "@examify-tms/interfaces";
 import { cn } from "@/lib/utils";
@@ -31,11 +31,15 @@ import { lessonBadge } from "@/features/lessons/lesson-display";
 import { useCreateInvoice, useSendInvoice } from "./api";
 import {
   createInvoiceFormSchema,
-  defaultQuantity,
-  defaultUnitAmount,
   type CreateInvoiceFormData,
 } from "./invoice-schema";
-import { formatCurrency, formatDate } from "./invoice-utils";
+import {
+  buildLessonLineItem,
+  defaultInvoiceDueDateInput,
+  formatCurrency,
+  formatDate,
+  partitionInvoiceableLessons,
+} from "./invoice-utils";
 import { useUserCurrency } from "@/lib/use-currency";
 
 interface LineItemDraft {
@@ -47,25 +51,20 @@ interface LineItemDraft {
   quantity: number;
 }
 
-function isCancelledLesson(lesson: LessonResponse): boolean {
-  return (
-    lesson.isCancelled ||
-    lesson.attendanceStatus === "tutor_cancelled" ||
-    lesson.attendanceStatus === "tutor_cancelled_makeup_issued"
-  );
-}
-
-function isPastLesson(lesson: LessonResponse): boolean {
-  return new Date(lesson.startDateTime).getTime() < Date.now();
-}
-
 export default function CreateInvoice() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const currency = useUserCurrency();
   const { data: students = [] } = useListStudents();
   const subjects = useSubjects();
 
-  const [studentId, setStudentId] = useState<string>("");
+  // Deep-link preselection: `/payments/new?student=ID&lesson=ID` (e.g. from
+  // the "Needs invoicing" card) opens the page with the student chosen and
+  // the lesson already checked — the tutor just reviews and confirms.
+  const preselectStudentId = searchParams.get("student") ?? "";
+  const preselectLessonId = searchParams.get("lesson") ?? "";
+
+  const [studentId, setStudentId] = useState<string>(preselectStudentId);
   const [selectedLessonIds, setSelectedLessonIds] = useState<Set<string>>(
     new Set(),
   );
@@ -76,11 +75,7 @@ export default function CreateInvoice() {
     Record<string, number>
   >({});
   const [billingEmail, setBillingEmail] = useState("");
-  const [dueDate, setDueDate] = useState(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 14);
-    return d.toISOString().slice(0, 10);
-  });
+  const [dueDate, setDueDate] = useState(() => defaultInvoiceDueDateInput());
   const [paymentMethod, setPaymentMethod] =
     useState<CreateInvoiceFormData["paymentMethod"]>("bank_transfer");
   const [notes, setNotes] = useState("");
@@ -101,30 +96,23 @@ export default function CreateInvoice() {
   );
   const lessonsLoading = studentId ? lessonsResult.isLoading : false;
 
+  // Once the student's unpaid lessons have loaded, auto-check the lesson
+  // supplied via the `?lesson=` deep link (if it belongs to this student).
+  useEffect(() => {
+    if (!preselectLessonId || unpaidLessons.length === 0) return;
+    if (selectedLessonIds.has(preselectLessonId)) return;
+    if (!unpaidLessons.some((l) => l.id === preselectLessonId)) return;
+    setSelectedLessonIds((prev) => new Set(prev).add(preselectLessonId));
+  }, [preselectLessonId, unpaidLessons, selectedLessonIds]);
+
   const createInvoice = useCreateInvoice();
   const sendInvoice = useSendInvoice();
 
-  const completedLessons = useMemo(
-    () =>
-      unpaidLessons
-        .filter((l) => !isCancelledLesson(l) && isPastLesson(l))
-        .sort(
-          (a, b) =>
-            new Date(b.startDateTime).getTime() -
-            new Date(a.startDateTime).getTime(),
-        ),
-    [unpaidLessons],
-  );
-
-  const upcomingLessons = useMemo(
-    () =>
-      unpaidLessons
-        .filter((l) => !isCancelledLesson(l) && !isPastLesson(l))
-        .sort(
-          (a, b) =>
-            new Date(a.startDateTime).getTime() -
-            new Date(b.startDateTime).getTime(),
-        ),
+  // Group the student's unpaid lessons into upcoming + completed (chargeable
+  // vs. unrecorded). The eligibility rules live in @examify-tms/shared so the
+  // same logic can drive the mobile client and the "Needs invoicing" surface.
+  const { upcoming: upcomingLessons, completed: completedLessons } = useMemo(
+    () => partitionInvoiceableLessons(unpaidLessons),
     [unpaidLessons],
   );
 
@@ -133,25 +121,19 @@ export default function CreateInvoice() {
     return unpaidLessons
       .filter((l) => selectedLessonIds.has(l.id))
       .map((lesson) => {
-        const rateType = selectedStudent.rateType;
-        const defaultQty = defaultQuantity(rateType, lesson.durationMinutes);
+        const base = buildLessonLineItem(
+          lesson,
+          selectedStudent.rateType,
+          selectedStudent.expectedAmount,
+        );
         const quantityOverride = lineItemQuantities[lesson.id];
-        const quantity =
-          quantityOverride !== undefined ? quantityOverride : defaultQty;
-        const override = lineItemAmounts[lesson.id];
-        const unitAmount =
-          override !== undefined
-            ? override
-            : defaultUnitAmount(selectedStudent.expectedAmount);
+        const amountOverride = lineItemAmounts[lesson.id];
         return {
-          lessonId: lesson.id,
-          description: `${lesson.subject || "Lesson"} — ${lesson.durationMinutes} min on ${formatDate(
-            lesson.startDateTime,
-          )}`,
-          durationMinutes: lesson.durationMinutes,
-          rateType,
-          unitAmount,
-          quantity,
+          ...base,
+          quantity:
+            quantityOverride !== undefined ? quantityOverride : base.quantity,
+          unitAmount:
+            amountOverride !== undefined ? amountOverride : base.unitAmount,
         };
       });
   }, [selectedStudent, unpaidLessons, selectedLessonIds, lineItemAmounts, lineItemQuantities]);
@@ -344,7 +326,8 @@ export default function CreateInvoice() {
                 <p className="py-6 text-center text-sm text-muted-foreground">
                   Loading unpaid lessons...
                 </p>
-              ) : completedLessons.length === 0 &&
+              ) : completedLessons.chargeable.length === 0 &&
+                completedLessons.unrecorded.length === 0 &&
                 upcomingLessons.length === 0 ? (
                 <p className="py-6 text-center text-sm text-muted-foreground">
                   No unpaid lessons for this student.
@@ -356,35 +339,43 @@ export default function CreateInvoice() {
                     <p className="mb-2 text-xs font-medium text-muted-foreground">
                       Completed lessons
                     </p>
-                    {completedLessons.length === 0 ? (
+                    {completedLessons.chargeable.length === 0 &&
+                    completedLessons.unrecorded.length === 0 ? (
                       <p className="py-3 text-center text-sm text-muted-foreground">
                         No completed unpaid lessons.
                       </p>
                     ) : (
-                      <div className="rounded-md border">
-                        <Table>
-                          <TableHeader>
-                            <TableRow className="bg-muted/30 hover:bg-muted/30">
-                              <TableHead className="w-10" />
-                              <TableHead>Lesson</TableHead>
-                              <TableHead>Date</TableHead>
-                              <TableHead className="text-right">
-                                Duration
-                              </TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {completedLessons.map((lesson) => (
-                              <LessonRow
-                                key={lesson.id}
-                                lesson={lesson}
-                                checked={selectedLessonIds.has(lesson.id)}
-                                onToggle={() => toggleLesson(lesson.id)}
-                                badge={lessonBadge(lesson)}
-                              />
-                            ))}
-                          </TableBody>
-                        </Table>
+                      <div className="space-y-4">
+                        {completedLessons.chargeable.length > 0 && (
+                          <div>
+                            <p className="mb-1.5 text-xs font-medium text-muted-foreground">
+                              Recorded · ready to invoice
+                              <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5 text-muted-foreground">
+                                {completedLessons.chargeable.length}
+                              </span>
+                            </p>
+                            <LessonsTable
+                              lessons={completedLessons.chargeable}
+                              selectedLessonIds={selectedLessonIds}
+                              onToggle={toggleLesson}
+                            />
+                          </div>
+                        )}
+                        {completedLessons.unrecorded.length > 0 && (
+                          <div>
+                            <p className="mb-1.5 text-xs font-medium text-muted-foreground">
+                              Not recorded
+                              <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5 text-muted-foreground">
+                                {completedLessons.unrecorded.length}
+                              </span>
+                            </p>
+                            <LessonsTable
+                              lessons={completedLessons.unrecorded}
+                              selectedLessonIds={selectedLessonIds}
+                              onToggle={toggleLesson}
+                            />
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -760,5 +751,41 @@ function LessonRow({ lesson, checked, onToggle, badge }: LessonRowProps) {
         {lesson.durationMinutes} min
       </TableCell>
     </TableRow>
+  );
+}
+
+function LessonsTable({
+  lessons,
+  selectedLessonIds,
+  onToggle,
+}: {
+  lessons: LessonResponse[];
+  selectedLessonIds: Set<string>;
+  onToggle: (id: string) => void;
+}) {
+  return (
+    <div className="rounded-md border">
+      <Table>
+        <TableHeader>
+          <TableRow className="bg-muted/30 hover:bg-muted/30">
+            <TableHead className="w-10" />
+            <TableHead>Lesson</TableHead>
+            <TableHead>Date</TableHead>
+            <TableHead className="text-right">Duration</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {lessons.map((lesson) => (
+            <LessonRow
+              key={lesson.id}
+              lesson={lesson}
+              checked={selectedLessonIds.has(lesson.id)}
+              onToggle={() => onToggle(lesson.id)}
+              badge={lessonBadge(lesson)}
+            />
+          ))}
+        </TableBody>
+      </Table>
+    </div>
   );
 }

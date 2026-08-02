@@ -5,33 +5,14 @@ import {
   deriveLessonStatus,
 } from "@/features/schedule/lesson-utils";
 
-/** Up to two uppercase initials from a full name. */
-export function getInitials(name: string): string {
-  return name
-    .split(" ")
-    .map((p) => p[0])
-    .filter(Boolean)
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
-}
-
-/** Formats an ISO date as "Mon, Jan 5". */
-export function formatLessonDate(iso: string | Date): string {
-  return new Date(iso).toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  });
-}
-
-/** Formats an ISO date as "5:30 PM". */
-export function formatLessonTime(iso: string | Date): string {
-  return new Date(iso).toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
+// Pure helpers moved to @examify-tms/shared — re-exported here so existing
+// imports from this module keep working.
+export {
+  getInitials,
+  formatLessonDate,
+  formatLessonTime,
+  isToday,
+} from "@examify-tms/shared";
 
 export interface LessonBadge {
   label: string;
@@ -106,14 +87,4 @@ export function lessonBadge(lesson: LessonResponse): LessonBadge {
     label: ATTENDANCE_LABELS[lesson.attendanceStatus],
     tone: attendanceTone(lesson.attendanceStatus),
   };
-}
-
-/** True when the given date is in the same calendar day (local) as now. */
-export function isToday(date: Date): boolean {
-  const now = new Date();
-  return (
-    date.getFullYear() === now.getFullYear() &&
-    date.getMonth() === now.getMonth() &&
-    date.getDate() === now.getDate()
-  );
 }

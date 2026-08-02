@@ -14,7 +14,8 @@ import {
   relativeDayLabel,
   type LessonChecklistItem,
 } from "../lib";
-import { MarkAttendanceDialog } from "./mark-attendance-dialog";
+import { MarkAttendanceDialog } from "@/components/mark-attendance-dialog";
+import type { InvoiceLessonEdits } from "@/features/payments/api";
 
 const ATTENDANCE_LABELS: Record<AttendanceStatus, string> = {
   present: "present",
@@ -31,10 +32,12 @@ type Props = {
   attendanceLessons: LessonResponse[];
   checklistItems: LessonChecklistItem[];
   studentNames: Record<string, string>;
+  studentSubjectOptions: Record<string, string[]>;
   onConfirm: (
     lessonId: string,
     attendanceStatus: AttendanceStatus,
     sendInvoice: boolean,
+    edits?: InvoiceLessonEdits,
   ) => Promise<void>;
 };
 
@@ -42,6 +45,7 @@ export function ThingsToDo({
   attendanceLessons,
   checklistItems,
   studentNames,
+  studentSubjectOptions,
   onConfirm,
 }: Props) {
   const markDone = useMarkLessonDone();
@@ -58,6 +62,7 @@ export function ThingsToDo({
     lessonId: string,
     attendanceStatus: AttendanceStatus,
     sendInvoice: boolean,
+    edits?: InvoiceLessonEdits,
   ) => {
     const lesson = attendanceLessons.find((l) => l.id === lessonId);
     if (!lesson) return;
@@ -67,7 +72,7 @@ export function ThingsToDo({
       toast.success(
         `Marked ${name}'s lesson as ${ATTENDANCE_LABELS[attendanceStatus]}`,
       );
-      await onConfirm(lessonId, attendanceStatus, sendInvoice);
+      await onConfirm(lessonId, attendanceStatus, sendInvoice, edits);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to mark lesson");
       throw err;
@@ -151,6 +156,9 @@ export function ThingsToDo({
           }
           lesson={openDialogLesson}
           studentName={openDialogStudentName}
+          subjectOptions={
+            studentSubjectOptions[openDialogLesson.studentId] ?? []
+          }
           onConfirm={handleConfirm}
           isPending={markDone.isPending}
         />

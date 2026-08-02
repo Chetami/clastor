@@ -20,10 +20,7 @@ import {
   relativeDayLabel,
   timeUntil,
 } from "../lib";
-
-/** Mirrors the backend NOTIFY_COOLDOWN_MS default (24h). The server remains the
- *  source of truth; this only drives the optimistic button state. */
-const NOTIFY_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+import { STUDENT_NOTIFY_COOLDOWN_MS } from "@examify-tms/shared";
 
 type Props = {
   lesson: LessonResponse | undefined;
@@ -69,7 +66,7 @@ export function NextLesson({ lesson, studentName }: Props) {
     ? new Date(lesson.lastStudentNotifiedAt)
     : null;
   const nextAllowedAt = notifiedAt
-    ? new Date(notifiedAt.getTime() + NOTIFY_COOLDOWN_MS)
+    ? new Date(notifiedAt.getTime() + STUDENT_NOTIFY_COOLDOWN_MS)
     : null;
   const cooldownActive = nextAllowedAt
     ? Date.now() < nextAllowedAt.getTime()

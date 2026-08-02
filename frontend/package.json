@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@examify-tms/interfaces": "^1.0.0",
+    "@examify-tms/shared": "^1.0.0",
     "@fullcalendar/core": "^6.1.21",
     "@fullcalendar/daygrid": "^6.1.21",
     "@fullcalendar/interaction": "^6.1.21",
