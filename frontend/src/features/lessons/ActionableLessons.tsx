@@ -1,15 +1,44 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   AlertTriangle,
-  ChevronRight,
+  CheckCircle2,
+  ClipboardList,
+  Clock,
   FileText,
+  Loader2,
+  Send,
 } from "lucide-react";
-import type { LessonResponse } from "@examify-tms/interfaces";
+import { toast } from "sonner";
+import {
+  addMilliseconds,
+  compareAsc,
+  compareDesc,
+  differenceInMilliseconds,
+  intervalToDuration,
+  isPast,
+} from "date-fns";
+import type {
+  AttendanceStatus,
+  LessonResponse,
+  UpdateLessonRequest,
+} from "@examify-tms/interfaces";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { useListLessons } from "@/features/schedule/api";
 import { useListStudents } from "@/features/students/api";
-import { useListInvoices } from "@/features/payments/api";
+import {
+  useInvoiceLesson,
+  useListInvoices,
+  useSendInvoice,
+  type InvoiceLessonEdits,
+} from "@/features/payments/api";
+import {
+  useMarkLessonDone,
+  useUpdateLessonDetails,
+} from "@/features/dashboard/api";
+import { MarkAttendanceDialog } from "@/components/mark-attendance-dialog";
+import { useSubjects } from "@/lib/subjects";
 import { formatCurrency, formatDate } from "@/features/payments/invoice-utils";
 import {
   formatLessonDate,
@@ -27,7 +56,62 @@ function isCancelledLesson(lesson: LessonResponse): boolean {
 }
 
 function isPastLesson(lesson: LessonResponse): boolean {
-  return new Date(lesson.startDateTime).getTime() < Date.now();
+  return isPast(new Date(lesson.startDateTime));
+}
+
+/**
+ * Attendance outcomes that leave the lesson billable — i.e. the tutor is
+ * still owed for the session. A student absence only counts when NO make-up
+ * credit was issued (the credited lesson is settled by charging for the
+ * make-up session instead). Tutor cancellations are excluded upstream by
+ * `isCancelledLesson`. `unrecorded` is excluded because attendance must be
+ * marked before a lesson is ready to invoice.
+ */
+const BILLABLE_ATTENDANCE_STATUSES: AttendanceStatus[] = [
+  "present",
+  "present_late",
+  "absent_no_makeup",
+  "absent_warning",
+];
+
+/** True when attendance has been recorded and the outcome is billable. */
+function isBillableForInvoicing(lesson: LessonResponse): boolean {
+  return BILLABLE_ATTENDANCE_STATUSES.includes(lesson.attendanceStatus);
+}
+
+const ATTENDANCE_LABELS: Record<AttendanceStatus, string> = {
+  present: "present",
+  present_late: "late",
+  absent_no_makeup: "absent",
+  absent_makeup_issued: "absent (makeup issued)",
+  absent_warning: "absent (warning)",
+  tutor_cancelled: "tutor cancelled",
+  tutor_cancelled_makeup_issued: "tutor cancelled (makeup issued)",
+  unrecorded: "unrecorded",
+};
+
+/**
+ * How long after an invoice was last emailed before the customer can be
+ * reminded again. Mirrors the backend `INVOICE_RESEND_COOLDOWN_MS` default
+ * (24h, same as lesson-notify). The backend enforces this authoritatively;
+ * this constant only drives the proactive UI lockout + countdown so the
+ * tutor gets immediate feedback instead of a 429.
+ */
+const REMIND_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Compact countdown label for a millisecond duration: "Xh Ym" / "Xh" / "Ym".
+ * Decomposes the duration with date-fns (flooring each unit) and folds days
+ * into hours so a 24h cooldown reads "24h" rather than "1 day" — and never
+ * shows a stray extra minute from sub-minute remainder.
+ */
+function formatRemaining(ms: number): string {
+  if (ms <= 0) return "";
+  const d = intervalToDuration({ start: new Date(0), end: new Date(ms) });
+  const totalHours = (d.days ?? 0) * 24 + (d.hours ?? 0);
+  const minutes = d.minutes ?? 0;
+  if (totalHours > 0) return minutes > 0 ? `${totalHours}h ${minutes}m` : `${totalHours}h`;
+  return `${minutes}m`;
 }
 
 interface OverdueRow {
@@ -39,43 +123,96 @@ interface OverdueRow {
   amount: number;
   currency: string;
   dueDate: string;
+  /** ISO time the invoice was last emailed, or null if never sent. */
+  sentAt: string | null;
 }
 
 /**
- * Two "needs attention" cards shown above the lessons browse list:
- *   1. Needs invoicing  — past lessons with no invoice attached yet
- *   2. Overdue          — lessons sitting on an unpaid, overdue invoice
+ * Three "needs attention" cards shown above the lessons browse list:
+ *   1. Needs invoicing        — past lessons with attendance marked, a
+ *                               billable outcome, and no invoice yet
+ *   2. Attendance not marked  — past lessons whose attendance is still
+ *                               unrecorded (a prerequisite to invoicing)
+ *   3. Overdue                — lessons sitting on an unpaid, overdue invoice
  *
- * Each fetches its own data (deduped by React Query) and renders nothing
- * when empty, keeping the page quiet when the tutor is all caught up.
+ * Each row carries a one-tap action; each card fetches its own data
+ * (deduped by React Query) and renders nothing when empty, keeping the page
+ * quiet when the tutor is all caught up.
  */
 export function ActionableLessons() {
   const navigate = useNavigate();
   const { data: students = [] } = useListStudents();
+  const subjects = useSubjects();
 
   // `unpaid: true` on the backend already excludes lessons that have an
   // invoiceId OR are marked paid, so this is exactly the uninvoiced set.
   const { data: unpaidLessons = [], isLoading: lessonsLoading } =
     useListLessons({ unpaid: true });
+  // Past lessons whose attendance is still pending — the prerequisite to
+  // being able to invoice them.
+  const { data: unrecordedLessons = [], isLoading: unrecordedLoading } =
+    useListLessons({ attendanceStatus: "unrecorded" });
   const { data: overdueInvoices = [], isLoading: invoicesLoading } =
     useListInvoices({ status: "overdue" });
 
-  const studentMap = useMemo(() => {
+  const markDone = useMarkLessonDone();
+  const updateLessonDetails = useUpdateLessonDetails();
+  const invoiceLesson = useInvoiceLesson();
+  const sendInvoice = useSendInvoice();
+
+  const studentNames = useMemo(() => {
     const map: Record<string, string> = {};
     for (const s of students) map[s.id] = s.name;
     return map;
   }, [students]);
 
+  const studentById = useMemo(() => {
+    const map: Record<string, (typeof students)[number]> = {};
+    for (const s of students) map[s.id] = s;
+    return map;
+  }, [students]);
+
+  // Per-student list of allowed subject names (from the tutor's catalogue),
+  // used to constrain the subject selector in the attendance dialog.
+  const studentSubjectOptions = useMemo(() => {
+    const map: Record<string, string[]> = {};
+    for (const s of students) {
+      map[s.id] = (s.subjectIds ?? [])
+        .map((id) => subjects.find((sub) => sub.id === id)?.name)
+        .filter((n): n is string => !!n);
+    }
+    return map;
+  }, [students, subjects]);
+
   const needsInvoicing = useMemo(
     () =>
       unpaidLessons
-        .filter((l) => isPastLesson(l) && !isCancelledLesson(l))
-        .sort(
-          (a, b) =>
-            new Date(b.startDateTime).getTime() -
-            new Date(a.startDateTime).getTime(),
+        .filter(
+          (l) =>
+            isPastLesson(l) &&
+            !isCancelledLesson(l) &&
+            isBillableForInvoicing(l),
+        )
+        .sort((a, b) =>
+          compareDesc(
+            new Date(a.startDateTime),
+            new Date(b.startDateTime),
+          ),
         ),
     [unpaidLessons],
+  );
+
+  const attendanceDue = useMemo(
+    () =>
+      unrecordedLessons
+        .filter((l) => isPastLesson(l) && !isCancelledLesson(l))
+        .sort((a, b) =>
+          compareDesc(
+            new Date(a.startDateTime),
+            new Date(b.startDateTime),
+          ),
+        ),
+    [unrecordedLessons],
   );
 
   const overdueRows = useMemo<OverdueRow[]>(() => {
@@ -91,121 +228,346 @@ export function ActionableLessons() {
           amount: li.amount,
           currency: inv.currency,
           dueDate: inv.dueDate,
+          sentAt: inv.sentAt ?? null,
         });
       }
     }
     // Most overdue first.
-    rows.sort(
-      (a, b) =>
-        new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime(),
+    rows.sort((a, b) =>
+      compareAsc(new Date(a.dueDate), new Date(b.dueDate)),
     );
     return rows;
   }, [overdueInvoices]);
 
-  const loading = lessonsLoading || invoicesLoading;
+  // Attendance dialog state. The lesson object is captured (not just its id)
+  // so the dialog + handler stay valid even once a successful mark refetches
+  // the list and the lesson drops out of `attendanceDue`.
+  const [dialogLesson, setDialogLesson] = useState<LessonResponse | null>(null);
+
+  const attendancePending =
+    markDone.isPending ||
+    updateLessonDetails.isPending ||
+    invoiceLesson.isPending;
+
+  async function handleAttendanceConfirm(
+    lessonId: string,
+    attendanceStatus: AttendanceStatus,
+    shouldInvoice: boolean,
+    edits?: InvoiceLessonEdits,
+  ) {
+    const lesson = dialogLesson;
+    if (!lesson) return;
+    const name = studentNames[lesson.studentId] ?? "Unknown student";
+    try {
+      await markDone.mutateAsync({ id: lessonId, attendanceStatus });
+
+      // Apply any lesson tweaks first — this happens whether or not an
+      // invoice is sent, since the lesson should reflect what was done.
+      let effective = lesson;
+      const hasEdits =
+        edits &&
+        (edits.subject !== undefined || edits.durationMinutes !== undefined);
+      if (hasEdits) {
+        const data: UpdateLessonRequest = {};
+        if (edits!.subject !== undefined) data.subject = edits!.subject;
+        if (edits!.durationMinutes !== undefined) {
+          data.durationMinutes = edits!.durationMinutes;
+        }
+        effective = await updateLessonDetails.mutateAsync({ id: lessonId, data });
+      }
+
+      if (shouldInvoice) {
+        const student = studentById[lesson.studentId];
+        if (student) {
+          const created = await invoiceLesson.mutateAsync({
+            lesson: effective,
+            rateType: student.rateType,
+            expectedAmount: student.expectedAmount,
+          });
+          toast.success(`Invoice sent to ${name}`);
+          setDialogLesson(null);
+          navigate(`/payments/${created.id}`);
+          return;
+        }
+      }
+
+      toast.success(
+        `Marked ${name}'s lesson as ${ATTENDANCE_LABELS[attendanceStatus]}`,
+      );
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to mark lesson");
+      throw err;
+    }
+  }
+
+  async function handleRemind(row: OverdueRow) {
+    try {
+      await sendInvoice.mutateAsync({ id: row.invoiceId });
+      toast.success(`Reminder sent to ${row.customerName}`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to send reminder");
+    }
+  }
+
+  const loading = lessonsLoading || unrecordedLoading || invoicesLoading;
   const hasNeedsInvoicing = needsInvoicing.length > 0;
+  const hasAttendanceDue = attendanceDue.length > 0;
   const hasOverdue = overdueRows.length > 0;
 
-  if (loading || (!hasNeedsInvoicing && !hasOverdue)) return null;
+  // Tick "now" once a minute while the overdue card is visible so the
+  // remind-cooldown countdowns stay fresh without re-rendering otherwise.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!hasOverdue) return;
+    const id = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(id);
+  }, [hasOverdue]);
+
+  if (loading || (!hasNeedsInvoicing && !hasAttendanceDue && !hasOverdue))
+    return null;
 
   return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-      {/* Needs invoicing */}
-      <Card className="overflow-hidden">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-          <div className="flex items-center gap-2">
-            <FileText className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-            <h3 className="text-sm font-semibold tracking-tight">
-              Needs invoicing
-            </h3>
-          </div>
-          <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-            {needsInvoicing.length}
-          </span>
-        </CardHeader>
-        <CardContent className="p-0">
-          <ul className="max-h-80 divide-y overflow-y-auto">
-            {needsInvoicing.map((lesson) => {
-              const name = studentMap[lesson.studentId] ?? "Unknown student";
-              return (
-                <li
-                  key={lesson.id}
-                  className="group flex cursor-pointer items-center justify-between gap-3 px-6 py-2.5 transition-colors hover:bg-accent/40"
-                  onClick={() => navigate(`/lessons/${lesson.id}`)}
-                >
-                  <div className="flex min-w-0 flex-1 items-center gap-2.5">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-medium text-primary">
-                      {getInitials(name)}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium leading-tight">
-                        {name}
-                      </p>
-                      <p className="truncate text-xs text-muted-foreground">
-                        {lesson.subject || "Lesson"}
-                        <span className="mx-1 text-muted-foreground/50">·</span>
-                        {formatLessonDate(lesson.startDateTime)}
-                        <span className="mx-1 text-muted-foreground/50">·</span>
-                        {formatLessonTime(lesson.startDateTime)}
-                      </p>
-                    </div>
-                  </div>
-                  <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/50 transition-colors group-hover:text-foreground" />
-                </li>
-              );
-            })}
-          </ul>
-        </CardContent>
-      </Card>
+    <>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        {/* Needs invoicing */}
+        {hasNeedsInvoicing && (
+          <Card className="overflow-hidden">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+              <div className="flex items-center gap-2">
+                <FileText className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                <h3 className="text-sm font-semibold tracking-tight">
+                  Needs invoicing
+                </h3>
+              </div>
+              <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                {needsInvoicing.length}
+              </span>
+            </CardHeader>
+            <CardContent className="p-0">
+              <ul className="max-h-80 divide-y overflow-y-auto">
+                {needsInvoicing.map((lesson) => {
+                  const name =
+                    studentNames[lesson.studentId] ?? "Unknown student";
+                  return (
+                    <li
+                      key={lesson.id}
+                      className="group flex cursor-pointer items-center justify-between gap-3 px-6 py-2.5 transition-colors hover:bg-accent/40"
+                      onClick={() => navigate(`/lessons/${lesson.id}`)}
+                    >
+                      <div className="flex min-w-0 flex-1 items-center gap-2.5">
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-medium text-primary">
+                          {getInitials(name)}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium leading-tight">
+                            {name}
+                          </p>
+                          <p className="truncate text-xs text-muted-foreground">
+                            {lesson.subject || "Lesson"}
+                            <span className="mx-1 text-muted-foreground/50">
+                              ·
+                            </span>
+                            {formatLessonDate(lesson.startDateTime)}
+                            <span className="mx-1 text-muted-foreground/50">
+                              ·
+                            </span>
+                            {formatLessonTime(lesson.startDateTime)}
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 w-24 shrink-0 gap-1.5 px-2.5 text-xs"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(
+                            `/payments/new?student=${lesson.studentId}&lesson=${lesson.id}`,
+                          );
+                        }}
+                      >
+                        <FileText className="h-3.5 w-3.5" />
+                        Invoice
+                      </Button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </CardContent>
+          </Card>
+        )}
 
-      {/* Overdue */}
-      <Card className="overflow-hidden">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4 text-rose-600 dark:text-rose-400" />
-            <h3 className="text-sm font-semibold tracking-tight">
-              Overdue
-            </h3>
-          </div>
-          <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-            {overdueRows.length}
-          </span>
-        </CardHeader>
-        <CardContent className="p-0">
-          <ul className="max-h-80 divide-y overflow-y-auto">
-            {overdueRows.map((row) => (
-              <li
-                key={row.key}
-                className="group flex cursor-pointer items-center justify-between gap-3 px-6 py-2.5 transition-colors hover:bg-accent/40"
-                onClick={() => navigate(`/payments/${row.invoiceId}`)}
-              >
-                <div className="flex min-w-0 flex-1 items-center gap-2.5">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-rose-500/10 text-xs font-medium text-rose-600 dark:text-rose-400">
-                    {getInitials(row.customerName)}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium leading-tight">
-                      {row.customerName}
-                    </p>
-                    <p className="truncate text-xs text-muted-foreground">
-                      {row.description}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex shrink-0 flex-col items-end gap-0.5">
-                  <span className="text-sm font-medium">
-                    {formatCurrency(row.amount, row.currency)}
-                  </span>
-                  <span className="text-[11px] text-rose-600 dark:text-rose-400">
-                    Due {formatDate(row.dueDate)}
-                  </span>
-                </div>
-                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/50 transition-colors group-hover:text-foreground" />
-              </li>
-            ))}
-          </ul>
-        </CardContent>
-      </Card>
-    </div>
+        {/* Attendance not marked */}
+        {hasAttendanceDue && (
+          <Card className="overflow-hidden">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+              <div className="flex items-center gap-2">
+                <ClipboardList className="h-4 w-4 text-sky-600 dark:text-sky-400" />
+                <h3 className="text-sm font-semibold tracking-tight">
+                  Attendance not marked
+                </h3>
+              </div>
+              <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                {attendanceDue.length}
+              </span>
+            </CardHeader>
+            <CardContent className="p-0">
+              <ul className="max-h-80 divide-y overflow-y-auto">
+                {attendanceDue.map((lesson) => {
+                  const name =
+                    studentNames[lesson.studentId] ?? "Unknown student";
+                  return (
+                    <li
+                      key={lesson.id}
+                      className="group flex cursor-pointer items-center justify-between gap-3 px-6 py-2.5 transition-colors hover:bg-accent/40"
+                      onClick={() => navigate(`/lessons/${lesson.id}`)}
+                    >
+                      <div className="flex min-w-0 flex-1 items-center gap-2.5">
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sky-500/10 text-xs font-medium text-sky-600 dark:text-sky-400">
+                          {getInitials(name)}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium leading-tight">
+                            {name}
+                          </p>
+                          <p className="truncate text-xs text-muted-foreground">
+                            {lesson.subject || "Lesson"}
+                            <span className="mx-1 text-muted-foreground/50">
+                              ·
+                            </span>
+                            {formatLessonDate(lesson.startDateTime)}
+                            <span className="mx-1 text-muted-foreground/50">
+                              ·
+                            </span>
+                            {formatLessonTime(lesson.startDateTime)}
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 w-24 shrink-0 gap-1.5 px-2.5 text-xs"
+                        disabled={attendancePending}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDialogLesson(lesson);
+                        }}
+                      >
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                        Mark
+                      </Button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Overdue */}
+        {hasOverdue && (
+          <Card className="overflow-hidden">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-rose-600 dark:text-rose-400" />
+                <h3 className="text-sm font-semibold tracking-tight">
+                  Overdue
+                </h3>
+              </div>
+              <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                {overdueRows.length}
+              </span>
+            </CardHeader>
+            <CardContent className="p-0">
+              <ul className="max-h-80 divide-y overflow-y-auto">
+                {overdueRows.map((row) => {
+                  const sending =
+                    sendInvoice.isPending &&
+                    sendInvoice.variables?.id === row.invoiceId;
+                  // The instant the cooldown lifts (last sent + 24h), or null
+                  // if the invoice has never been sent.
+                  const availableAt = row.sentAt
+                    ? addMilliseconds(new Date(row.sentAt), REMIND_COOLDOWN_MS)
+                    : null;
+                  const remaining = availableAt
+                    ? differenceInMilliseconds(availableAt, now)
+                    : 0;
+                  const onCooldown = remaining > 0;
+                  return (
+                    <li
+                      key={row.key}
+                      className="group flex cursor-pointer items-center justify-between gap-3 px-6 py-2.5 transition-colors hover:bg-accent/40"
+                      onClick={() => navigate(`/payments/${row.invoiceId}`)}
+                    >
+                      <div className="flex min-w-0 flex-1 items-center gap-2.5">
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-rose-500/10 text-xs font-medium text-rose-600 dark:text-rose-400">
+                          {getInitials(row.customerName)}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium leading-tight">
+                            {row.customerName}
+                          </p>
+                          <p className="truncate text-xs text-muted-foreground">
+                            {row.description}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex shrink-0 flex-col items-end gap-0.5">
+                        <span className="text-sm font-medium">
+                          {formatCurrency(row.amount, row.currency)}
+                        </span>
+                        <span className="text-[11px] text-rose-600 dark:text-rose-400">
+                          Due {formatDate(row.dueDate)}
+                        </span>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 w-24 shrink-0 gap-1.5 px-2.5 text-xs"
+                        disabled={sendInvoice.isPending || onCooldown}
+                        title={
+                          onCooldown
+                            ? `Last reminder sent ${formatDate(row.sentAt!)}`
+                            : "Send a reminder email"
+                        }
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRemind(row);
+                        }}
+                      >
+                        {sending ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : onCooldown ? (
+                          <Clock className="h-3.5 w-3.5" />
+                        ) : (
+                          <Send className="h-3.5 w-3.5" />
+                        )}
+                        {onCooldown ? formatRemaining(remaining) : "Remind"}
+                      </Button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {dialogLesson && (
+        <MarkAttendanceDialog
+          open={!!dialogLesson}
+          onOpenChange={(open) => {
+            if (!open) setDialogLesson(null);
+          }}
+          lesson={dialogLesson}
+          studentName={
+            studentNames[dialogLesson.studentId] ?? "Unknown student"
+          }
+          subjectOptions={studentSubjectOptions[dialogLesson.studentId] ?? []}
+          onConfirm={handleAttendanceConfirm}
+          isPending={attendancePending}
+        />
+      )}
+    </>
   );
 }

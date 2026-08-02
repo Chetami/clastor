@@ -14,7 +14,7 @@ import {
   relativeDayLabel,
   type LessonChecklistItem,
 } from "../lib";
-import { MarkAttendanceDialog } from "./mark-attendance-dialog";
+import { MarkAttendanceDialog } from "@/components/mark-attendance-dialog";
 import type { InvoiceLessonEdits } from "@/features/payments/api";
 
 const ATTENDANCE_LABELS: Record<AttendanceStatus, string> = {

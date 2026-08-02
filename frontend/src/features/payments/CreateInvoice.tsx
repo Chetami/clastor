@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Check, ChevronDown, DollarSign, Lock } from "lucide-react";
 import type { LessonResponse } from "@examify-tms/interfaces";
 import { cn } from "@/lib/utils";
@@ -64,11 +64,18 @@ function isPastLesson(lesson: LessonResponse): boolean {
 
 export default function CreateInvoice() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const currency = useUserCurrency();
   const { data: students = [] } = useListStudents();
   const subjects = useSubjects();
 
-  const [studentId, setStudentId] = useState<string>("");
+  // Deep-link preselection: `/payments/new?student=ID&lesson=ID` (e.g. from
+  // the "Needs invoicing" card) opens the page with the student chosen and
+  // the lesson already checked — the tutor just reviews and confirms.
+  const preselectStudentId = searchParams.get("student") ?? "";
+  const preselectLessonId = searchParams.get("lesson") ?? "";
+
+  const [studentId, setStudentId] = useState<string>(preselectStudentId);
   const [selectedLessonIds, setSelectedLessonIds] = useState<Set<string>>(
     new Set(),
   );
@@ -99,6 +106,15 @@ export default function CreateInvoice() {
     [studentId, lessonsResult.data],
   );
   const lessonsLoading = studentId ? lessonsResult.isLoading : false;
+
+  // Once the student's unpaid lessons have loaded, auto-check the lesson
+  // supplied via the `?lesson=` deep link (if it belongs to this student).
+  useEffect(() => {
+    if (!preselectLessonId || unpaidLessons.length === 0) return;
+    if (selectedLessonIds.has(preselectLessonId)) return;
+    if (!unpaidLessons.some((l) => l.id === preselectLessonId)) return;
+    setSelectedLessonIds((prev) => new Set(prev).add(preselectLessonId));
+  }, [preselectLessonId, unpaidLessons, selectedLessonIds]);
 
   const createInvoice = useCreateInvoice();
   const sendInvoice = useSendInvoice();

@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { addMilliseconds, differenceInMilliseconds } from "date-fns";
 import {
   listInvoicesFromFirestore,
   getInvoiceByIdFromFirestore,
@@ -30,7 +31,7 @@ import { sendInvoiceEmail } from "../services/emailService";
 import { getUserFromFirestore } from "../services/userService";
 import { resolveTutorNames } from "../services/tutorResolver";
 import { isStripeConfigured } from "../config/stripe";
-import { getPublicApiUrl } from "../config/email";
+import { getInvoiceResendCooldownMs, getPublicApiUrl } from "../config/email";
 import { getStripeAccountRecord } from "../services/stripeConnectService";
 import {
   recordInvoiceEventSafe,
@@ -291,6 +292,25 @@ export async function sendInvoice(
         .status(400)
         .json({ message: "This invoice has no billing email address on file" });
       return;
+    }
+
+    // Resend throttle: once an invoice has been emailed, don't allow another
+    // send until the cooldown elapses. The first send (draft → open) has no
+    // sentAt and is never blocked. Mirrors the notify-student cooldown so a
+    // customer can't be spammed with repeated invoice/reminder emails.
+    if (invoice.sentAt) {
+      const cooldownMs = getInvoiceResendCooldownMs();
+      const lastSentAt = new Date(invoice.sentAt as any);
+      const elapsed = differenceInMilliseconds(Date.now(), lastSentAt);
+      if (elapsed < cooldownMs) {
+        const nextAllowedAt = addMilliseconds(lastSentAt, cooldownMs);
+        res.status(429).json({
+          message:
+            "This invoice was already sent recently. You can send another reminder after " +
+            nextAllowedAt.toLocaleString(),
+        });
+        return;
+      }
     }
 
     const tutor = await safeGetUser(invoice.tutorId);
