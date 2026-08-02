@@ -35,6 +35,7 @@ import {
 } from "./invoice-schema";
 import {
   buildLessonLineItem,
+  defaultInvoiceDueDateInput,
   formatCurrency,
   formatDate,
 } from "./invoice-utils";
@@ -78,11 +79,7 @@ export default function CreateInvoice() {
     Record<string, number>
   >({});
   const [billingEmail, setBillingEmail] = useState("");
-  const [dueDate, setDueDate] = useState(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 14);
-    return d.toISOString().slice(0, 10);
-  });
+  const [dueDate, setDueDate] = useState(() => defaultInvoiceDueDateInput());
   const [paymentMethod, setPaymentMethod] =
     useState<CreateInvoiceFormData["paymentMethod"]>("bank_transfer");
   const [notes, setNotes] = useState("");

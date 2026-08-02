@@ -1,6 +1,7 @@
 export * from "./requests";
 export * from "./use-create-invoice";
 export * from "./use-get-invoice";
+export * from "./use-invoice-lesson";
 export * from "./use-list-invoice-events";
 export * from "./use-list-invoices";
 export * from "./use-mark-invoice-paid";

@@ -121,31 +121,35 @@ function PhoneCountrySelect({
   );
 }
 
+// NOTE: PhoneInput is currently disabled until further notice.
+// There are known bugs with this component that need to be resolved
+// before it can be enabled again. Do not re-enable without fixing them.
 export function PhoneInput({
   value,
   onChange,
   id,
   placeholder,
   defaultCountry,
-  disabled,
   invalid,
   className,
 }: PhoneInputProps) {
   return (
-    <PhoneInputBase
-      international
-      countryCallingCodeEditable={false}
-      defaultCountry={defaultCountry ?? detectDefaultCountry()}
-      value={value ? (value as Value) : undefined}
-      onChange={(v) => onChange(v ?? "")}
-      disabled={disabled}
-      className={cn("gi-phone-input", className)}
-      countrySelectComponent={PhoneCountrySelect}
-      numberInputProps={{
-        id,
-        placeholder,
-        "aria-invalid": invalid,
-      }}
-    />
+    <span title="Disabled until further notice" className="block w-full">
+      <PhoneInputBase
+        international
+        countryCallingCodeEditable={false}
+        defaultCountry={defaultCountry ?? detectDefaultCountry()}
+        value={value ? (value as Value) : undefined}
+        onChange={(v) => onChange(v ?? "")}
+        disabled
+        className={cn("gi-phone-input", className)}
+        countrySelectComponent={PhoneCountrySelect}
+        numberInputProps={{
+          id,
+          placeholder,
+          "aria-invalid": invalid,
+        }}
+      />
+    </span>
   );
 }

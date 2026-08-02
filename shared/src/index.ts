@@ -73,6 +73,9 @@ export * from "./features/students/api";
 
 // ---- Feature: payments ----
 export * from "./features/payments/api";
+export * from "./features/payments/invoice-config";
+export * from "./features/payments/invoice-schema";
+export * from "./features/payments/invoice-utils";
 
 // ---- Feature: lessons (via schedule) ----
 export * from "./features/emails/api";

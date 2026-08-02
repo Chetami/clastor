@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-import { queryClient } from "@examify-tms/shared";
+import { queryClient } from "../../../lib/query-client";
 import type {
   CreateInvoiceRequest,
   InvoiceResponse,
@@ -8,6 +8,7 @@ import type {
 } from "@examify-tms/interfaces";
 import { createInvoiceRequest, sendInvoiceRequest } from "./requests";
 import { buildLessonLineItem } from "../invoice-utils";
+import { defaultInvoiceDueDate } from "../invoice-config";
 
 export interface InvoiceLessonInput {
   lesson: LessonResponse;
@@ -21,12 +22,10 @@ export interface InvoiceLessonEdits {
   durationMinutes?: number;
 }
 
-const DEFAULT_DUE_DAYS = 14;
-
 /**
  * The single canonical "invoice one lesson" flow. Every invoicing entry point
- * goes through here so the description, amounts, and create+send behaviour
- * can never drift from the Create Invoice page.
+ * (web + mobile) goes through here so the description, amounts, due date, and
+ * create+send behaviour can never drift from the Create Invoice page.
  *
  * Builds the line item from the given lesson + student rate, creates the
  * invoice as finalised ("open") and emails it. Callers that need to tweak
@@ -41,9 +40,7 @@ export function useInvoiceLesson() {
       const payload: CreateInvoiceRequest = {
         studentId: lesson.studentId,
         lineItems: [lineItem],
-        dueDate: new Date(
-          Date.now() + DEFAULT_DUE_DAYS * 24 * 60 * 60 * 1000,
-        ).toISOString(),
+        dueDate: defaultInvoiceDueDate(),
         paymentMethod: "bank_transfer",
         status: "open",
       };
