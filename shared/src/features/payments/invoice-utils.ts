@@ -101,3 +101,107 @@ export function buildLessonLineItem(
     quantity: defaultQuantity(rateType, lesson.durationMinutes),
   };
 }
+
+/* -------------------------------------------------------------------------- */
+/* Invoice eligibility — which lessons can appear on an invoice.              */
+/* -------------------------------------------------------------------------- */
+
+/** True if the lesson was cancelled (forward flag or tutor-cancelled outcome). */
+export function isCancelledLesson(lesson: LessonResponse): boolean {
+  return (
+    lesson.isCancelled ||
+    lesson.attendanceStatus === "tutor_cancelled" ||
+    lesson.attendanceStatus === "tutor_cancelled_makeup_issued"
+  );
+}
+
+/** True once the lesson's start time has passed. */
+export function isPastLesson(lesson: LessonResponse): boolean {
+  return new Date(lesson.startDateTime).getTime() < Date.now();
+}
+
+/**
+ * Attendance outcomes that must never be invoiced: the student has already
+ * been compensated (make-up credit issued) or penalised (warning issued), or
+ * the tutor cancelled. These are dropped from the invoiceable set entirely.
+ */
+export function isExcludedFromInvoicing(lesson: LessonResponse): boolean {
+  return (
+    lesson.attendanceStatus === "absent_makeup_issued" ||
+    lesson.attendanceStatus === "absent_warning" ||
+    lesson.attendanceStatus === "tutor_cancelled" ||
+    lesson.attendanceStatus === "tutor_cancelled_makeup_issued"
+  );
+}
+
+/**
+ * Attendance has been recorded AND the session is billable: the student
+ * attended, or was absent with no make-up credit so they still pay.
+ */
+export function isChargeableAttendance(lesson: LessonResponse): boolean {
+  return (
+    lesson.attendanceStatus === "present" ||
+    lesson.attendanceStatus === "present_late" ||
+    lesson.attendanceStatus === "absent_no_makeup"
+  );
+}
+
+/** Partition of completed (past) lessons by how they should be presented. */
+export interface CompletedLessonsGroup {
+  /** Recorded, billable — ready to invoice now. */
+  chargeable: LessonResponse[];
+  /** Past but attendance not recorded yet — needs attention before invoicing. */
+  unrecorded: LessonResponse[];
+}
+
+/** Result of partitioning a student's lessons for invoice selection. */
+export interface InvoiceableLessonGroups {
+  upcoming: LessonResponse[];
+  completed: CompletedLessonsGroup;
+}
+
+/**
+ * Partition a student's lessons into invoiceable groups for the Create
+ * Invoice picker.
+ *
+ *   - upcoming            : not started yet (and not cancelled)
+ *   - completed.chargeable: past, recorded as attended / absent-no-make-up
+ *                           (ready to invoice now)
+ *   - completed.unrecorded: past but attendance still pending
+ *
+ * Cancelled, tutor-cancelled, absent-with-credit, and absent-with-warning
+ * lessons are dropped entirely — they are never invoiced. Within each group
+ * completed lessons sort newest-first and upcoming sort soonest-first.
+ */
+export function partitionInvoiceableLessons(
+  lessons: LessonResponse[],
+): InvoiceableLessonGroups {
+  const byDateDesc = (a: LessonResponse, b: LessonResponse) =>
+    new Date(b.startDateTime).getTime() - new Date(a.startDateTime).getTime();
+  const byDateAsc = (a: LessonResponse, b: LessonResponse) =>
+    new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime();
+
+  const eligible = lessons.filter(
+    (l) => !isCancelledLesson(l) && !isExcludedFromInvoicing(l),
+  );
+
+  const chargeable: LessonResponse[] = [];
+  const unrecorded: LessonResponse[] = [];
+  const upcoming: LessonResponse[] = [];
+
+  for (const lesson of eligible) {
+    if (!isPastLesson(lesson)) {
+      upcoming.push(lesson);
+    } else if (isChargeableAttendance(lesson)) {
+      chargeable.push(lesson);
+    } else if (lesson.attendanceStatus === "unrecorded") {
+      unrecorded.push(lesson);
+    }
+  }
+
+  chargeable.sort(byDateDesc);
+  unrecorded.sort(byDateDesc);
+  upcoming.sort(byDateAsc);
+
+  return { upcoming, completed: { chargeable, unrecorded } };
+}

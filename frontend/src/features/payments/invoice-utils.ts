@@ -32,5 +32,12 @@ export {
   isOverdue,
   buildLessonDescription,
   buildLessonLineItem,
+  isCancelledLesson,
+  isPastLesson,
+  isExcludedFromInvoicing,
+  isChargeableAttendance,
+  partitionInvoiceableLessons,
   type LessonLineItemDraft,
+  type CompletedLessonsGroup,
+  type InvoiceableLessonGroups,
 } from "@examify-tms/shared";

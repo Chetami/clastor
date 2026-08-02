@@ -38,6 +38,7 @@ import {
   defaultInvoiceDueDateInput,
   formatCurrency,
   formatDate,
+  partitionInvoiceableLessons,
 } from "./invoice-utils";
 import { useUserCurrency } from "@/lib/use-currency";
 
@@ -48,18 +49,6 @@ interface LineItemDraft {
   rateType: "hourly" | "per_lesson";
   unitAmount: number;
   quantity: number;
-}
-
-function isCancelledLesson(lesson: LessonResponse): boolean {
-  return (
-    lesson.isCancelled ||
-    lesson.attendanceStatus === "tutor_cancelled" ||
-    lesson.attendanceStatus === "tutor_cancelled_makeup_issued"
-  );
-}
-
-function isPastLesson(lesson: LessonResponse): boolean {
-  return new Date(lesson.startDateTime).getTime() < Date.now();
 }
 
 export default function CreateInvoice() {
@@ -119,27 +108,11 @@ export default function CreateInvoice() {
   const createInvoice = useCreateInvoice();
   const sendInvoice = useSendInvoice();
 
-  const completedLessons = useMemo(
-    () =>
-      unpaidLessons
-        .filter((l) => !isCancelledLesson(l) && isPastLesson(l))
-        .sort(
-          (a, b) =>
-            new Date(b.startDateTime).getTime() -
-            new Date(a.startDateTime).getTime(),
-        ),
-    [unpaidLessons],
-  );
-
-  const upcomingLessons = useMemo(
-    () =>
-      unpaidLessons
-        .filter((l) => !isCancelledLesson(l) && !isPastLesson(l))
-        .sort(
-          (a, b) =>
-            new Date(a.startDateTime).getTime() -
-            new Date(b.startDateTime).getTime(),
-        ),
+  // Group the student's unpaid lessons into upcoming + completed (chargeable
+  // vs. unrecorded). The eligibility rules live in @examify-tms/shared so the
+  // same logic can drive the mobile client and the "Needs invoicing" surface.
+  const { upcoming: upcomingLessons, completed: completedLessons } = useMemo(
+    () => partitionInvoiceableLessons(unpaidLessons),
     [unpaidLessons],
   );
 
@@ -353,7 +326,8 @@ export default function CreateInvoice() {
                 <p className="py-6 text-center text-sm text-muted-foreground">
                   Loading unpaid lessons...
                 </p>
-              ) : completedLessons.length === 0 &&
+              ) : completedLessons.chargeable.length === 0 &&
+                completedLessons.unrecorded.length === 0 &&
                 upcomingLessons.length === 0 ? (
                 <p className="py-6 text-center text-sm text-muted-foreground">
                   No unpaid lessons for this student.
@@ -365,35 +339,43 @@ export default function CreateInvoice() {
                     <p className="mb-2 text-xs font-medium text-muted-foreground">
                       Completed lessons
                     </p>
-                    {completedLessons.length === 0 ? (
+                    {completedLessons.chargeable.length === 0 &&
+                    completedLessons.unrecorded.length === 0 ? (
                       <p className="py-3 text-center text-sm text-muted-foreground">
                         No completed unpaid lessons.
                       </p>
                     ) : (
-                      <div className="rounded-md border">
-                        <Table>
-                          <TableHeader>
-                            <TableRow className="bg-muted/30 hover:bg-muted/30">
-                              <TableHead className="w-10" />
-                              <TableHead>Lesson</TableHead>
-                              <TableHead>Date</TableHead>
-                              <TableHead className="text-right">
-                                Duration
-                              </TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {completedLessons.map((lesson) => (
-                              <LessonRow
-                                key={lesson.id}
-                                lesson={lesson}
-                                checked={selectedLessonIds.has(lesson.id)}
-                                onToggle={() => toggleLesson(lesson.id)}
-                                badge={lessonBadge(lesson)}
-                              />
-                            ))}
-                          </TableBody>
-                        </Table>
+                      <div className="space-y-4">
+                        {completedLessons.chargeable.length > 0 && (
+                          <div>
+                            <p className="mb-1.5 text-xs font-medium text-muted-foreground">
+                              Recorded · ready to invoice
+                              <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5 text-muted-foreground">
+                                {completedLessons.chargeable.length}
+                              </span>
+                            </p>
+                            <LessonsTable
+                              lessons={completedLessons.chargeable}
+                              selectedLessonIds={selectedLessonIds}
+                              onToggle={toggleLesson}
+                            />
+                          </div>
+                        )}
+                        {completedLessons.unrecorded.length > 0 && (
+                          <div>
+                            <p className="mb-1.5 text-xs font-medium text-muted-foreground">
+                              Not recorded
+                              <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5 text-muted-foreground">
+                                {completedLessons.unrecorded.length}
+                              </span>
+                            </p>
+                            <LessonsTable
+                              lessons={completedLessons.unrecorded}
+                              selectedLessonIds={selectedLessonIds}
+                              onToggle={toggleLesson}
+                            />
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -769,5 +751,41 @@ function LessonRow({ lesson, checked, onToggle, badge }: LessonRowProps) {
         {lesson.durationMinutes} min
       </TableCell>
     </TableRow>
+  );
+}
+
+function LessonsTable({
+  lessons,
+  selectedLessonIds,
+  onToggle,
+}: {
+  lessons: LessonResponse[];
+  selectedLessonIds: Set<string>;
+  onToggle: (id: string) => void;
+}) {
+  return (
+    <div className="rounded-md border">
+      <Table>
+        <TableHeader>
+          <TableRow className="bg-muted/30 hover:bg-muted/30">
+            <TableHead className="w-10" />
+            <TableHead>Lesson</TableHead>
+            <TableHead>Date</TableHead>
+            <TableHead className="text-right">Duration</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {lessons.map((lesson) => (
+            <LessonRow
+              key={lesson.id}
+              lesson={lesson}
+              checked={selectedLessonIds.has(lesson.id)}
+              onToggle={() => onToggle(lesson.id)}
+              badge={lessonBadge(lesson)}
+            />
+          ))}
+        </TableBody>
+      </Table>
+    </div>
   );
 }

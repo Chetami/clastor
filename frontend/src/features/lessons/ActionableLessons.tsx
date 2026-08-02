@@ -16,7 +16,6 @@ import {
   compareDesc,
   differenceInMilliseconds,
   intervalToDuration,
-  isPast,
 } from "date-fns";
 import type {
   AttendanceStatus,
@@ -39,45 +38,18 @@ import {
 } from "@/features/dashboard/api";
 import { MarkAttendanceDialog } from "@/components/mark-attendance-dialog";
 import { useSubjects } from "@/lib/subjects";
-import { formatCurrency, formatDate } from "@/features/payments/invoice-utils";
+import {
+  formatCurrency,
+  formatDate,
+  isCancelledLesson,
+  isPastLesson,
+  partitionInvoiceableLessons,
+} from "@/features/payments/invoice-utils";
 import {
   formatLessonDate,
   formatLessonTime,
   getInitials,
 } from "@/features/lessons/lesson-display";
-
-/** Cancelled lessons aren't billable, so never need an invoice. */
-function isCancelledLesson(lesson: LessonResponse): boolean {
-  return (
-    lesson.isCancelled ||
-    lesson.attendanceStatus === "tutor_cancelled" ||
-    lesson.attendanceStatus === "tutor_cancelled_makeup_issued"
-  );
-}
-
-function isPastLesson(lesson: LessonResponse): boolean {
-  return isPast(new Date(lesson.startDateTime));
-}
-
-/**
- * Attendance outcomes that leave the lesson billable — i.e. the tutor is
- * still owed for the session. A student absence only counts when NO make-up
- * credit was issued (the credited lesson is settled by charging for the
- * make-up session instead). Tutor cancellations are excluded upstream by
- * `isCancelledLesson`. `unrecorded` is excluded because attendance must be
- * marked before a lesson is ready to invoice.
- */
-const BILLABLE_ATTENDANCE_STATUSES: AttendanceStatus[] = [
-  "present",
-  "present_late",
-  "absent_no_makeup",
-  "absent_warning",
-];
-
-/** True when attendance has been recorded and the outcome is billable. */
-function isBillableForInvoicing(lesson: LessonResponse): boolean {
-  return BILLABLE_ATTENDANCE_STATUSES.includes(lesson.attendanceStatus);
-}
 
 const ATTENDANCE_LABELS: Record<AttendanceStatus, string> = {
   present: "present",
@@ -110,7 +82,8 @@ function formatRemaining(ms: number): string {
   const d = intervalToDuration({ start: new Date(0), end: new Date(ms) });
   const totalHours = (d.days ?? 0) * 24 + (d.hours ?? 0);
   const minutes = d.minutes ?? 0;
-  if (totalHours > 0) return minutes > 0 ? `${totalHours}h ${minutes}m` : `${totalHours}h`;
+  if (totalHours > 0)
+    return minutes > 0 ? `${totalHours}h ${minutes}m` : `${totalHours}h`;
   return `${minutes}m`;
 }
 
@@ -184,33 +157,21 @@ export function ActionableLessons() {
     return map;
   }, [students, subjects]);
 
-  const needsInvoicing = useMemo(
-    () =>
-      unpaidLessons
-        .filter(
-          (l) =>
-            isPastLesson(l) &&
-            !isCancelledLesson(l) &&
-            isBillableForInvoicing(l),
-        )
-        .sort((a, b) =>
-          compareDesc(
-            new Date(a.startDateTime),
-            new Date(b.startDateTime),
-          ),
-        ),
+  // Billable, uninvoiced lessons — derived from the shared partitioner so the
+  // eligibility rules (absent-with-credit / warned / tutor-cancelled are never
+  // billable) stay identical to the Create Invoice page.
+  const { completed: completedLessons } = useMemo(
+    () => partitionInvoiceableLessons(unpaidLessons),
     [unpaidLessons],
   );
+  const needsInvoicing = completedLessons.chargeable;
 
   const attendanceDue = useMemo(
     () =>
       unrecordedLessons
         .filter((l) => isPastLesson(l) && !isCancelledLesson(l))
         .sort((a, b) =>
-          compareDesc(
-            new Date(a.startDateTime),
-            new Date(b.startDateTime),
-          ),
+          compareDesc(new Date(a.startDateTime), new Date(b.startDateTime)),
         ),
     [unrecordedLessons],
   );
@@ -233,9 +194,7 @@ export function ActionableLessons() {
       }
     }
     // Most overdue first.
-    rows.sort((a, b) =>
-      compareAsc(new Date(a.dueDate), new Date(b.dueDate)),
-    );
+    rows.sort((a, b) => compareAsc(new Date(a.dueDate), new Date(b.dueDate)));
     return rows;
   }, [overdueInvoices]);
 
@@ -273,7 +232,10 @@ export function ActionableLessons() {
         if (edits!.durationMinutes !== undefined) {
           data.durationMinutes = edits!.durationMinutes;
         }
-        effective = await updateLessonDetails.mutateAsync({ id: lessonId, data });
+        effective = await updateLessonDetails.mutateAsync({
+          id: lessonId,
+          data,
+        });
       }
 
       if (shouldInvoice) {
@@ -305,7 +267,9 @@ export function ActionableLessons() {
       await sendInvoice.mutateAsync({ id: row.invoiceId });
       toast.success(`Reminder sent to ${row.customerName}`);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to send reminder");
+      toast.error(
+        err instanceof Error ? err.message : "Failed to send reminder",
+      );
     }
   }
 
