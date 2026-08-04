@@ -20,6 +20,7 @@ import { CancelLessonDialog } from "@/features/schedule/CancelLessonDialog";
 import { RescheduleDialog } from "@/features/schedule/RescheduleDialog";
 import {
   formatLessonTime,
+  isToday,
   lessonBadge,
 } from "@/features/lessons/lesson-display";
 import { lessonIssues } from "./lesson-series-utils";
@@ -39,6 +40,7 @@ export function LessonRow({ lesson }: LessonRowProps) {
   const weekdayShort = start
     .toLocaleDateString("en-AU", { weekday: "short" })
     .toUpperCase();
+  const today = isToday(start);
 
   const [notesOpen, setNotesOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -61,23 +63,33 @@ export function LessonRow({ lesson }: LessonRowProps) {
   }
 
   const cancelled = !!lesson.isCancelled;
+  const isFinished = end.getTime() < Date.now();
+  const dimmed = cancelled || isFinished;
+  const destructiveDisabled = cancelled || isFinished;
 
   return (
     <div
-      className={`group flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-accent/40 sm:gap-4 ${
-        cancelled ? "opacity-55" : ""
-      }`}
+      data-lesson-id={lesson.id}
+      className="group flex items-center gap-3 scroll-mt-16 px-4 py-2.5 transition-colors hover:bg-accent/40 sm:gap-4"
     >
       <Link
         to={`/lessons/${lesson.id}`}
-        className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4"
+        className={`flex min-w-0 flex-1 items-center gap-3 transition-opacity sm:gap-4 ${
+          dimmed ? "opacity-55" : ""
+        }`}
       >
-        {/* Date indicator */}
-        <div className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-md border border-border bg-muted/30">
-          <span className="text-base font-bold leading-none text-foreground">
+        {/* Date indicator — mirrors the FullCalendar day header */}
+        <div className="flex h-12 w-12 shrink-0 flex-col items-center justify-center gap-0.5">
+          <span
+            className={`inline-flex h-7 min-w-[1.75rem] items-center justify-center px-2 text-lg font-medium leading-none transition-colors ${
+              today
+                ? "rounded-full bg-primary text-primary-foreground"
+                : "text-foreground"
+            }`}
+          >
             {dayOfMonth}
           </span>
-          <span className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+          <span className="text-[0.6875rem] font-medium uppercase leading-none tracking-[0.04em] text-muted-foreground">
             {weekdayShort}
           </span>
         </div>
@@ -158,27 +170,29 @@ export function LessonRow({ lesson }: LessonRowProps) {
           </PopoverContent>
         </Popover>
 
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 text-muted-foreground"
-          title="Reschedule"
-          onClick={() => setEditOpen(true)}
-          disabled={cancelled}
-        >
-          <Pencil className="h-4 w-4" />
-        </Button>
+        {!destructiveDisabled && (
+          <>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-muted-foreground"
+              title="Reschedule"
+              onClick={() => setEditOpen(true)}
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
 
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 text-muted-foreground hover:text-destructive"
-          title={cancelled ? "Already cancelled" : "Cancel lesson"}
-          onClick={() => setCancelOpen(true)}
-          disabled={cancelled}
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-muted-foreground hover:text-destructive"
+              title="Cancel lesson"
+              onClick={() => setCancelOpen(true)}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </>
+        )}
       </div>
 
       <RescheduleDialog
