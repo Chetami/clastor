@@ -849,6 +849,28 @@
   outline: none;
 }
 
+/* ---- Lesson series list (FullCalendar listMonth) ----
+   The wrapper carries both .gi-calendar (shared theming: CSS vars, buttons,
+   toolbar title, prev/next circles, focus ring) and .gi-series-calendar
+   (list-only tweaks). */
+.gi-series-calendar .fc .fc-list-day-cushion,
+.gi-series-calendar .fc .fc-list-day-side-cushion {
+  text-decoration: none;
+}
+
+.gi-series-calendar .fc .fc-list-event-time {
+  color: hsl(var(--muted-foreground));
+  white-space: nowrap;
+}
+
+.gi-series-calendar .fc .fc-list-event:hover td {
+  background-color: hsl(var(--accent) / 0.4);
+}
+
+.gi-series-calendar .gi-series-row--cancelled {
+  opacity: 0.55;
+}
+
 .gi-calendar .fc .fc-timezoneLabel-button::after {
   content: "Timezone selection isn't available yet";
   position: absolute;

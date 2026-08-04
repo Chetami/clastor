@@ -70,6 +70,7 @@ export interface LessonFilters {
   from?: Date;
   to?: Date;
   studentId?: string;
+  seriesId?: string;
   acceptanceStatus?: string;
   attendanceStatus?: string;
   unpaid?: boolean;
@@ -129,6 +130,7 @@ export async function listLessonsFromFirestore(
 
       // Remaining filters are applied in memory.
       if (filters.studentId && lesson.studentId !== filters.studentId) return;
+      if (filters.seriesId && lesson.seriesId !== filters.seriesId) return;
       if (
         filters.acceptanceStatus &&
         lesson.acceptanceStatus !== filters.acceptanceStatus

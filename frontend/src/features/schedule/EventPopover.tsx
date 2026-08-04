@@ -253,6 +253,7 @@ export function EventPopover({
                 lesson.isCancelled,
               )}
               isRecurring={!!lesson.seriesId}
+              seriesId={lesson.seriesId ?? null}
               isCancelled={lesson.isCancelled ?? false}
             acceptanceLabel={ACCEPTANCE_LABELS[lesson.acceptanceStatus]}
             attendanceLabel={ATTENDANCE_LABELS[lesson.attendanceStatus]}
@@ -349,6 +350,7 @@ interface PopoverBodyProps {
   notes: string | null | undefined;
   status: "scheduled" | "completed" | "cancelled";
   isRecurring: boolean;
+  seriesId: string | null;
   isCancelled: boolean;
   acceptanceLabel: string;
   attendanceLabel: string;
@@ -381,6 +383,7 @@ function PopoverBody({
   notes,
   status,
   isRecurring,
+  seriesId,
   isCancelled,
   acceptanceLabel,
   attendanceLabel,
@@ -614,7 +617,9 @@ function PopoverBody({
             </Button>
           )}
           <Button size="sm" variant="ghost" asChild className="ml-auto">
-            <Link to={`/lessons/${lessonId}`}>Open</Link>
+            <Link to={seriesId ? `/lessons/series/${seriesId}` : `/lessons/${lessonId}`}>
+              Open
+            </Link>
           </Button>
         </div>
       )}

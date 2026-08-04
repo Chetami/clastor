@@ -14,6 +14,7 @@ import type {
   GoogleConnectionStatus,
   LessonResponse,
   LessonListResponse,
+  LessonSeriesResponse,
   ExternalCalendarEventListResponse,
 } from "@examify-tms/interfaces";
 
@@ -47,6 +48,7 @@ export interface ListLessonsParams {
   from?: string;
   to?: string;
   studentId?: string;
+  seriesId?: string;
   unpaid?: boolean;
   acceptanceStatus?: string;
   attendanceStatus?: string;
@@ -127,6 +129,19 @@ export async function cancelLessonSeriesRequest(
   seriesId: string,
 ): Promise<{ cancelled: number }> {
   const response = await api.delete<{ cancelled: number }>(
+    `/api/lessons/series/${seriesId}`,
+  );
+  return response.data;
+}
+
+/**
+ * Fetch a single lesson series by ID (metadata only — occurrences are
+ * fetched via listLessonsRequest with `seriesId`).
+ */
+export async function getLessonSeriesRequest(
+  seriesId: string,
+): Promise<LessonSeriesResponse> {
+  const response = await api.get<LessonSeriesResponse>(
     `/api/lessons/series/${seriesId}`,
   );
   return response.data;

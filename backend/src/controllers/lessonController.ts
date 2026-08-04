@@ -217,6 +217,9 @@ export async function listLessons(
     if (typeof req.query.studentId === "string") {
       filters.studentId = req.query.studentId;
     }
+    if (typeof req.query.seriesId === "string") {
+      filters.seriesId = req.query.seriesId;
+    }
     if (typeof req.query.acceptanceStatus === "string") {
       filters.acceptanceStatus = req.query.acceptanceStatus;
     }

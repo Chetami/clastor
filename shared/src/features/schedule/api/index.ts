@@ -5,6 +5,7 @@ export * from "./use-create-lesson";
 export * from "./use-create-recurring-lesson";
 export * from "./use-external-events";
 export * from "./use-get-lesson";
+export * from "./use-get-lesson-series";
 export * from "./use-list-lessons-infinite";
 export * from "./use-list-lessons";
 export * from "./use-notify-student";
