@@ -9,6 +9,8 @@ import {
   escapeCsvField,
   studentsToCsv,
   studentToFormValues,
+  resolveBillingEmail,
+  resolveBillingEmailSource,
 } from "./student-utils";
 
 describe("getInitials", () => {
@@ -145,32 +147,82 @@ describe("studentToFormValues", () => {
     updatedAt: "2025-01-01T00:00:00.000Z",
   } as const;
 
-  it("detects when the billing email mirrors the parent email", () => {
+  it("maps a parent-derived billing email to auto mode", () => {
+    const values = studentToFormValues({
+      ...base,
+      parentEmail: "p@example.com",
+      billingEmail: "p@example.com",
+      billingEmailSource: "parent",
+    } as unknown as StudentResponse);
+    expect(values.billingEmailMode).toBe("auto");
+    expect(values.billingEmail).toBe("");
+  });
+
+  it("maps a student-derived billing email to auto mode", () => {
+    const values = studentToFormValues({
+      ...base,
+      parentEmail: null,
+      billingEmail: "ada@example.com",
+      billingEmailSource: "student",
+    } as unknown as StudentResponse);
+    expect(values.billingEmailMode).toBe("auto");
+    expect(values.billingEmail).toBe("");
+  });
+
+  it("keeps an explicit billing email in custom mode", () => {
+    const values = studentToFormValues({
+      ...base,
+      parentEmail: "p@example.com",
+      billingEmail: "billing@example.com",
+      billingEmailSource: "explicit",
+    } as unknown as StudentResponse);
+    expect(values.billingEmailMode).toBe("custom");
+    expect(values.billingEmail).toBe("billing@example.com");
+  });
+
+  it("treats a missing billingEmailSource as derived", () => {
     const values = studentToFormValues({
       ...base,
       parentEmail: "p@example.com",
       billingEmail: "p@example.com",
     } as unknown as StudentResponse);
-    expect(values.useParentEmailAsBilling).toBe(true);
-    expect(values.billingEmail).toBe("");
+    expect(values.billingEmailMode).toBe("auto");
+  });
+});
+
+describe("resolveBillingEmail", () => {
+  const EMAIL = "student@example.com";
+
+  it("prefers an explicit override", () => {
+    expect(
+      resolveBillingEmail("billing@example.com", "parent@example.com", EMAIL),
+    ).toBe("billing@example.com");
   });
 
-  it("keeps a distinct billing email", () => {
-    const values = studentToFormValues({
-      ...base,
-      parentEmail: "p@example.com",
-      billingEmail: "billing@example.com",
-    } as unknown as StudentResponse);
-    expect(values.useParentEmailAsBilling).toBe(false);
-    expect(values.billingEmail).toBe("billing@example.com");
+  it("falls back to the parent email when no override", () => {
+    expect(resolveBillingEmail(null, "parent@example.com", EMAIL)).toBe(
+      "parent@example.com",
+    );
   });
 
-  it("treats a missing parent email as no auto-billing", () => {
-    const values = studentToFormValues({
-      ...base,
-      parentEmail: null,
-      billingEmail: "ada@example.com",
-    } as unknown as StudentResponse);
-    expect(values.useParentEmailAsBilling).toBe(false);
+  it("falls back to the student email when nothing else is set", () => {
+    expect(resolveBillingEmail(null, null, EMAIL)).toBe(EMAIL);
+    expect(resolveBillingEmail(undefined, undefined, EMAIL)).toBe(EMAIL);
+  });
+});
+
+describe("resolveBillingEmailSource", () => {
+  it("reports explicit when an override is set", () => {
+    expect(resolveBillingEmailSource("b@example.com", "p@example.com")).toBe(
+      "explicit",
+    );
+  });
+
+  it("reports parent when only a parent email exists", () => {
+    expect(resolveBillingEmailSource(null, "p@example.com")).toBe("parent");
+  });
+
+  it("reports student when neither is set", () => {
+    expect(resolveBillingEmailSource(null, null)).toBe("student");
   });
 });

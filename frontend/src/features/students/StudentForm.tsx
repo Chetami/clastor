@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Mail } from "lucide-react";
 import type { RateType, StudentStatus } from "@examify-tms/interfaces";
 import { useUserCurrency, getCurrencySymbol } from "@/lib/use-currency";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,10 @@ import {
 } from "./student-schema";
 import { SubjectMultiSelect } from "@/components/subjects/SubjectMultiSelect";
 import { NumberInput } from "@/components/ui/number-input";
+import {
+  resolveBillingEmail,
+  resolveBillingEmailSource,
+} from "./student-utils";
 
 interface StudentFormProps {
   defaultValues?: Partial<StudentFormData>;
@@ -48,6 +52,15 @@ export function StudentForm({
   const [additionalOpen, setAdditionalOpen] = useState(false);
   const [billingOpen, setBillingOpen] = useState(false);
   const currencySymbol = getCurrencySymbol(useUserCurrency());
+
+  const billingAutoSource = resolveBillingEmailSource(null, values.parentEmail);
+  const billingAutoEmail = resolveBillingEmail(
+    null,
+    values.parentEmail,
+    values.email,
+  );
+  const billingAutoSourceLabel =
+    billingAutoSource === "parent" ? "parent email" : "student email";
 
   function update<K extends keyof StudentFormData>(
     key: K,
@@ -164,52 +177,50 @@ export function StudentForm({
         </CollapsibleTrigger>
         <CollapsibleContent className="space-y-4 p-4 pt-0 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:slide-in-from-top-1">
           <div className="space-y-2 pt-4">
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="useParentEmailAsBilling"
-                checked={values.useParentEmailAsBilling}
-                onChange={(e) =>
-                  update("useParentEmailAsBilling", e.target.checked)
-                }
-                disabled={!values.parentEmail}
+            <Label>Billing Email</Label>
+            <div className="grid grid-cols-2 gap-2">
+              <ToggleOption
+                checked={values.billingEmailMode === "auto"}
+                label="Auto"
+                onSelect={() => update("billingEmailMode", "auto" as const)}
               />
-              <Label
-                htmlFor="useParentEmailAsBilling"
-                className={`cursor-pointer ${
-                  !values.parentEmail ? "text-muted-foreground/60" : ""
-                }`}
-              >
-                Use parent email as billing email
-              </Label>
+              <ToggleOption
+                checked={values.billingEmailMode === "custom"}
+                label="Custom"
+                onSelect={() => update("billingEmailMode", "custom" as const)}
+              />
             </div>
-            {!values.parentEmail && (
-              <p className="text-xs text-muted-foreground">
-                Enter a parent email above to enable this option.
-              </p>
-            )}
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="billingEmail">
-              Billing Email{" "}
-              <span className="text-xs font-normal text-muted-foreground">
-                (optional)
-              </span>
-            </Label>
-            <Input
-              id="billingEmail"
-              type="email"
-              placeholder="billing@example.com"
-              aria-invalid={!!errors.billingEmail}
-              disabled={values.useParentEmailAsBilling}
-              value={
-                values.useParentEmailAsBilling
-                  ? values.parentEmail
-                  : values.billingEmail
-              }
-              onChange={(e) => update("billingEmail", e.target.value)}
-            />
-            {errors.billingEmail && (
-              <p className="text-xs text-destructive">{errors.billingEmail}</p>
+            {values.billingEmailMode === "auto" ? (
+              <div className="flex items-start gap-2 rounded-md border border-border/60 bg-muted/40 px-3 py-2 text-sm">
+                <Mail className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                <p className="text-muted-foreground">
+                  Invoices will be sent to{" "}
+                  <span className="font-medium text-foreground">
+                    {billingAutoEmail}
+                  </span>{" "}
+                  ({billingAutoSourceLabel})
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2 pt-2">
+                <Input
+                  id="billingEmail"
+                  type="email"
+                  placeholder="billing@example.com"
+                  aria-invalid={!!errors.billingEmail}
+                  value={values.billingEmail}
+                  onChange={(e) => update("billingEmail", e.target.value)}
+                />
+                {errors.billingEmail && (
+                  <p className="text-xs text-destructive">
+                    {errors.billingEmail}
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Auto would use {billingAutoEmail} ({billingAutoSourceLabel}).
+                  Use a custom address if invoices should go elsewhere.
+                </p>
+              </div>
             )}
           </div>
         </CollapsibleContent>

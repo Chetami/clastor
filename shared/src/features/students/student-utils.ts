@@ -32,22 +32,69 @@ export function formatFrequency(
   return rateType === "hourly" ? `${frequency} hrs/wk` : `${frequency}/wk`;
 }
 
+/**
+ * Resolve the effective billing email for a student: an explicit override
+ * wins, then the parent email, then the student's own email. Mirrors the
+ * backend's read-time resolution so the UI can preview what "auto" will
+ * produce.
+ */
+export function resolveBillingEmail(
+  explicit: string | null | undefined,
+  parentEmail: string | null | undefined,
+  email: string,
+): string {
+  if (explicit && explicit.trim().length > 0) return explicit;
+  if (parentEmail && parentEmail.trim().length > 0) return parentEmail;
+  return email;
+}
+
+export type BillingEmailSource = "explicit" | "parent" | "student";
+
+/**
+ * Resolve the provenance of a student's billing email. Mirrors the backend's
+ * read-time resolution.
+ */
+export function resolveBillingEmailSource(
+  explicit: string | null | undefined,
+  parentEmail: string | null | undefined,
+): BillingEmailSource {
+  if (explicit && explicit.trim().length > 0) return "explicit";
+  if (parentEmail && parentEmail.trim().length > 0) return "parent";
+  return "student";
+}
+
+/**
+ * Infer the billing email provenance for legacy records that predate the
+ * `billingEmailSource` field. A non-null billing email that matches the
+ * parent email was historically treated as "use parent email as billing",
+ * so it maps to 'parent'; any other non-null value is an explicit override.
+ */
+function inferBillingEmailSource(
+  billingEmail: string | null | undefined,
+  parentEmail: string | null | undefined,
+): BillingEmailSource {
+  const parent = parentEmail?.trim().toLowerCase();
+  const billing = billingEmail?.trim().toLowerCase();
+  if (parent && billing === parent) return "parent";
+  if (billing) return "explicit";
+  return "student";
+}
+
 export function studentToFormValues(
   student: StudentResponse,
 ): Partial<StudentFormData> {
   const parentEmail = student.parentEmail ?? "";
-  const billingEmail = student.billingEmail ?? "";
-  const useParentEmailAsBilling =
-    parentEmail.length > 0 &&
-    billingEmail.length > 0 &&
-    billingEmail.toLowerCase() === parentEmail.toLowerCase();
+  const source =
+    student.billingEmailSource ??
+    inferBillingEmailSource(student.billingEmail, parentEmail);
+  const billingEmailMode = source === "explicit" ? "custom" : "auto";
   return {
     name: student.name,
     email: student.email,
     phone: student.phone ?? "",
     parentEmail,
-    useParentEmailAsBilling,
-    billingEmail: useParentEmailAsBilling ? "" : billingEmail,
+    billingEmailMode,
+    billingEmail: billingEmailMode === "custom" ? student.billingEmail ?? "" : "",
     subjectIds: student.subjectIds ?? [],
     expectedAmount: student.expectedAmount,
     rateType: student.rateType,
@@ -166,6 +213,7 @@ export const SAMPLE_STUDENTS: Student[] = [
     phone: null,
     parentEmail: "parent.johnson@example.com",
     billingEmail: "parent.johnson@example.com",
+    billingEmailSource: "parent",
     subjectIds: [],
     expectedAmount: 45,
     rateType: "hourly",
@@ -185,6 +233,7 @@ export const SAMPLE_STUDENTS: Student[] = [
     phone: "+15551234567",
     parentEmail: null,
     billingEmail: "marcus.chen@example.com",
+    billingEmailSource: "student",
     subjectIds: [],
     expectedAmount: 120,
     rateType: "per_lesson",
@@ -204,6 +253,7 @@ export const SAMPLE_STUDENTS: Student[] = [
     phone: null,
     parentEmail: null,
     billingEmail: "priya.patel@example.com",
+    billingEmailSource: "student",
     subjectIds: [],
     expectedAmount: 50,
     rateType: "hourly",
@@ -223,6 +273,7 @@ export const SAMPLE_STUDENTS: Student[] = [
     phone: "+15559876543",
     parentEmail: "obrien.family@example.com",
     billingEmail: "obrien.family@example.com",
+    billingEmailSource: "parent",
     subjectIds: [],
     expectedAmount: 90,
     rateType: "per_lesson",

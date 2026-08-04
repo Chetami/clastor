@@ -65,6 +65,20 @@ export function resolveBillingEmail(
 }
 
 /**
+ * Resolve the provenance of a student's billing email. Mirrors
+ * `resolveBillingEmail`: an explicit override yields 'explicit', otherwise
+ * the presence of a parent email yields 'parent', otherwise 'student'.
+ */
+export function resolveBillingEmailSource(
+  explicit: string | null | undefined,
+  parentEmail: string | null | undefined
+): "explicit" | "parent" | "student" {
+  if (explicit && explicit.trim().length > 0) return "explicit";
+  if (parentEmail && parentEmail.trim().length > 0) return "parent";
+  return "student";
+}
+
+/**
  * Coerce a raw subjectIds value into a clean string[]. Handles docs created
  * before the field existed (missing) or malformed values.
  */
@@ -128,6 +142,10 @@ export async function listStudentsFromFirestore(
           parentEmail,
           data.email
         ),
+        billingEmailSource: resolveBillingEmailSource(
+          data.billingEmail,
+          parentEmail
+        ),
         subjectIds: coalesceSubjectIds(data.subjectIds),
         expectedAmount: data.expectedAmount,
         rateType: data.rateType,
@@ -181,6 +199,10 @@ export async function getStudentByIdFromFirestore(
         data.billingEmail,
         parentEmail,
         data.email
+      ),
+      billingEmailSource: resolveBillingEmailSource(
+        data.billingEmail,
+        parentEmail
       ),
       subjectIds: coalesceSubjectIds(data.subjectIds),
       expectedAmount: data.expectedAmount,
@@ -248,6 +270,10 @@ export async function createStudentInFirestore(
         data.billingEmail || null,
         parentEmail,
         data.email
+      ),
+      billingEmailSource: resolveBillingEmailSource(
+        data.billingEmail || null,
+        parentEmail
       ),
       subjectIds: coalesceSubjectIds(data.subjectIds),
       expectedAmount: data.expectedAmount,
@@ -329,6 +355,10 @@ export async function updateStudentInFirestore(
         updatedData.billingEmail,
         parentEmail,
         updatedData.email
+      ),
+      billingEmailSource: resolveBillingEmailSource(
+        updatedData.billingEmail,
+        parentEmail
       ),
       subjectIds: coalesceSubjectIds(updatedData.subjectIds),
       expectedAmount: updatedData.expectedAmount,

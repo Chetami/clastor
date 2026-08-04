@@ -71,6 +71,8 @@ components:
       $ref: './schemas/students/RateType.yaml'
     StudentStatus:
       $ref: './schemas/students/StudentStatus.yaml'
+    BillingEmailSource:
+      $ref: './schemas/students/BillingEmailSource.yaml'
     # Student Request/Response Schemas
     CreateStudentRequest:
       $ref: './schemas/students/req/CreateStudentRequest.yaml'

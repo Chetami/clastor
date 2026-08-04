@@ -35,8 +35,9 @@ properties:
     nullable: true
     description: >-
       Email used as the default recipient when creating invoices for this
-      student. May mirror parentEmail or be a different address. Null
-      means invoice creation falls back to parentEmail then student email.
+      student. May mirror parentEmail or be a different address. Null or
+      omitted means the backend derives the billing email automatically
+      (parentEmail first, then the student's own email).
     example: billing.johnson@example.com
   subjectIds:
     type: array

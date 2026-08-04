@@ -10,6 +10,8 @@ export {
   rateUnit,
   formatFrequency,
   studentToFormValues,
+  resolveBillingEmail,
+  resolveBillingEmailSource,
   STUDENT_CSV_COLUMNS,
   escapeCsvField,
   studentsToCsv,

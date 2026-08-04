@@ -54,6 +54,15 @@ export default function StudentDetail() {
   const [notesEditing, setNotesEditing] = useState(false);
   const [notesDraft, setNotesDraft] = useState("");
 
+  const billingEmailSourceLabel: Record<
+    NonNullable<typeof student>["billingEmailSource"],
+    string
+  > = {
+    explicit: "Custom",
+    parent: "Parent email",
+    student: "Student email",
+  };
+
   async function handleEdit(values: StudentFormData) {
     if (!student) return;
     await updateStudent.mutateAsync({
@@ -241,6 +250,20 @@ export default function StudentDetail() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
+              <span className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Mail className="h-4 w-4" />
+                Billing Email
+              </span>
+              <div className="text-right">
+                <p className="max-w-[200px] truncate font-medium">
+                  {student.billingEmail}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {billingEmailSourceLabel[student.billingEmailSource]}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center justify-between border-t pt-4">
               <span className="flex items-center gap-2 text-sm text-muted-foreground">
                 <DollarSign className="h-4 w-4" />
                 Rate

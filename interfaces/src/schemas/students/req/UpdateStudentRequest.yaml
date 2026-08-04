@@ -28,7 +28,10 @@ properties:
     nullable: true
     description: >-
       Email used as the default recipient when creating invoices for this
-      student. Send null to clear and fall back to parent/student email.
+      student. Send null (or omit) to clear the override and let the
+      backend derive the billing email automatically (parentEmail first,
+      then the student's own email). Send a non-null value to set an
+      explicit override.
     example: billing.johnson@example.com
   subjectIds:
     type: array

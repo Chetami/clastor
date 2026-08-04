@@ -10,6 +10,7 @@ required:
   - status
   - amountOwed
   - billingEmail
+  - billingEmailSource
   - tutorId
   - createdAt
   - updatedAt
@@ -53,6 +54,8 @@ properties:
       tutor's explicit override (if set), otherwise the parentEmail,
       otherwise the student's own email.
     example: billing.johnson@example.com
+  billingEmailSource:
+    $ref: './BillingEmailSource.yaml'
   subjectIds:
     type: array
     description: >-

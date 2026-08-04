@@ -23,7 +23,7 @@ export const studentFormSchema = z
       .trim()
       .optional()
       .or(z.literal("")),
-    useParentEmailAsBilling: z.boolean(),
+    billingEmailMode: z.enum(["auto", "custom"]),
     billingEmail: z.string().trim().optional().or(z.literal("")),
     subjectIds: z
       .array(z.string().min(1))
@@ -57,7 +57,7 @@ export const studentFormSchema = z
       }
     }
     if (
-      !data.useParentEmailAsBilling &&
+      data.billingEmailMode === "custom" &&
       data.billingEmail &&
       data.billingEmail.length > 0
     ) {
@@ -86,7 +86,7 @@ export const EMPTY_STUDENT_FORM: StudentFormData = {
   email: "",
   phone: "",
   parentEmail: "",
-  useParentEmailAsBilling: false,
+  billingEmailMode: "auto",
   billingEmail: "",
   subjectIds: [],
   expectedAmount: 0,
@@ -104,7 +104,10 @@ export function formToUpdateRequest(data: StudentFormData): UpdateStudentRequest
     email: data.email,
     phone: data.phone || null,
     parentEmail: data.parentEmail || null,
-    billingEmail: data.useParentEmailAsBilling ? data.parentEmail : (data.billingEmail || null),
+    billingEmail:
+      data.billingEmailMode === "auto"
+        ? null
+        : (data.billingEmail?.trim() || null),
     subjectIds: data.subjectIds,
     expectedAmount: data.expectedAmount,
     rateType: data.rateType,

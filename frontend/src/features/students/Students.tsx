@@ -159,9 +159,10 @@ export default function Students() {
 
   async function handleAdd(values: StudentFormData) {
     try {
-      const billingEmail = values.useParentEmailAsBilling
-        ? values.parentEmail?.trim() || undefined
-        : values.billingEmail?.trim() || undefined;
+      const billingEmail =
+        values.billingEmailMode === "auto"
+          ? undefined
+          : values.billingEmail?.trim() || undefined;
 
       await createStudent.mutateAsync({
         name: values.name,
@@ -190,9 +191,10 @@ export default function Students() {
   async function handleEdit(values: StudentFormData) {
     if (!editing) return;
     try {
-      const billingEmail = values.useParentEmailAsBilling
-        ? values.parentEmail?.trim() || null
-        : values.billingEmail?.trim() || null;
+      const billingEmail =
+        values.billingEmailMode === "auto"
+          ? null
+          : values.billingEmail?.trim() || null;
 
       await updateStudent.mutateAsync({
         id: editing.id,

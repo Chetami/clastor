@@ -3,6 +3,7 @@ import type { Subject } from "@examify-tms/interfaces";
 import {
   resolveSubjectIdsByName,
   resolveBillingEmail,
+  resolveBillingEmailSource,
   coalesceSubjectIds,
 } from "../src/services/studentService";
 
@@ -93,6 +94,28 @@ describe("resolveBillingEmail", () => {
 
   it("treats a whitespace-only parent email as unset", () => {
     expect(resolveBillingEmail(null, "   ", EMAIL)).toBe(EMAIL);
+  });
+});
+
+describe("resolveBillingEmailSource", () => {
+  it("reports explicit when an override is set", () => {
+    expect(resolveBillingEmailSource("billing@example.com", "parent@example.com")).toBe(
+      "explicit",
+    );
+  });
+
+  it("reports parent when no override but a parent email exists", () => {
+    expect(resolveBillingEmailSource(null, "parent@example.com")).toBe("parent");
+  });
+
+  it("reports student when neither override nor parent email is set", () => {
+    expect(resolveBillingEmailSource(null, null)).toBe("student");
+    expect(resolveBillingEmailSource(undefined, undefined)).toBe("student");
+  });
+
+  it("treats whitespace-only values as unset", () => {
+    expect(resolveBillingEmailSource("   ", "parent@example.com")).toBe("parent");
+    expect(resolveBillingEmailSource(null, "   ")).toBe("student");
   });
 });
 

@@ -1,0 +1,12 @@
+type: string
+enum:
+  - explicit
+  - parent
+  - student
+description: |-
+  Provenance of a student's resolved billing email.
+  - `explicit`: the tutor set a custom billing email override.
+  - `parent`: derived from the student's parentEmail (no override set).
+  - `student`: derived from the student's own email (no override and no
+    parent email set).
+example: parent
