@@ -1,11 +1,16 @@
 import { useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, CalendarDays, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { useGetLessonSeries, useListLessons } from "@/features/schedule/api";
+import {
+  useGetLessonSeries,
+  useListLessons,
+  useUpdateLessonSeries,
+} from "@/features/schedule/api";
 import { useListStudents } from "@/features/students/api";
-import type { LessonResponse } from "@examify-tms/interfaces";
+import type { LessonAcceptance, LessonResponse } from "@examify-tms/interfaces";
 import { lessonIssues } from "./lesson-series-utils";
 import { LessonSeriesCalendar } from "./LessonSeriesCalendar";
 import { SeriesHeader } from "./SeriesHeader";
@@ -15,6 +20,7 @@ export default function LessonSeriesDetail() {
   const navigate = useNavigate();
 
   const series = useGetLessonSeries(seriesId);
+  const updateSeries = useUpdateLessonSeries(seriesId);
   const { data: students = [] } = useListStudents();
   const lessonsQuery = useListLessons({ seriesId });
 
@@ -32,6 +38,16 @@ export default function LessonSeriesDetail() {
     () => lessons.reduce((n, l) => n + lessonIssues(l).length, 0),
     [lessons],
   );
+
+  async function handleAcceptanceChange(value: LessonAcceptance) {
+    try {
+      await updateSeries.mutateAsync({ acceptanceStatus: value });
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Failed to update acceptance",
+      );
+    }
+  }
 
   return (
     <div className="flex h-full flex-col gap-6">
@@ -66,6 +82,8 @@ export default function LessonSeriesDetail() {
             studentName={studentName}
             studentId={series.data.studentId}
             acceptance={series.data.acceptanceStatus}
+            onAcceptanceChange={handleAcceptanceChange}
+            acceptanceDisabled={updateSeries.isPending}
             intervalWeeks={series.data.intervalWeeks}
             slots={series.data.slots}
             durationMinutes={series.data.durationMinutes}

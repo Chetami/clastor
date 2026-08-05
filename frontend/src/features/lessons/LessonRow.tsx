@@ -23,7 +23,7 @@ import {
   isToday,
   lessonBadge,
 } from "@/features/lessons/lesson-display";
-import { lessonIssues } from "./lesson-series-utils";
+import { lessonIssues, ACCEPTANCE_TONE } from "./lesson-series-utils";
 
 export interface LessonRowProps {
   lesson: LessonResponse;
@@ -33,8 +33,21 @@ export interface LessonRowProps {
 export function LessonRow({ lesson }: LessonRowProps) {
   const start = new Date(lesson.startDateTime);
   const end = new Date(start.getTime() + lesson.durationMinutes * 60_000);
-  const { label, tone } = lessonBadge(lesson);
   const issues = lessonIssues(lesson);
+
+  // Derive the status badge. "Upcoming" is obvious from the date, so for
+  // future lessons we surface acceptance instead — only when pending or
+  // declined (accepted is the unremarkable default). Attendance-driven
+  // labels (Present, Absent, Cancelled, …) are kept for past lessons.
+  const baseBadge = lessonBadge(lesson);
+  const statusBadge =
+    baseBadge.label === "Upcoming"
+      ? lesson.acceptanceStatus === "pending"
+        ? { label: "Pending", tone: ACCEPTANCE_TONE.pending }
+        : lesson.acceptanceStatus === "declined"
+          ? { label: "Declined", tone: ACCEPTANCE_TONE.declined }
+          : null
+      : baseBadge;
 
   const dayOfMonth = start.getDate();
   const weekdayShort = start
@@ -104,13 +117,13 @@ export function LessonRow({ lesson }: LessonRowProps) {
               <span className="inline-flex items-center rounded-full bg-rose-500/15 px-2 py-0.5 text-[11px] font-medium text-rose-600 dark:text-rose-400">
                 {issues.length} {issues.length === 1 ? "issue" : "issues"}
               </span>
-            ) : (
+            ) : statusBadge ? (
               <span
-                className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${tone}`}
+                className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${statusBadge.tone}`}
               >
-                {label}
+                {statusBadge.label}
               </span>
-            )}
+            ) : null}
           </div>
           <div className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
             <Clock className="h-3 w-3" />

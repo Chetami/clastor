@@ -14,3 +14,4 @@ export * from "./use-reschedule-lesson";
 export * from "./use-resync-lesson";
 export * from "./use-sync-calendar";
 export * from "./use-update-lesson";
+export * from "./use-update-lesson-series";

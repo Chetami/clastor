@@ -61,9 +61,15 @@ export function LessonSeriesCalendar({ lessons }: LessonSeriesCalendarProps) {
       <CardContent ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto p-0">
         {monthGroups.map((group) => (
           <section key={group.key}>
-            <div className="sticky top-0 z-10 bg-card px-4 py-2">
-              <div className="rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.04em] text-muted-foreground">
-                {group.label}
+            <div className="sticky top-0 z-10 bg-muted/60 px-4 py-2 backdrop-blur-sm">
+              <div className="flex items-baseline gap-2">
+                <span className="text-xs font-semibold uppercase tracking-[0.04em] text-muted-foreground">
+                  {group.label}
+                </span>
+                <span className="text-[11px] text-muted-foreground/70">
+                  {group.lessons.length}{" "}
+                  {group.lessons.length === 1 ? "lesson" : "lessons"}
+                </span>
               </div>
             </div>
             <div className="divide-y divide-border/60">

@@ -2,6 +2,7 @@ import { api } from "../../../lib/api";
 import type {
   CreateLessonRequest,
   UpdateLessonRequest,
+  UpdateLessonSeriesRequest,
   RescheduleLessonRequest,
   RecordAttendanceRequest,
   CancelLessonRequest,
@@ -143,6 +144,22 @@ export async function getLessonSeriesRequest(
 ): Promise<LessonSeriesResponse> {
   const response = await api.get<LessonSeriesResponse>(
     `/api/lessons/series/${seriesId}`,
+  );
+  return response.data;
+}
+
+/**
+ * Update a lesson series template (subject, duration, location, notes,
+ * reminders, acceptance). Template changes propagate to future non-exception
+ * occurrences server-side.
+ */
+export async function updateLessonSeriesRequest(
+  seriesId: string,
+  data: UpdateLessonSeriesRequest,
+): Promise<LessonSeriesResponse> {
+  const response = await api.patch<LessonSeriesResponse>(
+    `/api/lessons/series/${seriesId}`,
+    data,
   );
   return response.data;
 }
