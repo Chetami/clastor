@@ -9,7 +9,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { EmailPreviewResponse } from "@examify-tms/interfaces";
@@ -155,30 +154,23 @@ export function EmailComposeDialog({
           </div>
         ) : (
           <div className="flex flex-1 flex-col gap-4 overflow-y-auto pr-1">
-            <div className="space-y-1.5">
-              <Label htmlFor="ec-to" className="text-xs text-muted-foreground">
-                To
-              </Label>
-              <Input
-                id="ec-to"
-                readOnly
-                value={to.join(", ")}
-                className="h-8 bg-muted/40 text-xs"
-                tabIndex={-1}
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="ec-subject" className="text-xs text-muted-foreground">
-                Subject
-              </Label>
-              <Input
-                id="ec-subject"
-                readOnly
-                value={subject}
-                className="h-8 bg-muted/40 text-xs"
-                tabIndex={-1}
-              />
+            <div className="grid grid-cols-3 gap-3">
+              <div className="min-w-0 space-y-1">
+                <Label className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                  To
+                </Label>
+                <div className="truncate rounded-md border border-transparent bg-muted px-2.5 py-1.5 text-xs text-muted-foreground">
+                  {to.join(", ")}
+                </div>
+              </div>
+              <div className="col-span-2 min-w-0 space-y-1">
+                <Label className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                  Subject
+                </Label>
+                <div className="truncate rounded-md border border-transparent bg-muted px-2.5 py-1.5 text-xs text-muted-foreground">
+                  {subject}
+                </div>
+              </div>
             </div>
 
             <div className="space-y-1.5">
@@ -194,10 +186,6 @@ export function EmailComposeDialog({
                 placeholder="Type a message to the student…"
                 autoFocus
               />
-              <p className="text-xs text-muted-foreground">
-                The recipient, subject, and the lesson details / response / payment
-                buttons are fixed — only this message is editable.
-              </p>
             </div>
 
             <div className="space-y-1.5">
