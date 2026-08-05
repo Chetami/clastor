@@ -48,16 +48,26 @@ export function formatRange(startDate: string, until: string | null): string {
   }
 }
 
-/** Issues that need the tutor's attention for a given lesson. */
-export function lessonIssues(lesson: LessonResponse): string[] {
-  const issues: string[] = [];
+export type LessonIssue =
+  /** Past lesson whose attendance is still "unrecorded". */
+  | { kind: "attendance"; label: "Attendance not recorded" }
+  /** Past, uninvoiced (and unpaid) lesson. */
+  | { kind: "unpaid"; label: "Unpaid" };
+
+/**
+ * Issues that need the tutor's attention for a given past lesson, each
+ * carrying a `kind` so callers can render a matching quick action (e.g.
+ * open the attendance dialog, deep-link into Create Invoice).
+ */
+export function lessonIssues(lesson: LessonResponse): LessonIssue[] {
+  const issues: LessonIssue[] = [];
   const future = new Date(lesson.startDateTime).getTime() >= Date.now();
   if (lesson.isCancelled || future) return issues;
   if (lesson.attendanceStatus === "unrecorded") {
-    issues.push("Attendance not recorded");
+    issues.push({ kind: "attendance", label: "Attendance not recorded" });
   }
   if (!lesson.isPaid) {
-    issues.push("Unpaid");
+    issues.push({ kind: "unpaid", label: "Unpaid" });
   }
   return issues;
 }

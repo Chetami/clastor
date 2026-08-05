@@ -23,6 +23,7 @@ import {
   resyncLessonRequest,
   notifyLessonSeriesRequest,
 } from "@/features/schedule/api";
+import { STUDENT_NOTIFY_COOLDOWN_MS } from "@examify-tms/shared";
 import { queryClient } from "@/lib/query-client";
 import type { LessonResponse } from "@examify-tms/interfaces";
 
@@ -85,6 +86,9 @@ export function SeriesActionsMenu({ seriesId, upcoming }: SeriesActionsMenuProps
             ? "Sent 1 summary email covering the upcoming lesson."
             : `Sent 1 summary email covering ${notified} upcoming lessons.`,
         );
+        // Refresh lesson stamps so the notify button reflects the new cooldown.
+        await queryClient.invalidateQueries({ queryKey: ["lessons"] });
+        await queryClient.invalidateQueries({ queryKey: ["sent-emails"] });
       } else {
         await cancelSeries.mutateAsync(seriesId);
         toast.success("Series cancelled.");
@@ -100,6 +104,21 @@ export function SeriesActionsMenu({ seriesId, upcoming }: SeriesActionsMenuProps
   }
 
   const upcomingCount = upcoming.length;
+
+  // Mirrors the series-level cooldown enforced server-side: blocked when ANY
+  // upcoming lesson was notified within the cooldown window. nextAllowedAt is
+  // the latest of each lesson's next-eligible time.
+  const nextAllowedAt = upcoming.reduce<Date | null>((next, l) => {
+    if (!l.lastStudentNotifiedAt) return next;
+    const candidate = new Date(
+      new Date(l.lastStudentNotifiedAt).getTime() + STUDENT_NOTIFY_COOLDOWN_MS,
+    );
+    return !next || candidate > next ? candidate : next;
+  }, null);
+  const notifyOnCooldown = nextAllowedAt
+    ? Date.now() < nextAllowedAt.getTime()
+    : false;
+  const notifyDisabled = upcomingCount === 0 || notifyOnCooldown;
 
   return (
     <>
@@ -129,10 +148,21 @@ export function SeriesActionsMenu({ seriesId, upcoming }: SeriesActionsMenuProps
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => setConfirm("notify")}
-            disabled={upcomingCount === 0}
+            disabled={notifyDisabled}
+            title={
+              notifyOnCooldown && nextAllowedAt
+                ? `Already notified — can resend after ${nextAllowedAt.toLocaleString(
+                    "en-US",
+                    { dateStyle: "medium", timeStyle: "short" },
+                  )}`
+                : upcomingCount === 0
+                  ? "No upcoming lessons to notify about"
+                  : undefined
+            }
           >
             <Mail className="mr-2 h-4 w-4" />
-            Notify student ({upcomingCount})
+            Notify student ({upcomingCount}{" "}
+            {upcomingCount === 1 ? "lesson" : "lessons"})
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
