@@ -33,7 +33,7 @@ properties:
   intervalWeeks:
     type: integer
     minimum: 1
-    description: Cadence in weeks (1 = weekly, 2 = biweekly)
+    description: Cadence in weeks (1 = weekly, 2 = biweekly, 4 = monthly)
     example: 1
   slots:
     type: array

@@ -27,7 +27,7 @@ properties:
     type: integer
     minimum: 1
     nullable: true
-    description: Cadence in weeks (1 = weekly, 2 = biweekly)
+    description: Cadence in weeks (1 = weekly, 2 = biweekly, 4 = monthly)
   slots:
     type: array
     minItems: 1

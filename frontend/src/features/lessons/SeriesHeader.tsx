@@ -103,7 +103,9 @@ export function SeriesHeader({
       ? "Weekly"
       : intervalWeeks === 2
         ? "Biweekly"
-        : `Every ${intervalWeeks} weeks`;
+        : intervalWeeks === 4
+          ? "Monthly"
+          : `Every ${intervalWeeks} weeks`;
   const slotLabel = slots.map(formatSlot).join(" · ");
 
   const [copied, setCopied] = useState(false);

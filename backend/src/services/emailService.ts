@@ -379,6 +379,7 @@ function formatSlot(slot: { dayOfWeek: string; timeOfDay: string }): string {
 function formatCadence(intervalWeeks: number): string {
   if (intervalWeeks === 1) return "weekly";
   if (intervalWeeks === 2) return "fortnightly";
+  if (intervalWeeks === 4) return "monthly";
   return `every ${intervalWeeks} weeks`;
 }
 
