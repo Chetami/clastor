@@ -29,6 +29,7 @@ import {
   useInvoiceLesson,
   useListInvoices,
   useSendInvoice,
+  previewSendInvoiceRequest,
   type InvoiceLessonEdits,
 } from "@/features/payments/api";
 import {
@@ -36,6 +37,7 @@ import {
   useUpdateLessonDetails,
 } from "@/features/dashboard/api";
 import { MarkAttendanceDialog } from "@/components/mark-attendance-dialog";
+import { EmailComposeDialog } from "@/components/email-compose-dialog";
 import { useSubjects } from "@/lib/subjects";
 import {
   formatCurrency,
@@ -180,6 +182,7 @@ export function ActionableLessons() {
   // so the dialog + handler stay valid even once a successful mark refetches
   // the list and the lesson drops out of `attendanceDue`.
   const [dialogLesson, setDialogLesson] = useState<LessonResponse | null>(null);
+  const [sendInvoiceId, setSendInvoiceId] = useState<string | null>(null);
 
   const attendancePending =
     markDone.isPending ||
@@ -219,14 +222,17 @@ export function ActionableLessons() {
       if (shouldInvoice) {
         const student = studentById[lesson.studentId];
         if (student) {
+          // Create the invoice but DON'T email yet — open the compose dialog so
+          // the tutor reviews/edits the email before it goes out.
           const created = await invoiceLesson.mutateAsync({
             lesson: effective,
             rateType: student.rateType,
             expectedAmount: student.expectedAmount,
+            skipSend: true,
           });
-          toast.success(`Invoice sent to ${name}`);
+          toast.success(`Invoice created for ${name} — review before sending.`);
           setDialogLesson(null);
-          navigate(`/payments/${created.id}`);
+          setSendInvoiceId(created.id);
           return;
         }
       }
@@ -240,15 +246,8 @@ export function ActionableLessons() {
     }
   }
 
-  async function handleRemind(row: OverdueRow) {
-    try {
-      await sendInvoice.mutateAsync({ id: row.invoiceId });
-      toast.success(`Reminder sent to ${row.customerName}`);
-    } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "Failed to send reminder",
-      );
-    }
+  function handleRemind(row: OverdueRow) {
+    setSendInvoiceId(row.invoiceId);
   }
 
   const loading = lessonsLoading || unrecordedLoading || invoicesLoading;
@@ -508,6 +507,28 @@ export function ActionableLessons() {
           subjectOptions={studentSubjectOptions[dialogLesson.studentId] ?? []}
           onConfirm={handleAttendanceConfirm}
           isPending={attendancePending}
+        />
+      )}
+
+      {sendInvoiceId && (
+        <EmailComposeDialog
+          open
+          onOpenChange={(o) => !o && setSendInvoiceId(null)}
+          title="Send invoice"
+          description="Review and edit the email before sending. The invoice PDF is attached automatically."
+          fetchPreview={(message) =>
+            previewSendInvoiceRequest(sendInvoiceId, message)
+          }
+          onSend={async (message) => {
+            await sendInvoice.mutateAsync({
+              id: sendInvoiceId,
+              message: message || undefined,
+            });
+            toast.success("Invoice sent.");
+            const id = sendInvoiceId;
+            setSendInvoiceId(null);
+            navigate(`/payments/${id}`);
+          }}
         />
       )}
     </>

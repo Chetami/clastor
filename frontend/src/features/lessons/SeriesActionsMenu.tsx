@@ -22,7 +22,9 @@ import {
   useCancelLessonSeries,
   resyncLessonRequest,
   notifyLessonSeriesRequest,
+  previewNotifyLessonSeriesRequest,
 } from "@/features/schedule/api";
+import { EmailComposeDialog } from "@/components/email-compose-dialog";
 import { STUDENT_NOTIFY_COOLDOWN_MS } from "@examify-tms/shared";
 import { queryClient } from "@/lib/query-client";
 import type { LessonResponse } from "@examify-tms/interfaces";
@@ -33,7 +35,7 @@ interface SeriesActionsMenuProps {
   upcoming: LessonResponse[];
 }
 
-type ConfirmType = "notify" | "cancel";
+type ConfirmType = "cancel";
 
 /**
  * The "⋯" overflow menu for series-level actions on the series detail page:
@@ -49,6 +51,7 @@ export function SeriesActionsMenu({ seriesId, upcoming }: SeriesActionsMenuProps
   const navigate = useNavigate();
   const cancelSeries = useCancelLessonSeries();
   const [confirm, setConfirm] = useState<ConfirmType | null>(null);
+  const [notifyOpen, setNotifyOpen] = useState(false);
   const [busy, setBusy] = useState(false);
 
   async function handleResyncAll() {
@@ -79,28 +82,30 @@ export function SeriesActionsMenu({ seriesId, upcoming }: SeriesActionsMenuProps
     if (!confirm) return;
     setBusy(true);
     try {
-      if (confirm === "notify") {
-        const { notified } = await notifyLessonSeriesRequest(seriesId);
-        toast.success(
-          notified === 1
-            ? "Sent 1 summary email covering the upcoming lesson."
-            : `Sent 1 summary email covering ${notified} upcoming lessons.`,
-        );
-        // Refresh lesson stamps so the notify button reflects the new cooldown.
-        await queryClient.invalidateQueries({ queryKey: ["lessons"] });
-        await queryClient.invalidateQueries({ queryKey: ["sent-emails"] });
-      } else {
-        await cancelSeries.mutateAsync(seriesId);
-        toast.success("Series cancelled.");
-        navigate("/lessons");
-        return;
-      }
+      await cancelSeries.mutateAsync(seriesId);
+      toast.success("Series cancelled.");
+      navigate("/lessons");
+      return;
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Something went wrong.");
     } finally {
       setBusy(false);
       setConfirm(null);
     }
+  }
+
+  async function handleNotify(message: string) {
+    const { notified } = await notifyLessonSeriesRequest(
+      seriesId,
+      message || undefined,
+    );
+    toast.success(
+      notified === 1
+        ? "Sent 1 summary email covering the upcoming lesson."
+        : `Sent 1 summary email covering ${notified} upcoming lessons.`,
+    );
+    await queryClient.invalidateQueries({ queryKey: ["lessons"] });
+    await queryClient.invalidateQueries({ queryKey: ["sent-emails"] });
   }
 
   const upcomingCount = upcoming.length;
@@ -147,7 +152,7 @@ export function SeriesActionsMenu({ seriesId, upcoming }: SeriesActionsMenuProps
             Resync to Calendar
           </DropdownMenuItem>
           <DropdownMenuItem
-            onClick={() => setConfirm("notify")}
+            onClick={() => setNotifyOpen(true)}
             disabled={notifyDisabled}
             title={
               notifyOnCooldown && nextAllowedAt
@@ -178,17 +183,11 @@ export function SeriesActionsMenu({ seriesId, upcoming }: SeriesActionsMenuProps
       <Dialog open={confirm !== null} onOpenChange={(o) => !o && setConfirm(null)}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>
-              {confirm === "cancel" ? "Cancel this series?" : "Notify the student?"}
-            </DialogTitle>
+            <DialogTitle>Cancel this series?</DialogTitle>
             <DialogDescription>
-              {confirm === "cancel"
-                ? `This soft-cancels all ${upcomingCount} upcoming lesson${
-                    upcomingCount === 1 ? "" : "s"
-                  }. Past lessons are kept for history. This can't be undone.`
-                : `Sends one summary email to the student covering all ${upcomingCount} upcoming lesson${
-                    upcomingCount === 1 ? "" : "s"
-                  } with their dates and times. Blocked if a summary was already emailed in the last 24 hours.`}
+              {`This soft-cancels all ${upcomingCount} upcoming lesson${
+                upcomingCount === 1 ? "" : "s"
+              }. Past lessons are kept for history. This can't be undone.`}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -197,19 +196,32 @@ export function SeriesActionsMenu({ seriesId, upcoming }: SeriesActionsMenuProps
               onClick={() => setConfirm(null)}
               disabled={busy}
             >
-              {confirm === "cancel" ? "Keep series" : "Don't send"}
+              Keep series
             </Button>
             <Button
-              variant={confirm === "cancel" ? "destructive" : "default"}
+              variant="destructive"
               onClick={handleConfirm}
               disabled={busy}
             >
               {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {confirm === "cancel" ? "Cancel series" : "Send summary email"}
+              Cancel series
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <EmailComposeDialog
+        open={notifyOpen}
+        onOpenChange={setNotifyOpen}
+        title="Notify the student"
+        description={`Sends one summary email covering all ${upcomingCount} upcoming lesson${
+          upcomingCount === 1 ? "" : "s"
+        } with their dates and times.`}
+        fetchPreview={(message) =>
+          previewNotifyLessonSeriesRequest(seriesId, message)
+        }
+        onSend={handleNotify}
+      />
     </>
   );
 }

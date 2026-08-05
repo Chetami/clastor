@@ -10,6 +10,7 @@ import {
   Search,
   ChevronsUpDown,
 } from "lucide-react";
+import { toast } from "sonner";
 import type { InvoiceResponse, InvoiceStatus } from "@examify-tms/interfaces";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -34,7 +35,9 @@ import {
   useMarkInvoicePaid,
   useVoidInvoice,
   useSendInvoice,
+  previewSendInvoiceRequest,
 } from "./api";
+import { EmailComposeDialog } from "@/components/email-compose-dialog";
 import {
   STATUS_META,
   formatCompactCurrency,
@@ -73,6 +76,7 @@ export default function Payments() {
   const markPaid = useMarkInvoicePaid();
   const voidInvoice = useVoidInvoice();
   const sendInvoice = useSendInvoice();
+  const [sendInvoiceId, setSendInvoiceId] = useState<string | null>(null);
 
   const counts = useMemo(() => {
     const c: Record<string, number> = {
@@ -317,9 +321,7 @@ export default function Payments() {
                                   <>
                                     <DropdownMenuItem
                                       disabled={sendInvoice.isPending}
-                                      onSelect={() =>
-                                        sendInvoice.mutate({ id: inv.id })
-                                      }
+                                      onSelect={() => setSendInvoiceId(inv.id)}
                                     >
                                       Send invoice
                                     </DropdownMenuItem>
@@ -391,6 +393,26 @@ export default function Payments() {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {sendInvoiceId && (
+        <EmailComposeDialog
+          open
+          onOpenChange={(o) => !o && setSendInvoiceId(null)}
+          title="Send invoice"
+          description="Review and edit the email before sending. The invoice PDF is attached automatically."
+          fetchPreview={(message) =>
+            previewSendInvoiceRequest(sendInvoiceId, message)
+          }
+          onSend={async (message) => {
+            await sendInvoice.mutateAsync({
+              id: sendInvoiceId,
+              message: message || undefined,
+            });
+            toast.success("Invoice sent.");
+            setSendInvoiceId(null);
+          }}
+        />
       )}
     </div>
   );

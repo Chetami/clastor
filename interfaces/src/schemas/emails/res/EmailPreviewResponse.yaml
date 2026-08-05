@@ -1,0 +1,37 @@
+type: object
+required:
+  - to
+  - subject
+  - text
+  - html
+  - defaultSubject
+  - defaultMessage
+properties:
+  to:
+    type: array
+    items:
+      type: string
+    description: Recipient email address(es) the email will be sent to.
+  subject:
+    type: string
+    description: >-
+      The rendered subject line (always the auto-generated one; the subject is
+      not editable — only the message is). Equals defaultSubject.
+  text:
+    type: string
+    description: The rendered plain-text body, honouring any message/subject edits.
+  html:
+    type: string
+    description: The rendered HTML body, honouring any message/subject edits.
+  defaultSubject:
+    type: string
+    description: The auto-generated subject line (ignoring any override).
+  defaultMessage:
+    type: string
+    description: >-
+      The auto-generated message/greeting (ignoring any custom message), used
+      to prefill the compose dialog's body field.
+description: |-
+  Response from the email preview endpoints (notify-student, reschedule,
+  cancel, series-notify, invoice-send). Renders the full email content
+  WITHOUT sending, so the tutor can review and edit it before sending.

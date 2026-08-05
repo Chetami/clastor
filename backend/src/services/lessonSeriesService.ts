@@ -522,14 +522,41 @@ const WEEKDAY_TO_DOW: Record<string, DayOfWeek> = {
  * Derive the IANA day-of-week (monday…sunday) of a UTC instant as it falls in
  * the given timezone. Uses date-fns-tz so DST is handled correctly.
  */
-function dayOfWeekInTz(date: Date, tz: string): DayOfWeek {
+export function dayOfWeekInTz(date: Date, tz: string): DayOfWeek {
   const name = formatInTimeZone(date, tz, "EEEE").toLowerCase();
   return WEEKDAY_TO_DOW[name] ?? "monday";
 }
 
 /** Derive the "HH:mm" wall-clock time of a UTC instant in the given timezone. */
-function timeOfDayInTz(date: Date, tz: string): string {
+export function timeOfDayInTz(date: Date, tz: string): string {
   return formatInTimeZone(date, tz, "HH:mm");
+}
+
+/**
+ * Read-only preview of the slot transformation performed by
+ * {@link rescheduleSeriesFromOccurrence}: replace the series slot matching the
+ * old occurrence's day with the new day/time, leaving all other slots
+ * unchanged. Returns the resulting slot list without mutating anything.
+ */
+export function previewRescheduledSlots(
+  slots: LessonSlot[],
+  oldStart: Date,
+  newStart: Date,
+  tz: string,
+): LessonSlot[] {
+  const oldDay = dayOfWeekInTz(oldStart, tz);
+  const newDay = dayOfWeekInTz(newStart, tz);
+  const newTime = timeOfDayInTz(newStart, tz);
+  let replaced = false;
+  const updated = slots.map((slot) => {
+    if (slot.dayOfWeek === oldDay && !replaced) {
+      replaced = true;
+      return { dayOfWeek: newDay, timeOfDay: newTime };
+    }
+    return slot;
+  });
+  if (!replaced) updated.push({ dayOfWeek: newDay, timeOfDay: newTime });
+  return updated;
 }
 
 /**

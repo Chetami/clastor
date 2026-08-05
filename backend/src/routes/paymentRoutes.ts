@@ -10,6 +10,7 @@ import {
   voidInvoice,
   deleteInvoice,
   sendInvoice,
+  previewSendInvoice,
   getStudentInvoices,
   getStudentDebt,
 } from "../controllers/paymentController";
@@ -98,6 +99,18 @@ router.post(
   authenticateJWT,
   requireRole("tutor", "system_admin"),
   voidInvoice
+);
+
+/**
+ * POST /api/payments/:id/send/preview
+ * Preview (without sending) the invoice email so the tutor can review and
+ * edit it before sending. Does not promote a draft or stamp sentAt.
+ */
+router.post(
+  "/:id/send/preview",
+  authenticateJWT,
+  requireRole("tutor", "system_admin"),
+  previewSendInvoice
 );
 
 /**

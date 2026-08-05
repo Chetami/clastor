@@ -27,7 +27,13 @@ import {
 } from "@examify-tms/interfaces";
 import { canViewInvoice, canEditInvoice, canDeleteInvoice } from "../permissions/paymentPermissions";
 import { generateInvoicePdf } from "../services/invoicePdfService";
-import { sendInvoiceEmail } from "../services/emailService";
+import {
+  sendInvoiceEmail,
+  buildInvoiceEmailContent,
+  defaultInvoiceMessage,
+  defaultInvoiceSubject,
+  invoiceFromName,
+} from "../services/emailService";
 import { getUserFromFirestore } from "../services/userService";
 import { resolveTutorNames } from "../services/tutorResolver";
 import { isStripeConfigured } from "../config/stripe";
@@ -260,7 +266,7 @@ export async function getInvoicePdf(
  * invoices cannot be sent.
  */
 export async function sendInvoice(
-  req: Request<{ id: string }>,
+  req: Request<{ id: string }, {}, { message?: string }>,
   res: Response<InvoiceResponse | ApiError>
 ): Promise<void> {
   try {
@@ -322,22 +328,9 @@ export async function sendInvoice(
     });
 
     // Embed a "Pay online" link when the tutor has connected a Stripe account
-    // that is ready to accept charges. The link is a stable redirect that
-    // mints a fresh Checkout session on each visit (sessions expire after 24h),
-    // so it stays valid for the whole life of the invoice. If Stripe isn't
-    // ready, the email is sent as before (PDF only) — no regression.
-    let paymentUrl: string | undefined;
-    if (isStripeConfigured()) {
-      try {
-        const account = await getStripeAccountRecord(invoice.tutorId);
-        if (account?.chargesEnabled) {
-          paymentUrl = `${getPublicApiUrl()}/api/stripe/pay/${invoice.id}`;
-        }
-      } catch (error) {
-        // A Stripe hiccup must never block sending the invoice.
-        console.error("Failed to resolve Stripe pay link for invoice:", error);
-      }
-    }
+    // that is ready to accept charges (resolved via resolveInvoicePaymentUrl so
+    // the preview and send paths stay identical).
+    const paymentUrl = await resolveInvoicePaymentUrl(invoice);
 
     const actorName = await safeGetActorName(req.user.uid);
 
@@ -349,6 +342,7 @@ export async function sendInvoice(
         tutorEmail: tutor?.email,
         pdfBuffer,
         paymentUrl,
+        message: req.body?.message,
       });
 
       await recordSentEmailSafe({
@@ -413,6 +407,100 @@ export async function sendInvoice(
     const message = error instanceof Error ? error.message : "Failed to send invoice";
     const status = message.includes("not configured") ? 503 : 500;
     res.status(status).json({ message });
+  }
+}
+
+/**
+ * Resolve the Stripe-hosted "Pay online" link for an invoice, if the tutor has
+ * connected a Stripe account that is ready to accept charges. The link is a
+ * stable redirect that mints a fresh Checkout session on each visit. Returns
+ * undefined when Stripe isn't configured/ready (PDF-only email). Shared by the
+ * send + preview paths so the email body never diverges between them.
+ */
+async function resolveInvoicePaymentUrl(invoice: Invoice): Promise<string | undefined> {
+  if (!isStripeConfigured()) return undefined;
+  try {
+    const account = await getStripeAccountRecord(invoice.tutorId);
+    if (account?.chargesEnabled) {
+      return `${getPublicApiUrl()}/api/stripe/pay/${invoice.id}`;
+    }
+  } catch (error) {
+    console.error("Failed to resolve Stripe pay link for invoice:", error);
+  }
+  return undefined;
+}
+
+/**
+ * Shape returned by the invoice preview endpoint (mirrors the lesson preview
+ * endpoints).
+ */
+interface EmailPreviewResponse {
+  to: string[];
+  subject: string;
+  text: string;
+  html: string;
+  defaultSubject: string;
+  defaultMessage: string;
+}
+
+/**
+ * Preview the invoice email without sending (and without promoting a draft or
+ * stamping sentAt). Renders the full email body — including the "Pay online"
+ * button when Stripe is ready — so the compose dialog can show + let the tutor
+ * edit the subject/message before sending. The PDF attachment is generated only
+ * on the real send.
+ */
+export async function previewSendInvoice(
+  req: Request<{ id: string }, {}, { message?: string }>,
+  res: Response<EmailPreviewResponse | ApiError>,
+): Promise<void> {
+  try {
+    if (!req.user) {
+      res.status(401).json({ message: "Unauthorized" });
+      return;
+    }
+    const invoice = await getInvoiceByIdFromFirestore(req.params.id);
+    if (!invoice) {
+      res.status(404).json({ message: "Invoice not found" });
+      return;
+    }
+    if (!canEditInvoice(invoice, req)) {
+      res.status(403).json({ message: "Forbidden" });
+      return;
+    }
+    if (!invoice.billingEmail) {
+      res
+        .status(400)
+        .json({ message: "This invoice has no billing email address on file" });
+      return;
+    }
+
+    const tutor = await safeGetUser(invoice.tutorId);
+    const paymentUrl = await resolveInvoicePaymentUrl(invoice);
+
+    const input = {
+      to: invoice.billingEmail,
+      invoice,
+      tutorName: tutor?.name,
+      tutorEmail: tutor?.email,
+      paymentUrl,
+      message: req.body?.message,
+    };
+    const content = buildInvoiceEmailContent(input);
+    const fromName = invoiceFromName(input);
+
+    res.status(200).json({
+      to: [invoice.billingEmail],
+      subject: content.subject,
+      text: content.text,
+      html: content.html,
+      defaultSubject: defaultInvoiceSubject(invoice, fromName),
+      defaultMessage: defaultInvoiceMessage(invoice.customerName, fromName),
+    });
+  } catch (error) {
+    console.error("Preview send invoice failed:", error);
+    const message = error instanceof Error ? error.message : "Failed to preview email";
+    res.status(500).json({ message });
   }
 }
 

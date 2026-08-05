@@ -5,8 +5,6 @@ import type {
   UpdateLessonSeriesRequest,
   RescheduleLessonRequest,
   RecordAttendanceRequest,
-  CancelLessonRequest,
-  NotifyStudentRequest,
   AttendanceStatus,
   CreateRecurringLessonRequest,
   CreateRecurringLessonResponse,
@@ -18,6 +16,9 @@ import type {
   LessonSeriesResponse,
   GenerateSeriesMeetLinkResponse,
   ExternalCalendarEventListResponse,
+  CancelLessonRequest,
+  NotifyStudentRequest,
+  EmailPreviewResponse,
 } from "@examify-tms/interfaces";
 
 export async function createLessonRequest(
@@ -119,10 +120,71 @@ export async function notifyStudentRequest(
   id: string,
   message?: string,
 ): Promise<LessonResponse> {
-  const body: NotifyStudentRequest = { message: message ?? null };
+  const body: NotifyStudentRequest = {
+    message: message ?? null,
+  };
   const response = await api.post<LessonResponse>(
     `/api/lessons/${id}/notify-student`,
     body,
+  );
+  return response.data;
+}
+
+/**
+ * Preview (without sending) the lesson reminder email so the tutor can review
+ * and edit the message before sending. Returns the rendered email content
+ * plus the auto-generated defaults.
+ */
+export async function previewNotifyStudentRequest(
+  id: string,
+  message?: string,
+): Promise<EmailPreviewResponse> {
+  const response = await api.post<EmailPreviewResponse>(
+    `/api/lessons/${id}/notify-student/preview`,
+    {
+      message: message ?? null,
+    },
+  );
+  return response.data;
+}
+
+/**
+ * Preview (without moving the lesson) the email that would be sent on a
+ * reschedule. Pass the proposed new time/duration so the preview reflects it.
+ * For a series occurrence, scope "this_and_future" previews the schedule
+ * summary email.
+ */
+export async function previewRescheduleEmailRequest(
+  id: string,
+  data: {
+    startDateTime: string;
+    durationMinutes?: number;
+    scope?: "this" | "this_and_future";
+    message?: string;
+  },
+): Promise<EmailPreviewResponse> {
+  const response = await api.patch<EmailPreviewResponse>(
+    `/api/lessons/${id}/reschedule/preview`,
+    data,
+  );
+  return response.data;
+}
+
+/**
+ * Preview (without cancelling) the cancellation email. For a series
+ * occurrence, scope "this_and_future" previews the series-cancellation
+ * summary listing the lessons that would be removed.
+ */
+export async function previewCancelEmailRequest(
+  id: string,
+  data: {
+    scope?: "this" | "this_and_future";
+    message?: string;
+  },
+): Promise<EmailPreviewResponse> {
+  const response = await api.patch<EmailPreviewResponse>(
+    `/api/lessons/${id}/cancel/preview`,
+    data,
   );
   return response.data;
 }
@@ -136,10 +198,29 @@ export async function notifyLessonSeriesRequest(
   seriesId: string,
   message?: string,
 ): Promise<{ notified: number }> {
-  const body: NotifyStudentRequest = { message: message ?? null };
+  const body: NotifyStudentRequest = {
+    message: message ?? null,
+  };
   const response = await api.post<{ notified: number }>(
     `/api/lessons/series/${seriesId}/notify-student`,
     body,
+  );
+  return response.data;
+}
+
+/**
+ * Preview (without sending) the series summary email so the tutor can review
+ * and edit it before sending.
+ */
+export async function previewNotifyLessonSeriesRequest(
+  seriesId: string,
+  message?: string,
+): Promise<EmailPreviewResponse> {
+  const response = await api.post<EmailPreviewResponse>(
+    `/api/lessons/series/${seriesId}/notify-student/preview`,
+    {
+      message: message ?? null,
+    },
   );
   return response.data;
 }

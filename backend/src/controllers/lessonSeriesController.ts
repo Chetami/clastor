@@ -29,7 +29,12 @@ import {
 import { canViewSeries, canEditSeries } from "../permissions/lessonSeriesPermissions";
 import { getStudentByIdFromFirestore } from "../services/studentService";
 import { getUserFromFirestore } from "../services/userService";
-import { sendSeriesNotificationEmail } from "../services/emailService";
+import {
+  sendSeriesNotificationEmail,
+  buildSeriesNotificationContent,
+  defaultSeriesNotificationMessage,
+  defaultSeriesNotificationSubject,
+} from "../services/emailService";
 import { recordSentEmailSafe } from "../services/sentEmailService";
 import { markStudentNotifiedInFirestore } from "../services/lessonService";
 import { getNotifyCooldownMs } from "../config/email";
@@ -468,6 +473,90 @@ export async function notifySeriesStudent(
     console.error("Notify lesson series failed:", error);
     const message =
       error instanceof Error ? error.message : "Failed to notify student";
+    res.status(500).json({ message });
+  }
+}
+
+/**
+ * Shape returned by the series notify preview endpoint (mirrors the lesson
+ * preview endpoints).
+ */
+interface EmailPreviewResponse {
+  to: string[];
+  subject: string;
+  text: string;
+  html: string;
+  defaultSubject: string;
+  defaultMessage: string;
+}
+
+/**
+ * Preview the series summary email (one email covering every upcoming lesson
+ * in the series) without sending. Renders the full email from read-only state
+ * so the compose dialog can show + let the tutor edit it before sending.
+ */
+export async function previewNotifySeriesStudent(
+  req: Request<{ id: string }, {}, { message?: string }>,
+  res: Response<EmailPreviewResponse | ApiError>,
+): Promise<void> {
+  try {
+    if (!req.user) {
+      res.status(401).json({ message: "Unauthorized" });
+      return;
+    }
+    const series = await getLessonSeriesByIdFromFirestore(req.params.id);
+    if (!series) {
+      res.status(404).json({ message: "Lesson series not found" });
+      return;
+    }
+    if (!canEditSeries(series, req)) {
+      res.status(403).json({ message: "Forbidden" });
+      return;
+    }
+
+    const upcoming = await listLessonsBySeriesFromFirestore(req.params.id, {
+      futureOnly: true,
+    });
+    if (upcoming.length === 0) {
+      res
+        .status(400)
+        .json({ message: "This series has no upcoming lessons to notify about" });
+      return;
+    }
+
+    const student = await getStudentByIdFromFirestore(series.studentId);
+    if (!student?.email) {
+      res.status(400).json({ message: "This student has no email address on file" });
+      return;
+    }
+    const tutor = await getUserFromFirestore(series.tutorId);
+
+    const input = {
+      to: student.email,
+      studentName: student.name,
+      tutorName: tutor.name,
+      tutorEmail: tutor.email,
+      subject: series.subject ?? null,
+      timezone: series.timezone ?? null,
+      lessons: upcoming.map((l) => ({
+        startDateTime: new Date(l.startDateTime as any),
+        durationMinutes: l.durationMinutes,
+        location: l.meetLink ?? l.location,
+      })),
+      message: req.body?.message ?? null,
+    };
+    const content = buildSeriesNotificationContent(input);
+    res.status(200).json({
+      to: [student.email],
+      subject: content.subject,
+      text: content.text,
+      html: content.html,
+      defaultSubject: defaultSeriesNotificationSubject(input),
+      defaultMessage: defaultSeriesNotificationMessage(student.name, tutor.name),
+    });
+  } catch (error) {
+    console.error("Preview notify lesson series failed:", error);
+    const message = error instanceof Error ? error.message : "Failed to preview email";
     res.status(500).json({ message });
   }
 }

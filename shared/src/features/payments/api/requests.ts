@@ -7,6 +7,7 @@ import type {
   InvoiceListResponse,
   InvoiceEventListResponse,
   InvoiceStatus,
+  EmailPreviewResponse,
 } from "@examify-tms/interfaces";
 
 export interface ListInvoicesParams {
@@ -47,8 +48,29 @@ export async function updateInvoiceRequest(
 
 export async function sendInvoiceRequest(
   id: string,
+  message?: string,
 ): Promise<InvoiceResponse> {
-  const response = await api.post<InvoiceResponse>(`/api/payments/${id}/send`);
+  const response = await api.post<InvoiceResponse>(
+    `/api/payments/${id}/send`,
+    { message: message ?? null },
+  );
+  return response.data;
+}
+
+/**
+ * Preview (without sending) the invoice email so the tutor can review and edit
+ * the message before sending. Does not promote a draft or stamp sentAt.
+ */
+export async function previewSendInvoiceRequest(
+  id: string,
+  message?: string,
+): Promise<EmailPreviewResponse> {
+  const response = await api.post<EmailPreviewResponse>(
+    `/api/payments/${id}/send/preview`,
+    {
+      message: message ?? null,
+    },
+  );
   return response.data;
 }
 

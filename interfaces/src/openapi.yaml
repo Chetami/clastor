@@ -246,3 +246,5 @@ components:
       $ref: './schemas/emails/res/SentEmailResponse.yaml'
     SentEmailListResponse:
       $ref: './schemas/emails/res/SentEmailListResponse.yaml'
+    EmailPreviewResponse:
+      $ref: './schemas/emails/res/EmailPreviewResponse.yaml'

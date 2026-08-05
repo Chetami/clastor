@@ -3,9 +3,14 @@ import { sendInvoiceRequest } from "./requests";
 import type { InvoiceResponse } from "@examify-tms/interfaces";
 import { queryClient } from "../../../lib/query-client";
 
+export interface SendInvoiceArgs {
+  id: string;
+  message?: string;
+}
+
 export function useSendInvoice() {
-  return useMutation<InvoiceResponse, Error, { id: string }>({
-    mutationFn: ({ id }) => sendInvoiceRequest(id),
+  return useMutation<InvoiceResponse, Error, SendInvoiceArgs>({
+    mutationFn: ({ id, message }) => sendInvoiceRequest(id, message),
     onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
       queryClient.invalidateQueries({ queryKey: ["invoice", response.id] });

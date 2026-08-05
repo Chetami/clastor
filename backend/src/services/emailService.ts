@@ -9,14 +9,50 @@ import { formatInTimeZone } from "date-fns-tz";
 
 /**
  * The fully-rendered content of an outbound email, returned by every `send*`
- * function so the caller can record it in the sent-email log. Mirrors the
- * three nodemailer body fields.
+ * and `build*` function so the caller can record it in the sent-email log or
+ * return it from a preview endpoint. Mirrors the three nodemailer body fields.
  */
 export interface SentEmailContent {
   subject: string;
   text: string;
   html: string;
 }
+
+/**
+ * Resolve the timezone to render times in. Falls back to UTC (matching the
+ * server's default) when none is configured, so legacy tutors without a
+ * stored timezone still get a deterministic, unambiguous time.
+ */
+function resolveTz(tz?: string | null): string {
+  return tz && tz.trim() ? tz.trim() : "Etc/UTC";
+}
+
+/**
+ * Format a full start date/time, e.g. "Monday, July 13, 2026, 8:00 PM",
+ * in the given timezone.
+ */
+function formatStart(d: Date, tz?: string | null): string {
+  return formatInTimeZone(d, resolveTz(tz), "EEEE, MMMM d, yyyy, h:mm a");
+}
+
+/**
+ * Format a short time-of-day, e.g. "8:00 PM", in the given timezone.
+ */
+function formatTime(d: Date, tz?: string | null): string {
+  return formatInTimeZone(d, resolveTz(tz), "h:mm a");
+}
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+// ---------------------------------------------------------------------------
+// Lesson notification (reminder / reschedule)
+// ---------------------------------------------------------------------------
 
 /** Context required to render and send a lesson notification email. */
 export interface LessonNotificationInput {
@@ -57,37 +93,33 @@ export interface LessonNotificationInput {
   reason?: "reminder" | "reschedule";
 }
 
-/**
- * Resolve the timezone to render times in. Falls back to UTC (matching the
- * server's default) when none is configured, so legacy tutors without a
- * stored timezone still get a deterministic, unambiguous time.
- */
-function resolveTz(tz?: string | null): string {
-  return tz && tz.trim() ? tz.trim() : "Etc/UTC";
+/** Default greeting used when the tutor supplies no custom message. */
+export function defaultLessonMessage(
+  studentName: string,
+  reason?: "reminder" | "reschedule",
+): string {
+  return reason === "reschedule"
+    ? `Hi ${studentName},\n\nThe time for our upcoming lesson has changed. The updated details are below.`
+    : `Hi ${studentName},\n\nThis is a reminder about our upcoming lesson.`;
 }
 
-/**
- * Format a full start date/time, e.g. "Monday, July 13, 2026, 8:00 PM",
- * in the given timezone.
- */
-function formatStart(d: Date, tz?: string | null): string {
-  return formatInTimeZone(d, resolveTz(tz), "EEEE, MMMM d, yyyy, h:mm a");
-}
-
-/**
- * Format a short time-of-day, e.g. "8:00 PM", in the given timezone.
- */
-function formatTime(d: Date, tz?: string | null): string {
-  return formatInTimeZone(d, resolveTz(tz), "h:mm a");
+/** Default subject line for a lesson notification (without override). */
+export function defaultLessonSubject(
+  input: Pick<
+    LessonNotificationInput,
+    "subject" | "tutorName" | "startDateTime" | "timezone" | "reason"
+  >,
+): string {
+  const prefix =
+    input.reason === "reschedule" ? "Lesson time updated" : "Lesson reminder";
+  return `${prefix}${input.subject ? `: ${input.subject}` : ""} with ${input.tutorName} on ${formatStart(input.startDateTime, input.timezone)}`;
 }
 
 /**
  * Build the subject line for a lesson reminder / reschedule notice.
  */
 export function buildLessonNotificationSubject(input: LessonNotificationInput): string {
-  const prefix =
-    input.reason === "reschedule" ? "Lesson time updated" : "Lesson reminder";
-  return `${prefix}${input.subject ? `: ${input.subject}` : ""} with ${input.tutorName} on ${formatStart(input.startDateTime, input.timezone)}`;
+  return defaultLessonSubject(input);
 }
 
 /**
@@ -98,7 +130,7 @@ export function buildLessonNotificationBody(input: LessonNotificationInput): str
   const greeting =
     input.message && input.message.trim().length > 0
       ? input.message.trim()
-      : `Hi ${input.studentName},\n\nThis is a reminder about our upcoming lesson.`;
+      : defaultLessonMessage(input.studentName, input.reason);
 
   const end = new Date(input.startDateTime.getTime() + input.durationMinutes * 60_000);
   const timeRange = `${formatTime(input.startDateTime, input.timezone)} – ${formatTime(end, input.timezone)}`;
@@ -114,14 +146,6 @@ export function buildLessonNotificationBody(input: LessonNotificationInput): str
   ].filter(Boolean);
 
   return `${greeting}\n${footerLines.join("\n")}`;
-}
-
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
 }
 
 /**
@@ -183,6 +207,21 @@ export function buildLessonNotificationHtml(input: LessonNotificationInput): str
 }
 
 /**
+ * Render the full lesson-notification email content (subject + text + html)
+ * without sending. Used by both {@link sendLessonNotification} and the
+ * notify-student preview endpoint so the two never drift apart.
+ */
+export function buildLessonNotificationContent(
+  input: LessonNotificationInput,
+): SentEmailContent {
+  return {
+    subject: buildLessonNotificationSubject(input),
+    text: buildLessonNotificationBody(input),
+    html: buildLessonNotificationHtml(input),
+  };
+}
+
+/**
  * Send a lesson notification email. Throws if SMTP is not configured or if
  * the transporter rejects the send, so the caller can surface the failure.
  * Returns the rendered content on success so the caller can log it.
@@ -196,20 +235,18 @@ export async function sendLessonNotification(
     );
   }
 
-  const subject = buildLessonNotificationSubject(input);
-  const text = buildLessonNotificationBody(input);
-  const html = buildLessonNotificationHtml(input);
-
+  const content = buildLessonNotificationContent(input);
   const transporter = getEmailTransporter();
+
   await transporter.sendMail({
     // Display name reflects the tutor (so the student recognises the sender);
     // the envelope address stays the configured SMTP sender for deliverability.
     from: `"${input.tutorName} via ${getSenderDisplayName()}" <${getSenderAddress()}>`,
     replyTo: input.tutorEmail || undefined,
     to: input.to,
-    subject,
-    text,
-    html,
+    subject: content.subject,
+    text: content.text,
+    html: content.html,
     ...(input.icsContent
       ? {
           // nodemailer renders this as a proper text/calendar; method=REQUEST
@@ -222,8 +259,12 @@ export async function sendLessonNotification(
       : {}),
   });
 
-  return { subject, text, html };
+  return content;
 }
+
+// ---------------------------------------------------------------------------
+// Lesson cancellation
+// ---------------------------------------------------------------------------
 
 /** Context required to render and send a lesson cancellation email. */
 export interface LessonCancellationInput {
@@ -252,15 +293,30 @@ export interface LessonCancellationInput {
   icsContent?: string;
 }
 
+/** Default cancellation greeting when no custom message is supplied. */
+export function defaultLessonCancellationMessage(studentName: string): string {
+  return `Hi ${studentName},\n\nUnfortunately, our upcoming lesson has been cancelled.`;
+}
+
+/** Default subject line for a lesson cancellation (without override). */
+export function defaultLessonCancellationSubject(
+  input: Pick<
+    LessonCancellationInput,
+    "subject" | "tutorName" | "startDateTime" | "timezone"
+  >,
+): string {
+  return `Lesson cancelled${
+    input.subject ? `: ${input.subject}` : ""
+  } with ${input.tutorName} on ${formatStart(input.startDateTime, input.timezone)}`;
+}
+
 /**
  * Build the subject line for a lesson cancellation.
  */
 export function buildLessonCancellationSubject(
   input: LessonCancellationInput,
 ): string {
-  return `Lesson cancelled${
-    input.subject ? `: ${input.subject}` : ""
-  } with ${input.tutorName} on ${formatStart(input.startDateTime, input.timezone)}`;
+  return defaultLessonCancellationSubject(input);
 }
 
 /**
@@ -272,7 +328,7 @@ export function buildLessonCancellationBody(
   const greeting =
     input.message && input.message.trim().length > 0
       ? input.message.trim()
-      : `Hi ${input.studentName},\n\nUnfortunately, our upcoming lesson has been cancelled.`;
+      : defaultLessonCancellationMessage(input.studentName);
 
   const footerLines = [
     "",
@@ -325,6 +381,17 @@ export function buildLessonCancellationHtml(
   );
 }
 
+/** Render the full cancellation email content without sending. */
+export function buildLessonCancellationContent(
+  input: LessonCancellationInput,
+): SentEmailContent {
+  return {
+    subject: buildLessonCancellationSubject(input),
+    text: buildLessonCancellationBody(input),
+    html: buildLessonCancellationHtml(input),
+  };
+}
+
 /**
  * Send a lesson cancellation email. Throws if SMTP is not configured or if the
  * transporter rejects the send, so the caller can surface the failure. Returns
@@ -339,18 +406,16 @@ export async function sendLessonCancellation(
     );
   }
 
-  const subject = buildLessonCancellationSubject(input);
-  const text = buildLessonCancellationBody(input);
-  const html = buildLessonCancellationHtml(input);
-
+  const content = buildLessonCancellationContent(input);
   const transporter = getEmailTransporter();
+
   await transporter.sendMail({
     from: `"${input.tutorName} via ${getSenderDisplayName()}" <${getSenderAddress()}>`,
     replyTo: input.tutorEmail || undefined,
     to: input.to,
-    subject,
-    text,
-    html,
+    subject: content.subject,
+    text: content.text,
+    html: content.html,
     ...(input.icsContent
       ? {
           icalEvent: {
@@ -361,10 +426,12 @@ export async function sendLessonCancellation(
       : {}),
   });
 
-  return { subject, text, html };
+  return content;
 }
 
-// ---- Series-level notification emails (one summary email per change) --------
+// ---------------------------------------------------------------------------
+// Series-level notification emails (one summary email per change)
+// ---------------------------------------------------------------------------
 
 /** Format a weekly slot as a readable day+time, e.g. "Mondays at 4:00 PM". */
 function formatSlot(slot: { dayOfWeek: string; timeOfDay: string }): string {
@@ -396,24 +463,26 @@ export interface SeriesRescheduleEmailInput {
   message?: string | null;
 }
 
-/**
- * Send a single summary email notifying the student that their recurring
- * lesson schedule has changed. Renders the new slots + cadence and the first
- * upcoming date, all in the tutor's timezone. No ICS attachment — it's a
- * schedule summary, not a single event.
- */
-export async function sendSeriesRescheduleEmail(
-  input: SeriesRescheduleEmailInput,
-): Promise<SentEmailContent> {
-  if (!isEmailConfigured()) {
-    throw new Error(
-      "Email is not configured. Set SMTP_HOST, SMTP_USER and SMTP_PASS to send notifications.",
-    );
-  }
+/** Default greeting for the series-reschedule summary email. */
+export function defaultSeriesRescheduleMessage(
+  studentName: string,
+  subject: string | null,
+): string {
+  return `Hi ${studentName},\n\nThe schedule for our recurring${subject ? ` ${subject}` : ""} lessons has changed. Here's your new schedule.`;
+}
 
-  const subjectLine = `Schedule updated${
-    input.subject ? `: ${input.subject}` : ""
-  } with ${input.tutorName}`;
+/** Default subject line for the series-reschedule summary email. */
+export function defaultSeriesRescheduleSubject(
+  input: Pick<SeriesRescheduleEmailInput, "subject" | "tutorName">,
+): string {
+  return `Schedule updated${input.subject ? `: ${input.subject}` : ""} with ${input.tutorName}`;
+}
+
+/** Render the full series-reschedule summary email content without sending. */
+export function buildSeriesRescheduleContent(
+  input: SeriesRescheduleEmailInput,
+): SentEmailContent {
+  const subjectLine = defaultSeriesRescheduleSubject(input);
 
   const slotSummary = input.slots.map(formatSlot).join(", ");
   const cadence = formatCadence(input.intervalWeeks);
@@ -424,7 +493,7 @@ export async function sendSeriesRescheduleEmail(
   const greeting =
     input.message && input.message.trim().length > 0
       ? input.message.trim()
-      : `Hi ${input.studentName},\n\nThe schedule for our recurring${input.subject ? ` ${input.subject}` : ""} lessons has changed. Here's your new schedule.`;
+      : defaultSeriesRescheduleMessage(input.studentName, input.subject);
 
   const text =
     `${greeting}\n\n` +
@@ -441,17 +510,37 @@ export async function sendSeriesRescheduleEmail(
     `<p style="margin:0 0 12px 0">Tutor: ${escapeHtml(input.tutorName)}</p>` +
     `</div>`;
 
+  return { subject: subjectLine, text, html };
+}
+
+/**
+ * Send a single summary email notifying the student that their recurring
+ * lesson schedule has changed. Renders the new slots + cadence and the first
+ * upcoming date, all in the tutor's timezone. No ICS attachment — it's a
+ * schedule summary, not a single event.
+ */
+export async function sendSeriesRescheduleEmail(
+  input: SeriesRescheduleEmailInput,
+): Promise<SentEmailContent> {
+  if (!isEmailConfigured()) {
+    throw new Error(
+      "Email is not configured. Set SMTP_HOST, SMTP_USER and SMTP_PASS to send notifications.",
+    );
+  }
+
+  const content = buildSeriesRescheduleContent(input);
   const transporter = getEmailTransporter();
+
   await transporter.sendMail({
     from: `"${input.tutorName} via ${getSenderDisplayName()}" <${getSenderAddress()}>`,
     replyTo: input.tutorEmail || undefined,
     to: input.to,
-    subject: subjectLine,
-    text,
-    html,
+    subject: content.subject,
+    text: content.text,
+    html: content.html,
   });
 
-  return { subject: subjectLine, text, html };
+  return content;
 }
 
 export interface SeriesCancellationEmailInput {
@@ -465,23 +554,29 @@ export interface SeriesCancellationEmailInput {
   message?: string | null;
 }
 
-/**
- * Send a single summary email notifying the student that their recurring
- * lessons have been cancelled. Lists the removed upcoming dates in the
- * tutor's timezone.
- */
-export async function sendSeriesCancellationEmail(
-  input: SeriesCancellationEmailInput,
-): Promise<SentEmailContent> {
-  if (!isEmailConfigured()) {
-    throw new Error(
-      "Email is not configured. Set SMTP_HOST, SMTP_USER and SMTP_PASS to send notifications.",
-    );
-  }
+/** Default greeting for the series-cancellation summary email. */
+export function defaultSeriesCancellationMessage(
+  studentName: string,
+  subject: string | null,
+  count: number,
+): string {
+  return `Hi ${studentName},\n\nOur recurring${subject ? ` ${subject}` : ""} lessons have been cancelled. The following upcoming ${count === 1 ? "lesson has" : `lessons have`} been removed:`;
+}
 
-  const subjectLine = `Recurring lessons cancelled${
+/** Default subject line for the series-cancellation summary email. */
+export function defaultSeriesCancellationSubject(
+  input: Pick<SeriesCancellationEmailInput, "subject" | "tutorName">,
+): string {
+  return `Recurring lessons cancelled${
     input.subject ? `: ${input.subject}` : ""
   } with ${input.tutorName}`;
+}
+
+/** Render the full series-cancellation summary email content without sending. */
+export function buildSeriesCancellationContent(
+  input: SeriesCancellationEmailInput,
+): SentEmailContent {
+  const subjectLine = defaultSeriesCancellationSubject(input);
 
   const dateList = input.removedDates
     .slice(0, 12) // cap to keep the email readable
@@ -490,7 +585,11 @@ export async function sendSeriesCancellationEmail(
   const greeting =
     input.message && input.message.trim().length > 0
       ? input.message.trim()
-      : `Hi ${input.studentName},\n\nOur recurring${input.subject ? ` ${input.subject}` : ""} lessons have been cancelled. The following upcoming ${input.removedDates.length === 1 ? "lesson has" : `lessons have`} been removed:`;
+      : defaultSeriesCancellationMessage(
+          input.studentName,
+          input.subject,
+          input.removedDates.length,
+        );
 
   const text =
     `${greeting}\n\n` +
@@ -512,17 +611,36 @@ export async function sendSeriesCancellationEmail(
     `<p style="margin:0 0 12px 0">Tutor: ${escapeHtml(input.tutorName)}</p>` +
     `</div>`;
 
+  return { subject: subjectLine, text, html };
+}
+
+/**
+ * Send a single summary email notifying the student that their recurring
+ * lessons have been cancelled. Lists the removed upcoming dates in the
+ * tutor's timezone.
+ */
+export async function sendSeriesCancellationEmail(
+  input: SeriesCancellationEmailInput,
+): Promise<SentEmailContent> {
+  if (!isEmailConfigured()) {
+    throw new Error(
+      "Email is not configured. Set SMTP_HOST, SMTP_USER and SMTP_PASS to send notifications.",
+    );
+  }
+
+  const content = buildSeriesCancellationContent(input);
   const transporter = getEmailTransporter();
+
   await transporter.sendMail({
     from: `"${input.tutorName} via ${getSenderDisplayName()}" <${getSenderAddress()}>`,
     replyTo: input.tutorEmail || undefined,
     to: input.to,
-    subject: subjectLine,
-    text,
-    html,
+    subject: content.subject,
+    text: content.text,
+    html: content.html,
   });
 
-  return { subject: subjectLine, text, html };
+  return content;
 }
 
 /** A single upcoming occurrence to list in the series summary email. */
@@ -544,28 +662,33 @@ export interface SeriesNotificationEmailInput {
   message?: string | null;
 }
 
-/**
- * Send a single summary email notifying the student about ALL upcoming
- * lessons in a series at once, instead of one email per occurrence. Each
- * lesson is rendered as a dated bullet point in the tutor's timezone.
- */
-export async function sendSeriesNotificationEmail(
-  input: SeriesNotificationEmailInput,
-): Promise<SentEmailContent> {
-  if (!isEmailConfigured()) {
-    throw new Error(
-      "Email is not configured. Set SMTP_HOST, SMTP_USER and SMTP_PASS to send notifications.",
-    );
-  }
+/** Default greeting for the series summary email. */
+export function defaultSeriesNotificationMessage(
+  studentName: string,
+  tutorName: string,
+): string {
+  return `Hi ${studentName},\n\nHere are all your upcoming lessons with ${tutorName}.`;
+}
 
-  const subjectLine = `Upcoming lessons${
+/** Default subject line for the series summary email. */
+export function defaultSeriesNotificationSubject(
+  input: Pick<SeriesNotificationEmailInput, "subject" | "tutorName">,
+): string {
+  return `Upcoming lessons${
     input.subject ? `: ${input.subject}` : ""
   } with ${input.tutorName}`;
+}
+
+/** Render the full series-summary email content without sending. */
+export function buildSeriesNotificationContent(
+  input: SeriesNotificationEmailInput,
+): SentEmailContent {
+  const subjectLine = defaultSeriesNotificationSubject(input);
 
   const greeting =
     input.message && input.message.trim().length > 0
       ? input.message.trim()
-      : `Hi ${input.studentName},\n\nHere are all your upcoming lessons with ${input.tutorName}.`;
+      : defaultSeriesNotificationMessage(input.studentName, input.tutorName);
 
   const lessonBullets = input.lessons.map((l) => {
     const when = formatStart(l.startDateTime, input.timezone);
@@ -596,26 +719,49 @@ export async function sendSeriesNotificationEmail(
     `<p style="margin:0 0 12px 0">Tutor: ${escapeHtml(input.tutorName)}</p>` +
     `</div>`;
 
+  return { subject: subjectLine, text, html };
+}
+
+/**
+ * Send a single summary email notifying the student about ALL upcoming
+ * lessons in a series at once, instead of one email per occurrence. Each
+ * lesson is rendered as a dated bullet point in the tutor's timezone.
+ */
+export async function sendSeriesNotificationEmail(
+  input: SeriesNotificationEmailInput,
+): Promise<SentEmailContent> {
+  if (!isEmailConfigured()) {
+    throw new Error(
+      "Email is not configured. Set SMTP_HOST, SMTP_USER and SMTP_PASS to send notifications.",
+    );
+  }
+
+  const content = buildSeriesNotificationContent(input);
   const transporter = getEmailTransporter();
+
   await transporter.sendMail({
     from: `"${input.tutorName} via ${getSenderDisplayName()}" <${getSenderAddress()}>`,
     replyTo: input.tutorEmail || undefined,
     to: input.to,
-    subject: subjectLine,
-    text,
-    html,
+    subject: content.subject,
+    text: content.text,
+    html: content.html,
   });
 
-  return { subject: subjectLine, text, html };
+  return content;
 }
+
+// ---------------------------------------------------------------------------
+// Invoice email
+// ---------------------------------------------------------------------------
 
 export interface InvoiceEmailInput {
   to: string;
   invoice: Invoice;
   tutorName?: string | null;
   tutorEmail?: string | null;
-  /** Generated PDF attachment bytes. */
-  pdfBuffer: Buffer;
+  /** Optional custom body from the tutor; a default is used if absent. */
+  message?: string | null;
   /**
    * Optional Stripe-hosted pay link. When present, a "Pay online" button is
    * rendered in the email so the recipient can pay the invoice by card; the
@@ -623,6 +769,8 @@ export interface InvoiceEmailInput {
    * when the tutor hasn't set up Stripe.
    */
   paymentUrl?: string;
+  /** Generated PDF attachment bytes. Only required for the actual send. */
+  pdfBuffer?: Buffer;
 }
 
 function formatCurrency(amount: number, currency: string = "AUD"): string {
@@ -633,23 +781,40 @@ function formatCurrency(amount: number, currency: string = "AUD"): string {
   }).format(amount);
 }
 
-/**
- * Send an invoice to the parent/billing contact. Attaches the generated PDF
- * and stamps the tutor's display name on the From line so the recipient
- * recognises the sender. Throws if SMTP is unconfigured or the send fails.
- * Returns the rendered content on success so the caller can log it.
- */
-export async function sendInvoiceEmail(input: InvoiceEmailInput): Promise<SentEmailContent> {
-  if (!isEmailConfigured()) {
-    throw new Error(
-      "Email is not configured. Set SMTP_HOST, SMTP_USER and SMTP_PASS to send invoices."
-    );
-  }
+/** Resolve the effective sender display name for an invoice email. */
+export function invoiceFromName(input: InvoiceEmailInput): string {
+  return input.tutorName || getSenderDisplayName();
+}
 
-  const { invoice, tutorName, paymentUrl } = input;
-  const fromName = tutorName || getSenderDisplayName();
-  const subject = `Invoice ${invoice.invoiceNumber} from ${fromName}`;
+/** Default subject line for an invoice email (without override). */
+export function defaultInvoiceSubject(
+  invoice: Invoice,
+  fromName: string,
+): string {
+  return `Invoice ${invoice.invoiceNumber} from ${fromName}`;
+}
+
+/** Default greeting body for an invoice email. */
+export function defaultInvoiceMessage(
+  customerName: string,
+  fromName: string,
+): string {
+  return `Hi ${customerName},\n\nThank you for your business. Please find your invoice attached. Let me know if you have any questions.\n\nThank you,\n${fromName}`;
+}
+
+/**
+ * Render the full invoice email content (subject + text + html) without
+ * sending. The PDF attachment and Stripe pay link are reflected in the body
+ * (a "Pay online" button when `paymentUrl` is present) but the PDF bytes are
+ * not required here — only the actual send attaches them. Used by both
+ * {@link sendInvoiceEmail} and the invoice-send preview endpoint.
+ */
+export function buildInvoiceEmailContent(input: InvoiceEmailInput): SentEmailContent {
+  const { invoice, paymentUrl } = input;
+  const fromName = invoiceFromName(input);
   const total = formatCurrency(invoice.total, invoice.currency);
+
+  const subject = defaultInvoiceSubject(invoice, fromName);
 
   const payLineText = paymentUrl
     ? `You can pay securely online with a card here: ${paymentUrl}\n\n`
@@ -661,6 +826,27 @@ export async function sendInvoiceEmail(input: InvoiceEmailInput): Promise<SentEm
       `<p style="margin:8px 0 0 0;color:#6b7280;font-size:13px">Payment is processed securely by Stripe and goes directly to ${escapeHtml(fromName)}. No account required.</p>` +
       `</div>`
     : "";
+
+  // When the tutor supplies a custom message it replaces the greeting +
+  // signature block; the invoice/pay details are always appended so the
+  // recipient never loses the amount due or pay button.
+  if (input.message && input.message.trim().length > 0) {
+    const custom = input.message.trim();
+    const text =
+      `${custom}\n\n` +
+      `Invoice ${invoice.invoiceNumber} attached. Amount due: ${total}.\n` +
+      payLineText;
+
+    const html =
+      `<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#111827;line-height:1.5">` +
+      `<p style="margin:0 0 12px 0;white-space:pre-line">${escapeHtml(custom)}</p>` +
+      `<p style="margin:0 0 12px 0">Invoice <strong>${escapeHtml(invoice.invoiceNumber)}</strong> attached. ` +
+      `Amount due: <strong>${escapeHtml(total)}</strong>.</p>` +
+      payButtonHtml +
+      `</div>`;
+
+    return { subject, text, html };
+  }
 
   const text =
     `Hi ${invoice.customerName},\n\n` +
@@ -679,23 +865,40 @@ export async function sendInvoiceEmail(input: InvoiceEmailInput): Promise<SentEm
     `<p style="margin:0 0 12px 0">Thank you,<br>${escapeHtml(fromName)}</p>` +
     `</div>`;
 
+  return { subject, text, html };
+}
+
+/**
+ * Send an invoice to the parent/billing contact. Attaches the generated PDF
+ * and stamps the tutor's display name on the From line so the recipient
+ * recognises the sender. Throws if SMTP is unconfigured or the send fails.
+ * Returns the rendered content on success so the caller can log it.
+ */
+export async function sendInvoiceEmail(input: InvoiceEmailInput): Promise<SentEmailContent> {
+  if (!isEmailConfigured()) {
+    throw new Error(
+      "Email is not configured. Set SMTP_HOST, SMTP_USER and SMTP_PASS to send invoices."
+    );
+  }
+
+  const content = buildInvoiceEmailContent(input);
   const transporter = getEmailTransporter();
+
   await transporter.sendMail({
-    from: `"${fromName} via ${getSenderDisplayName()}" <${getSenderAddress()}>`,
+    from: `"${invoiceFromName(input)} via ${getSenderDisplayName()}" <${getSenderAddress()}>`,
     replyTo: input.tutorEmail || undefined,
     to: input.to,
-    subject,
-    text,
-    html,
+    subject: content.subject,
+    text: content.text,
+    html: content.html,
     attachments: [
       {
-        filename: `${invoice.invoiceNumber}.pdf`,
+        filename: `${input.invoice.invoiceNumber}.pdf`,
         content: input.pdfBuffer,
         contentType: "application/pdf",
       },
     ],
   });
 
-  return { subject, text, html };
+  return content;
 }
-

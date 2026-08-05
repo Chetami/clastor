@@ -14,6 +14,13 @@ export interface InvoiceLessonInput {
   lesson: LessonResponse;
   rateType: RateType;
   expectedAmount: number;
+  /**
+   * When true, the invoice is created but NOT emailed — the caller takes
+   * responsibility for showing a compose/preview dialog and sending (via
+   * useSendInvoice) so the tutor can review the email first. Defaults to
+   * false (create + send immediately), preserving the legacy/mobile flow.
+   */
+  skipSend?: boolean;
 }
 
 /** Optional lesson fields a caller may tweak before/while invoicing. */
@@ -28,13 +35,13 @@ export interface InvoiceLessonEdits {
  * create+send behaviour can never drift from the Create Invoice page.
  *
  * Builds the line item from the given lesson + student rate, creates the
- * invoice as finalised ("open") and emails it. Callers that need to tweak
- * the lesson first should patch it (e.g. via useUpdateLessonDetails) and pass
- * the updated lesson here.
+ * invoice as finalised ("open") and (unless `skipSend`) emails it. Callers
+ * that need to tweak the lesson first should patch it (e.g. via
+ * useUpdateLessonDetails) and pass the updated lesson here.
  */
 export function useInvoiceLesson() {
   return useMutation<InvoiceResponse, Error, InvoiceLessonInput>({
-    mutationFn: async ({ lesson, rateType, expectedAmount }) => {
+    mutationFn: async ({ lesson, rateType, expectedAmount, skipSend }) => {
       const lineItem = buildLessonLineItem(lesson, rateType, expectedAmount);
 
       const payload: CreateInvoiceRequest = {
@@ -46,7 +53,9 @@ export function useInvoiceLesson() {
       };
 
       const created = await createInvoiceRequest(payload);
-      await sendInvoiceRequest(created.id);
+      if (!skipSend) {
+        await sendInvoiceRequest(created.id);
+      }
       return created;
     },
     onSuccess: (response) => {

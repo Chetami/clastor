@@ -10,6 +10,9 @@ import {
   notifyStudent,
   rsvpLesson,
   resyncLesson,
+  previewNotifyStudent,
+  previewRescheduleLesson,
+  previewCancelLesson,
 } from "../controllers/lessonController";
 import {
   createRecurringLesson,
@@ -18,6 +21,7 @@ import {
   cancelLessonSeries,
   generateSeriesMeetLink,
   notifySeriesStudent,
+  previewNotifySeriesStudent,
 } from "../controllers/lessonSeriesController";
 import { authenticateJWT, requireRole } from "../middleware/auth";
 
@@ -110,6 +114,18 @@ router.post(
 );
 
 /**
+ * POST /api/lessons/series/:id/notify-student/preview
+ * Preview (without sending) the series summary email so the tutor can review
+ * and edit it before sending.
+ */
+router.post(
+  "/series/:id/notify-student/preview",
+  authenticateJWT,
+  requireRole("tutor", "system_admin"),
+  previewNotifySeriesStudent
+);
+
+/**
  * POST /api/lessons/series/:id/notify-student
  * Send ONE summary email to the student covering every upcoming lesson in the
  * series, instead of one email per occurrence. Subject to a series-level
@@ -131,6 +147,18 @@ router.delete(
   authenticateJWT,
   requireRole("tutor", "system_admin"),
   cancelLessonSeries
+);
+
+/**
+ * PATCH /api/lessons/:id/reschedule/preview
+ * Preview (without moving the lesson) the email that would be sent on a
+ * reschedule, so the tutor can review/edit it first.
+ */
+router.patch(
+  "/:id/reschedule/preview",
+  authenticateJWT,
+  requireRole("tutor", "system_admin"),
+  previewRescheduleLesson
 );
 
 /**
@@ -158,6 +186,18 @@ router.patch(
 );
 
 /**
+ * PATCH /api/lessons/:id/cancel/preview
+ * Preview (without cancelling) the cancellation email so the tutor can
+ * review/edit it first.
+ */
+router.patch(
+  "/:id/cancel/preview",
+  authenticateJWT,
+  requireRole("tutor", "system_admin"),
+  previewCancelLesson
+);
+
+/**
  * PATCH /api/lessons/:id/cancel
  * Soft-cancel a single lesson occurrence.
  */
@@ -166,6 +206,18 @@ router.patch(
   authenticateJWT,
   requireRole("tutor", "system_admin"),
   cancelLesson
+);
+
+/**
+ * POST /api/lessons/:id/notify-student/preview
+ * Preview (without sending) the lesson reminder email so the tutor can review
+ * and edit it before sending.
+ */
+router.post(
+  "/:id/notify-student/preview",
+  authenticateJWT,
+  requireRole("tutor", "system_admin"),
+  previewNotifyStudent
 );
 
 /**

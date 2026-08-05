@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Check, ChevronDown, DollarSign, Lock } from "lucide-react";
+import { toast } from "sonner";
 import type { LessonResponse } from "@examify-tms/interfaces";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -28,7 +29,8 @@ import { useListStudents } from "@/features/students/api";
 import { useSubjects, resolveSubjectNames } from "@/lib/subjects";
 import { useListLessons } from "@/features/schedule/api";
 import { lessonBadge } from "@/features/lessons/lesson-display";
-import { useCreateInvoice, useSendInvoice } from "./api";
+import { useCreateInvoice, useSendInvoice, previewSendInvoiceRequest } from "./api";
+import { EmailComposeDialog } from "@/components/email-compose-dialog";
 import {
   createInvoiceFormSchema,
   type CreateInvoiceFormData,
@@ -107,6 +109,7 @@ export default function CreateInvoice() {
 
   const createInvoice = useCreateInvoice();
   const sendInvoice = useSendInvoice();
+  const [sendInvoiceId, setSendInvoiceId] = useState<string | null>(null);
 
   // Group the student's unpaid lessons into upcoming + completed (chargeable
   // vs. unrecorded). The eligibility rules live in @examify-tms/shared so the
@@ -215,11 +218,13 @@ export default function CreateInvoice() {
         status: result.data.status,
       });
 
-      // Only the "Create & Send" path emails the invoice. The create
-      // endpoint just persists to Firestore; the email is sent by the
-      // dedicated /send endpoint (same path Resend uses).
+      // The "Create & Send" path opens a compose dialog so the tutor can
+      // review/edit the email before it goes out. The create endpoint just
+      // persists to Firestore; the email is sent by the dedicated /send
+      // endpoint (called from the compose dialog).
       if (sendEmail) {
-        await sendInvoice.mutateAsync({ id: created.id });
+        setSendInvoiceId(created.id);
+        return;
       }
 
       navigate("/payments");
@@ -229,6 +234,7 @@ export default function CreateInvoice() {
   }
 
   return (
+    <>
     <div className="space-y-6">
       <div className="flex items-center gap-4">
         <Button
@@ -674,6 +680,28 @@ export default function CreateInvoice() {
         </div>
       </div>
     </div>
+
+      {sendInvoiceId && (
+        <EmailComposeDialog
+          open
+          onOpenChange={(o) => !o && setSendInvoiceId(null)}
+          title="Send invoice"
+          description="Review and edit the email before sending. The invoice PDF is attached automatically."
+          fetchPreview={(message) =>
+            previewSendInvoiceRequest(sendInvoiceId, message)
+          }
+          onSend={async (message) => {
+            await sendInvoice.mutateAsync({
+              id: sendInvoiceId,
+              message: message || undefined,
+            });
+            toast.success("Invoice sent.");
+            setSendInvoiceId(null);
+            navigate("/payments");
+          }}
+        />
+      )}
+    </>
   );
 }
 

@@ -14,10 +14,30 @@ import {
   bumpRsvpTokenVersion,
   setLessonAcceptanceInFirestore,
   setLessonGoogleEventId,
+  listLessonsBySeriesFromFirestore,
 } from "../services/lessonService";
 import { getStudentByIdFromFirestore } from "../services/studentService";
 import { getUserFromFirestore } from "../services/userService";
-import { sendLessonNotification, sendLessonCancellation, sendSeriesRescheduleEmail, sendSeriesCancellationEmail } from "../services/emailService";
+import {
+  sendLessonNotification,
+  sendLessonCancellation,
+  sendSeriesRescheduleEmail,
+  sendSeriesCancellationEmail,
+  buildLessonNotificationContent,
+  buildLessonCancellationContent,
+  buildSeriesRescheduleContent,
+  buildSeriesCancellationContent,
+  defaultLessonMessage,
+  defaultLessonSubject,
+  defaultLessonCancellationMessage,
+  defaultLessonCancellationSubject,
+  defaultSeriesRescheduleMessage,
+  defaultSeriesRescheduleSubject,
+  defaultSeriesCancellationMessage,
+  defaultSeriesCancellationSubject,
+  type LessonNotificationInput,
+  type LessonCancellationInput,
+} from "../services/emailService";
 import { buildLessonInvite, buildLessonCancellation } from "../services/icalService";
 import { recordSentEmailSafe } from "../services/sentEmailService";
 import {
@@ -30,6 +50,7 @@ import {
   rescheduleSeriesFromOccurrence,
   deleteSeriesAndFuture,
   getLessonSeriesByIdFromFirestore,
+  previewRescheduledSlots,
 } from "../services/lessonSeriesService";
 import { signRsvpToken, verifyRsvpToken } from "../utils/jwt";
 import { getNotifyCooldownMs, getPublicApiUrl } from "../config/email";
@@ -1097,6 +1118,413 @@ export async function notifyStudent(
   } catch (error) {
     console.error("Notify student failed:", error);
     const message = error instanceof Error ? error.message : "Failed to notify student";
+    res.status(500).json({ message });
+  }
+}
+
+/**
+ * Shape returned by every email preview endpoint: the rendered email
+ * (honouring any supplied message) plus the untouched defaults so the compose
+ * dialog can prefill / reset its fields.
+ */
+interface EmailPreviewResponse {
+  to: string[];
+  subject: string;
+  text: string;
+  html: string;
+  defaultSubject: string;
+  defaultMessage: string;
+}
+
+/**
+ * Resolve the data needed to render a lesson-notification email for PREVIEW,
+ * with no side effects: it reads the existing iCal UID + RSVP version instead
+ * of creating/bumping them (the real send does). Supports an optional proposed
+ * start/duration so the reschedule preview can render the NEW time before the
+ * lesson is actually moved.
+ */
+async function resolveNotifyPreviewInput(
+  lesson: Lesson,
+  opts: {
+    message?: string | null;
+    reason?: "reminder" | "reschedule";
+    startDateTime?: Date;
+    durationMinutes?: number;
+  },
+): Promise<{
+  input: LessonNotificationInput;
+  defaultSubject: string;
+  defaultMessage: string;
+}> {
+  const student = await getStudentByIdFromFirestore(lesson.studentId);
+  if (!student || !student.email) {
+    throw new StudentEmailMissingError();
+  }
+  const tutor = await getUserFromFirestore(lesson.tutorId);
+
+  const start = opts.startDateTime ?? new Date(lesson.startDateTime as any);
+  const duration = opts.durationMinutes ?? lesson.durationMinutes;
+  const end = new Date(start.getTime() + duration * 60_000);
+
+  // Read-only equivalents of ensureLessonIcsUid / bumpRsvpTokenVersion so the
+  // preview never mutates the lesson. The real send persists + bumps these.
+  const icsUid = lesson.icsUid ?? `${lesson.id}@examify-tms`;
+  const sequence = lesson.rsvpTokenVersion ?? 0;
+
+  const rsvpToken = signRsvpToken(lesson.id, sequence);
+  const rsvpBase = `${getPublicApiUrl()}/api/lessons/rsvp`;
+  const rsvpLinks = {
+    accept: `${rsvpBase}?token=${encodeURIComponent(rsvpToken)}&status=accepted`,
+    decline: `${rsvpBase}?token=${encodeURIComponent(rsvpToken)}&status=declined`,
+  };
+
+  const icsContent = buildLessonInvite({
+    icsUid,
+    sequence,
+    summary: `${lesson.subject ?? "Lesson"} with ${tutor.name}`,
+    start,
+    end,
+    timezone: tutor.timezone ?? null,
+    location: lesson.meetLink ?? lesson.location,
+    organizer: { name: tutor.name, email: tutor.email },
+    attendee: { name: student.name, email: student.email },
+  });
+
+  const reason = opts.reason ?? "reminder";
+  const input: LessonNotificationInput = {
+    to: student.email,
+    studentName: student.name,
+    tutorName: tutor.name,
+    tutorEmail: tutor.email,
+    subject: lesson.subject ?? null,
+    startDateTime: start,
+    durationMinutes: duration,
+    location: lesson.location,
+    timezone: tutor.timezone ?? null,
+    message: opts.message,
+    icsContent,
+    rsvpLinks,
+    reason,
+  };
+
+  return {
+    input,
+    defaultSubject: defaultLessonSubject(input),
+    defaultMessage: defaultLessonMessage(student.name, reason),
+  };
+}
+
+/**
+ * Preview the lesson reminder/notify email without sending. Renders the full
+ * email (subject + body + calendar invite + RSVP buttons) using read-only
+ * state, honouring an optional edited message/subject. Used by the compose
+ * dialog so the tutor can review and edit before sending.
+ */
+export async function previewNotifyStudent(
+  req: Request<{ id: string }, {}, { message?: string }>,
+  res: Response<EmailPreviewResponse | ApiError>,
+): Promise<void> {
+  try {
+    if (!req.user) {
+      res.status(401).json({ message: "Unauthorized" });
+      return;
+    }
+    const lesson = await getLessonByIdFromFirestore(req.params.id);
+    if (!lesson) {
+      res.status(404).json({ message: "Lesson not found" });
+      return;
+    }
+    if (!canEditLesson(lesson, req)) {
+      res.status(403).json({ message: "Forbidden" });
+      return;
+    }
+
+    let resolved;
+    try {
+      resolved = await resolveNotifyPreviewInput(lesson, {
+        message: req.body?.message,
+        reason: "reminder",
+      });
+    } catch (e) {
+      if (e instanceof StudentEmailMissingError) {
+        res.status(400).json({ message: "This student has no email address on file" });
+        return;
+      }
+      throw e;
+    }
+
+    const content = buildLessonNotificationContent(resolved.input);
+    res.status(200).json({
+      to: [resolved.input.to],
+      subject: content.subject,
+      text: content.text,
+      html: content.html,
+      defaultSubject: resolved.defaultSubject,
+      defaultMessage: resolved.defaultMessage,
+    });
+  } catch (error) {
+    console.error("Preview notify student failed:", error);
+    const message = error instanceof Error ? error.message : "Failed to preview email";
+    res.status(500).json({ message });
+  }
+}
+
+/**
+ * Preview the email that would be sent on a reschedule, WITHOUT moving the
+ * lesson. Renders either the single-occurrence update invite (using the
+ * proposed new time) or — when scope is "this_and_future" — the series
+ * schedule-summary email, with the new slot derived read-only.
+ */
+export async function previewRescheduleLesson(
+  req: Request<
+    { id: string },
+    {},
+    {
+      startDateTime?: string;
+      durationMinutes?: number;
+      scope?: "this" | "this_and_future";
+      message?: string;
+    }
+  >,
+  res: Response<EmailPreviewResponse | ApiError>,
+): Promise<void> {
+  try {
+    if (!req.user) {
+      res.status(401).json({ message: "Unauthorized" });
+      return;
+    }
+    const lesson = await getLessonByIdFromFirestore(req.params.id);
+    if (!lesson) {
+      res.status(404).json({ message: "Lesson not found" });
+      return;
+    }
+    if (!canEditLesson(lesson, req)) {
+      res.status(403).json({ message: "Forbidden" });
+      return;
+    }
+
+    const newStart = req.body?.startDateTime
+      ? new Date(req.body.startDateTime)
+      : new Date(lesson.startDateTime as any);
+    if (Number.isNaN(newStart.getTime())) {
+      res.status(400).json({ message: "Invalid startDateTime" });
+      return;
+    }
+    const duration = req.body?.durationMinutes ?? lesson.durationMinutes;
+
+    // Series scope: preview the schedule-summary email with derived new slots.
+    if (req.body?.scope === "this_and_future") {
+      if (!lesson.seriesId) {
+        res.status(400).json({ message: "This lesson is not part of a series." });
+        return;
+      }
+      const [student, tutor, series] = await Promise.all([
+        getStudentByIdFromFirestore(lesson.studentId),
+        getUserFromFirestore(lesson.tutorId),
+        getLessonSeriesByIdFromFirestore(lesson.seriesId),
+      ]);
+      if (!student?.email) {
+        res.status(400).json({ message: "This student has no email address on file" });
+        return;
+      }
+      if (!series || !tutor) {
+        res.status(404).json({ message: "Series not found" });
+        return;
+      }
+      const tz = series.timezone ?? tutor.timezone ?? null;
+      const slots = previewRescheduledSlots(
+        series.slots,
+        new Date(lesson.startDateTime as any),
+        newStart,
+        tz ?? "Etc/UTC",
+      );
+      const input = {
+        to: student.email,
+        studentName: student.name,
+        tutorName: tutor.name,
+        tutorEmail: tutor.email,
+        subject: lesson.subject ?? null,
+        timezone: tz,
+        slots,
+        intervalWeeks: series.intervalWeeks,
+        firstUpcoming: newStart,
+        message: req.body?.message,
+      };
+      const content = buildSeriesRescheduleContent(input);
+      res.status(200).json({
+        to: [student.email],
+        subject: content.subject,
+        text: content.text,
+        html: content.html,
+        defaultSubject: defaultSeriesRescheduleSubject(input),
+        defaultMessage: defaultSeriesRescheduleMessage(student.name, lesson.subject ?? null),
+      });
+      return;
+    }
+
+    // Single occurrence: preview the updated invite with the proposed time.
+    let resolved;
+    try {
+      resolved = await resolveNotifyPreviewInput(lesson, {
+        message: req.body?.message,
+        reason: "reschedule",
+        startDateTime: newStart,
+        durationMinutes: duration,
+      });
+    } catch (e) {
+      if (e instanceof StudentEmailMissingError) {
+        res.status(400).json({ message: "This student has no email address on file" });
+        return;
+      }
+      throw e;
+    }
+    const content = buildLessonNotificationContent(resolved.input);
+    res.status(200).json({
+      to: [resolved.input.to],
+      subject: content.subject,
+      text: content.text,
+      html: content.html,
+      defaultSubject: resolved.defaultSubject,
+      defaultMessage: resolved.defaultMessage,
+    });
+  } catch (error) {
+    console.error("Preview reschedule email failed:", error);
+    const message = error instanceof Error ? error.message : "Failed to preview email";
+    res.status(500).json({ message });
+  }
+}
+
+/**
+ * Preview the cancellation email without cancelling. Renders either the
+ * single-lesson cancellation (with an optional CANCEL calendar update when
+ * the student was previously invited) or — when scope is
+ * "this_and_future" — the series-cancellation summary listing the upcoming
+ * lessons that would be removed (read from the series, no mutation).
+ */
+export async function previewCancelLesson(
+  req: Request<
+    { id: string },
+    {},
+    {
+      scope?: "this" | "this_and_future";
+      message?: string;
+    }
+  >,
+  res: Response<EmailPreviewResponse | ApiError>,
+): Promise<void> {
+  try {
+    if (!req.user) {
+      res.status(401).json({ message: "Unauthorized" });
+      return;
+    }
+    const lesson = await getLessonByIdFromFirestore(req.params.id);
+    if (!lesson) {
+      res.status(404).json({ message: "Lesson not found" });
+      return;
+    }
+    if (!canEditLesson(lesson, req)) {
+      res.status(403).json({ message: "Forbidden" });
+      return;
+    }
+
+    // Series scope: preview the cancellation summary listing removed dates.
+    if (req.body?.scope === "this_and_future") {
+      if (!lesson.seriesId) {
+        res.status(400).json({ message: "This lesson is not part of a series." });
+        return;
+      }
+      const [student, tutor, upcoming] = await Promise.all([
+        getStudentByIdFromFirestore(lesson.studentId),
+        getUserFromFirestore(lesson.tutorId),
+        listLessonsBySeriesFromFirestore(lesson.seriesId, { futureOnly: true }),
+      ]);
+      if (!student?.email) {
+        res.status(400).json({ message: "This student has no email address on file" });
+        return;
+      }
+      if (!tutor) {
+        res.status(404).json({ message: "Tutor not found" });
+        return;
+      }
+      const removedDates = upcoming.map((l) => new Date(l.startDateTime as any));
+      const input = {
+        to: student.email,
+        studentName: student.name,
+        tutorName: tutor.name,
+        tutorEmail: tutor.email,
+        subject: lesson.subject ?? null,
+        timezone: tutor.timezone ?? null,
+        removedDates,
+        message: req.body?.message,
+      };
+      const content = buildSeriesCancellationContent(input);
+      res.status(200).json({
+        to: [student.email],
+        subject: content.subject,
+        text: content.text,
+        html: content.html,
+        defaultSubject: defaultSeriesCancellationSubject(input),
+        defaultMessage: defaultSeriesCancellationMessage(
+          student.name,
+          lesson.subject ?? null,
+          removedDates.length,
+        ),
+      });
+      return;
+    }
+
+    // Single lesson cancellation preview.
+    const student = await getStudentByIdFromFirestore(lesson.studentId);
+    if (!student?.email) {
+      res.status(400).json({ message: "This student has no email address on file" });
+      return;
+    }
+    const tutor = await getUserFromFirestore(lesson.tutorId);
+
+    const start = new Date(lesson.startDateTime as any);
+    const end = new Date(start.getTime() + lesson.durationMinutes * 60_000);
+
+    // Attach a CANCEL iCal only if the student was ever sent an invite.
+    let icsContent: string | undefined;
+    if (lesson.icsUid) {
+      icsContent = buildLessonCancellation({
+        icsUid: lesson.icsUid,
+        sequence: lesson.rsvpTokenVersion ?? 0,
+        summary: `${lesson.subject ?? "Lesson"} with ${tutor.name}`,
+        start,
+        end,
+        timezone: tutor.timezone ?? null,
+        location: lesson.meetLink ?? lesson.location,
+        organizer: { name: tutor.name, email: tutor.email },
+        attendee: { name: student.name, email: student.email },
+      });
+    }
+
+    const input: LessonCancellationInput = {
+      to: student.email,
+      studentName: student.name,
+      tutorName: tutor.name,
+      tutorEmail: tutor.email,
+      subject: lesson.subject ?? null,
+      startDateTime: start,
+      durationMinutes: lesson.durationMinutes,
+      location: lesson.location,
+      timezone: tutor.timezone ?? null,
+      message: req.body?.message,
+      icsContent,
+    };
+    const content = buildLessonCancellationContent(input);
+    res.status(200).json({
+      to: [student.email],
+      subject: content.subject,
+      text: content.text,
+      html: content.html,
+      defaultSubject: defaultLessonCancellationSubject(input),
+      defaultMessage: defaultLessonCancellationMessage(student.name),
+    });
+  } catch (error) {
+    console.error("Preview cancel email failed:", error);
+    const message = error instanceof Error ? error.message : "Failed to preview email";
     res.status(500).json({ message });
   }
 }

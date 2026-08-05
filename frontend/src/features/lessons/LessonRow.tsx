@@ -23,8 +23,11 @@ import {
 } from "@/features/dashboard/api";
 import {
   useInvoiceLesson,
+  useSendInvoice,
+  previewSendInvoiceRequest,
   type InvoiceLessonEdits,
 } from "@/features/payments/api";
+import { EmailComposeDialog } from "@/components/email-compose-dialog";
 import { CancelLessonDialog } from "@/features/schedule/CancelLessonDialog";
 import { RescheduleDialog } from "@/features/schedule/RescheduleDialog";
 import {
@@ -90,6 +93,8 @@ export function LessonRow({ lesson }: LessonRowProps) {
   const markDone = useMarkLessonDone();
   const updateLessonDetails = useUpdateLessonDetails();
   const invoiceLesson = useInvoiceLesson();
+  const sendInvoice = useSendInvoice();
+  const [sendInvoiceId, setSendInvoiceId] = useState<string | null>(null);
 
   const studentNames = useMemo(() => {
     const map: Record<string, string> = {};
@@ -144,13 +149,16 @@ export function LessonRow({ lesson }: LessonRowProps) {
       if (shouldInvoice) {
         const student = studentById[lesson.studentId];
         if (student) {
+          // Create the invoice but DON'T email yet — open the compose dialog so
+          // the email is reviewed before sending.
           const created = await invoiceLesson.mutateAsync({
             lesson: effective,
             rateType: student.rateType,
             expectedAmount: student.expectedAmount,
+            skipSend: true,
           });
-          toast.success(`Invoice sent to ${name}`);
-          navigate(`/payments/${created.id}`);
+          toast.success(`Invoice created for ${name} — review before sending.`);
+          setSendInvoiceId(created.id);
           return;
         }
       }
@@ -299,6 +307,28 @@ export function LessonRow({ lesson }: LessonRowProps) {
           subjectOptions={subjectOptions}
           onConfirm={handleAttendanceConfirm}
           isPending={attendancePending}
+        />
+      )}
+
+      {sendInvoiceId && (
+        <EmailComposeDialog
+          open
+          onOpenChange={(o) => !o && setSendInvoiceId(null)}
+          title="Send invoice"
+          description="Review and edit the email before sending. The invoice PDF is attached automatically."
+          fetchPreview={(message) =>
+            previewSendInvoiceRequest(sendInvoiceId, message)
+          }
+          onSend={async (message) => {
+            await sendInvoice.mutateAsync({
+              id: sendInvoiceId,
+              message: message || undefined,
+            });
+            toast.success("Invoice sent.");
+            const id = sendInvoiceId;
+            setSendInvoiceId(null);
+            navigate(`/payments/${id}`);
+          }}
         />
       )}
     </div>
