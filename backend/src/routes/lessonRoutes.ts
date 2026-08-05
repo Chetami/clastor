@@ -17,6 +17,7 @@ import {
   updateLessonSeries,
   cancelLessonSeries,
   generateSeriesMeetLink,
+  notifySeriesStudent,
 } from "../controllers/lessonSeriesController";
 import { authenticateJWT, requireRole } from "../middleware/auth";
 
@@ -106,6 +107,19 @@ router.post(
   authenticateJWT,
   requireRole("tutor", "system_admin"),
   generateSeriesMeetLink
+);
+
+/**
+ * POST /api/lessons/series/:id/notify-student
+ * Send ONE summary email to the student covering every upcoming lesson in the
+ * series, instead of one email per occurrence. Subject to a series-level
+ * cooldown to prevent spamming.
+ */
+router.post(
+  "/series/:id/notify-student",
+  authenticateJWT,
+  requireRole("tutor", "system_admin"),
+  notifySeriesStudent
 );
 
 /**

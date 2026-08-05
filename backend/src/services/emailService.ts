@@ -524,6 +524,90 @@ export async function sendSeriesCancellationEmail(
   return { subject: subjectLine, text, html };
 }
 
+/** A single upcoming occurrence to list in the series summary email. */
+export interface SeriesNotificationLesson {
+  startDateTime: Date;
+  durationMinutes: number;
+  location?: string | null;
+}
+
+export interface SeriesNotificationEmailInput {
+  to: string;
+  studentName: string;
+  tutorName: string;
+  tutorEmail?: string | null;
+  subject: string | null;
+  timezone?: string | null;
+  /** Every upcoming lesson, in chronological order, to list in the email. */
+  lessons: SeriesNotificationLesson[];
+  message?: string | null;
+}
+
+/**
+ * Send a single summary email notifying the student about ALL upcoming
+ * lessons in a series at once, instead of one email per occurrence. Each
+ * lesson is rendered as a dated bullet point in the tutor's timezone.
+ */
+export async function sendSeriesNotificationEmail(
+  input: SeriesNotificationEmailInput,
+): Promise<SentEmailContent> {
+  if (!isEmailConfigured()) {
+    throw new Error(
+      "Email is not configured. Set SMTP_HOST, SMTP_USER and SMTP_PASS to send notifications.",
+    );
+  }
+
+  const subjectLine = `Upcoming lessons${
+    input.subject ? `: ${input.subject}` : ""
+  } with ${input.tutorName}`;
+
+  const greeting =
+    input.message && input.message.trim().length > 0
+      ? input.message.trim()
+      : `Hi ${input.studentName},\n\nHere are all your upcoming lessons with ${input.tutorName}.`;
+
+  const lessonBullets = input.lessons.map((l) => {
+    const when = formatStart(l.startDateTime, input.timezone);
+    const loc = l.location && l.location.trim().length > 0 ? l.location : null;
+    return `• ${when} (${l.durationMinutes} min)${loc ? ` — ${loc}` : ""}`;
+  });
+
+  const text =
+    `${greeting}\n\n` +
+    lessonBullets.join("\n") +
+    `\n\nTutor: ${input.tutorName}`;
+
+  const html =
+    `<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#111827;line-height:1.5">` +
+    `<p style="margin:0 0 12px 0;white-space:pre-line">${escapeHtml(greeting)}</p>` +
+    `<ul style="margin:0 0 12px 0;padding-left:20px;line-height:1.8">${input.lessons
+      .map((l) => {
+        const when = formatStart(l.startDateTime, input.timezone);
+        const loc =
+          l.location && l.location.trim().length > 0 ? l.location : null;
+        return (
+          `<li><strong>${escapeHtml(when)}</strong> (${l.durationMinutes} min)` +
+          (loc ? `<br><span style="color:#6b7280">${escapeHtml(loc)}</span>` : "") +
+          `</li>`
+        );
+      })
+      .join("")}</ul>` +
+    `<p style="margin:0 0 12px 0">Tutor: ${escapeHtml(input.tutorName)}</p>` +
+    `</div>`;
+
+  const transporter = getEmailTransporter();
+  await transporter.sendMail({
+    from: `"${input.tutorName} via ${getSenderDisplayName()}" <${getSenderAddress()}>`,
+    replyTo: input.tutorEmail || undefined,
+    to: input.to,
+    subject: subjectLine,
+    text,
+    html,
+  });
+
+  return { subject: subjectLine, text, html };
+}
+
 export interface InvoiceEmailInput {
   to: string;
   invoice: Invoice;

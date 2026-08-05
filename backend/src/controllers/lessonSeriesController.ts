@@ -4,16 +4,16 @@ import {
   updateLessonSeriesInFirestore,
   cancelLessonSeriesFuture,
   getLessonSeriesByIdFromFirestore,
-  setSeriesMeetLinkInFirestore,
+  generateSeriesMeetLinkForUser,
+  SeriesNoUpcomingLessonsError,
+  isMeetLocation,
 } from "../services/lessonSeriesService";
 import { listLessonsBySeriesFromFirestore } from "../services/lessonService";
 import {
   syncLessonToCalendar,
   deleteLessonCalendarEvent,
-  attachMeetLinkToCalendarEvent,
 } from "../services/googleCalendarService";
 import {
-  generateMeetLinkForUser,
   GoogleNotConnectedError,
 } from "../services/meetService";
 import {
@@ -23,9 +23,16 @@ import {
   LessonSeriesResponse,
   CreateRecurringLessonResponse,
   GenerateSeriesMeetLinkResponse,
+  NotifyStudentRequest,
   ApiError,
 } from "@examify-tms/interfaces";
 import { canViewSeries, canEditSeries } from "../permissions/lessonSeriesPermissions";
+import { getStudentByIdFromFirestore } from "../services/studentService";
+import { getUserFromFirestore } from "../services/userService";
+import { sendSeriesNotificationEmail } from "../services/emailService";
+import { recordSentEmailSafe } from "../services/sentEmailService";
+import { markStudentNotifiedInFirestore } from "../services/lessonService";
+import { getNotifyCooldownMs } from "../config/email";
 
 function toSeriesResponse(series: LessonSeries): LessonSeriesResponse {
   const toIso = (v: any) => (v instanceof Date ? v.toISOString() : v);
@@ -90,6 +97,27 @@ export async function createRecurringLesson(
       );
     } catch {
       /* logged inside syncLessonToCalendar */
+    }
+
+    // Auto-generate a shared Google Meet link when the series is set to use
+    // Google Meet, and persist it on the series + every occurrence. Best-effort:
+    // if the tutor isn't connected to Google (or Meet provisioning fails), the
+    // series is still created and they can generate the link from the series page.
+    if (isMeetLocation(req.body.location)) {
+      try {
+        await generateSeriesMeetLinkForUser(req.user.uid, result.seriesId);
+      } catch (error) {
+        if (error instanceof GoogleNotConnectedError) {
+          console.warn(
+            `[series-meet] Google not connected; skipping auto Meet link for series ${result.seriesId}`,
+          );
+        } else if (!(error instanceof SeriesNoUpcomingLessonsError)) {
+          console.error(
+            `[series-meet] Failed to auto-generate Meet link for series ${result.seriesId}:`,
+            error,
+          );
+        }
+      }
     }
 
     const response: CreateRecurringLessonResponse = {
@@ -252,13 +280,9 @@ export async function cancelLessonSeries(
  * POST /api/lessons/series/:id/generate-meet
  *
  * Generate ONE shared Google Meet link for an entire series and apply it to
- * every upcoming lesson:
- *   1. Ensure every upcoming occurrence has a backing Google Calendar event.
- *   2. Provision a single Meet conference on the first upcoming lesson's
- *      calendar event (this mints the shared Meet URL).
- *   3. Persist that URL on the series + every non-cancelled occurrence.
- *   4. Attach the same Meet link to each remaining upcoming lesson's calendar
- *      event so every session shows the same "Join" button (best-effort).
+ * every upcoming lesson. Delegates to the shared
+ * {@link generateSeriesMeetLinkForUser} service (also used to auto-provision
+ * a Meet link when a series is created with a Meet location).
  */
 export async function generateSeriesMeetLink(
   req: Request<{ id: string }>,
@@ -283,66 +307,15 @@ export async function generateSeriesMeetLink(
       return;
     }
 
-    // 1. Upcoming non-cancelled occurrences to attach Meet to.
-    let upcoming = await listLessonsBySeriesFromFirestore(req.params.id, {
-      futureOnly: true,
-    });
-    if (upcoming.length === 0) {
-      res.status(400).json({
-        message: "This series has no upcoming lessons to attach a Meet link to",
-      });
-      return;
-    }
-
-    // Ensure each upcoming lesson has a Google Calendar event so we can
-    // attach the Meet conference to it. Best-effort; failures are logged.
-    await Promise.allSettled(upcoming.map((l) => syncLessonToCalendar(uid, l)));
-
-    // Reload to pick up fresh googleCalendarEventIds from the sync above.
-    upcoming = await listLessonsBySeriesFromFirestore(req.params.id, {
-      futureOnly: true,
-    });
-
-    const first = upcoming[0];
-
-    // 2. Provision the shared Meet link on the first lesson's calendar event.
-    //    generateMeetLinkForUser attaches conferenceData to the lesson's
-    //    existing event (or creates one) and returns the minted Meet URL.
-    const { meetingLink } = await generateMeetLinkForUser(uid, {
-      lessonId: first.id,
-    });
-
-    // 3. Persist the shared link on the series + all non-cancelled lessons.
-    await setSeriesMeetLinkInFirestore(req.params.id, meetingLink);
-
-    // 4. Attach the same Meet link to every OTHER upcoming lesson's event.
-    //    Best-effort: a single event failing must not roll back the rest.
-    const others = upcoming.filter(
-      (l) => l.id !== first.id && l.googleCalendarEventId,
-    );
-    const results = await Promise.allSettled(
-      others.map((l) =>
-        attachMeetLinkToCalendarEvent(uid, l.googleCalendarEventId, meetingLink),
-      ),
-    );
-    const calendarFailed = results.filter(
-      (r) => r.status === "rejected",
-    ).length;
-    if (calendarFailed > 0) {
-      console.error(
-        `[series-meet] ${calendarFailed}/${others.length} calendar events could not be updated for series ${req.params.id}`,
-      );
-    }
-
-    const response: GenerateSeriesMeetLinkResponse = {
-      meetingLink,
-      appliedTo: upcoming.length,
-      calendarFailed,
-    };
+    const response = await generateSeriesMeetLinkForUser(uid, req.params.id);
     res.status(200).json(response);
   } catch (error) {
     if (error instanceof GoogleNotConnectedError) {
       res.status(409).json({ message: error.message });
+      return;
+    }
+    if (error instanceof SeriesNoUpcomingLessonsError) {
+      res.status(400).json({ message: error.message });
       return;
     }
     console.error("Generate series Meet link failed:", error);
@@ -350,6 +323,151 @@ export async function generateSeriesMeetLink(
       error instanceof Error
         ? error.message
         : "Failed to generate Meet link for series";
+    res.status(500).json({ message });
+  }
+}
+
+/**
+ * Resolve the display name of the authenticated user for the sent-email log.
+ * Best-effort: returns null if the user record can't be loaded.
+ */
+async function safeGetActorName(uid: string | undefined): Promise<string | null> {
+  if (!uid) return null;
+  try {
+    const user = await getUserFromFirestore(uid);
+    return user?.name ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * POST /api/lessons/series/:id/notify-student
+ *
+ * Send ONE summary email to the student covering every upcoming, non-cancelled
+ * occurrence in the series — instead of one email per lesson. The email lists
+ * each upcoming lesson with its date/time in the tutor's timezone.
+ *
+ * Subject to a series-level cooldown (same window as per-lesson notifies): if
+ * any upcoming lesson was notified within the window, the whole send is
+ * blocked so the student isn't spammed with the same summary repeatedly. On
+ * success every upcoming lesson is stamped as notified.
+ */
+export async function notifySeriesStudent(
+  req: Request<{ id: string }, {}, NotifyStudentRequest>,
+  res: Response<{ notified: number } | ApiError>
+): Promise<void> {
+  try {
+    if (!req.user) {
+      res.status(401).json({ message: "Unauthorized" });
+      return;
+    }
+
+    const series = await getLessonSeriesByIdFromFirestore(req.params.id);
+    if (!series) {
+      res.status(404).json({ message: "Lesson series not found" });
+      return;
+    }
+
+    if (!canEditSeries(series, req)) {
+      res
+        .status(403)
+        .json({ message: "Forbidden: You do not have permission to notify for this series" });
+      return;
+    }
+
+    const upcoming = await listLessonsBySeriesFromFirestore(req.params.id, {
+      futureOnly: true,
+    });
+    if (upcoming.length === 0) {
+      res
+        .status(400)
+        .json({ message: "This series has no upcoming lessons to notify about" });
+      return;
+    }
+
+    // Series-level cooldown: block if any upcoming lesson was notified within
+    // the window, reporting when the next send is allowed.
+    const cooldownMs = getNotifyCooldownMs();
+    let nextAllowedAt: Date | null = null;
+    for (const lesson of upcoming) {
+      if (!lesson.lastStudentNotifiedAt) continue;
+      const last = new Date(lesson.lastStudentNotifiedAt as any).getTime();
+      if (Date.now() - last < cooldownMs) {
+        const candidate = new Date(last + cooldownMs);
+        if (!nextAllowedAt || candidate.getTime() > nextAllowedAt.getTime()) {
+          nextAllowedAt = candidate;
+        }
+      }
+    }
+    if (nextAllowedAt) {
+      res.status(409).json({
+        message: `A summary email was already sent recently. You can send another after ${nextAllowedAt.toISOString()}.`,
+      });
+      return;
+    }
+
+    const student = await getStudentByIdFromFirestore(series.studentId);
+    if (!student || !student.email) {
+      res
+        .status(400)
+        .json({ message: "This student has no email address on file" });
+      return;
+    }
+    const tutor = await getUserFromFirestore(series.tutorId);
+
+    try {
+      const content = await sendSeriesNotificationEmail({
+        to: student.email,
+        studentName: student.name,
+        tutorName: tutor.name,
+        tutorEmail: tutor.email,
+        subject: series.subject ?? null,
+        timezone: series.timezone ?? null,
+        lessons: upcoming.map((l) => ({
+          startDateTime: new Date(l.startDateTime as any),
+          durationMinutes: l.durationMinutes,
+          location: l.meetLink ?? l.location,
+        })),
+        message: req.body?.message ?? null,
+      });
+
+      await recordSentEmailSafe({
+        type: "lesson_notify",
+        to: student.email,
+        subject: content.subject,
+        status: "sent",
+        bodyHtml: content.html,
+        tutorId: series.tutorId,
+        studentId: series.studentId,
+        sentBy: req.user.uid,
+        sentByName: await safeGetActorName(req.user.uid),
+      });
+    } catch (sendError) {
+      await recordSentEmailSafe({
+        type: "lesson_notify",
+        to: student.email,
+        subject: "",
+        status: "failed",
+        errorMessage:
+          sendError instanceof Error ? sendError.message : String(sendError),
+        bodyHtml: "",
+        tutorId: series.tutorId,
+        studentId: series.studentId,
+        sentBy: req.user.uid,
+        sentByName: await safeGetActorName(req.user.uid),
+      });
+      throw sendError;
+    }
+
+    // Stamp every upcoming lesson as notified only after delivery succeeds.
+    await Promise.all(upcoming.map((l) => markStudentNotifiedInFirestore(l.id)));
+
+    res.status(200).json({ notified: upcoming.length });
+  } catch (error) {
+    console.error("Notify lesson series failed:", error);
+    const message =
+      error instanceof Error ? error.message : "Failed to notify student";
     res.status(500).json({ message });
   }
 }

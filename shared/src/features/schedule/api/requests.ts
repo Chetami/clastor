@@ -127,6 +127,23 @@ export async function notifyStudentRequest(
   return response.data;
 }
 
+/**
+ * Send a single summary email to the student covering every upcoming lesson
+ * in a series (instead of one email per occurrence). Returns how many lessons
+ * the email covered.
+ */
+export async function notifyLessonSeriesRequest(
+  seriesId: string,
+  message?: string,
+): Promise<{ notified: number }> {
+  const body: NotifyStudentRequest = { message: message ?? null };
+  const response = await api.post<{ notified: number }>(
+    `/api/lessons/series/${seriesId}/notify-student`,
+    body,
+  );
+  return response.data;
+}
+
 export async function cancelLessonSeriesRequest(
   seriesId: string,
 ): Promise<{ cancelled: number }> {

@@ -21,7 +21,7 @@ import {
 import {
   useCancelLessonSeries,
   resyncLessonRequest,
-  notifyStudentRequest,
+  notifyLessonSeriesRequest,
 } from "@/features/schedule/api";
 import { queryClient } from "@/lib/query-client";
 import type { LessonResponse } from "@examify-tms/interfaces";
@@ -37,7 +37,8 @@ type ConfirmType = "notify" | "cancel";
 /**
  * The "⋯" overflow menu for series-level actions on the series detail page:
  *   - Resync every upcoming occurrence to Google Calendar (best-effort)
- *   - Notify the student for every upcoming occurrence (sends invite emails)
+ *   - Notify the student with a single summary email covering all upcoming
+ *     lessons (one email, not one per occurrence)
  *   - Cancel the entire series (soft-cancels future occurrences)
  *
  * Resync runs immediately (side-effect only, no emails); Notify and Cancel
@@ -78,15 +79,11 @@ export function SeriesActionsMenu({ seriesId, upcoming }: SeriesActionsMenuProps
     setBusy(true);
     try {
       if (confirm === "notify") {
-        const results = await Promise.allSettled(
-          upcoming.map((l) => notifyStudentRequest(l.id)),
-        );
-        const failed = results.filter((r) => r.status === "rejected").length;
-        const done = results.length - failed;
+        const { notified } = await notifyLessonSeriesRequest(seriesId);
         toast.success(
-          failed === 0
-            ? `Sent invites for ${done} lesson${done === 1 ? "" : "s"}.`
-            : `Sent ${done}, ${failed} failed.`,
+          notified === 1
+            ? "Sent 1 summary email covering the upcoming lesson."
+            : `Sent 1 summary email covering ${notified} upcoming lessons.`,
         );
       } else {
         await cancelSeries.mutateAsync(seriesId);
@@ -159,9 +156,9 @@ export function SeriesActionsMenu({ seriesId, upcoming }: SeriesActionsMenuProps
                 ? `This soft-cancels all ${upcomingCount} upcoming lesson${
                     upcomingCount === 1 ? "" : "s"
                   }. Past lessons are kept for history. This can't be undone.`
-                : `Sends an invite email for each of the ${upcomingCount} upcoming lesson${
+                : `Sends one summary email to the student covering all ${upcomingCount} upcoming lesson${
                     upcomingCount === 1 ? "" : "s"
-                  }. Lessons already on the email cooldown will be skipped.`}
+                  } with their dates and times. Blocked if a summary was already emailed in the last 24 hours.`}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -178,9 +175,7 @@ export function SeriesActionsMenu({ seriesId, upcoming }: SeriesActionsMenuProps
               disabled={busy}
             >
               {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {confirm === "cancel" ? "Cancel series" : `Send ${upcomingCount} invite${
-                upcomingCount === 1 ? "" : "s"
-              }`}
+              {confirm === "cancel" ? "Cancel series" : "Send summary email"}
             </Button>
           </DialogFooter>
         </DialogContent>
