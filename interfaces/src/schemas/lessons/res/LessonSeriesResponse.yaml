@@ -35,6 +35,13 @@ properties:
     nullable: true
     description: Where the lessons take place
     example: Online — Zoom
+  meetLink:
+    type: string
+    nullable: true
+    description: >-
+      A shared Google Meet URL applied to every occurrence in this series, or
+      null when no Meet link has been generated yet.
+    example: https://meet.google.com/abc-mnop-xyz
   notes:
     type: string
     nullable: true

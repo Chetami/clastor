@@ -110,6 +110,7 @@ function mapSeries(
     subject: data.subject,
     durationMinutes: data.durationMinutes,
     location: data.location ?? null,
+    meetLink: data.meetLink ?? null,
     notes: data.notes ?? null,
     intervalWeeks: data.intervalWeeks,
     slots: data.slots,
@@ -317,6 +318,49 @@ export async function updateLessonSeriesInFirestore(
   } catch (error) {
     console.error("Failed to update lesson series in Firestore:", error);
     throw error instanceof Error ? error : new Error("Failed to update lesson series");
+  }
+}
+
+/**
+ * Persist a shared Google Meet link on a series and propagate it to every
+ * non-cancelled occurrence. The Meet conference itself is attached to each
+ * upcoming lesson's Google Calendar event by the caller (controller), since
+ * this function is storage-only. Past occurrences also receive the `meetLink`
+ * string for data consistency, but their calendar events are not touched.
+ */
+export async function setSeriesMeetLinkInFirestore(
+  seriesId: string,
+  meetLink: string,
+): Promise<void> {
+  try {
+    const firestore = getFirebaseFirestore();
+    const now = admin.firestore.Timestamp.now();
+
+    await firestore
+      .collection("lessonSeries")
+      .doc(seriesId)
+      .update({ meetLink, updatedAt: now });
+
+    // Propagate to every non-cancelled occurrence (single-field seriesId
+    // query, filtered in memory — a series has bounded occurrences).
+    const snapshot = await firestore
+      .collection("lessons")
+      .where("seriesId", "==", seriesId)
+      .get();
+
+    const targets = snapshot.docs.filter((d) => !d.data()?.isCancelled);
+
+    for (let i = 0; i < targets.length; i += 400) {
+      const chunk = targets.slice(i, i + 400);
+      const batch = firestore.batch();
+      for (const doc of chunk) {
+        batch.update(doc.ref, { meetLink, updatedAt: now });
+      }
+      await batch.commit();
+    }
+  } catch (error) {
+    console.error("Failed to set series Meet link in Firestore:", error);
+    throw new Error("Failed to set series Meet link");
   }
 }
 

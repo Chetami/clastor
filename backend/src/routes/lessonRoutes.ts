@@ -16,6 +16,7 @@ import {
   getLessonSeries,
   updateLessonSeries,
   cancelLessonSeries,
+  generateSeriesMeetLink,
 } from "../controllers/lessonSeriesController";
 import { authenticateJWT, requireRole } from "../middleware/auth";
 
@@ -92,6 +93,19 @@ router.patch(
   authenticateJWT,
   requireRole("tutor", "system_admin"),
   updateLessonSeries
+);
+
+/**
+ * POST /api/lessons/series/:id/generate-meet
+ * Generate ONE shared Google Meet link for the series and apply it to every
+ * upcoming lesson, attaching the Meet conference to each lesson's Google
+ * Calendar event.
+ */
+router.post(
+  "/series/:id/generate-meet",
+  authenticateJWT,
+  requireRole("tutor", "system_admin"),
+  generateSeriesMeetLink
 );
 
 /**

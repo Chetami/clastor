@@ -7,6 +7,8 @@ import {
   Hash,
   Repeat,
   User,
+  Video,
+  ExternalLink,
 } from "lucide-react";
 import type * as React from "react";
 import type { LessonAcceptance, LessonSlot } from "@examify-tms/interfaces";
@@ -17,8 +19,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 import { ACCEPTANCE_LABELS } from "@/features/schedule/lesson-utils";
-import { getInitials } from "@/features/lessons/lesson-display";
 import { StudentLink } from "@/components/students/StudentLink";
 import { ACCEPTANCE_TONE, formatRange, formatSlot } from "./lesson-series-utils";
 
@@ -37,19 +39,30 @@ export interface SeriesHeaderProps {
   until: string | null;
   count: number | null | undefined;
   issueCount: number;
+  /** Shared Meet link for the series, if one has been generated. */
+  meetLink?: string | null;
+  /** Generate (or regenerate) a shared Meet link for all upcoming lessons. */
+  onGenerateMeet?: () => void;
+  meetDisabled?: boolean;
+  meetPending?: boolean;
 }
 
 function MetaItem({
   icon,
+  label,
   children,
 }: {
   icon: React.ReactNode;
+  label: string;
   children: React.ReactNode;
 }) {
   return (
-    <div className="inline-flex items-center gap-1.5 text-muted-foreground">
-      {icon}
-      <span>{children}</span>
+    <div className="min-w-0">
+      <dt className="flex items-center gap-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+        {icon}
+        {label}
+      </dt>
+      <dd className="mt-0.5 truncate text-sm text-foreground">{children}</dd>
     </div>
   );
 }
@@ -69,6 +82,10 @@ export function SeriesHeader({
   until,
   count,
   issueCount,
+  meetLink,
+  onGenerateMeet,
+  meetDisabled,
+  meetPending,
 }: SeriesHeaderProps) {
   const cadence =
     intervalWeeks === 1
@@ -79,10 +96,7 @@ export function SeriesHeader({
   const slotLabel = slots.map(formatSlot).join(" · ");
   return (
     <div className="shrink-0 space-y-3.5 rounded-xl border bg-card text-card-foreground shadow">
-      <div className="flex flex-wrap items-center gap-4 p-6">
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary ring-1 ring-primary/15">
-          {getInitials(studentName ?? studentId)}
-        </div>
+      <div className="flex flex-wrap items-start gap-x-8 gap-y-4 p-6">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-2xl font-semibold tracking-tight">
@@ -106,66 +120,103 @@ export function SeriesHeader({
               </span>
             )}
           </div>
-          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs">
+          <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-3 text-sm sm:grid-cols-3">
             {studentName && (
-              <MetaItem icon={<User className="h-3.5 w-3.5" />}>
+              <MetaItem icon={<User className="h-3 w-3" />} label="Student">
                 <StudentLink studentId={studentId} name={studentName} />
               </MetaItem>
             )}
             {slotLabel && (
-              <MetaItem icon={<CalendarClock className="h-3.5 w-3.5" />}>
+              <MetaItem
+                icon={<CalendarClock className="h-3 w-3" />}
+                label="Schedule"
+              >
                 {slotLabel}
               </MetaItem>
             )}
-            <MetaItem icon={<Clock className="h-3.5 w-3.5" />}>
+            <MetaItem icon={<Clock className="h-3 w-3" />} label="Duration">
               {durationMinutes} min
             </MetaItem>
-            <MetaItem icon={<CalendarDays className="h-3.5 w-3.5" />}>
+            <MetaItem
+              icon={<CalendarDays className="h-3 w-3" />}
+              label="Date range"
+            >
               {formatRange(startDate, until)}
             </MetaItem>
             {count ? (
-              <MetaItem icon={<Hash className="h-3.5 w-3.5" />}>
-                {count} sessions
+              <MetaItem icon={<Hash className="h-3 w-3" />} label="Sessions">
+                {count}
               </MetaItem>
             ) : null}
-            <MetaItem icon={<Globe className="h-3.5 w-3.5" />}>
+            <MetaItem icon={<Globe className="h-3 w-3" />} label="Timezone">
               {timezone}
             </MetaItem>
-          </div>
+          </dl>
         </div>
-        {onAcceptanceChange && (
-          <div className="w-full shrink-0 sm:w-56">
-            <div className="mb-1.5 flex items-center gap-2">
-              <p className="text-xs font-medium text-muted-foreground">
-                Student acceptance
-              </p>
-              <span
-                className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${ACCEPTANCE_TONE[acceptance] ?? "bg-muted text-muted-foreground"}`}
+        {(onAcceptanceChange || onGenerateMeet) && (
+          <div className="flex w-full shrink-0 flex-col gap-3 sm:w-[180px]">
+            {onAcceptanceChange && (
+              <Select
+                value={acceptance}
+                disabled={acceptanceDisabled}
+                onValueChange={(v) => onAcceptanceChange(v as LessonAcceptance)}
               >
-                {ACCEPTANCE_LABELS[acceptance]}
-              </span>
-            </div>
-            <Select
-              value={acceptance}
-              disabled={acceptanceDisabled}
-              onValueChange={(v) => onAcceptanceChange(v as LessonAcceptance)}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {(["pending", "accepted", "declined"] as LessonAcceptance[]).map(
-                  (opt) => (
-                    <SelectItem key={opt} value={opt}>
-                      {ACCEPTANCE_LABELS[opt]}
-                    </SelectItem>
-                  ),
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {(["pending", "accepted", "declined"] as LessonAcceptance[]).map(
+                    (opt) => (
+                      <SelectItem key={opt} value={opt}>
+                        {ACCEPTANCE_LABELS[opt]}
+                      </SelectItem>
+                    ),
+                  )}
+                </SelectContent>
+              </Select>
+            )}
+            {onGenerateMeet && (
+              <div className="flex flex-col gap-2 rounded-lg border bg-muted/30 p-2">
+                <span className="px-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                  Google Meet
+                </span>
+                {meetLink ? (
+                  <>
+                    <Button
+                      asChild
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5"
+                    >
+                      <a href={meetLink} target="_blank" rel="noreferrer">
+                        <Video className="h-4 w-4" />
+                        Join Meet
+                        <ExternalLink className="h-3 w-3 opacity-60" />
+                      </a>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled={meetDisabled || meetPending}
+                      onClick={onGenerateMeet}
+                    >
+                      {meetPending ? "Regenerating…" : "Regenerate"}
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    disabled={meetDisabled || meetPending}
+                    onClick={onGenerateMeet}
+                  >
+                    <Video className="h-4 w-4" />
+                    {meetPending ? "Generating…" : "Generate Meet"}
+                  </Button>
                 )}
-              </SelectContent>
-            </Select>
-            <p className="mt-1.5 text-xs text-muted-foreground">
-              Applies to all upcoming lessons.
-            </p>
+              </div>
+            )}
           </div>
         )}
       </div>

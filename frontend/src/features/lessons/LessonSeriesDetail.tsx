@@ -1,13 +1,13 @@
 import { useMemo } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, CalendarDays, Loader2 } from "lucide-react";
+import { useParams } from "react-router-dom";
+import { CalendarDays, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   useGetLessonSeries,
   useListLessons,
   useUpdateLessonSeries,
+  useGenerateSeriesMeetLink,
 } from "@/features/schedule/api";
 import { useListStudents } from "@/features/students/api";
 import type { LessonAcceptance, LessonResponse } from "@examify-tms/interfaces";
@@ -17,10 +17,10 @@ import { SeriesHeader } from "./SeriesHeader";
 
 export default function LessonSeriesDetail() {
   const { seriesId = "" } = useParams();
-  const navigate = useNavigate();
 
   const series = useGetLessonSeries(seriesId);
   const updateSeries = useUpdateLessonSeries(seriesId);
+  const generateMeet = useGenerateSeriesMeetLink(seriesId);
   const { data: students = [] } = useListStudents();
   const lessonsQuery = useListLessons({ seriesId });
 
@@ -49,18 +49,23 @@ export default function LessonSeriesDetail() {
     }
   }
 
+  async function handleGenerateMeet() {
+    try {
+      const result = await generateMeet.mutateAsync();
+      toast.success(
+        `Meet link generated and applied to ${result.appliedTo} lesson${
+          result.appliedTo === 1 ? "" : "s"
+        }.`,
+      );
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Failed to generate Meet link",
+      );
+    }
+  }
+
   return (
     <div className="flex h-full flex-col gap-6">
-      <Button
-        variant="ghost"
-        size="sm"
-        className="-ml-2 shrink-0 self-start text-muted-foreground"
-        onClick={() => navigate("/lessons")}
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Lessons
-      </Button>
-
       {isLoading && (
         <div className="flex shrink-0 items-center justify-center py-12">
           <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -92,6 +97,9 @@ export default function LessonSeriesDetail() {
             until={series.data.until ?? null}
             count={series.data.count}
             issueCount={issueCount}
+            meetLink={series.data.meetLink ?? null}
+            onGenerateMeet={handleGenerateMeet}
+            meetPending={generateMeet.isPending}
           />
 
           {lessonsQuery.error ? (

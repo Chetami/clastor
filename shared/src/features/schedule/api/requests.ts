@@ -16,6 +16,7 @@ import type {
   LessonResponse,
   LessonListResponse,
   LessonSeriesResponse,
+  GenerateSeriesMeetLinkResponse,
   ExternalCalendarEventListResponse,
 } from "@examify-tms/interfaces";
 
@@ -160,6 +161,20 @@ export async function updateLessonSeriesRequest(
   const response = await api.patch<LessonSeriesResponse>(
     `/api/lessons/series/${seriesId}`,
     data,
+  );
+  return response.data;
+}
+
+/**
+ * Generate ONE shared Google Meet link for an entire series and apply it to
+ * every upcoming lesson. Returns the shared link and how many lessons it was
+ * applied to.
+ */
+export async function generateSeriesMeetLinkRequest(
+  seriesId: string,
+): Promise<GenerateSeriesMeetLinkResponse> {
+  const response = await api.post<GenerateSeriesMeetLinkResponse>(
+    `/api/lessons/series/${seriesId}/generate-meet`,
   );
   return response.data;
 }

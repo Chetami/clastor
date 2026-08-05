@@ -131,6 +131,8 @@ components:
       $ref: './schemas/lessons/req/UpdateLessonSeriesRequest.yaml'
     LessonSeriesResponse:
       $ref: './schemas/lessons/res/LessonSeriesResponse.yaml'
+    GenerateSeriesMeetLinkResponse:
+      $ref: './schemas/lessons/res/GenerateSeriesMeetLinkResponse.yaml'
     CreateRecurringLessonResponse:
       $ref: './schemas/lessons/res/CreateRecurringLessonResponse.yaml'
     # Meeting (Google Meet) Schemas
