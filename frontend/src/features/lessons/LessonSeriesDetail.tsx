@@ -14,6 +14,7 @@ import type { LessonAcceptance, LessonResponse } from "@examify-tms/interfaces";
 import { lessonIssues } from "./lesson-series-utils";
 import { LessonSeriesCalendar } from "./LessonSeriesCalendar";
 import { SeriesHeader } from "./SeriesHeader";
+import { SeriesActionsMenu } from "./SeriesActionsMenu";
 
 export default function LessonSeriesDetail() {
   const { seriesId = "" } = useParams();
@@ -38,6 +39,20 @@ export default function LessonSeriesDetail() {
     () => lessons.reduce((n, l) => n + lessonIssues(l).length, 0),
     [lessons],
   );
+  const upcomingLessons = useMemo<LessonResponse[]>(() => {
+    const now = Date.now();
+    return lessons
+      .filter(
+        (l) =>
+          !l.isCancelled &&
+          new Date(l.startDateTime).getTime() >= now,
+      )
+      .sort(
+        (a, b) =>
+          new Date(a.startDateTime).getTime() -
+          new Date(b.startDateTime).getTime(),
+      );
+  }, [lessons]);
 
   async function handleAcceptanceChange(value: LessonAcceptance) {
     try {
@@ -100,6 +115,9 @@ export default function LessonSeriesDetail() {
             meetLink={series.data.meetLink ?? null}
             onGenerateMeet={handleGenerateMeet}
             meetPending={generateMeet.isPending}
+            actions={
+              <SeriesActionsMenu seriesId={seriesId} upcoming={upcomingLessons} />
+            }
           />
 
           {lessonsQuery.error ? (

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   CalendarClock,
   CalendarDays,
@@ -9,6 +10,9 @@ import {
   User,
   Video,
   ExternalLink,
+  Copy,
+  Check,
+  PlugZap,
 } from "lucide-react";
 import type * as React from "react";
 import type { LessonAcceptance, LessonSlot } from "@examify-tms/interfaces";
@@ -21,6 +25,10 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { ACCEPTANCE_LABELS } from "@/features/schedule/lesson-utils";
+import {
+  useGoogleConnectionStatus,
+  useConnectGoogle,
+} from "@/features/settings/api/use-google-connect";
 import { StudentLink } from "@/components/students/StudentLink";
 import { ACCEPTANCE_TONE, formatRange, formatSlot } from "./lesson-series-utils";
 
@@ -45,6 +53,8 @@ export interface SeriesHeaderProps {
   onGenerateMeet?: () => void;
   meetDisabled?: boolean;
   meetPending?: boolean;
+  /** Optional series-level actions (e.g. a "⋯" menu) rendered atop the controls. */
+  actions?: React.ReactNode;
 }
 
 function MetaItem({
@@ -86,6 +96,7 @@ export function SeriesHeader({
   onGenerateMeet,
   meetDisabled,
   meetPending,
+  actions,
 }: SeriesHeaderProps) {
   const cadence =
     intervalWeeks === 1
@@ -94,6 +105,23 @@ export function SeriesHeader({
         ? "Biweekly"
         : `Every ${intervalWeeks} weeks`;
   const slotLabel = slots.map(formatSlot).join(" · ");
+
+  const [copied, setCopied] = useState(false);
+  const googleStatus = useGoogleConnectionStatus();
+  const connectGoogle = useConnectGoogle(window.location.pathname);
+  const googleConnected = googleStatus.data?.connected ?? false;
+
+  async function copyMeetLink() {
+    if (!meetLink) return;
+    try {
+      await navigator.clipboard.writeText(meetLink);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      /* clipboard unavailable — ignore */
+    }
+  }
+
   return (
     <div className="shrink-0 space-y-3.5 rounded-xl border bg-card text-card-foreground shadow">
       <div className="flex flex-wrap items-start gap-x-8 gap-y-4 p-6">
@@ -153,8 +181,11 @@ export function SeriesHeader({
             </MetaItem>
           </dl>
         </div>
-        {(onAcceptanceChange || onGenerateMeet) && (
-          <div className="flex w-full shrink-0 flex-col gap-3 sm:w-[180px]">
+        {(onAcceptanceChange || onGenerateMeet || actions) && (
+          <div className="flex w-full shrink-0 flex-col gap-3 sm:w-[200px]">
+            {actions && (
+              <div className="flex justify-end">{actions}</div>
+            )}
             {onAcceptanceChange && (
               <Select
                 value={acceptance}
@@ -194,16 +225,32 @@ export function SeriesHeader({
                         <ExternalLink className="h-3 w-3 opacity-60" />
                       </a>
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      disabled={meetDisabled || meetPending}
-                      onClick={onGenerateMeet}
-                    >
-                      {meetPending ? "Regenerating…" : "Regenerate"}
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="flex-1 gap-1.5"
+                        onClick={copyMeetLink}
+                      >
+                        {copied ? (
+                          <Check className="h-3.5 w-3.5 text-emerald-500" />
+                        ) : (
+                          <Copy className="h-3.5 w-3.5" />
+                        )}
+                        {copied ? "Copied" : "Copy"}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="flex-1"
+                        disabled={meetDisabled || meetPending}
+                        onClick={onGenerateMeet}
+                      >
+                        {meetPending ? "Regenerating…" : "Regenerate"}
+                      </Button>
+                    </div>
                   </>
-                ) : (
+                ) : googleConnected ? (
                   <Button
                     variant="outline"
                     size="sm"
@@ -214,6 +261,22 @@ export function SeriesHeader({
                     <Video className="h-4 w-4" />
                     {meetPending ? "Generating…" : "Generate Meet"}
                   </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    disabled={connectGoogle.isPending}
+                    onClick={() => connectGoogle.mutate()}
+                  >
+                    <PlugZap className="h-4 w-4" />
+                    {connectGoogle.isPending ? "Connecting…" : "Connect Google"}
+                  </Button>
+                )}
+                {!meetLink && !googleConnected && (
+                  <p className="px-1 text-[11px] leading-tight text-muted-foreground">
+                    Connect your Google account to generate a Meet link.
+                  </p>
                 )}
               </div>
             )}
