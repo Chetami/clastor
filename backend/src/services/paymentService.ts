@@ -104,6 +104,7 @@ function computeTotals(
 
 /**
  * List invoices scoped to the authenticated user, with optional filters.
+ * Full-fetch (no pagination) — used by dashboards, mobile, and search.
  */
 export async function listInvoicesFromFirestore(
   userId: string,
@@ -134,6 +135,163 @@ export async function listInvoicesFromFirestore(
     console.error("Failed to list invoices from Firestore:", error);
     throw new Error("Failed to list invoices");
   }
+}
+
+const DEFAULT_INVOICE_PAGE_SIZE = 10;
+
+export interface InvoicePageQuery {
+  status?: InvoiceStatus | "all";
+  limit?: number;
+  cursor?: string;
+}
+
+export interface InvoicePageResult {
+  data: Invoice[];
+  nextCursor: string | null;
+  hasMore: boolean;
+  total: number;
+}
+
+interface InvoiceCursor {
+  v: string;
+  id: string;
+}
+
+const CURSOR_ENCODING = "base64url";
+
+function encodeInvoiceCursor(
+  invoice: Invoice,
+  field: "createdAt" | "dueDate"
+): string {
+  const payload: InvoiceCursor = {
+    v: new Date(invoice[field] as any).toISOString(),
+    id: invoice.id,
+  };
+  return Buffer.from(JSON.stringify(payload), "utf8").toString(CURSOR_ENCODING);
+}
+
+function decodeInvoiceCursor(cursor: string): InvoiceCursor {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(
+      Buffer.from(cursor, CURSOR_ENCODING).toString("utf8")
+    );
+  } catch {
+    throw new Error("Invalid cursor");
+  }
+  if (
+    typeof parsed !== "object" ||
+    parsed === null ||
+    typeof (parsed as InvoiceCursor).v !== "string" ||
+    typeof (parsed as InvoiceCursor).id !== "string"
+  ) {
+    throw new Error("Invalid cursor");
+  }
+  const decoded = parsed as InvoiceCursor;
+  if (Number.isNaN(new Date(decoded.v).getTime())) {
+    throw new Error("Invalid cursor");
+  }
+  return decoded;
+}
+
+/**
+ * Cursor-paginated invoice listing for the payments page.
+ *
+ * Pushes status filtering + limit + orderBy to Firestore so only ~limit
+ * documents are read per page (vs the full collection in
+ * `listInvoicesFromFirestore`).
+ *
+ * Status mapping at the Firestore level:
+ *   - "open"    → where("status","==","open") — naturally includes overdue
+ *                 (overdue is derived from open + past dueDate at read time)
+ *   - "overdue" → where("status","==","open").where("dueDate","<",now),
+ *                 ordered by dueDate ascending (most overdue first)
+ *   - draft/paid/void → exact status match
+ *   - "all"     → no status filter
+ *
+ * Ordering:
+ *   - overdue → dueDate asc + documentId asc
+ *   - everything else → createdAt desc + documentId desc
+ *
+ * Requires composite indexes — see `firestore.indexes.json`.
+ */
+export async function listInvoicesPageFromFirestore(
+  userId: string,
+  role: string,
+  query: InvoicePageQuery
+): Promise<InvoicePageResult> {
+  const firestore = getFirebaseFirestore();
+  const now = admin.firestore.Timestamp.now();
+  const status = query.status ?? "all";
+  const limit = Math.max(
+    1,
+    Math.min(100, Math.floor(query.limit ?? DEFAULT_INVOICE_PAGE_SIZE))
+  );
+
+  let q: admin.firestore.Query = firestore.collection("invoices");
+  if (role === "tutor") {
+    q = q.where("tutorId", "==", userId);
+  } else if (role !== "system_admin") {
+    throw new Error("Invalid role");
+  }
+
+  const isOverdue = status === "overdue";
+  const sortField: "createdAt" | "dueDate" = isOverdue ? "dueDate" : "createdAt";
+  const dir: "asc" | "desc" = isOverdue ? "asc" : "desc";
+
+  if (
+    status === "draft" ||
+    status === "open" ||
+    status === "paid" ||
+    status === "void"
+  ) {
+    q = q.where("status", "==", status);
+  } else if (isOverdue) {
+    q = q
+      .where("status", "==", "open")
+      .where("dueDate", "<", now);
+  }
+
+  // Capture the base filtered query (tutorId + status) for the count
+  // aggregation — Firestore Query objects are immutable, so this snapshot
+  // won't be affected by the orderBy/startAfter/limit we add below.
+  const countQuery = q;
+
+  q = q
+    .orderBy(sortField, dir)
+    .orderBy(admin.firestore.FieldPath.documentId(), dir);
+
+  if (query.cursor) {
+    const cursor = decodeInvoiceCursor(query.cursor);
+    q = q.startAfter(
+      admin.firestore.Timestamp.fromDate(new Date(cursor.v)),
+      cursor.id
+    );
+  }
+
+  // Run the page fetch + total count in parallel. The count() aggregation
+  // costs 1 read per 1000 matched docs (much cheaper than fetching them all).
+  const [snapshot, countSnapshot] = await Promise.all([
+    q.limit(limit + 1).get(),
+    countQuery.count().get(),
+  ]);
+  const docs = snapshot.docs;
+  const total = countSnapshot.data().count;
+
+  const hasMore = docs.length > limit;
+  const pageDocs = hasMore ? docs.slice(0, limit) : docs;
+  const invoices = pageDocs.map((doc) => mapInvoice(doc.id, doc.data()));
+
+  let nextCursor: string | null = null;
+  if (hasMore && pageDocs.length > 0) {
+    const last = pageDocs[pageDocs.length - 1];
+    nextCursor = encodeInvoiceCursor(
+      mapInvoice(last.id, last.data()),
+      sortField
+    );
+  }
+
+  return { data: invoices, nextCursor, hasMore, total };
 }
 
 /**

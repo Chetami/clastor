@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { addMilliseconds, differenceInMilliseconds } from "date-fns";
 import {
   listInvoicesFromFirestore,
+  listInvoicesPageFromFirestore,
   getInvoiceByIdFromFirestore,
   createInvoiceInFirestore,
   updateInvoiceInFirestore,
@@ -78,9 +79,16 @@ function toInvoiceResponse(invoice: Invoice): InvoiceResponse {
 }
 
 /**
- * List invoices. Optional filters via query: status, search, sort, order.
- * Sorting/filtering is applied in memory since invoice volume per tutor is
- * modest; Firestore only filters by ownership.
+ * List invoices. Two modes share this endpoint:
+ *   * Paginated (payments page): `limit` (+ `status`, `cursor`) and no
+ *     `search` — returns one cursor-paginated page reading only ~limit
+ *     documents from Firestore.
+ *   * Unpaginated (search / dashboards / mobile): `search` present or
+ *     `limit` omitted — returns the full matching set with `nextCursor`
+ *     null, filtering/sorting in memory.
+ *
+ * The "open" status filter includes overdue invoices (open invoices whose
+ * dueDate has passed), matching Stripe's behaviour.
  */
 export async function listInvoices(
   req: Request,
@@ -105,20 +113,74 @@ export async function listInvoices(
         ? "tutor"
         : req.user.role;
 
-    const invoices = await listInvoicesFromFirestore(scopeUid, scopeRole);
-
     const status = typeof req.query.status === "string" ? req.query.status : null;
     const search =
       typeof req.query.search === "string"
         ? req.query.search.trim().toLowerCase()
         : "";
+
+    const hasLimit =
+      req.query.limit != null && req.query.limit !== "" &&
+      Number.isFinite(Number(req.query.limit)) && Number(req.query.limit) > 0;
+
+    // ── Paginated path ───────────────────────────────────────────────
+    // Only used when limit is present AND no search (search needs a full
+    // fetch since Firestore can't do full-text search).
+    if (hasLimit && search.length === 0) {
+      const result = await listInvoicesPageFromFirestore(
+        scopeUid,
+        scopeRole,
+        {
+          limit: Math.min(100, Math.floor(Number(req.query.limit))),
+          status: (status as any) ?? "all",
+          cursor:
+            typeof req.query.cursor === "string" && req.query.cursor
+              ? req.query.cursor
+              : undefined,
+        }
+      );
+
+      let data = result.data.map(toInvoiceResponse);
+      if (req.user.role === "system_admin") {
+        const names = await resolveTutorNames(
+          result.data.map((i) => i.tutorId)
+        );
+        data = data.map((r, idx) => {
+          const info = names.get(result.data[idx].tutorId);
+          return {
+            ...r,
+            tutorName: info?.name ?? null,
+            tutorEmail: info?.email ?? null,
+          };
+        });
+      }
+
+      res.status(200).json({
+        data,
+        nextCursor: result.nextCursor,
+        hasMore: result.hasMore,
+        total: result.total,
+      });
+      return;
+    }
+
+    // ── Unpaginated path (search / dashboards / mobile) ──────────────
     const sort =
       typeof req.query.sort === "string" ? req.query.sort : "createdAt";
     const order = req.query.order === "asc" ? "asc" : "desc";
 
+    const invoices = await listInvoicesFromFirestore(scopeUid, scopeRole);
+
     let filtered = invoices;
     if (status && status !== "all") {
-      filtered = filtered.filter((i) => i.status === status);
+      if (status === "open") {
+        // "open" includes overdue (overdue is derived from open + past due)
+        filtered = filtered.filter(
+          (i) => i.status === "open" || i.status === "overdue"
+        );
+      } else {
+        filtered = filtered.filter((i) => i.status === status);
+      }
     }
     if (search.length > 0) {
       filtered = filtered.filter(
@@ -156,9 +218,9 @@ export async function listInvoices(
     // render a "Tutor" column. Skipped for the tutor's own (single-tutor) view.
     let data = filtered.map(toInvoiceResponse);
     if (req.user.role === "system_admin") {
-      const names = await resolveTutorNames(invoices.map((i) => i.tutorId));
+      const names = await resolveTutorNames(filtered.map((i) => i.tutorId));
       data = data.map((r, idx) => {
-        const info = names.get(invoices[idx].tutorId);
+        const info = names.get(filtered[idx].tutorId);
         return {
           ...r,
           tutorName: info?.name ?? null,
@@ -170,6 +232,8 @@ export async function listInvoices(
     const response: InvoiceListResponse = {
       data,
       total: filtered.length,
+      nextCursor: null,
+      hasMore: false,
     };
 
     res.status(200).json(response);
@@ -810,6 +874,8 @@ export async function getStudentInvoices(
     const response: InvoiceListResponse = {
       data: invoices.map(toInvoiceResponse),
       total: invoices.length,
+      nextCursor: null,
+      hasMore: false,
     };
 
     res.status(200).json(response);

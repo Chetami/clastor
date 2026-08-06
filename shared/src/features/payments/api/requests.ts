@@ -15,6 +15,8 @@ export interface ListInvoicesParams {
   search?: string;
   sort?: string;
   order?: "asc" | "desc";
+  limit?: number;
+  cursor?: string;
 }
 
 export async function listInvoicesRequest(
