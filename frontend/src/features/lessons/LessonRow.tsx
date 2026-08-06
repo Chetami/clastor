@@ -36,17 +36,7 @@ import {
   lessonBadge,
 } from "@/features/lessons/lesson-display";
 import { lessonIssues, ACCEPTANCE_TONE } from "./lesson-series-utils";
-
-const ATTENDANCE_LABELS: Record<AttendanceStatus, string> = {
-  present: "present",
-  present_late: "late",
-  absent_no_makeup: "absent",
-  absent_makeup_issued: "absent (makeup issued)",
-  absent_warning: "absent (warning)",
-  tutor_cancelled: "tutor cancelled",
-  tutor_cancelled_makeup_issued: "tutor cancelled (makeup issued)",
-  unrecorded: "unrecorded",
-};
+import { ATTENDANCE_LABELS } from "@/features/schedule/lesson-utils";
 
 export interface LessonRowProps {
   lesson: LessonResponse;
