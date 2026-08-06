@@ -153,7 +153,7 @@ export function EmailComposeDialog({
             <Loader2 className="h-5 w-4 animate-spin text-muted-foreground" />
           </div>
         ) : (
-          <div className="flex flex-1 flex-col gap-4 overflow-y-auto pr-1">
+          <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-1">
             <div className="grid grid-cols-3 gap-3">
               <div className="min-w-0 space-y-1">
                 <Label className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
