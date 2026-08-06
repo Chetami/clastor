@@ -327,7 +327,7 @@ export default function Schedule() {
           allDaySlot={false}
           scrollTimeReset={false}
           nowIndicator
-          selectable
+          selectable={!eventPopoverOpen}
           selectMirror
           editable
           headerToolbar={false}
