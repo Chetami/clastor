@@ -6,6 +6,10 @@ import {
   getMeetInvitePreview,
   getReschedulePreview,
   getCancellationPreview,
+  getSeriesNotificationPreview,
+  getSeriesReschedulePreview,
+  getSeriesCancellationPreview,
+  getInvoiceEmailPreview,
 } from "../controllers/templateController";
 import { authenticateJWT, requireRole } from "../middleware/auth";
 
@@ -24,5 +28,9 @@ router.get("/lesson-reminder/preview", getLessonReminderPreview);
 router.get("/meet-invite/preview", getMeetInvitePreview);
 router.get("/reschedule/preview", getReschedulePreview);
 router.get("/cancellation/preview", getCancellationPreview);
+router.get("/series-notification/preview", getSeriesNotificationPreview);
+router.get("/series-reschedule/preview", getSeriesReschedulePreview);
+router.get("/series-cancellation/preview", getSeriesCancellationPreview);
+router.get("/invoice-email/preview", getInvoiceEmailPreview);
 
 export default router;

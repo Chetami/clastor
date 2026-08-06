@@ -11,6 +11,10 @@ import {
   previewMeetInvite,
   previewReschedule,
   previewCancellation,
+  previewSeriesNotification,
+  previewSeriesReschedule,
+  previewSeriesCancellation,
+  previewInvoiceEmail,
 } from "../services/templateService";
 
 /**
@@ -127,6 +131,86 @@ export async function getCancellationPreview(
         ? error.message
         : "Failed to render cancellation preview";
     console.error("getCancellationPreview error:", error);
+    res.status(500).json({ message });
+  }
+}
+
+/**
+ * GET /api/templates/series-notification/preview
+ * Render the upcoming-lessons summary email against sample data.
+ */
+export async function getSeriesNotificationPreview(
+  req: Request,
+  res: Response<EmailTemplatePreview | ApiError>,
+): Promise<void> {
+  try {
+    res.status(200).json(await previewSeriesNotification(req.user?.uid));
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Failed to render upcoming lessons preview";
+    console.error("getSeriesNotificationPreview error:", error);
+    res.status(500).json({ message });
+  }
+}
+
+/**
+ * GET /api/templates/series-reschedule/preview
+ * Render the series schedule-update email against sample data.
+ */
+export async function getSeriesReschedulePreview(
+  req: Request,
+  res: Response<EmailTemplatePreview | ApiError>,
+): Promise<void> {
+  try {
+    res.status(200).json(await previewSeriesReschedule(req.user?.uid));
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Failed to render series schedule update preview";
+    console.error("getSeriesReschedulePreview error:", error);
+    res.status(500).json({ message });
+  }
+}
+
+/**
+ * GET /api/templates/series-cancellation/preview
+ * Render the series cancellation email against sample data.
+ */
+export async function getSeriesCancellationPreview(
+  req: Request,
+  res: Response<EmailTemplatePreview | ApiError>,
+): Promise<void> {
+  try {
+    res.status(200).json(await previewSeriesCancellation(req.user?.uid));
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Failed to render series cancellation preview";
+    console.error("getSeriesCancellationPreview error:", error);
+    res.status(500).json({ message });
+  }
+}
+
+/**
+ * GET /api/templates/invoice-email/preview
+ * Render the invoice email (subject + body + pay button) against sample data.
+ */
+export async function getInvoiceEmailPreview(
+  req: Request,
+  res: Response<EmailTemplatePreview | ApiError>,
+): Promise<void> {
+  try {
+    res.status(200).json(await previewInvoiceEmail(req.user?.uid));
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Failed to render invoice email preview";
+    console.error("getInvoiceEmailPreview error:", error);
     res.status(500).json({ message });
   }
 }

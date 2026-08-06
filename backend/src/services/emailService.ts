@@ -6,6 +6,11 @@ import {
 } from "../config/email";
 import type { Invoice } from "@examify-tms/interfaces";
 import { formatInTimeZone } from "date-fns-tz";
+import {
+  renderEmailTemplate,
+  subjectNamePart,
+  subjectPart,
+} from "./emailTemplateStore";
 
 /**
  * The fully-rendered content of an outbound email, returned by every `send*`
@@ -98,9 +103,10 @@ export function defaultLessonMessage(
   studentName: string,
   reason?: "reminder" | "reschedule",
 ): string {
-  return reason === "reschedule"
-    ? `Hi ${studentName},\n\nThe time for our upcoming lesson has changed. The updated details are below.`
-    : `Hi ${studentName},\n\nThis is a reminder about our upcoming lesson.`;
+  return renderEmailTemplate(
+    reason === "reschedule" ? "reschedule" : "lesson-reminder",
+    { studentName },
+  ).body;
 }
 
 /** Default subject line for a lesson notification (without override). */
@@ -110,9 +116,14 @@ export function defaultLessonSubject(
     "subject" | "tutorName" | "startDateTime" | "timezone" | "reason"
   >,
 ): string {
-  const prefix =
-    input.reason === "reschedule" ? "Lesson time updated" : "Lesson reminder";
-  return `${prefix}${input.subject ? `: ${input.subject}` : ""} with ${input.tutorName} on ${formatStart(input.startDateTime, input.timezone)}`;
+  return renderEmailTemplate(
+    input.reason === "reschedule" ? "reschedule" : "lesson-reminder",
+    {
+      subjectPart: subjectPart(input.subject),
+      tutorName: input.tutorName,
+      start: formatStart(input.startDateTime, input.timezone),
+    },
+  ).subject;
 }
 
 /**
@@ -157,7 +168,7 @@ export function buildLessonNotificationHtml(input: LessonNotificationInput): str
   const greeting =
     input.message && input.message.trim().length > 0
       ? escapeHtml(input.message.trim())
-      : `Hi ${escapeHtml(input.studentName)},<br><br>This is a reminder about our upcoming lesson.`;
+      : escapeHtml(defaultLessonMessage(input.studentName, input.reason));
 
   const end = new Date(input.startDateTime.getTime() + input.durationMinutes * 60_000);
   const timeRange = `${formatTime(input.startDateTime, input.timezone)} – ${formatTime(end, input.timezone)}`;
@@ -295,7 +306,7 @@ export interface LessonCancellationInput {
 
 /** Default cancellation greeting when no custom message is supplied. */
 export function defaultLessonCancellationMessage(studentName: string): string {
-  return `Hi ${studentName},\n\nUnfortunately, our upcoming lesson has been cancelled.`;
+  return renderEmailTemplate("cancellation", { studentName }).body;
 }
 
 /** Default subject line for a lesson cancellation (without override). */
@@ -305,9 +316,11 @@ export function defaultLessonCancellationSubject(
     "subject" | "tutorName" | "startDateTime" | "timezone"
   >,
 ): string {
-  return `Lesson cancelled${
-    input.subject ? `: ${input.subject}` : ""
-  } with ${input.tutorName} on ${formatStart(input.startDateTime, input.timezone)}`;
+  return renderEmailTemplate("cancellation", {
+    subjectPart: subjectPart(input.subject),
+    tutorName: input.tutorName,
+    start: formatStart(input.startDateTime, input.timezone),
+  }).subject;
 }
 
 /**
@@ -352,9 +365,7 @@ export function buildLessonCancellationHtml(
   const greeting =
     input.message && input.message.trim().length > 0
       ? escapeHtml(input.message.trim())
-      : `Hi ${escapeHtml(
-          input.studentName,
-        )},<br><br>Unfortunately, our upcoming lesson has been cancelled.`;
+      : escapeHtml(defaultLessonCancellationMessage(input.studentName));
 
   const rows = [
     ...(input.subject ? [["Subject", escapeHtml(input.subject)]] : []),
@@ -468,14 +479,20 @@ export function defaultSeriesRescheduleMessage(
   studentName: string,
   subject: string | null,
 ): string {
-  return `Hi ${studentName},\n\nThe schedule for our recurring${subject ? ` ${subject}` : ""} lessons has changed. Here's your new schedule.`;
+  return renderEmailTemplate("series-reschedule", {
+    studentName,
+    subjectNamePart: subjectNamePart(subject),
+  }).body;
 }
 
 /** Default subject line for the series-reschedule summary email. */
 export function defaultSeriesRescheduleSubject(
   input: Pick<SeriesRescheduleEmailInput, "subject" | "tutorName">,
 ): string {
-  return `Schedule updated${input.subject ? `: ${input.subject}` : ""} with ${input.tutorName}`;
+  return renderEmailTemplate("series-reschedule", {
+    subjectPart: subjectPart(input.subject),
+    tutorName: input.tutorName,
+  }).subject;
 }
 
 /** Render the full series-reschedule summary email content without sending. */
@@ -560,16 +577,21 @@ export function defaultSeriesCancellationMessage(
   subject: string | null,
   count: number,
 ): string {
-  return `Hi ${studentName},\n\nOur recurring${subject ? ` ${subject}` : ""} lessons have been cancelled. The following upcoming ${count === 1 ? "lesson has" : `lessons have`} been removed:`;
+  return renderEmailTemplate("series-cancellation", {
+    studentName,
+    subjectNamePart: subjectNamePart(subject),
+    countPhrase: count === 1 ? "lesson has" : "lessons have",
+  }).body;
 }
 
 /** Default subject line for the series-cancellation summary email. */
 export function defaultSeriesCancellationSubject(
   input: Pick<SeriesCancellationEmailInput, "subject" | "tutorName">,
 ): string {
-  return `Recurring lessons cancelled${
-    input.subject ? `: ${input.subject}` : ""
-  } with ${input.tutorName}`;
+  return renderEmailTemplate("series-cancellation", {
+    subjectPart: subjectPart(input.subject),
+    tutorName: input.tutorName,
+  }).subject;
 }
 
 /** Render the full series-cancellation summary email content without sending. */
@@ -667,16 +689,20 @@ export function defaultSeriesNotificationMessage(
   studentName: string,
   tutorName: string,
 ): string {
-  return `Hi ${studentName},\n\nHere are all your upcoming lessons with ${tutorName}.`;
+  return renderEmailTemplate("series-notification", {
+    studentName,
+    tutorName,
+  }).body;
 }
 
 /** Default subject line for the series summary email. */
 export function defaultSeriesNotificationSubject(
   input: Pick<SeriesNotificationEmailInput, "subject" | "tutorName">,
 ): string {
-  return `Upcoming lessons${
-    input.subject ? `: ${input.subject}` : ""
-  } with ${input.tutorName}`;
+  return renderEmailTemplate("series-notification", {
+    subjectPart: subjectPart(input.subject),
+    tutorName: input.tutorName,
+  }).subject;
 }
 
 /** Render the full series-summary email content without sending. */
@@ -791,15 +817,28 @@ export function defaultInvoiceSubject(
   invoice: Invoice,
   fromName: string,
 ): string {
-  return `Invoice ${invoice.invoiceNumber} from ${fromName}`;
+  return renderEmailTemplate("invoice", {
+    invoiceNumber: invoice.invoiceNumber,
+    fromName,
+  }).subject;
 }
 
 /** Default greeting body for an invoice email. */
 export function defaultInvoiceMessage(
   customerName: string,
+  invoice: Invoice,
   fromName: string,
+  paymentUrl?: string,
 ): string {
-  return `Hi ${customerName},\n\nThank you for your business. Please find your invoice attached. Let me know if you have any questions.\n\nThank you,\n${fromName}`;
+  return renderEmailTemplate("invoice", {
+    customerName,
+    invoiceNumber: invoice.invoiceNumber,
+    total: formatCurrency(invoice.total, invoice.currency),
+    payLineText: paymentUrl
+      ? `You can pay securely online with a card here: ${paymentUrl}\n\n`
+      : "",
+    fromName,
+  }).body;
 }
 
 /**
@@ -848,21 +887,37 @@ export function buildInvoiceEmailContent(input: InvoiceEmailInput): SentEmailCon
     return { subject, text, html };
   }
 
-  const text =
-    `Hi ${invoice.customerName},\n\n` +
-    `Please find your invoice ${invoice.invoiceNumber} attached. ` +
-    `The amount due is ${total}.\n\n` +
-    payLineText +
-    `Thank you,\n${fromName}`;
+  const defaultValues = {
+    customerName: invoice.customerName,
+    invoiceNumber: invoice.invoiceNumber,
+    total,
+    fromName,
+  };
+
+  const text = renderEmailTemplate("invoice", {
+    ...defaultValues,
+    payLineText,
+  }).body;
+
+  // HTML greeting derives from the same template (pay line is "" — the HTML
+  // version uses the Pay button). Wrap the invoice number + amount in <strong>
+  // for emphasis.
+  const renderedHtmlGreeting = escapeHtml(
+    renderEmailTemplate("invoice", {
+      ...defaultValues,
+      payLineText: "",
+    }).body,
+  )
+    .replace(
+      escapeHtml(invoice.invoiceNumber),
+      `<strong>${escapeHtml(invoice.invoiceNumber)}</strong>`,
+    )
+    .replace(escapeHtml(total), `<strong>${escapeHtml(total)}</strong>`);
 
   const html =
     `<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#111827;line-height:1.5">` +
-    `<p style="margin:0 0 12px 0">Hi ${escapeHtml(invoice.customerName)},</p>` +
-    `<p style="margin:0 0 12px 0">Please find your invoice ` +
-    `<strong>${escapeHtml(invoice.invoiceNumber)}</strong> attached. ` +
-    `The amount due is <strong>${escapeHtml(total)}</strong>.</p>` +
+    `<p style="margin:0 0 12px 0;white-space:pre-line">${renderedHtmlGreeting}</p>` +
     payButtonHtml +
-    `<p style="margin:0 0 12px 0">Thank you,<br>${escapeHtml(fromName)}</p>` +
     `</div>`;
 
   return { subject, text, html };

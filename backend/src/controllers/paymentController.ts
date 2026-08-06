@@ -495,7 +495,12 @@ export async function previewSendInvoice(
       text: content.text,
       html: content.html,
       defaultSubject: defaultInvoiceSubject(invoice, fromName),
-      defaultMessage: defaultInvoiceMessage(invoice.customerName, fromName),
+      defaultMessage: defaultInvoiceMessage(
+        invoice.customerName,
+        invoice,
+        fromName,
+        paymentUrl,
+      ),
     });
   } catch (error) {
     console.error("Preview send invoice failed:", error);

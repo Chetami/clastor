@@ -3,6 +3,7 @@ required:
   - id
   - name
   - type
+  - group
   - description
 properties:
   id:
@@ -17,6 +18,12 @@ properties:
     example: Invoice
   type:
     $ref: '../TemplateType.yaml'
+  group:
+    type: string
+    description: >-
+      Display group the template belongs to, used to section the gallery
+      (e.g. "Lessons", "Recurring series", "Invoices").
+    example: Invoices
   description:
     type: string
     description: Short explanation of when this template is sent.

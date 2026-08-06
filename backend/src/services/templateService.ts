@@ -13,8 +13,17 @@ import {
   buildLessonCancellationSubject,
   buildLessonCancellationBody,
   buildLessonCancellationHtml,
+  buildSeriesRescheduleContent,
+  buildSeriesCancellationContent,
+  buildSeriesNotificationContent,
+  buildInvoiceEmailContent,
   type LessonNotificationInput,
   type LessonCancellationInput,
+  type SeriesRescheduleEmailInput,
+  type SeriesCancellationEmailInput,
+  type SeriesNotificationEmailInput,
+  type SeriesNotificationLesson,
+  type InvoiceEmailInput,
 } from "./emailService";
 import { buildLessonInvite, buildLessonCancellation } from "./icalService";
 
@@ -31,16 +40,10 @@ import { buildLessonInvite, buildLessonCancellation } from "./icalService";
 
 export const TEMPLATE_LIST: TemplateSummary[] = [
   {
-    id: "invoice",
-    name: "Invoice",
-    type: "pdf",
-    description:
-      "PDF attached to the invoice email sent to a parent or billing contact.",
-  },
-  {
     id: "lesson-reminder",
     name: "Lesson reminder",
     type: "email",
+    group: "Lessons",
     description:
       "Reminder emailed to a student before a lesson, with the lesson details.",
   },
@@ -48,6 +51,7 @@ export const TEMPLATE_LIST: TemplateSummary[] = [
     id: "meet-invite",
     name: "Google Meet invite",
     type: "email",
+    group: "Lessons",
     description:
       "Lesson reminder that also carries a calendar invite with a Google Meet link and RSVP buttons.",
   },
@@ -55,6 +59,7 @@ export const TEMPLATE_LIST: TemplateSummary[] = [
     id: "reschedule",
     name: "Reschedule notice",
     type: "email",
+    group: "Lessons",
     description:
       "Sent automatically when you reschedule a lesson with “notify student” on — an updated invite with the new time.",
   },
@@ -62,8 +67,49 @@ export const TEMPLATE_LIST: TemplateSummary[] = [
     id: "cancellation",
     name: "Cancellation notice",
     type: "email",
+    group: "Lessons",
     description:
       "Sent when you cancel a lesson and choose to notify the student — removes the event from their calendar.",
+  },
+  {
+    id: "series-notification",
+    name: "Upcoming lessons summary",
+    type: "email",
+    group: "Recurring series",
+    description:
+      "Summary email listing all upcoming lessons in a recurring series at once.",
+  },
+  {
+    id: "series-reschedule",
+    name: "Series schedule update",
+    type: "email",
+    group: "Recurring series",
+    description:
+      "Sent when a recurring lesson schedule changes — shows the new time slots and cadence.",
+  },
+  {
+    id: "series-cancellation",
+    name: "Series cancellation",
+    type: "email",
+    group: "Recurring series",
+    description:
+      "Sent when recurring lessons are cancelled — lists every upcoming date removed.",
+  },
+  {
+    id: "invoice",
+    name: "Invoice",
+    type: "pdf",
+    group: "Invoices",
+    description:
+      "PDF attached to the invoice email sent to a parent or billing contact.",
+  },
+  {
+    id: "invoice-email",
+    name: "Invoice email",
+    type: "email",
+    group: "Invoices",
+    description:
+      "The email message that accompanies an invoice, with the amount due and a pay-online button.",
   },
 ];
 
@@ -304,11 +350,12 @@ export async function previewReschedule(
   const timezone = await loadTutorTimezone(tutorUid);
   const { input, ics } = sampleLessonInput({ withMeet: true, timezone });
   // Mirrors dispatchLessonNotification({ reason: "reschedule" }): the subject
-  // becomes "Lesson time updated" and the greeting notes the time change.
+  // becomes "Lesson time updated" and a null message lets the template store
+  // supply the reschedule-appropriate default greeting.
   const rescheduleInput: LessonNotificationInput = {
     ...input,
     reason: "reschedule",
-    message: `Hi ${input.studentName},\n\nThe time for our upcoming lesson has changed. The updated details are below.`,
+    message: null,
   };
   return {
     subject: buildLessonNotificationSubject(rescheduleInput),
@@ -357,4 +404,116 @@ export async function previewCancellation(
     html: buildLessonCancellationHtml(cancelInput),
     ics: icsContent,
   };
+}
+
+// ---- Series-level email previews ------------------------------------------
+
+/** Sample recurring-slot used by the series previews. */
+const SAMPLE_SLOTS = [{ dayOfWeek: "monday", timeOfDay: "16:00" }];
+
+/**
+ * Build a handful of upcoming occurrences from the sample weekly slot so the
+ * series-summary preview has realistic, fresh dates in the tutor's timezone.
+ */
+function sampleUpcomingLessons(
+  count: number,
+  intervalWeeks: number,
+  timezone: string | null,
+): SeriesNotificationLesson[] {
+  const start = nextWeekdayAt(1, 16, 0); // next Monday 4 PM
+  const lessons: SeriesNotificationLesson[] = [];
+  for (let i = 0; i < count; i++) {
+    lessons.push({
+      startDateTime: new Date(start.getTime() + i * intervalWeeks * 7 * 24 * 60 * 60 * 1000),
+      durationMinutes: 60,
+      location: SAMPLE_MEET_LINK,
+    });
+  }
+  return lessons;
+}
+
+export async function previewSeriesNotification(
+  tutorUid?: string,
+): Promise<EmailTemplatePreview> {
+  const timezone = await loadTutorTimezone(tutorUid);
+  const lessons = sampleUpcomingLessons(4, 1, timezone);
+  const input: SeriesNotificationEmailInput = {
+    to: SAMPLE_STUDENT.email,
+    studentName: SAMPLE_STUDENT.name,
+    tutorName: SAMPLE_TUTOR.name,
+    tutorEmail: SAMPLE_TUTOR.email,
+    subject: SAMPLE_SUBJECT,
+    timezone: timezone ?? null,
+    lessons,
+  };
+  const content = buildSeriesNotificationContent(input);
+  return { ...content, ics: null };
+}
+
+export async function previewSeriesReschedule(
+  tutorUid?: string,
+): Promise<EmailTemplatePreview> {
+  const timezone = await loadTutorTimezone(tutorUid);
+  const input: SeriesRescheduleEmailInput = {
+    to: SAMPLE_STUDENT.email,
+    studentName: SAMPLE_STUDENT.name,
+    tutorName: SAMPLE_TUTOR.name,
+    tutorEmail: SAMPLE_TUTOR.email,
+    subject: SAMPLE_SUBJECT,
+    timezone: timezone ?? null,
+    slots: SAMPLE_SLOTS,
+    intervalWeeks: 1,
+    firstUpcoming: nextWeekdayAt(1, 16, 0),
+  };
+  const content = buildSeriesRescheduleContent(input);
+  return { ...content, ics: null };
+}
+
+export async function previewSeriesCancellation(
+  tutorUid?: string,
+): Promise<EmailTemplatePreview> {
+  const timezone = await loadTutorTimezone(tutorUid);
+  const input: SeriesCancellationEmailInput = {
+    to: SAMPLE_STUDENT.email,
+    studentName: SAMPLE_STUDENT.name,
+    tutorName: SAMPLE_TUTOR.name,
+    tutorEmail: SAMPLE_TUTOR.email,
+    subject: SAMPLE_SUBJECT,
+    timezone: timezone ?? null,
+    removedDates: sampleUpcomingLessons(4, 1, timezone).map((l) => l.startDateTime),
+  };
+  const content = buildSeriesCancellationContent(input);
+  return { ...content, ics: null };
+}
+
+// ---- Invoice email preview -------------------------------------------------
+
+const SAMPLE_PAYMENT_URL = "https://pay.stripe.com/in/sample-cls-0001";
+
+export async function previewInvoiceEmail(
+  tutorUid?: string,
+): Promise<EmailTemplatePreview> {
+  let tutorName = SAMPLE_TUTOR.name;
+  let tutorEmail = SAMPLE_TUTOR.email;
+
+  if (tutorUid) {
+    try {
+      const tutor = await getUserFromFirestore(tutorUid);
+      tutorName = tutor.name;
+      tutorEmail = tutor.email;
+    } catch (error) {
+      console.error("previewInvoiceEmail: failed to load tutor, using fallback:", error);
+    }
+  }
+
+  const invoice = sampleInvoice();
+  const input: InvoiceEmailInput = {
+    to: SAMPLE_STUDENT.parentEmail ?? SAMPLE_STUDENT.email,
+    invoice,
+    tutorName,
+    tutorEmail,
+    paymentUrl: SAMPLE_PAYMENT_URL,
+  };
+  const content = buildInvoiceEmailContent(input);
+  return { ...content, ics: null };
 }

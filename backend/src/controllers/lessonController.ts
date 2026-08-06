@@ -898,16 +898,11 @@ async function dispatchLessonNotification(
     attendee: { name: student.name, email: student.email },
   });
 
-  // An explicit message always wins; otherwise use a reason-appropriate
-  // default. A null message lets the email service render its own reminder
-  // greeting.
-  let message = opts.message ?? null;
-  if (!message || message.trim().length === 0) {
-    message =
-      opts.reason === "reschedule"
-        ? `Hi ${student.name},\n\nThe time for our upcoming lesson has changed. The updated details are below.`
-        : null;
-  }
+  // An explicit message always wins; otherwise a null message lets the email
+  // service render its own reason-aware greeting (reminder / reschedule) from
+  // the template store.
+  const message =
+    opts.message && opts.message.trim().length > 0 ? opts.message.trim() : null;
 
   try {
     const content = await sendLessonNotification({
