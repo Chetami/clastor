@@ -74,7 +74,7 @@ import { resolveTutorNames } from "../services/tutorResolver";
  * Convert a Lesson (Date-typed) to a LessonResponse (ISO string-typed),
  * excluding tutorId.
  */
-function toLessonResponse(lesson: Lesson): LessonResponse {
+export function toLessonResponse(lesson: Lesson): LessonResponse {
   const toIso = (v: any) =>
     v instanceof Date ? v.toISOString() : v;
   return {

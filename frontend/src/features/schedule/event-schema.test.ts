@@ -2,6 +2,8 @@ import { describe, it, expect } from "vitest";
 import {
   minutesBetween,
   timePlusMinutes,
+  intervalWeeksFor,
+  formatTime12h,
   eventFormSchema,
   toCreateLessonRequest,
   toCreateRecurringLessonRequest,
@@ -58,6 +60,37 @@ describe("timePlusMinutes", () => {
   it("wraps past midnight", () => {
     expect(timePlusMinutes("23:30", 60)).toBe("00:30");
   });
+
+  it("leaves the time unchanged for zero minutes", () => {
+    expect(timePlusMinutes("09:00", 0)).toBe("09:00");
+  });
+
+  it("advances by exactly one hour", () => {
+    expect(timePlusMinutes("09:00", 60)).toBe("10:00");
+  });
+});
+
+describe("intervalWeeksFor", () => {
+  it("maps each cadence to its week interval", () => {
+    expect(intervalWeeksFor("weekly")).toBe(1);
+    expect(intervalWeeksFor("biweekly")).toBe(2);
+    expect(intervalWeeksFor("monthly")).toBe(4);
+    // "none" isn't a real cadence but falls back to 1.
+    expect(intervalWeeksFor("none")).toBe(1);
+  });
+});
+
+describe("formatTime12h", () => {
+  it("formats morning times with AM", () => {
+    expect(formatTime12h("09:05")).toBe("9:05 AM");
+    expect(formatTime12h("00:00")).toBe("12:00 AM");
+  });
+
+  it("formats afternoon/evening times with PM", () => {
+    expect(formatTime12h("12:00")).toBe("12:00 PM");
+    expect(formatTime12h("13:30")).toBe("1:30 PM");
+    expect(formatTime12h("23:59")).toBe("11:59 PM");
+  });
 });
 
 describe("eventFormSchema — one-off", () => {
@@ -79,6 +112,10 @@ describe("eventFormSchema — one-off", () => {
         res.error.issues.some((i) => i.path[0] === "durationMinutes"),
       ).toBe(true);
     }
+  });
+
+  it("rejects a negative duration", () => {
+    expect(parse({ ...validOneOff, durationMinutes: -10 }).success).toBe(false);
   });
 
   it("does not require a time window for a recurring series", () => {
@@ -126,6 +163,23 @@ describe("eventFormSchema — recurring", () => {
         res.error.issues.some((i) => i.path[0] === "occurrenceCount"),
       ).toBe(true);
     }
+  });
+
+  it("accepts a complete count-mode series", () => {
+    const res = parse({
+      ...recurringBase(),
+      endsMode: "count",
+      occurrenceCount: 10,
+    });
+    expect(res.success).toBe(true);
+  });
+
+  it("rejects an invalid day-of-week on a slot", () => {
+    const res = parse({
+      ...recurringBase(),
+      slots: [{ dayOfWeek: "funday" as unknown as string, timeOfDay: "09:00" }],
+    });
+    expect(res.success).toBe(false);
   });
 });
 
@@ -240,6 +294,40 @@ describe("estimateOccurrenceCount", () => {
     // ~4 on-weeks × 2 slots.
     expect(estimateOccurrenceCount(parsed)).toBeGreaterThanOrEqual(8);
   });
+
+  it("halves the estimate for a fortnightly cadence", () => {
+    const weekly = eventFormSchema.parse({
+      ...validOneOff,
+      date: "2026-01-05",
+      repeat: "weekly",
+      slots: [{ dayOfWeek: "monday", timeOfDay: "09:00" }],
+      durationMinutes: 60,
+      endsMode: "until",
+      endDate: "2026-03-30",
+    });
+    const biweekly = eventFormSchema.parse({
+      ...weekly,
+      repeat: "biweekly",
+    });
+    const weeklyCount = estimateOccurrenceCount(weekly);
+    const biweeklyCount = estimateOccurrenceCount(biweekly);
+    expect(weeklyCount).not.toBeNull();
+    expect(biweeklyCount).not.toBeNull();
+    expect(biweeklyCount!).toBeLessThan(weeklyCount!);
+  });
+
+  it("returns null when the end date is before the start", () => {
+    const parsed = eventFormSchema.parse({
+      ...validOneOff,
+      date: "2026-02-01",
+      repeat: "weekly",
+      slots: recurringSlots,
+      durationMinutes: 60,
+      endsMode: "until",
+      endDate: "2026-01-01",
+    });
+    expect(estimateOccurrenceCount(parsed)).toBeNull();
+  });
 });
 
 describe("describeRecurrence", () => {
@@ -263,6 +351,49 @@ describe("describeRecurrence", () => {
     expect(summary).toContain("60 min each");
   });
 
+  it("handles a single slot", () => {
+    const parsed = eventFormSchema.parse({
+      ...validOneOff,
+      date: "2026-01-05",
+      repeat: "weekly",
+      slots: [{ dayOfWeek: "friday", timeOfDay: "16:00" }],
+      durationMinutes: 45,
+      endsMode: "until",
+      endDate: "2026-12-31",
+    });
+    const summary = describeRecurrence(parsed);
+    expect(summary).toContain("Friday 4:00 PM");
+    expect(summary).toContain("45 min each");
+    // No stray comma-joiners for a single slot.
+    expect(summary).not.toContain("&");
+  });
+
+  it("uses the fortnightly cadence label", () => {
+    const parsed = eventFormSchema.parse({
+      ...validOneOff,
+      date: "2026-01-05",
+      repeat: "biweekly",
+      slots: [{ dayOfWeek: "monday", timeOfDay: "09:00" }],
+      durationMinutes: 60,
+      endsMode: "until",
+      endDate: "2026-12-31",
+    });
+    expect(describeRecurrence(parsed)).toContain("Every 2 weeks");
+  });
+
+  it("restates a count-bounded series", () => {
+    const parsed = eventFormSchema.parse({
+      ...validOneOff,
+      date: "2026-01-05",
+      repeat: "weekly",
+      slots: [{ dayOfWeek: "monday", timeOfDay: "09:00" }],
+      durationMinutes: 60,
+      endsMode: "count",
+      occurrenceCount: 10,
+    });
+    expect(describeRecurrence(parsed)).toContain("for 10 lessons");
+  });
+
   it("returns an empty string for a one-off", () => {
     expect(describeRecurrence(eventFormSchema.parse(validOneOff))).toBe("");
   });
@@ -279,6 +410,11 @@ describe("describeOneOff", () => {
     expect(summary).toContain("4:00 PM");
     expect(summary).toContain("5:00 PM");
     expect(summary).toContain("60 min");
+  });
+
+  it("includes the year so the date is unambiguous", () => {
+    const parsed = eventFormSchema.parse(validOneOff);
+    expect(describeOneOff(parsed)).toContain("2026");
   });
 
   it("returns an empty string when the start time is missing", () => {
