@@ -12,6 +12,12 @@ examify-tms/
 │       ├── user/            # User-related schemas (YAML)
 │       ├── openapi.yaml     # Generated complete spec (not committed)
 │   └── dist/               # Generated type declarations (not committed)
+├── shared/                   # Shared runtime logic (domain utils, API client, hooks) — frontend + mobile only
+│   └── src/
+│       ├── features/         # Per-feature utils + API/hooks (lessons, payments, students, …)
+│       ├── lib/              # axios client, queryClient, formatters
+│       ├── store/            # Zustand auth store
+│       └── runtime.ts        # configureShared() platform abstraction
 ├── frontend/                 # React SPA (Vite + React Router + shadcn/ui)
 │   └── src/
 │       ├── features/auth/    # Login page, auth services
@@ -33,7 +39,8 @@ examify-tms/
 
 | Layer | Technology |
 |-------|------------|
-| Shared | YAML-based TypeScript interfaces (auto-generated via build script) |
+| Shared types | `@examify-tms/interfaces` — YAML-based TypeScript types (auto-generated); consumed by every package |
+| Shared logic | `@examify-tms/shared` — runtime domain utils, API client, React Query hooks; consumed by frontend + mobile only |
 | Frontend | React 18, Vite, React Router, shadcn/ui, TypeScript |
 | Backend | Node.js, Express, TypeScript, Firebase Admin SDK |
 | Auth | Firebase Authentication, JWT (jsonwebtoken) |
@@ -59,7 +66,13 @@ From the root directory:
 npm install
 ```
 
-This will install dependencies for all packages (interfaces, backend, frontend).
+This will install dependencies for all packages (interfaces, shared, backend, frontend, mobile, website).
+
+> **Two shared packages:** `@examify-tms/interfaces` holds **types only**
+> (generated from OpenAPI YAML, used by every package), while
+> `@examify-tms/shared` holds **runtime logic** (domain utils, the axios API
+> client, Zustand store, React Query hooks — used by the frontend and mobile
+> clients only). Don't confuse the two; the backend does not depend on `shared`.
 
 ### 2. Configure Environment Variables
 
