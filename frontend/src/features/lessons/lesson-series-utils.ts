@@ -51,7 +51,7 @@ export function formatRange(startDate: string, until: string | null): string {
 export type LessonIssue =
   /** Past lesson whose attendance is still "unrecorded". */
   | { kind: "attendance"; label: "Attendance not recorded" }
-  /** Past, uninvoiced (and unpaid) lesson. */
+  /** Past lesson with no invoice opened yet (still needs invoicing). */
   | { kind: "unpaid"; label: "Unpaid" };
 
 /**
@@ -66,7 +66,10 @@ export function lessonIssues(lesson: LessonResponse): LessonIssue[] {
   if (lesson.attendanceStatus === "unrecorded") {
     issues.push({ kind: "attendance", label: "Attendance not recorded" });
   }
-  if (!lesson.isPaid) {
+  // Only surface the "Create invoice" nudge when no invoice has been opened
+  // for this lesson yet — once an invoice exists (even unpaid), payment is
+  // tracked on the invoice, not as a lesson issue.
+  if (!lesson.invoiceId && !lesson.isPaid) {
     issues.push({ kind: "unpaid", label: "Unpaid" });
   }
   return issues;
