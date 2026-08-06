@@ -170,4 +170,18 @@ describe("toCreateRecurringLessonRequest", () => {
     expect(req.until).toBeNull();
     expect(req.count).toBe(6);
   });
+
+  it("maps monthly → 4-week interval", () => {
+    const parsed = eventFormSchema.parse({
+      ...validOneOff,
+      repeat: "monthly",
+      selectedDays: ["monday"],
+      slotTimes: { monday: "09:00" },
+      endsMode: "until",
+      endDate: "2026-12-31",
+    });
+    const req = toCreateRecurringLessonRequest(parsed, "UTC");
+    expect(req.intervalWeeks).toBe(4);
+    expect(req.until).toBe("2026-12-31");
+  });
 });

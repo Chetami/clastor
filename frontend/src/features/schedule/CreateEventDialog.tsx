@@ -5,7 +5,6 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -19,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useListStudents } from "@/features/students/api";
 import { useSubjects } from "@/lib/subjects";
 import { useCreateLesson, useCreateRecurringLesson } from "./api";
@@ -66,6 +66,13 @@ function weekdayOf(dateStr: string): DayOfWeek | null {
 
 function browserTimezone(): string {
   return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+}
+
+function endOfYearDateStr(dateStr: string): string {
+  const year = /^\d{4}-\d{2}-\d{2}$/.test(dateStr)
+    ? Number(dateStr.slice(0, 4))
+    : new Date().getFullYear();
+  return `${year}-12-31`;
 }
 
 function emptyValues(): EventFormData {
@@ -168,6 +175,39 @@ export function CreateEventDialog({
     user?.workingHours,
   ]);
 
+  // Rough preview of how many lessons a recurring series will create, so the
+  // choice feels concrete. Mirrors the backend's week-stepping loosely.
+  const estimatedCount = useMemo(() => {
+    if (!isRecurring || values.selectedDays.length === 0) return null;
+    if (values.endsMode === "count") return values.occurrenceCount ?? null;
+    if (!values.date || !values.endDate) return null;
+    const startMs = new Date(`${values.date}T00:00:00`).getTime();
+    const endMs = new Date(`${values.endDate}T00:00:00`).getTime();
+    if (Number.isNaN(startMs) || Number.isNaN(endMs) || endMs < startMs) {
+      return null;
+    }
+    const intervalWeeks =
+      values.repeat === "weekly"
+        ? 1
+        : values.repeat === "biweekly"
+          ? 2
+          : values.repeat === "monthly"
+            ? 4
+            : 1;
+    const weeks =
+      Math.floor((endMs - startMs) / (7 * 24 * 60 * 60 * 1000)) + 1;
+    const onWeeks = Math.ceil(weeks / intervalWeeks);
+    return Math.max(0, onWeeks * values.selectedDays.length);
+  }, [
+    isRecurring,
+    values.selectedDays.length,
+    values.repeat,
+    values.endsMode,
+    values.occurrenceCount,
+    values.date,
+    values.endDate,
+  ]);
+
   useEffect(() => {
     if (!open) return;
     setErrors({});
@@ -245,16 +285,20 @@ export function CreateEventDialog({
       update("repeat", "none");
       return;
     }
-    // Seed the day picker with the weekday of the chosen date (if empty).
+    // Seed the day picker with the weekday of the chosen date, and default
+    // the end date to the end of the start date's year so the user rarely
+    // has to think about bounding the series.
     setValues((prev) => {
-      if (prev.selectedDays.length > 0) {
-        return { ...prev, repeat: next };
-      }
-      const day = weekdayOf(prev.date);
-      if (!day) return { ...prev, repeat: next };
-      return {
+      const base = {
         ...prev,
         repeat: next,
+        endDate: prev.endDate || endOfYearDateStr(prev.date),
+      };
+      if (prev.selectedDays.length > 0) return base;
+      const day = weekdayOf(prev.date);
+      if (!day) return base;
+      return {
+        ...base,
         selectedDays: [day],
         slotTimes: { ...prev.slotTimes, [day]: prev.startTime },
       };
@@ -263,7 +307,16 @@ export function CreateEventDialog({
       ...prev,
       repeat: undefined,
       selectedDays: undefined,
+      endDate: undefined,
     }));
+  }
+
+  function handleTabChange(tab: "single" | "recurring") {
+    if (tab === "single") {
+      handleRepeatChange("none");
+      return;
+    }
+    handleRepeatChange(values.repeat === "none" ? "weekly" : values.repeat);
   }
 
   function toggleDay(day: DayOfWeek) {
@@ -352,12 +405,18 @@ export function CreateEventDialog({
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>New lesson</DialogTitle>
-          <DialogDescription>
-            Add a one-off lesson, or set it to repeat weekly or bi-weekly.
-          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+          <Tabs
+            value={isRecurring ? "recurring" : "single"}
+            onValueChange={(v) => handleTabChange(v as "single" | "recurring")}
+          >
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="single">One time</TabsTrigger>
+              <TabsTrigger value="recurring">Recurring series</TabsTrigger>
+            </TabsList>
+          </Tabs>
           <div className="space-y-2">
             <Label htmlFor="student">Student</Label>
             <Select
@@ -499,29 +558,34 @@ export function CreateEventDialog({
             </div>
           )}
 
-          <div className="space-y-2">
-            <Label htmlFor="repeat">Repeat</Label>
-            <Select
-              value={values.repeat}
-              onValueChange={(v) =>
-                handleRepeatChange(v as EventFormData["repeat"])
-              }
-            >
-              <SelectTrigger id="repeat">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Does not repeat</SelectItem>
-                <SelectItem value="weekly">Weekly</SelectItem>
-                <SelectItem value="biweekly">Every 2 weeks</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
           {isRecurring && (
-            <div className="space-y-4 rounded-lg border p-4">
+            <div className="space-y-5 rounded-lg border bg-muted/30 p-4">
               <div className="space-y-2">
-                <Label>Days</Label>
+                <Label>How often?</Label>
+                <ToggleGroup
+                  type="single"
+                  variant="outline"
+                  value={values.repeat}
+                  onValueChange={(v) =>
+                    v && handleRepeatChange(v as EventFormData["repeat"])
+                  }
+                  className="flex flex-wrap justify-start gap-2"
+                >
+                  <ToggleGroupItem value="weekly">Weekly</ToggleGroupItem>
+                  <ToggleGroupItem value="biweekly">
+                    Every 2 weeks
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="monthly">Monthly</ToggleGroupItem>
+                </ToggleGroup>
+                {values.repeat === "monthly" && (
+                  <p className="text-xs text-muted-foreground">
+                    Repeats every 4 weeks on the days you pick below.
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label>Repeat on</Label>
                 <div className="flex flex-wrap gap-2">
                   {DAYS.map((day) => {
                     const selected = values.selectedDays.includes(day);
@@ -585,53 +649,75 @@ export function CreateEventDialog({
 
               <div className="space-y-2">
                 <Label>Ends</Label>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    aria-pressed={values.endsMode === "until"}
-                    onClick={() => update("endsMode", "until")}
+                <div
+                  className={
+                    "flex items-center gap-3 rounded-md border p-2 transition-colors " +
+                    (values.endsMode === "until"
+                      ? "border-primary bg-primary/5"
+                      : "border-input")
+                  }
+                  onClick={() => update("endsMode", "until")}
+                >
+                  <span
                     className={
-                      values.endsMode === "until"
-                        ? "inline-flex h-9 items-center justify-center rounded-md border border-primary bg-primary/10 px-3 text-sm font-medium text-primary"
-                        : "inline-flex h-9 items-center justify-center rounded-md border border-input bg-background px-3 text-sm font-medium text-muted-foreground hover:bg-accent"
+                      "flex h-4 w-4 shrink-0 items-center justify-center rounded-full border " +
+                      (values.endsMode === "until"
+                        ? "border-primary"
+                        : "border-muted-foreground/40")
                     }
                   >
-                    On
-                  </button>
+                    {values.endsMode === "until" && (
+                      <span className="h-2 w-2 rounded-full bg-primary" />
+                    )}
+                  </span>
+                  <span className="text-sm font-medium">On</span>
                   <Input
                     type="date"
-                    className="h-9"
-                    disabled={values.endsMode !== "until"}
+                    className="h-8"
                     value={values.endDate}
-                    onChange={(e) => update("endDate", e.target.value)}
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={(e) => {
+                      update("endsMode", "until");
+                      update("endDate", e.target.value);
+                    }}
                   />
                 </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    aria-pressed={values.endsMode === "count"}
-                    onClick={() => update("endsMode", "count")}
+                <div
+                  className={
+                    "flex items-center gap-3 rounded-md border p-2 transition-colors " +
+                    (values.endsMode === "count"
+                      ? "border-primary bg-primary/5"
+                      : "border-input")
+                  }
+                  onClick={() => update("endsMode", "count")}
+                >
+                  <span
                     className={
-                      values.endsMode === "count"
-                        ? "inline-flex h-9 items-center justify-center rounded-md border border-primary bg-primary/10 px-3 text-sm font-medium text-primary"
-                        : "inline-flex h-9 items-center justify-center rounded-md border border-input bg-background px-3 text-sm font-medium text-muted-foreground hover:bg-accent"
+                      "flex h-4 w-4 shrink-0 items-center justify-center rounded-full border " +
+                      (values.endsMode === "count"
+                        ? "border-primary"
+                        : "border-muted-foreground/40")
                     }
                   >
-                    After
-                  </button>
+                    {values.endsMode === "count" && (
+                      <span className="h-2 w-2 rounded-full bg-primary" />
+                    )}
+                  </span>
+                  <span className="text-sm font-medium">After</span>
                   <Input
                     type="number"
                     min={1}
-                    className="h-9"
-                    disabled={values.endsMode !== "count"}
+                    className="h-8 w-20"
                     placeholder="12"
                     value={values.occurrenceCount ?? ""}
-                    onChange={(e) =>
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={(e) => {
+                      update("endsMode", "count");
                       update(
                         "occurrenceCount",
                         e.target.valueAsNumber || undefined,
-                      )
-                    }
+                      );
+                    }}
                   />
                   <span className="text-sm text-muted-foreground">lessons</span>
                 </div>
@@ -644,6 +730,13 @@ export function CreateEventDialog({
                   </p>
                 )}
               </div>
+
+              {estimatedCount !== null && estimatedCount > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  About {estimatedCount} lesson
+                  {estimatedCount === 1 ? "" : "s"} will be created.
+                </p>
+              )}
             </div>
           )}
 

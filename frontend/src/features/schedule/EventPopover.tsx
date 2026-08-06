@@ -22,14 +22,6 @@ import {
   PopoverAnchor,
   PopoverContent,
 } from "@/components/ui/popover";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
@@ -41,8 +33,10 @@ import {
   useNotifyStudent,
   useUpdateLesson,
   useResyncLesson,
+  previewNotifyStudentRequest,
 } from "./api";
 import { generateMeetLinkRequest } from "./api/requests";
+import { EmailComposeDialog } from "@/components/email-compose-dialog";
 import {
   ACCEPTANCE_LABELS,
   ATTENDANCE_LABELS,
@@ -103,8 +97,6 @@ export function EventPopover({
   const [actionError, setActionError] = useState<string | null>(null);
   const [meetLoading, setMeetLoading] = useState(false);
   const [notifyOpen, setNotifyOpen] = useState(false);
-  const [notifyMessage, setNotifyMessage] = useState("");
-  const [notifyError, setNotifyError] = useState<string | null>(null);
   const [rescheduleOpen, setRescheduleOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
 
@@ -128,26 +120,15 @@ export function EventPopover({
   const ready = !!(lesson && studentName && endDate);
 
   function openNotifyDialog() {
-    if (!lesson || !studentName) return;
-    setNotifyError(null);
-    const subjectPart = lesson.subject ? ` ${lesson.subject}` : "";
-    setNotifyMessage(
-      `Hi ${studentName},\n\nThis is a reminder about our upcoming${subjectPart} lesson on ${formatDateTime(lesson.startDateTime)}.\n\nLooking forward to seeing you!`,
-    );
     setNotifyOpen(true);
   }
 
-  async function handleNotify() {
+  async function handleNotify(message: string) {
     if (!lessonId) return;
-    setNotifyError(null);
-    try {
-      await notifyStudent.mutateAsync(notifyMessage || undefined);
-      setNotifyOpen(false);
-    } catch {
-      setNotifyError(
-        notifyStudent.error?.message ?? "Failed to notify student",
-      );
-    }
+    await notifyStudent.mutateAsync({
+      message: message || undefined,
+    });
+    toast.success("Reminder sent");
   }
 
   async function handleCancel() {
@@ -253,6 +234,7 @@ export function EventPopover({
                 lesson.isCancelled,
               )}
               isRecurring={!!lesson.seriesId}
+              seriesId={lesson.seriesId ?? null}
               isCancelled={lesson.isCancelled ?? false}
             acceptanceLabel={ACCEPTANCE_LABELS[lesson.acceptanceStatus]}
             attendanceLabel={ATTENDANCE_LABELS[lesson.attendanceStatus]}
@@ -278,46 +260,18 @@ export function EventPopover({
       </PopoverContent>
     </Popover>
 
-      <Dialog open={notifyOpen} onOpenChange={setNotifyOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Notify {studentName ?? "student"}</DialogTitle>
-            <DialogDescription>
-              Send a reminder email to the student. Lesson details are appended
-              automatically. You can resend once every 24 hours.
-            </DialogDescription>
-          </DialogHeader>
-          <textarea
-            value={notifyMessage}
-            onChange={(e) => setNotifyMessage(e.target.value)}
-            rows={6}
-            className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-          />
-          {notifyError && (
-            <p className="text-xs text-destructive">{notifyError}</p>
-          )}
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setNotifyOpen(false)}
-              disabled={notifyStudent.isPending}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleNotify}
-              disabled={notifyStudent.isPending}
-            >
-              {notifyStudent.isPending ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Mail className="mr-2 h-4 w-4" />
-              )}
-              {notifyStudent.isPending ? "Sending…" : "Send email"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {lesson && (
+        <EmailComposeDialog
+          open={notifyOpen}
+          onOpenChange={setNotifyOpen}
+          title={`Notify ${studentName ?? "student"}`}
+          description="Send a reminder email to the student. You can resend once every 24 hours."
+          fetchPreview={(message) =>
+            previewNotifyStudentRequest(lesson.id, message)
+          }
+          onSend={handleNotify}
+        />
+      )}
 
       {lesson && (
         <RescheduleDialog
@@ -349,6 +303,7 @@ interface PopoverBodyProps {
   notes: string | null | undefined;
   status: "scheduled" | "completed" | "cancelled";
   isRecurring: boolean;
+  seriesId: string | null;
   isCancelled: boolean;
   acceptanceLabel: string;
   attendanceLabel: string;
@@ -381,6 +336,7 @@ function PopoverBody({
   notes,
   status,
   isRecurring,
+  seriesId,
   isCancelled,
   acceptanceLabel,
   attendanceLabel,
@@ -614,7 +570,9 @@ function PopoverBody({
             </Button>
           )}
           <Button size="sm" variant="ghost" asChild className="ml-auto">
-            <Link to={`/lessons/${lessonId}`}>Open</Link>
+            <Link to={seriesId ? `/lessons/series/${seriesId}` : `/lessons/${lessonId}`}>
+              Open
+            </Link>
           </Button>
         </div>
       )}

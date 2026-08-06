@@ -27,7 +27,7 @@ export const DAY_LABELS: Record<(typeof DAYS)[number], string> = {
   sunday: "Sun",
 };
 
-const repeatEnum = z.enum(["none", "weekly", "biweekly"]);
+const repeatEnum = z.enum(["none", "weekly", "biweekly", "monthly"]);
 export type Repeat = z.infer<typeof repeatEnum>;
 
 export function minutesBetween(start: string, end: string): number {
@@ -126,11 +126,19 @@ export function toCreateRecurringLessonRequest(
     dayOfWeek: day as DayOfWeek,
     timeOfDay: values.slotTimes[day] ?? values.startTime,
   }));
+  const intervalWeeks =
+    values.repeat === "weekly"
+      ? 1
+      : values.repeat === "biweekly"
+        ? 2
+        : values.repeat === "monthly"
+          ? 4
+          : 1;
   return {
     studentId: values.studentId,
     subject: values.subject ? values.subject : null,
     durationMinutes,
-    intervalWeeks: values.repeat === "weekly" ? 1 : 2,
+    intervalWeeks,
     slots,
     timezone,
     startDate: values.date,

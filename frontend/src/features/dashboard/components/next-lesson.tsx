@@ -2,19 +2,16 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { CalendarClock, Video, ExternalLink, Loader2, Mail } from "lucide-react";
 import { toast } from "sonner";
 import type { LessonResponse } from "@examify-tms/interfaces";
 import { useGenerateMeetLink } from "../api";
-import { useUpdateLesson, useNotifyStudent } from "@/features/schedule/api";
+import {
+  useUpdateLesson,
+  useNotifyStudent,
+  previewNotifyStudentRequest,
+} from "@/features/schedule/api";
+import { EmailComposeDialog } from "@/components/email-compose-dialog";
 import {
   lessonTimeRange,
   relativeDayLabel,
@@ -40,8 +37,6 @@ export function NextLesson({ lesson, studentName }: Props) {
   const notifyStudent = useNotifyStudent(lesson?.id ?? "");
 
   const [notifyOpen, setNotifyOpen] = useState(false);
-  const [notifyMessage, setNotifyMessage] = useState("");
-  const [notifyError, setNotifyError] = useState<string | null>(null);
 
   if (!lesson) {
     return (
@@ -93,27 +88,11 @@ export function NextLesson({ lesson, studentName }: Props) {
     }
   };
 
-  const openNotifyDialog = () => {
-    setNotifyError(null);
-    setNotifyMessage(
-      `Hi ${studentName},\n\nThis is a reminder about our upcoming ${lesson.subject} lesson on ${lessonTimeRange(lesson)} (${relativeDayLabel(lesson.startDateTime)}).\n\nLooking forward to seeing you!`,
-    );
-    setNotifyOpen(true);
-  };
-
-  const handleNotify = async () => {
-    setNotifyError(null);
-    try {
-      await notifyStudent.mutateAsync(notifyMessage || undefined);
-      setNotifyOpen(false);
-      toast.success("Reminder sent");
-    } catch (err) {
-      setNotifyError(
-        err instanceof Error && err.message
-          ? err.message
-          : "Failed to notify student",
-      );
-    }
+  const handleNotify = async (message: string) => {
+    await notifyStudent.mutateAsync({
+      message: message || undefined,
+    });
+    toast.success("Reminder sent");
   };
 
   return (
@@ -173,7 +152,7 @@ export function NextLesson({ lesson, studentName }: Props) {
             variant="outline"
             size="sm"
             className="gap-1.5"
-            onClick={openNotifyDialog}
+            onClick={() => setNotifyOpen(true)}
             disabled={cooldownActive}
             title={
               cooldownActive && nextAllowedAt
@@ -196,43 +175,16 @@ export function NextLesson({ lesson, studentName }: Props) {
         </div>
       </CardContent>
 
-      <Dialog open={notifyOpen} onOpenChange={setNotifyOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Notify {studentName}</DialogTitle>
-            <DialogDescription>
-              Send a reminder email to the student. Lesson details are appended
-              automatically. You can resend once every 24 hours.
-            </DialogDescription>
-          </DialogHeader>
-          <textarea
-            value={notifyMessage}
-            onChange={(e) => setNotifyMessage(e.target.value)}
-            rows={6}
-            className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-          />
-          {notifyError && (
-            <p className="text-xs text-destructive">{notifyError}</p>
-          )}
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setNotifyOpen(false)}
-              disabled={notifyStudent.isPending}
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleNotify} disabled={notifyStudent.isPending}>
-              {notifyStudent.isPending ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Mail className="mr-2 h-4 w-4" />
-              )}
-              {notifyStudent.isPending ? "Sending…" : "Send email"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <EmailComposeDialog
+        open={notifyOpen}
+        onOpenChange={setNotifyOpen}
+        title={`Notify ${studentName}`}
+        description="Send a reminder email to the student. You can resend once every 24 hours."
+        fetchPreview={(message) =>
+          previewNotifyStudentRequest(lesson.id, message)
+        }
+        onSend={handleNotify}
+      />
     </Card>
   );
 }

@@ -7,7 +7,15 @@ import type {
   LessonSeries,
   Lesson,
 } from "@examify-tms/interfaces";
-import { mapLesson } from "./lessonService";
+import { mapLesson, listLessonsBySeriesFromFirestore } from "./lessonService";
+import {
+  syncLessonToCalendar,
+  attachMeetLinkToCalendarEvent,
+} from "./googleCalendarService";
+import {
+  generateMeetLinkForUser,
+  GoogleNotConnectedError,
+} from "./meetService";
 import admin from "firebase-admin";
 import crypto from "crypto";
 import { fromZonedTime, formatInTimeZone } from "date-fns-tz";
@@ -110,6 +118,7 @@ function mapSeries(
     subject: data.subject,
     durationMinutes: data.durationMinutes,
     location: data.location ?? null,
+    meetLink: data.meetLink ?? null,
     notes: data.notes ?? null,
     intervalWeeks: data.intervalWeeks,
     slots: data.slots,
@@ -321,6 +330,143 @@ export async function updateLessonSeriesInFirestore(
 }
 
 /**
+ * Persist a shared Google Meet link on a series and propagate it to every
+ * non-cancelled occurrence. The Meet conference itself is attached to each
+ * upcoming lesson's Google Calendar event by the caller (controller), since
+ * this function is storage-only. Past occurrences also receive the `meetLink`
+ * string for data consistency, but their calendar events are not touched.
+ */
+export async function setSeriesMeetLinkInFirestore(
+  seriesId: string,
+  meetLink: string,
+): Promise<void> {
+  try {
+    const firestore = getFirebaseFirestore();
+    const now = admin.firestore.Timestamp.now();
+
+    await firestore
+      .collection("lessonSeries")
+      .doc(seriesId)
+      .update({ meetLink, updatedAt: now });
+
+    // Propagate to every non-cancelled occurrence (single-field seriesId
+    // query, filtered in memory — a series has bounded occurrences).
+    const snapshot = await firestore
+      .collection("lessons")
+      .where("seriesId", "==", seriesId)
+      .get();
+
+    const targets = snapshot.docs.filter((d) => !d.data()?.isCancelled);
+
+    for (let i = 0; i < targets.length; i += 400) {
+      const chunk = targets.slice(i, i + 400);
+      const batch = firestore.batch();
+      for (const doc of chunk) {
+        batch.update(doc.ref, { meetLink, updatedAt: now });
+      }
+      await batch.commit();
+    }
+  } catch (error) {
+    console.error("Failed to set series Meet link in Firestore:", error);
+    throw new Error("Failed to set series Meet link");
+  }
+}
+
+/** Thrown when a series has no upcoming occurrences to attach a Meet link to. */
+export class SeriesNoUpcomingLessonsError extends Error {
+  constructor() {
+    super("This series has no upcoming lessons to attach a Meet link to");
+    this.name = "SeriesNoUpcomingLessonsError";
+  }
+}
+
+/**
+ * True when a lesson/series location value means the tutor wants to use
+ * Google Meet. The web flow stores the literal "Google Meet" label, but we
+ * match loosely (case-insensitive) so any client setting "Meet" or
+ * "google meet" triggers the same behaviour.
+ */
+export function isMeetLocation(
+  location: string | null | undefined,
+): boolean {
+  return /(^|\s)meet(\s|$)|google\s*meet/i.test(location ?? "");
+}
+
+export interface GenerateSeriesMeetResult {
+  meetingLink: string;
+  appliedTo: number;
+  calendarFailed: number;
+}
+
+/**
+ * Provision ONE shared Google Meet link for an entire series and persist it on
+ * the series + every non-cancelled occurrence:
+ *   1. Ensure every upcoming occurrence has a backing Google Calendar event.
+ *   2. Provision a single Meet conference on the first upcoming lesson's
+ *      calendar event (this mints the shared Meet URL).
+ *   3. Persist that URL on the series + every non-cancelled occurrence.
+ *   4. Attach the same Meet link to each remaining upcoming lesson's calendar
+ *      event so every session shows the same "Join" button (best-effort).
+ *
+ * Throws {@link GoogleNotConnectedError} when the tutor hasn't connected
+ * Google, and {@link SeriesNoUpcomingLessonsError} when the series has no
+ * upcoming occurrences.
+ */
+export async function generateSeriesMeetLinkForUser(
+  uid: string,
+  seriesId: string,
+): Promise<GenerateSeriesMeetResult> {
+  let upcoming = await listLessonsBySeriesFromFirestore(seriesId, {
+    futureOnly: true,
+  });
+  if (upcoming.length === 0) {
+    throw new SeriesNoUpcomingLessonsError();
+  }
+
+  // Ensure each upcoming lesson has a Google Calendar event so we can attach
+  // the Meet conference to it. Best-effort; failures are logged.
+  await Promise.allSettled(upcoming.map((l) => syncLessonToCalendar(uid, l)));
+
+  // Reload to pick up fresh googleCalendarEventIds from the sync above.
+  upcoming = await listLessonsBySeriesFromFirestore(seriesId, {
+    futureOnly: true,
+  });
+
+  const first = upcoming[0];
+
+  // Provision the shared Meet link on the first lesson's calendar event.
+  // generateMeetLinkForUser attaches conferenceData to the lesson's existing
+  // event (or creates one) and returns the minted Meet URL.
+  const { meetingLink } = await generateMeetLinkForUser(uid, {
+    lessonId: first.id,
+  });
+
+  // Persist the shared link on the series + all non-cancelled lessons.
+  await setSeriesMeetLinkInFirestore(seriesId, meetingLink);
+
+  // Attach the same Meet link to every OTHER upcoming lesson's event.
+  // Best-effort: a single event failing must not roll back the rest.
+  const others = upcoming.filter(
+    (l) => l.id !== first.id && l.googleCalendarEventId,
+  );
+  const results = await Promise.allSettled(
+    others.map((l) =>
+      attachMeetLinkToCalendarEvent(uid, l.googleCalendarEventId, meetingLink),
+    ),
+  );
+  const calendarFailed = results.filter(
+    (r) => r.status === "rejected",
+  ).length;
+  if (calendarFailed > 0) {
+    console.error(
+      `[series-meet] ${calendarFailed}/${others.length} calendar events could not be updated for series ${seriesId}`,
+    );
+  }
+
+  return { meetingLink, appliedTo: upcoming.length, calendarFailed };
+}
+
+/**
  * Cancel all future, non-cancelled occurrences of a series (soft cancel).
  * Past occurrences and history are preserved.
  */
@@ -376,14 +522,41 @@ const WEEKDAY_TO_DOW: Record<string, DayOfWeek> = {
  * Derive the IANA day-of-week (monday…sunday) of a UTC instant as it falls in
  * the given timezone. Uses date-fns-tz so DST is handled correctly.
  */
-function dayOfWeekInTz(date: Date, tz: string): DayOfWeek {
+export function dayOfWeekInTz(date: Date, tz: string): DayOfWeek {
   const name = formatInTimeZone(date, tz, "EEEE").toLowerCase();
   return WEEKDAY_TO_DOW[name] ?? "monday";
 }
 
 /** Derive the "HH:mm" wall-clock time of a UTC instant in the given timezone. */
-function timeOfDayInTz(date: Date, tz: string): string {
+export function timeOfDayInTz(date: Date, tz: string): string {
   return formatInTimeZone(date, tz, "HH:mm");
+}
+
+/**
+ * Read-only preview of the slot transformation performed by
+ * {@link rescheduleSeriesFromOccurrence}: replace the series slot matching the
+ * old occurrence's day with the new day/time, leaving all other slots
+ * unchanged. Returns the resulting slot list without mutating anything.
+ */
+export function previewRescheduledSlots(
+  slots: LessonSlot[],
+  oldStart: Date,
+  newStart: Date,
+  tz: string,
+): LessonSlot[] {
+  const oldDay = dayOfWeekInTz(oldStart, tz);
+  const newDay = dayOfWeekInTz(newStart, tz);
+  const newTime = timeOfDayInTz(newStart, tz);
+  let replaced = false;
+  const updated = slots.map((slot) => {
+    if (slot.dayOfWeek === oldDay && !replaced) {
+      replaced = true;
+      return { dayOfWeek: newDay, timeOfDay: newTime };
+    }
+    return slot;
+  });
+  if (!replaced) updated.push({ dayOfWeek: newDay, timeOfDay: newTime });
+  return updated;
 }
 
 /**

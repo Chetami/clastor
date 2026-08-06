@@ -11,8 +11,13 @@ import type {
   UpdateLessonRequest,
 } from "@examify-tms/interfaces";
 import { useDashboardSummary, useUpdateLessonDetails } from "./api";
-import { useInvoiceLesson } from "@/features/payments/api";
+import {
+  useInvoiceLesson,
+  useSendInvoice,
+  previewSendInvoiceRequest,
+} from "@/features/payments/api";
 import type { InvoiceLessonEdits } from "@/features/payments/api";
+import { EmailComposeDialog } from "@/components/email-compose-dialog";
 import { PeriodSelector } from "./components/period-selector";
 import { StatCards } from "./components/stat-cards";
 import { HoursChart } from "./components/hours-chart";
@@ -47,6 +52,8 @@ export default function Dashboard() {
   const { data: students = [] } = useListStudents();
   const subjects = useSubjects();
   const invoiceLesson = useInvoiceLesson();
+  const sendInvoice = useSendInvoice();
+  const [sendInvoiceId, setSendInvoiceId] = useState<string | null>(null);
   const updateLessonDetails = useUpdateLessonDetails();
 
   const studentNames = useMemo(() => {
@@ -121,10 +128,11 @@ export default function Dashboard() {
       lesson: effective,
       rateType: student.rateType,
       expectedAmount: student.expectedAmount,
+      skipSend: true,
     });
 
-    toast.success(`Invoice sent to ${name}`);
-    navigate(`/payments/${createdInvoice.id}`);
+    toast.success(`Invoice created for ${name} — review before sending.`);
+    setSendInvoiceId(createdInvoice.id);
   };
 
   return (
@@ -205,6 +213,28 @@ export default function Dashboard() {
           )}
         </div>
       </div>
+
+      {sendInvoiceId && (
+        <EmailComposeDialog
+          open
+          onOpenChange={(o) => !o && setSendInvoiceId(null)}
+          title="Send invoice"
+          description="Review and edit the email before sending. The invoice PDF is attached automatically."
+          fetchPreview={(message) =>
+            previewSendInvoiceRequest(sendInvoiceId, message)
+          }
+          onSend={async (message) => {
+            await sendInvoice.mutateAsync({
+              id: sendInvoiceId,
+              message: message || undefined,
+            });
+            toast.success("Invoice sent.");
+            const id = sendInvoiceId;
+            setSendInvoiceId(null);
+            navigate(`/payments/${id}`);
+          }}
+        />
+      )}
     </div>
   );
 }

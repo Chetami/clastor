@@ -3,6 +3,7 @@ import {
   ATTENDANCE_LABELS,
   attendanceTone,
   deriveLessonStatus,
+  isUpcomingLesson,
 } from "@/features/schedule/lesson-utils";
 
 // Pure helpers moved to @examify-tms/shared — re-exported here so existing
@@ -22,7 +23,7 @@ export interface LessonBadge {
 /** Derives the badge label and tone for a lesson based on status and timing. */
 export function lessonBadge(lesson: LessonResponse): LessonBadge {
   const status = deriveLessonStatus(lesson.attendanceStatus, lesson.isCancelled);
-  const future = new Date(lesson.startDateTime).getTime() >= Date.now();
+  const future = isUpcomingLesson(lesson);
   if (status === "cancelled") {
     return {
       label: "Cancelled",

@@ -1,9 +1,7 @@
 import type {
   DashboardPeriod,
-  InvoiceResponse,
   InvoiceStatus,
   LessonResponse,
-  PaymentMethod,
 } from "@examify-tms/interfaces";
 
 /**
@@ -11,6 +9,18 @@ import type {
  * `features/dashboard/lib.ts` and `features/students/student-utils.ts` but
  * depends only on the JS Intl API (no `date-fns`, which isn't a mobile dep).
  */
+
+// Pure invoice/acceptance/date helpers live in @examify-tms/shared —
+// re-exported here so existing `@/lib/format` imports keep working. Mobile
+// keeps its own currency + attendance + status-colour variants below (they
+// differ from the web/shared versions).
+export {
+  ACCEPTANCE_LABELS,
+  PAYMENT_METHOD_LABELS,
+  formatDate,
+  formatDateTime,
+  isOverdue,
+} from "@examify-tms/shared";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const WEEKDAYS_LONG = [
@@ -319,16 +329,10 @@ export const ATTENDANCE_LABELS: Record<string, string> = {
   tutor_cancelled_makeup_issued: "Tutor cancelled — make-up",
 };
 
-/** Acceptance display label for a status. */
-export const ACCEPTANCE_LABELS: Record<string, string> = {
-  pending: "Pending",
-  accepted: "Accepted",
-  declined: "Declined",
-};
-
 /* -------------------------------------------------------------------------- *
- * Invoice helpers (mirrors web `features/payments/invoice-utils.ts`).          *
- * Colours are hex so they work with React Native StyleSheet.                   *
+ * Invoice status tokens. The pure label/format helpers now come from          *
+ * @examify-tms/shared (re-exported above); only the React Native status       *
+ * colour map stays here, since it uses hex values for StyleSheet.              *
  * -------------------------------------------------------------------------- */
 
 /** Display label + colour tokens for each invoice lifecycle status. */
@@ -343,38 +347,3 @@ export const INVOICE_STATUS_META: Record<
   void: { label: "Void", bg: "#f1f5f9", text: "#94a3b8" },
 };
 
-/** Human labels for each payment method. */
-export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
-  cash: "Cash",
-  bank_transfer: "Bank Transfer",
-  stripe: "Stripe",
-};
-
-/** "5 Jul 2026" style date (no date-fns dependency). */
-export function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-AU", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
-
-/** "5 Jul 2026, 4:30 pm" style date+time. */
-export function formatDateTime(iso: string): string {
-  return new Date(iso).toLocaleString("en-AU", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  });
-}
-
-/** True when an open/overdue invoice is past its due date. */
-export function isOverdue(invoice: InvoiceResponse): boolean {
-  return (
-    (invoice.status === "open" || invoice.status === "overdue") &&
-    new Date(invoice.dueDate).getTime() < Date.now()
-  );
-}

@@ -36,14 +36,6 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -57,7 +49,9 @@ import {
   useNotifyStudent,
   useUpdateLesson,
   useResyncLesson,
+  previewNotifyStudentRequest,
 } from "../schedule/api";
+import { EmailComposeDialog } from "@/components/email-compose-dialog";
 import {
   generateMeetLinkRequest,
   getGoogleConnectionStatus,
@@ -119,7 +113,6 @@ export default function EventDetail() {
   const [pickerError, setPickerError] = useState<string | null>(null);
   const [subjectError, setSubjectError] = useState<string | null>(null);
   const [notifyOpen, setNotifyOpen] = useState(false);
-  const [notifyMessage, setNotifyMessage] = useState("");
   const [meetLoading, setMeetLoading] = useState(false);
   const [meetError, setMeetError] = useState<string | null>(null);
   const [googleConnected, setGoogleConnected] = useState<boolean | null>(null);
@@ -238,14 +231,7 @@ export default function EventDetail() {
     ? Date.now() < nextAllowedAt.getTime()
     : false;
 
-  const defaultNotifyMessage = (() => {
-    const when = formatDateTime(lesson.startDateTime);
-    const subjectPart = subject ? ` ${subject}` : "";
-    return `Hi ${studentName},\n\nThis is a reminder about our upcoming${subjectPart} lesson on ${when}.\n\nLooking forward to seeing you!`;
-  })();
-
   function openNotifyDialog() {
-    setNotifyMessage(defaultNotifyMessage);
     setPickerError(null);
     setNotifyOpen(true);
   }
@@ -275,9 +261,12 @@ export default function EventDetail() {
     }
   }
 
-  async function handleNotify() {
+  async function handleNotify(message: string) {
     try {
-      await notifyStudent.mutateAsync(notifyMessage);
+      await notifyStudent.mutateAsync({
+        message: message || undefined,
+      });
+      toast.success("Reminder sent");
       setNotifyOpen(false);
     } catch {
       setPickerError(
@@ -896,43 +885,16 @@ export default function EventDetail() {
         <EmailHistory lessonId={lesson.id} variant="bare" />
       </div>
 
-      <Dialog open={notifyOpen} onOpenChange={setNotifyOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Notify {studentName}</DialogTitle>
-            <DialogDescription>
-              Send a reminder email to the student. Lesson details are appended
-              automatically. You can resend once every 24 hours.
-            </DialogDescription>
-          </DialogHeader>
-          <textarea
-            value={notifyMessage}
-            onChange={(e) => setNotifyMessage(e.target.value)}
-            rows={6}
-            className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-          />
-          {pickerError && (
-            <p className="text-xs text-destructive">{pickerError}</p>
-          )}
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setNotifyOpen(false)}
-              disabled={notifyStudent.isPending}
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleNotify} disabled={notifyStudent.isPending}>
-              {notifyStudent.isPending ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Mail className="mr-2 h-4 w-4" />
-              )}
-              {notifyStudent.isPending ? "Sending…" : "Send email"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <EmailComposeDialog
+        open={notifyOpen}
+        onOpenChange={setNotifyOpen}
+        title={`Notify ${studentName}`}
+        description="Send a reminder email to the student. You can resend once every 24 hours."
+        fetchPreview={(message) =>
+          previewNotifyStudentRequest(lesson.id, message)
+        }
+        onSend={handleNotify}
+      />
 
       <RescheduleDialog
         lesson={lesson}

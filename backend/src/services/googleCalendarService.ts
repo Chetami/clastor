@@ -162,6 +162,39 @@ export async function updateLessonCalendarEvent(
 }
 
 /**
+ * Attach an already-provisioned Google Meet link to an existing Google
+ * Calendar event (patched via conferenceData). Used when sharing one Meet
+ * link across every lesson in a series: the first event provisions the link
+ * via `createRequest`, and each remaining event references the same link
+ * through `entryPoints` so all of them show the "Join with Google Meet"
+ * button.
+ *
+ * No-op if the tutor isn't connected. Never throws — callers run this
+ * best-effort across many lessons (Promise.allSettled).
+ */
+export async function attachMeetLinkToCalendarEvent(
+  uid: string,
+  googleCalendarEventId: string | null | undefined,
+  meetLink: string,
+): Promise<void> {
+  if (!googleCalendarEventId) return;
+  const ctx = await getCalendarForUser(uid);
+  if (!ctx) return;
+
+  const conferenceData: calendar_v3.Schema$ConferenceData = {
+    entryPoints: [{ entryPointType: "video", uri: meetLink }],
+    conferenceSolution: { key: { type: "hangoutsMeet" } },
+  };
+
+  await ctx.cal.events.patch({
+    calendarId: PRIMARY_CALENDAR_ID,
+    eventId: googleCalendarEventId,
+    conferenceDataVersion: 1,
+    requestBody: { conferenceData },
+  });
+}
+
+/**
  * Delete the Google Calendar event for a lesson (used on cancel/disconnect).
  * No-op if the tutor isn't connected or the lesson has no event id.
  */

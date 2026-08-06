@@ -6,10 +6,11 @@ import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import type { EventApi, EventInput } from "@fullcalendar/core";
-import { useListLessons, useExternalCalendarEvents, useRescheduleLesson } from "./api";
+import { useListLessons, useExternalCalendarEvents, useRescheduleLesson, previewRescheduleEmailRequest } from "./api";
 import { useListStudents } from "@/features/students/api";
 import { useGoogleConnectionStatus } from "@/features/settings/api/use-google-connect";
 import { useAuthStore } from "@/store/auth-store";
+import { EmailComposeDialog } from "@/components/email-compose-dialog";
 import {
   lessonToCalendarEvent,
   externalEventToCalendarEvent,
@@ -116,6 +117,13 @@ export default function Schedule() {
   } | null>(null);
   const [dropNotify, setDropNotify] = useState(true);
   const [dropScope, setDropScope] = useState<"this" | "this_and_future">("this");
+  const [composeDrop, setComposeDrop] = useState<{
+    lessonId: string;
+    startDateTime: string;
+    durationMinutes: number;
+    scope: "this" | "this_and_future";
+    isSeries: boolean;
+  } | null>(null);
   const reschedule = useRescheduleLesson(dropPending?.lessonId ?? "");
 
   function openDropConfirm(event: EventApi, revert: () => void) {
@@ -158,12 +166,30 @@ export default function Schedule() {
 
   async function confirmDrop() {
     if (!dropPending) return;
+
+    // When notifying, show the email review step first (no reschedule yet).
+    if (dropNotify) {
+      setComposeDrop({
+        lessonId: dropPending.lessonId,
+        startDateTime: dropPending.startDateTime,
+        durationMinutes: dropPending.durationMinutes,
+        scope: dropScope,
+        isSeries: !!dropPending.seriesId,
+      });
+      return;
+    }
+
+    await runDropReschedule(null);
+  }
+
+  async function runDropReschedule(message: string | null) {
+    if (!dropPending) return;
     try {
       await reschedule.mutateAsync({
         startDateTime: dropPending.startDateTime,
         durationMinutes: dropPending.durationMinutes,
         notifyStudent: dropNotify,
-        message: null,
+        message,
         ...(dropPending.seriesId ? { scope: dropScope } : {}),
       });
       toast.success(
@@ -176,12 +202,15 @@ export default function Schedule() {
             : "Lesson rescheduled.",
       );
       setDropPending(null);
+      setComposeDrop(null);
     } catch (err) {
       dropPending.revert();
       toast.error(
         err instanceof Error ? err.message : "Failed to reschedule lesson",
       );
       setDropPending(null);
+      setComposeDrop(null);
+      throw err;
     }
   }
 
@@ -470,11 +499,35 @@ export default function Schedule() {
               {reschedule.isPending ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : null}
-              Confirm
+              {dropNotify ? "Review email" : "Confirm"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {composeDrop && (
+        <EmailComposeDialog
+          open
+          onOpenChange={(o) => {
+            if (!o) setComposeDrop(null);
+          }}
+          title="Review reschedule email"
+          description={
+            composeDrop.scope === "this_and_future"
+              ? "A summary of the new schedule will be emailed."
+              : "An updated calendar invite will be emailed."
+          }
+          fetchPreview={(message) =>
+            previewRescheduleEmailRequest(composeDrop.lessonId, {
+              startDateTime: composeDrop.startDateTime,
+              durationMinutes: composeDrop.durationMinutes,
+              scope: composeDrop.isSeries ? composeDrop.scope : undefined,
+              message,
+            })
+          }
+          onSend={(message) => runDropReschedule(message || null)}
+        />
+      )}
     </div>
   );
 }

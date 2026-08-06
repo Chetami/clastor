@@ -1,0 +1,30 @@
+type: object
+required:
+  - meetingLink
+  - appliedTo
+properties:
+  meetingLink:
+    type: string
+    description: >-
+      The shared Google Meet URL generated for the series. This same link is
+      written to the series and to every upcoming lesson's `meetLink` field.
+    example: "https://meet.google.com/abc-mnop-xyz"
+  appliedTo:
+    type: integer
+    minimum: 0
+    description: >-
+      Number of upcoming lessons the shared Meet link was applied to.
+    example: 12
+  calendarFailed:
+    type: integer
+    minimum: 0
+    description: >-
+      Count of upcoming lessons whose Google Calendar event could not be
+      updated with the Meet conference (best-effort). The `meetLink` is still
+      stored on these lessons; they can be resynced individually.
+    example: 0
+description: |-
+  Response returned after generating a shared Google Meet link for an entire
+  lesson series. The Meet conference is provisioned on the first upcoming
+  lesson's calendar event, then attached to each remaining upcoming lesson's
+  calendar event so every session shows the same Join button.
