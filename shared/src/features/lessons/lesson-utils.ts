@@ -1,4 +1,9 @@
-import { intervalToDuration } from "date-fns";
+import {
+  addMinutes,
+  intervalToDuration,
+  isPast,
+  isToday as isTodayDateFns,
+} from "date-fns";
 import type {
   AttendanceStatus,
   LessonAcceptance,
@@ -32,15 +37,12 @@ export function deriveLessonStatus(
 
 /** Compute the end Date of a lesson from start + duration. */
 export function lessonEndDate(lesson: LessonResponse): Date {
-  return new Date(
-    new Date(lesson.startDateTime).getTime() +
-      lesson.durationMinutes * 60_000,
-  );
+  return addMinutes(new Date(lesson.startDateTime), lesson.durationMinutes);
 }
 
 /** True when a lesson is in the future (start time hasn't arrived yet). */
 export function isUpcomingLesson(lesson: LessonResponse): boolean {
-  return new Date(lesson.startDateTime).getTime() >= Date.now();
+  return !isPast(new Date(lesson.startDateTime));
 }
 
 /**
@@ -51,7 +53,7 @@ export function isUpcomingLesson(lesson: LessonResponse): boolean {
  */
 export function isLessonFinished(lesson: LessonResponse): boolean {
   const hasRecordedAttendance = lesson.attendanceStatus !== "unrecorded";
-  const isPastEndTime = lessonEndDate(lesson) < new Date();
+  const isPastEndTime = isPast(lessonEndDate(lesson));
   return hasRecordedAttendance || isPastEndTime;
 }
 
@@ -74,12 +76,7 @@ export function isRangeOverlap(
 
 /** True when the given date is in the same calendar day (local) as now. */
 export function isToday(date: Date): boolean {
-  const now = new Date();
-  return (
-    date.getFullYear() === now.getFullYear() &&
-    date.getMonth() === now.getMonth() &&
-    date.getDate() === now.getDate()
-  );
+  return isTodayDateFns(date);
 }
 
 export const ATTENDANCE_LABELS: Record<AttendanceStatus, string> = {

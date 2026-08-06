@@ -1,3 +1,4 @@
+import { compareAsc, format, parse } from "date-fns";
 import type {
   DayOfWeek,
   LessonResponse,
@@ -23,26 +24,18 @@ export const ACCEPTANCE_TONE: Record<string, string> = {
 
 /** Format a recurring slot like "Mon 7:30 PM". */
 export function formatSlot(slot: LessonSlot): string {
-  const [hh, mm] = slot.timeOfDay.split(":");
-  const h24 = Number(hh);
-  const period = h24 >= 12 ? "PM" : "AM";
-  const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
-  return `${DAY_SHORT[slot.dayOfWeek]} ${h12}:${mm} ${period}`;
+  const time = format(parse(slot.timeOfDay, "HH:mm", new Date()), "h:mm a");
+  return `${DAY_SHORT[slot.dayOfWeek]} ${time}`;
 }
 
 /** Format an optional end-bounded date range, e.g. "Jan 5, 2026 – Mar 30, 2026". */
 export function formatRange(startDate: string, until: string | null): string {
   try {
-    const start = new Date(startDate + "T00:00:00");
-    const fmt = (d: Date) =>
-      d.toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      });
+    const fmt = (iso: string) =>
+      format(new Date(iso + "T00:00:00"), "MMM d, yyyy");
     return until
-      ? `${fmt(start)} – ${fmt(new Date(until + "T00:00:00"))}`
-      : `from ${fmt(start)}`;
+      ? `${fmt(startDate)} – ${fmt(until)}`
+      : `from ${fmt(startDate)}`;
   } catch {
     return startDate;
   }
@@ -83,18 +76,14 @@ export interface LessonMonthGroup {
 
 /** Group lessons into chronological month buckets with a human label. */
 export function groupLessonsByMonth(lessons: LessonResponse[]): LessonMonthGroup[] {
-  const sorted = [...lessons].sort(
-    (a, b) =>
-      new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime(),
+  const sorted = [...lessons].sort((a, b) =>
+    compareAsc(new Date(a.startDateTime), new Date(b.startDateTime)),
   );
   const groups: LessonMonthGroup[] = [];
   for (const lesson of sorted) {
     const d = new Date(lesson.startDateTime);
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-    const label = d.toLocaleDateString("en-US", {
-      month: "long",
-      year: "numeric",
-    });
+    const key = format(d, "yyyy-MM");
+    const label = format(d, "MMMM yyyy");
     let group = groups.find((g) => g.key === key);
     if (!group) {
       group = { key, label, lessons: [] };

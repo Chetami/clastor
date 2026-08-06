@@ -4,6 +4,7 @@ import type {
   PaymentMethod,
   RateType,
 } from "@examify-tms/interfaces";
+import { compareAsc, compareDesc, isPast } from "date-fns";
 import { defaultQuantity, defaultUnitAmount } from "./invoice-schema";
 
 export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
@@ -54,7 +55,7 @@ export function formatDateTime(iso: string): string {
 export function isOverdue(invoice: InvoiceResponse): boolean {
   return (
     (invoice.status === "open" || invoice.status === "overdue") &&
-    new Date(invoice.dueDate).getTime() < Date.now()
+    isPast(new Date(invoice.dueDate))
   );
 }
 
@@ -117,7 +118,7 @@ export function isCancelledLesson(lesson: LessonResponse): boolean {
 
 /** True once the lesson's start time has passed. */
 export function isPastLesson(lesson: LessonResponse): boolean {
-  return new Date(lesson.startDateTime).getTime() < Date.now();
+  return isPast(new Date(lesson.startDateTime));
 }
 
 /**
@@ -177,9 +178,9 @@ export function partitionInvoiceableLessons(
   lessons: LessonResponse[],
 ): InvoiceableLessonGroups {
   const byDateDesc = (a: LessonResponse, b: LessonResponse) =>
-    new Date(b.startDateTime).getTime() - new Date(a.startDateTime).getTime();
+    compareDesc(new Date(a.startDateTime), new Date(b.startDateTime));
   const byDateAsc = (a: LessonResponse, b: LessonResponse) =>
-    new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime();
+    compareAsc(new Date(a.startDateTime), new Date(b.startDateTime));
 
   const eligible = lessons.filter(
     (l) => !isCancelledLesson(l) && !isExcludedFromInvoicing(l),
