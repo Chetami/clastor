@@ -63,7 +63,36 @@ function toSeriesResponse(series: LessonSeries): LessonSeriesResponse {
 }
 
 /**
+ * Run slow, best-effort enrichment AFTER the response has been sent so the
+ * client gets a fast 201. The backend is a long-running Node server, so
+ * fire-and-forget work after res.json() is safe. All errors are caught + logged
+ * here so they can never surface as unhandled rejections.
+ */
+function runInBackground(
+  label: string,
+  seriesId: string,
+  fn: () => Promise<unknown>,
+): void {
+  fn().catch((error) => {
+    if (error instanceof GoogleNotConnectedError) {
+      console.warn(
+        `[series-bg] ${label}: Google not connected for ${seriesId}`,
+      );
+    } else if (error instanceof SeriesNoUpcomingLessonsError) {
+      // Expected for some series — not an error.
+    } else {
+      console.error(`[series-bg] ${label} failed for ${seriesId}:`, error);
+    }
+  });
+}
+
+/**
  * Create a recurring lesson series.
+ *
+ * The Firestore write (series doc + every occurrence) is the only blocking
+ * step — it must succeed before we respond. Google Calendar sync and the
+ * optional shared Meet link are enrichment that runs in the background so the
+ * client doesn't wait on third-party APIs.
  */
 export async function createRecurringLesson(
   req: Request<{}, {}, CreateRecurringLessonRequest>,
@@ -91,45 +120,32 @@ export async function createRecurringLesson(
 
     const result = await createLessonSeriesInFirestore(req.body, req.user.uid);
 
-    // Best-effort push every upcoming occurrence to Google Calendar.
-    // Never blocks the response; failures are logged inside the sync helper.
-    try {
-      const upcoming = await listLessonsBySeriesFromFirestore(result.seriesId, {
-        futureOnly: true,
-      });
-      await Promise.all(
-        upcoming.map((l) => syncLessonToCalendar(req.user!.uid, l)),
-      );
-    } catch {
-      /* logged inside syncLessonToCalendar */
-    }
-
-    // Auto-generate a shared Google Meet link when the series is set to use
-    // Google Meet, and persist it on the series + every occurrence. Best-effort:
-    // if the tutor isn't connected to Google (or Meet provisioning fails), the
-    // series is still created and they can generate the link from the series page.
-    if (isMeetLocation(req.body.location)) {
-      try {
-        await generateSeriesMeetLinkForUser(req.user.uid, result.seriesId);
-      } catch (error) {
-        if (error instanceof GoogleNotConnectedError) {
-          console.warn(
-            `[series-meet] Google not connected; skipping auto Meet link for series ${result.seriesId}`,
-          );
-        } else if (!(error instanceof SeriesNoUpcomingLessonsError)) {
-          console.error(
-            `[series-meet] Failed to auto-generate Meet link for series ${result.seriesId}:`,
-            error,
-          );
-        }
-      }
-    }
-
-    const response: CreateRecurringLessonResponse = {
+    // Respond immediately — the lessons already exist and are visible. Calendar
+    // sync + (optional) Meet-link provisioning continue in the background; the
+    // client polls for the Meet link and refetches lessons as they update.
+    res.status(201).json({
       seriesId: result.seriesId,
       count: result.count,
-    };
-    res.status(201).json(response);
+    });
+
+    const tutorId = req.user.uid;
+    const seriesId = result.seriesId;
+
+    // Push every upcoming occurrence to Google Calendar (best-effort).
+    runInBackground("calendar-sync", seriesId, async () => {
+      const upcoming = await listLessonsBySeriesFromFirestore(seriesId, {
+        futureOnly: true,
+      });
+      await Promise.all(upcoming.map((l) => syncLessonToCalendar(tutorId, l)));
+    });
+
+    // Auto-provision a shared Google Meet link for Meet-based series
+    // (best-effort; the tutor can also generate it from the series page).
+    if (isMeetLocation(req.body.location)) {
+      runInBackground("meet-link", seriesId, () =>
+        generateSeriesMeetLinkForUser(tutorId, seriesId),
+      );
+    }
   } catch (error) {
     console.error("Create recurring lesson failed:", error);
     const message = error instanceof Error ? error.message : "Failed to create recurring lesson";

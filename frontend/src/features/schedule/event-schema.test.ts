@@ -1,9 +1,13 @@
 import { describe, it, expect } from "vitest";
 import {
   minutesBetween,
+  timePlusMinutes,
   eventFormSchema,
   toCreateLessonRequest,
   toCreateRecurringLessonRequest,
+  describeRecurrence,
+  describeOneOff,
+  estimateOccurrenceCount,
 } from "@examify-tms/shared";
 
 const validOneOff = {
@@ -11,8 +15,25 @@ const validOneOff = {
   studentName: "Ada Lovelace",
   date: "2026-01-15",
   startTime: "09:00",
-  endTime: "10:00",
+  durationMinutes: 60,
 };
+
+const recurringSlots = [
+  { dayOfWeek: "monday", timeOfDay: "09:00" },
+  { dayOfWeek: "wednesday", timeOfDay: "10:00" },
+];
+
+function recurringBase(overrides: Record<string, unknown> = {}) {
+  return {
+    ...validOneOff,
+    repeat: "weekly",
+    slots: recurringSlots,
+    durationMinutes: 60,
+    endsMode: "until",
+    endDate: "2026-12-31",
+    ...overrides,
+  };
+}
 
 function parse(input: Record<string, unknown>) {
   return eventFormSchema.safeParse(input);
@@ -29,65 +50,68 @@ describe("minutesBetween", () => {
   });
 });
 
+describe("timePlusMinutes", () => {
+  it("adds minutes within the same day", () => {
+    expect(timePlusMinutes("09:00", 90)).toBe("10:30");
+  });
+
+  it("wraps past midnight", () => {
+    expect(timePlusMinutes("23:30", 60)).toBe("00:30");
+  });
+});
+
 describe("eventFormSchema — one-off", () => {
   it("accepts a minimal valid lesson", () => {
     const res = parse(validOneOff);
     expect(res.success).toBe(true);
   });
 
-  it("requires a valid date and HH:mm times", () => {
-    expect(
-      parse({ ...validOneOff, date: "15-01-2026" }).success,
-    ).toBe(false);
+  it("requires a valid date and start time", () => {
+    expect(parse({ ...validOneOff, date: "15-01-2026" }).success).toBe(false);
     expect(parse({ ...validOneOff, startTime: "9:00" }).success).toBe(false);
   });
-});
 
-describe("eventFormSchema — end after start", () => {
-  it("rejects an end time at or before the start", () => {
-    const same = parse({ ...validOneOff, startTime: "09:30", endTime: "09:30" });
-    expect(same.success).toBe(false);
-    if (!same.success) {
-      expect(same.error.issues.some((i) => i.path[0] === "endTime")).toBe(true);
+  it("requires a positive duration", () => {
+    const res = parse({ ...validOneOff, durationMinutes: 0 });
+    expect(res.success).toBe(false);
+    if (!res.success) {
+      expect(
+        res.error.issues.some((i) => i.path[0] === "durationMinutes"),
+      ).toBe(true);
     }
+  });
+
+  it("does not require a time window for a recurring series", () => {
+    const res = parse({
+      ...recurringBase(),
+      startTime: "",
+    });
+    expect(res.success).toBe(true);
   });
 });
 
 describe("eventFormSchema — recurring", () => {
-  const recurringBase = {
-    ...validOneOff,
-    repeat: "weekly" as const,
-    selectedDays: ["monday", "wednesday"],
-    slotTimes: { monday: "09:00", wednesday: "10:00" },
-    endsMode: "until" as const,
-    endDate: "2026-12-31",
-  };
-
-  it("requires at least one day", () => {
-    const res = parse({ ...recurringBase, selectedDays: [] });
+  it("requires at least one slot", () => {
+    const res = parse({ ...recurringBase(), slots: [] });
     expect(res.success).toBe(false);
     if (!res.success) {
-      expect(
-        res.error.issues.some((i) => i.path[0] === "selectedDays"),
-      ).toBe(true);
+      expect(res.error.issues.some((i) => i.path[0] === "slots")).toBe(true);
     }
   });
 
-  it("requires a valid slot time for each selected day", () => {
+  it("requires a valid time on every slot", () => {
     const res = parse({
-      ...recurringBase,
-      slotTimes: { monday: "09:00", wednesday: "bad" },
+      ...recurringBase(),
+      slots: [
+        { dayOfWeek: "monday", timeOfDay: "09:00" },
+        { dayOfWeek: "wednesday", timeOfDay: "bad" },
+      ],
     });
     expect(res.success).toBe(false);
-    if (!res.success) {
-      expect(
-        res.error.issues.some((i) => i.path[0] === "slotTimes"),
-      ).toBe(true);
-    }
   });
 
   it("requires an end date when endsMode is 'until'", () => {
-    const res = parse({ ...recurringBase, endDate: "" });
+    const res = parse({ ...recurringBase(), endDate: "" });
     expect(res.success).toBe(false);
     if (!res.success) {
       expect(res.error.issues.some((i) => i.path[0] === "endDate")).toBe(true);
@@ -95,7 +119,7 @@ describe("eventFormSchema — recurring", () => {
   });
 
   it("requires an occurrence count when endsMode is 'count'", () => {
-    const res = parse({ ...recurringBase, endsMode: "count" });
+    const res = parse({ ...recurringBase(), endsMode: "count" });
     expect(res.success).toBe(false);
     if (!res.success) {
       expect(
@@ -106,11 +130,11 @@ describe("eventFormSchema — recurring", () => {
 });
 
 describe("toCreateLessonRequest", () => {
-  it("builds a one-off create payload with derived duration + ISO start", () => {
-    const parsed = eventFormSchema.parse(validOneOff);
+  it("builds a one-off create payload using the explicit duration + ISO start", () => {
+    const parsed = eventFormSchema.parse({ ...validOneOff, durationMinutes: 45 });
     const req = toCreateLessonRequest(parsed);
     expect(req.studentId).toBe("stu_1");
-    expect(req.durationMinutes).toBe(60);
+    expect(req.durationMinutes).toBe(45);
     // The builder parses "<date>T<time>:00" in local time, so mirror that here.
     expect(req.startDateTime).toBe(
       new Date("2026-01-15T09:00:00").toISOString(),
@@ -136,17 +160,18 @@ describe("toCreateLessonRequest", () => {
 });
 
 describe("toCreateRecurringLessonRequest", () => {
-  it("maps weekly → 1-week interval and builds a slot per day", () => {
+  it("uses the explicit duration and builds a slot per row", () => {
     const parsed = eventFormSchema.parse({
       ...validOneOff,
       repeat: "weekly",
-      selectedDays: ["monday", "wednesday"],
-      slotTimes: { monday: "09:00", wednesday: "10:00" },
+      slots: recurringSlots,
+      durationMinutes: 45,
       endsMode: "until",
       endDate: "2026-12-31",
     });
     const req = toCreateRecurringLessonRequest(parsed, "Australia/Sydney");
     expect(req.intervalWeeks).toBe(1);
+    expect(req.durationMinutes).toBe(45);
     expect(req.slots).toEqual([
       { dayOfWeek: "monday", timeOfDay: "09:00" },
       { dayOfWeek: "wednesday", timeOfDay: "10:00" },
@@ -160,8 +185,8 @@ describe("toCreateRecurringLessonRequest", () => {
     const parsed = eventFormSchema.parse({
       ...validOneOff,
       repeat: "biweekly",
-      selectedDays: ["friday"],
-      slotTimes: { friday: "16:00" },
+      slots: [{ dayOfWeek: "friday", timeOfDay: "16:00" }],
+      durationMinutes: 60,
       endsMode: "count",
       occurrenceCount: 6,
     });
@@ -175,13 +200,93 @@ describe("toCreateRecurringLessonRequest", () => {
     const parsed = eventFormSchema.parse({
       ...validOneOff,
       repeat: "monthly",
-      selectedDays: ["monday"],
-      slotTimes: { monday: "09:00" },
+      slots: [{ dayOfWeek: "monday", timeOfDay: "09:00" }],
+      durationMinutes: 60,
       endsMode: "until",
       endDate: "2026-12-31",
     });
     const req = toCreateRecurringLessonRequest(parsed, "UTC");
     expect(req.intervalWeeks).toBe(4);
     expect(req.until).toBe("2026-12-31");
+  });
+});
+
+describe("estimateOccurrenceCount", () => {
+  it("returns null for a one-off", () => {
+    expect(
+      estimateOccurrenceCount(eventFormSchema.parse(validOneOff)),
+    ).toBeNull();
+  });
+
+  it("returns the count in count mode", () => {
+    const parsed = eventFormSchema.parse({
+      ...recurringBase(),
+      endsMode: "count",
+      occurrenceCount: 12,
+    });
+    expect(estimateOccurrenceCount(parsed)).toBe(12);
+  });
+
+  it("estimates from the date range for until mode", () => {
+    const parsed = eventFormSchema.parse({
+      ...validOneOff,
+      date: "2026-01-05",
+      repeat: "weekly",
+      slots: recurringSlots,
+      durationMinutes: 60,
+      endsMode: "until",
+      endDate: "2026-01-31",
+    });
+    // ~4 on-weeks × 2 slots.
+    expect(estimateOccurrenceCount(parsed)).toBeGreaterThanOrEqual(8);
+  });
+});
+
+describe("describeRecurrence", () => {
+  it("restates a weekly multi-slot series in plain English", () => {
+    const parsed = eventFormSchema.parse({
+      ...validOneOff,
+      date: "2026-01-05",
+      repeat: "weekly",
+      slots: [
+        { dayOfWeek: "monday", timeOfDay: "16:00" },
+        { dayOfWeek: "wednesday", timeOfDay: "17:00" },
+      ],
+      durationMinutes: 60,
+      endsMode: "until",
+      endDate: "2026-12-31",
+    });
+    const summary = describeRecurrence(parsed);
+    expect(summary).toContain("Every week");
+    expect(summary).toContain("Monday 4:00 PM");
+    expect(summary).toContain("Wednesday 5:00 PM");
+    expect(summary).toContain("60 min each");
+  });
+
+  it("returns an empty string for a one-off", () => {
+    expect(describeRecurrence(eventFormSchema.parse(validOneOff))).toBe("");
+  });
+});
+
+describe("describeOneOff", () => {
+  it("restates a one-off lesson with start, derived end and duration", () => {
+    const parsed = eventFormSchema.parse({
+      ...validOneOff,
+      startTime: "16:00",
+      durationMinutes: 60,
+    });
+    const summary = describeOneOff(parsed);
+    expect(summary).toContain("4:00 PM");
+    expect(summary).toContain("5:00 PM");
+    expect(summary).toContain("60 min");
+  });
+
+  it("returns an empty string when the start time is missing", () => {
+    const parsed = eventFormSchema.parse(validOneOff);
+    expect(describeOneOff({ ...parsed, startTime: "" })).toBe("");
+  });
+
+  it("returns an empty string for a recurring series", () => {
+    expect(describeOneOff(eventFormSchema.parse(recurringBase()))).toBe("");
   });
 });

@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { Video, TriangleAlert, MapPin, Globe } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Video, TriangleAlert, MapPin, Globe, Plus, X, Repeat, Clock } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
@@ -22,18 +24,24 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useListStudents } from "@/features/students/api";
 import { useSubjects } from "@/lib/subjects";
 import { useCreateLesson, useCreateRecurringLesson } from "./api";
+import { pollSeriesMeetLink } from "./api";
 import { generateMeetLinkRequest, updateLessonRequest } from "./api/requests";
 import {
   DAYS,
-  DAY_LABELS,
+  DAY_FULL_LABELS,
+  DURATION_PRESETS,
+  describeRecurrence,
+  describeOneOff,
   eventFormSchema,
   toCreateLessonRequest,
   toCreateRecurringLessonRequest,
+  timePlusMinutes,
   type EventFormData,
 } from "./event-schema";
 import { isRangeOverlap } from "./lesson-utils";
 import { isSlotOutsideWorkingHours } from "./working-hours-utils";
 import { useAuthStore } from "@/store/auth-store";
+import { queryClient } from "@examify-tms/shared";
 import type { DayOfWeek, ExternalCalendarEvent } from "@examify-tms/interfaces";
 
 interface CreateEventDialogProps {
@@ -48,6 +56,7 @@ const pad = (n: number) => String(n).padStart(2, "0");
 const toDateStr = (d: Date) =>
   `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const toTimeStr = (d: Date) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+const TIME_RE = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
 const JS_DAY_NAMES: DayOfWeek[] = [
   "sunday",
@@ -82,12 +91,11 @@ function emptyValues(): EventFormData {
     subject: "",
     date: "",
     startTime: "",
-    endTime: "",
     location: "",
     notes: "",
     repeat: "none",
-    selectedDays: [],
-    slotTimes: {},
+    slots: [],
+    durationMinutes: 60,
     endsMode: "until",
     endDate: "",
     occurrenceCount: undefined,
@@ -97,6 +105,64 @@ function emptyValues(): EventFormData {
 type LocationMode = "zoom" | "meet" | "inperson" | "other" | "";
 type FieldErrors = Partial<Record<keyof EventFormData, string>>;
 
+/**
+ * Shared duration control for one-off and recurring lessons: quick-pick chips
+ * plus an "Other" toggle that reveals a custom number input.
+ */
+function DurationPicker({
+  value,
+  onChange,
+}: {
+  value: number;
+  onChange: (minutes: number) => void;
+}) {
+  const [other, setOther] = useState(false);
+  const isPreset = (DURATION_PRESETS as readonly number[]).includes(value);
+  const showCustom = other || !isPreset;
+  return (
+    <>
+      <ToggleGroup
+        type="single"
+        variant="outline"
+        value={showCustom ? "other" : String(value)}
+        onValueChange={(v) => {
+          if (!v) return;
+          if (v === "other") {
+            setOther(true);
+          } else {
+            setOther(false);
+            onChange(Number(v));
+          }
+        }}
+        className="flex flex-wrap justify-start gap-2"
+      >
+        {DURATION_PRESETS.map((d) => (
+          <ToggleGroupItem key={d} value={String(d)}>
+            {d} min
+          </ToggleGroupItem>
+        ))}
+        <ToggleGroupItem value="other">Other</ToggleGroupItem>
+      </ToggleGroup>
+      {showCustom && (
+        <div className="flex items-center gap-1.5">
+          <Input
+            type="number"
+            min={5}
+            step={5}
+            className="h-9 w-24"
+            value={value || ""}
+            placeholder="e.g. 50"
+            onChange={(e) =>
+              onChange(Math.max(1, e.target.valueAsNumber || 0))
+            }
+          />
+          <span className="text-xs text-muted-foreground">min</span>
+        </div>
+      )}
+    </>
+  );
+}
+
 export function CreateEventDialog({
   open,
   onOpenChange,
@@ -104,6 +170,7 @@ export function CreateEventDialog({
   end,
   externalEvents = [],
 }: CreateEventDialogProps) {
+  const navigate = useNavigate();
   const { data: students = [] } = useListStudents();
   const subjects = useSubjects();
   const user = useAuthStore((s) => s.user);
@@ -112,11 +179,8 @@ export function CreateEventDialog({
   const [values, setValues] = useState<EventFormData>(emptyValues);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [locationMode, setLocationMode] = useState<LocationMode>("");
-  // null = unknown, true = connected, false = not connected
   const isRecurring = values.repeat !== "none";
-  const [meetAttaching, setMeetAttaching] = useState(false);
-  const pending =
-    createLesson.isPending || createRecurring.isPending || meetAttaching;
+  const pending = createLesson.isPending || createRecurring.isPending;
   const submitError =
     createLesson.error?.message ?? createRecurring.error?.message;
 
@@ -134,12 +198,13 @@ export function CreateEventDialog({
   // date + time range is known.
   const overlaps = useMemo(() => {
     if (isRecurring) return [];
-    if (!values.date || !values.startTime || !values.endTime) return [];
-    const startMs = new Date(`${values.date}T${values.startTime}:00`).getTime();
-    const endMs = new Date(`${values.date}T${values.endTime}:00`).getTime();
-    if (Number.isNaN(startMs) || Number.isNaN(endMs) || endMs <= startMs) {
+    if (!values.date || !values.startTime || !TIME_RE.test(values.startTime)) {
       return [];
     }
+    if (!values.durationMinutes || values.durationMinutes < 1) return [];
+    const startMs = new Date(`${values.date}T${values.startTime}:00`).getTime();
+    if (Number.isNaN(startMs)) return [];
+    const endMs = startMs + values.durationMinutes * 60000;
     return externalEvents.filter((ev) =>
       isRangeOverlap(
         new Date(startMs),
@@ -152,7 +217,7 @@ export function CreateEventDialog({
     isRecurring,
     values.date,
     values.startTime,
-    values.endTime,
+    values.durationMinutes,
     externalEvents,
   ]);
 
@@ -160,63 +225,44 @@ export function CreateEventDialog({
   // configured working hours (day off, or before/after the daily window).
   const outsideHours = useMemo(() => {
     if (isRecurring) return false;
-    if (!values.date || !values.startTime || !values.endTime) return false;
+    if (!values.date || !values.startTime || !TIME_RE.test(values.startTime)) {
+      return false;
+    }
+    if (!values.durationMinutes || values.durationMinutes < 1) return false;
     return isSlotOutsideWorkingHours(
       values.date,
       values.startTime,
-      values.endTime,
+      timePlusMinutes(values.startTime, values.durationMinutes),
       user?.workingHours,
     );
   }, [
     isRecurring,
     values.date,
     values.startTime,
-    values.endTime,
+    values.durationMinutes,
     user?.workingHours,
   ]);
 
-  // Rough preview of how many lessons a recurring series will create, so the
-  // choice feels concrete. Mirrors the backend's week-stepping loosely.
-  const estimatedCount = useMemo(() => {
-    if (!isRecurring || values.selectedDays.length === 0) return null;
-    if (values.endsMode === "count") return values.occurrenceCount ?? null;
-    if (!values.date || !values.endDate) return null;
-    const startMs = new Date(`${values.date}T00:00:00`).getTime();
-    const endMs = new Date(`${values.endDate}T00:00:00`).getTime();
-    if (Number.isNaN(startMs) || Number.isNaN(endMs) || endMs < startMs) {
-      return null;
-    }
-    const intervalWeeks =
-      values.repeat === "weekly"
-        ? 1
-        : values.repeat === "biweekly"
-          ? 2
-          : values.repeat === "monthly"
-            ? 4
-            : 1;
-    const weeks =
-      Math.floor((endMs - startMs) / (7 * 24 * 60 * 60 * 1000)) + 1;
-    const onWeeks = Math.ceil(weeks / intervalWeeks);
-    return Math.max(0, onWeeks * values.selectedDays.length);
-  }, [
-    isRecurring,
-    values.selectedDays.length,
-    values.repeat,
-    values.endsMode,
-    values.occurrenceCount,
-    values.date,
-    values.endDate,
-  ]);
+  // Plain-English restatement of what will be created, shown live so the user
+  // can verify before submitting (one-off or recurring).
+  const summary = useMemo(
+    () => (isRecurring ? describeRecurrence(values) : describeOneOff(values)),
+    [isRecurring, values],
+  );
 
   useEffect(() => {
     if (!open) return;
     setErrors({});
     setLocationMode("");
+    const seededDuration =
+      start && end
+        ? Math.max(1, Math.round((end.getTime() - start.getTime()) / 60000))
+        : 60;
     setValues({
       ...emptyValues(),
       date: start ? toDateStr(start) : "",
       startTime: start ? toTimeStr(start) : "",
-      endTime: end ? toTimeStr(end) : "",
+      durationMinutes: seededDuration,
     });
   }, [open, start, end]);
 
@@ -285,28 +331,30 @@ export function CreateEventDialog({
       update("repeat", "none");
       return;
     }
-    // Seed the day picker with the weekday of the chosen date, and default
-    // the end date to the end of the start date's year so the user rarely
-    // has to think about bounding the series.
+    // Seed a first slot from the chosen start date + time, and default the end
+    // date to the end of that year, so the user rarely has to think about
+    // bounding or timing the series. Duration is already the shared source of
+    // truth from the one-off side.
     setValues((prev) => {
       const base = {
         ...prev,
         repeat: next,
         endDate: prev.endDate || endOfYearDateStr(prev.date),
+        durationMinutes:
+          prev.durationMinutes && prev.durationMinutes > 0
+            ? prev.durationMinutes
+            : 60,
       };
-      if (prev.selectedDays.length > 0) return base;
-      const day = weekdayOf(prev.date);
-      if (!day) return base;
-      return {
-        ...base,
-        selectedDays: [day],
-        slotTimes: { ...prev.slotTimes, [day]: prev.startTime },
-      };
+      if (prev.slots.length > 0) return base;
+      const day = weekdayOf(prev.date) ?? "monday";
+      const time =
+        prev.startTime && TIME_RE.test(prev.startTime) ? prev.startTime : "09:00";
+      return { ...base, slots: [{ dayOfWeek: day, timeOfDay: time }] };
     });
     setErrors((prev) => ({
       ...prev,
       repeat: undefined,
-      selectedDays: undefined,
+      slots: undefined,
       endDate: undefined,
     }));
   }
@@ -319,49 +367,58 @@ export function CreateEventDialog({
     handleRepeatChange(values.repeat === "none" ? "weekly" : values.repeat);
   }
 
-  function toggleDay(day: DayOfWeek) {
+  function addSlot() {
     setValues((prev) => {
-      const isSelected = prev.selectedDays.includes(day);
-      const selectedDays = isSelected
-        ? prev.selectedDays.filter((d) => d !== day)
-        : [...prev.selectedDays, day];
-      const slotTimes = { ...prev.slotTimes };
-      if (!isSelected && !slotTimes[day]) {
-        slotTimes[day] = prev.startTime;
-      }
-      return { ...prev, selectedDays, slotTimes };
+      if (prev.slots.length >= 7) return prev;
+      const usedDays = new Set(prev.slots.map((s) => s.dayOfWeek));
+      const nextDay = (DAYS.find((d) => !usedDays.has(d)) ?? "monday") as DayOfWeek;
+      const lastTime =
+        prev.slots[prev.slots.length - 1]?.timeOfDay ??
+        (prev.startTime && TIME_RE.test(prev.startTime) ? prev.startTime : "09:00");
+      return { ...prev, slots: [...prev.slots, { dayOfWeek: nextDay, timeOfDay: lastTime }] };
     });
-    setErrors((prev) => ({
+  }
+
+  function updateSlot(index: number, patch: Partial<{ dayOfWeek: DayOfWeek; timeOfDay: string }>) {
+    setValues((prev) => ({
       ...prev,
-      selectedDays: undefined,
-      slotTimes: undefined,
+      slots: prev.slots.map((s, i) => (i === index ? { ...s, ...patch } : s)),
+    }));
+    setErrors((prev) => ({ ...prev, slots: undefined }));
+  }
+
+  function removeSlot(index: number) {
+    setValues((prev) => ({
+      ...prev,
+      slots: prev.slots.filter((_, i) => i !== index),
     }));
   }
 
-  async function attachMeetLink(lessonId: string, data: EventFormData) {
+  /**
+   * Provision + attach a Google Meet link to an already-created lesson. Runs in
+   * the background after the dialog closes; resolves to the link or null.
+   */
+  async function attachMeetLink(
+    lessonId: string,
+    data: EventFormData,
+  ): Promise<string | null> {
     try {
       const startDateTime = new Date(
         `${data.date}T${data.startTime}:00`,
       ).toISOString();
-      const durationMinutes = Math.max(
-        1,
-        Math.round(
-          (new Date(`${data.date}T${data.endTime}:00`).getTime() -
-            new Date(`${data.date}T${data.startTime}:00`).getTime()) /
-            60000,
-        ),
-      );
       const { meetingLink } = await generateMeetLinkRequest({
         lessonId,
         startDateTime,
-        durationMinutes,
+        durationMinutes: data.durationMinutes,
       });
       await updateLessonRequest(lessonId, {
         location: "Google Meet",
         meetLink: meetingLink,
       });
+      return meetingLink;
     } catch {
       // best-effort — lesson was created, Meet link just didn't attach
+      return null;
     }
   }
 
@@ -382,19 +439,55 @@ export function CreateEventDialog({
         const lesson = await createLesson.mutateAsync(
           toCreateLessonRequest(result.data),
         );
+        onOpenChange(false);
+
+        toast.success("Lesson created", {
+          description: describeOneOff(result.data) || undefined,
+          action: {
+            label: "View lesson",
+            onClick: () => navigate(`/lessons/${lesson.id}`),
+          },
+        });
+
+        // Meet provisioning is slow; run it silently in the background and
+        // refresh the lessons query once the link is attached.
         if (locationMode === "meet") {
-          setMeetAttaching(true);
-          await attachMeetLink(lesson.id, result.data);
-          setMeetAttaching(false);
+          void attachMeetLink(lesson.id, result.data).then((link) => {
+            if (link) queryClient.invalidateQueries({ queryKey: ["lessons"] });
+          });
         }
       } else {
         const student = students.find((s) => s.id === result.data.studentId);
         const timezone = student?.timezone || browserTimezone();
-        await createRecurring.mutateAsync(
+        // The backend returns fast (after the Firestore write); Google Calendar
+        // sync + Meet provisioning continue in the background.
+        const created = await createRecurring.mutateAsync(
           toCreateRecurringLessonRequest(result.data, timezone),
         );
+        onOpenChange(false);
+
+        const plural = created.count === 1 ? "" : "s";
+        toast.success("Series created", {
+          description: `${created.count} lesson${plural} added.`,
+          action: {
+            label: "View series",
+            onClick: () => navigate(`/lessons/series/${created.seriesId}`),
+          },
+        });
+
+        // The Meet link is provisioned in the background; poll silently and
+        // refresh the lessons query once it lands.
+        if (locationMode === "meet") {
+          void pollSeriesMeetLink(created.seriesId).then((link) => {
+            if (link) queryClient.invalidateQueries({ queryKey: ["lessons"] });
+          });
+        } else {
+          toast.info("Syncing to Google Calendar…", {
+            id: "series-cal",
+            description: "Happens in the background.",
+          });
+        }
       }
-      onOpenChange(false);
     } catch {
       // error surfaced below; keep dialog open
     }
@@ -495,36 +588,37 @@ export function CreateEventDialog({
             )}
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="startTime">
-                {isRecurring ? "Default time" : "Start"}
-              </Label>
-              <Input
-                id="startTime"
-                type="time"
-                aria-invalid={!!errors.startTime}
-                value={values.startTime}
-                onChange={(e) => update("startTime", e.target.value)}
-              />
-              {errors.startTime && (
-                <p className="text-xs text-destructive">{errors.startTime}</p>
-              )}
+          {/* One-off lessons need a start time + duration. A recurring series
+              derives its start from per-slot times, so these are hidden there. */}
+          {!isRecurring && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="startTime">Start time</Label>
+                <Input
+                  id="startTime"
+                  type="time"
+                  aria-invalid={!!errors.startTime}
+                  value={values.startTime}
+                  onChange={(e) => update("startTime", e.target.value)}
+                />
+                {errors.startTime && (
+                  <p className="text-xs text-destructive">{errors.startTime}</p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label>Duration</Label>
+                <DurationPicker
+                  value={values.durationMinutes}
+                  onChange={(n) => update("durationMinutes", n)}
+                />
+                {errors.durationMinutes && (
+                  <p className="text-xs text-destructive">
+                    {errors.durationMinutes}
+                  </p>
+                )}
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="endTime">End</Label>
-              <Input
-                id="endTime"
-                type="time"
-                aria-invalid={!!errors.endTime}
-                value={values.endTime}
-                onChange={(e) => update("endTime", e.target.value)}
-              />
-              {errors.endTime && (
-                <p className="text-xs text-destructive">{errors.endTime}</p>
-              )}
-            </div>
-          </div>
+          )}
 
           {overlaps.length > 0 && (
             <div className="flex items-start gap-2 rounded-md border border-amber-500/50 bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-400">
@@ -575,77 +669,84 @@ export function CreateEventDialog({
                   <ToggleGroupItem value="biweekly">
                     Every 2 weeks
                   </ToggleGroupItem>
-                  <ToggleGroupItem value="monthly">Monthly</ToggleGroupItem>
+                  <ToggleGroupItem value="monthly">
+                    Every 4 weeks
+                  </ToggleGroupItem>
                 </ToggleGroup>
-                {values.repeat === "monthly" && (
-                  <p className="text-xs text-muted-foreground">
-                    Repeats every 4 weeks on the days you pick below.
-                  </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Weekly lesson times</Label>
+                <div className="space-y-2">
+                  {values.slots.map((slot, index) => (
+                    <div key={index} className="flex items-center gap-2">
+                      <Select
+                        value={slot.dayOfWeek}
+                        onValueChange={(d) =>
+                          updateSlot(index, { dayOfWeek: d as DayOfWeek })
+                        }
+                      >
+                        <SelectTrigger className="flex-1">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {DAYS.map((day) => (
+                            <SelectItem key={day} value={day}>
+                              {DAY_FULL_LABELS[day]}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Input
+                        type="time"
+                        className="h-9 flex-1"
+                        value={slot.timeOfDay}
+                        onChange={(e) =>
+                          updateSlot(index, { timeOfDay: e.target.value })
+                        }
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9 shrink-0 text-muted-foreground"
+                        onClick={() => removeSlot(index)}
+                        disabled={values.slots.length <= 1}
+                        aria-label="Remove this lesson time"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+                {values.slots.length < 7 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addSlot}
+                  >
+                    <Plus className="mr-1.5 h-4 w-4" />
+                    Add a lesson time
+                  </Button>
+                )}
+                {errors.slots && (
+                  <p className="text-xs text-destructive">{errors.slots}</p>
                 )}
               </div>
 
               <div className="space-y-2">
-                <Label>Repeat on</Label>
-                <div className="flex flex-wrap gap-2">
-                  {DAYS.map((day) => {
-                    const selected = values.selectedDays.includes(day);
-                    return (
-                      <button
-                        key={day}
-                        type="button"
-                        aria-pressed={selected}
-                        onClick={() => toggleDay(day)}
-                        className={
-                          selected
-                            ? "inline-flex h-9 min-w-9 items-center justify-center rounded-md border border-primary bg-primary/10 px-3 text-sm font-medium text-primary transition-colors"
-                            : "inline-flex h-9 min-w-9 items-center justify-center rounded-md border border-input bg-background px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-                        }
-                      >
-                        {DAY_LABELS[day]}
-                      </button>
-                    );
-                  })}
-                </div>
-                {errors.selectedDays && (
+                <Label>Lesson duration</Label>
+                <DurationPicker
+                  value={values.durationMinutes}
+                  onChange={(n) => update("durationMinutes", n)}
+                />
+                {errors.durationMinutes && (
                   <p className="text-xs text-destructive">
-                    {errors.selectedDays}
+                    {errors.durationMinutes}
                   </p>
                 )}
               </div>
-
-              {values.selectedDays.length > 0 && (
-                <div className="space-y-2">
-                  <Label>Start time per day</Label>
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    {values.selectedDays.map((day) => (
-                      <div key={day} className="flex items-center gap-2">
-                        <span className="w-10 text-sm text-muted-foreground">
-                          {DAY_LABELS[day]}
-                        </span>
-                        <Input
-                          type="time"
-                          className="h-9"
-                          value={values.slotTimes[day] ?? values.startTime}
-                          onChange={(e) =>
-                            setValues((prev) => ({
-                              ...prev,
-                              slotTimes: {
-                                ...prev.slotTimes,
-                                [day]: e.target.value,
-                              },
-                            }))
-                          }
-                        />
-                      </div>
-                    ))}
-                  </div>
-                  {errors.slotTimes && (
-                    <p className="text-xs text-destructive">
-                      {errors.slotTimes}
-                    </p>
-                  )}
-                </div>
-              )}
 
               <div className="space-y-2">
                 <Label>Ends</Label>
@@ -730,13 +831,17 @@ export function CreateEventDialog({
                   </p>
                 )}
               </div>
+            </div>
+          )}
 
-              {estimatedCount !== null && estimatedCount > 0 && (
-                <p className="text-xs text-muted-foreground">
-                  About {estimatedCount} lesson
-                  {estimatedCount === 1 ? "" : "s"} will be created.
-                </p>
+          {summary && (
+            <div className="flex items-start gap-2 rounded-md border border-primary/30 bg-primary/5 p-3 text-xs">
+              {isRecurring ? (
+                <Repeat className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+              ) : (
+                <Clock className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
               )}
+              <p className="text-foreground">{summary}</p>
             </div>
           )}
 
@@ -822,13 +927,11 @@ export function CreateEventDialog({
               Cancel
             </Button>
             <Button type="submit" disabled={pending}>
-              {meetAttaching
-                ? "Generating link…"
-                : pending
-                  ? "Creating…"
-                  : isRecurring
-                    ? "Create series"
-                    : "Create lesson"}
+              {pending
+                ? "Creating…"
+                : isRecurring
+                  ? "Create series"
+                  : "Create lesson"}
             </Button>
           </DialogFooter>
         </form>
