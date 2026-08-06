@@ -98,6 +98,7 @@ function toLessonResponse(lesson: Lesson): LessonResponse {
       : null,
     studentNotifiedCount: lesson.studentNotifiedCount ?? 0,
     isPaid: lesson.isPaid ?? false,
+    invoiceId: lesson.invoiceId ?? null,
     googleCalendarEventId: lesson.googleCalendarEventId ?? null,
     googleCalendarSyncedAt: lesson.googleCalendarSyncedAt
       ? toIso(lesson.googleCalendarSyncedAt)
