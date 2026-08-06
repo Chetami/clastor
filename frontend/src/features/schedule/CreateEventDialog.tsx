@@ -510,100 +510,102 @@ export function CreateEventDialog({
               <TabsTrigger value="recurring">Recurring series</TabsTrigger>
             </TabsList>
           </Tabs>
-          <div className="space-y-2">
-            <Label htmlFor="student">Student</Label>
-            <Select
-              value={values.studentId}
-              onValueChange={handleStudentChange}
-              disabled={students.length === 0}
-            >
-              <SelectTrigger id="student" aria-invalid={!!errors.studentId}>
-                <SelectValue
-                  placeholder={
-                    students.length === 0
-                      ? "Add a student first"
-                      : "Select a student"
-                  }
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {students.map((s) => (
-                  <SelectItem key={s.id} value={s.id}>
-                    {s.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {errors.studentId && (
-              <p className="text-xs text-destructive">{errors.studentId}</p>
-            )}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="student">Student</Label>
+              <Select
+                value={values.studentId}
+                onValueChange={handleStudentChange}
+                disabled={students.length === 0}
+              >
+                <SelectTrigger id="student" aria-invalid={!!errors.studentId}>
+                  <SelectValue
+                    placeholder={
+                      students.length === 0
+                        ? "Add a student first"
+                        : "Select a student"
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {students.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.studentId && (
+                <p className="text-xs text-destructive">{errors.studentId}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="subject">
+                Subject{" "}
+                <span className="text-xs font-normal text-muted-foreground">
+                  (optional)
+                </span>
+              </Label>
+              <Select
+                value={values.subject}
+                onValueChange={(v) => update("subject", v)}
+                disabled={!selectedStudent}
+              >
+                <SelectTrigger id="subject" aria-invalid={!!errors.subject}>
+                  <SelectValue
+                    placeholder={
+                      selectedStudent && studentSubjects.length > 0
+                        ? "Select a subject"
+                        : "No subjects assigned"
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">No subject</SelectItem>
+                  {studentSubjects.map((s) => (
+                    <SelectItem key={s.id} value={s.name}>
+                      {s.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.subject && (
+                <p className="text-xs text-destructive">{errors.subject}</p>
+              )}
+            </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="subject">
-              Subject{" "}
-              <span className="text-xs font-normal text-muted-foreground">
-                (optional)
-              </span>
-            </Label>
-            <Select
-              value={values.subject}
-              onValueChange={(v) => update("subject", v)}
-              disabled={!selectedStudent}
-            >
-              <SelectTrigger id="subject" aria-invalid={!!errors.subject}>
-                <SelectValue
-                  placeholder={
-                    selectedStudent && studentSubjects.length > 0
-                      ? "Select a subject"
-                      : "No subjects assigned"
-                  }
-                />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">No subject</SelectItem>
-                {studentSubjects.map((s) => (
-                  <SelectItem key={s.id} value={s.name}>
-                    {s.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {errors.subject && (
-              <p className="text-xs text-destructive">{errors.subject}</p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="date">{isRecurring ? "Start date" : "Date"}</Label>
-            <Input
-              id="date"
-              type="date"
-              aria-invalid={!!errors.date}
-              value={values.date}
-              onChange={(e) => update("date", e.target.value)}
-            />
-            {errors.date && (
-              <p className="text-xs text-destructive">{errors.date}</p>
-            )}
-          </div>
-
-          {/* One-off lessons need a start time + duration. A recurring series
-              derives its start from per-slot times, so these are hidden there. */}
+          {/* One-off: date + start time share a row, duration sits below. */}
           {!isRecurring && (
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="startTime">Start time</Label>
-                <Input
-                  id="startTime"
-                  type="time"
-                  aria-invalid={!!errors.startTime}
-                  value={values.startTime}
-                  onChange={(e) => update("startTime", e.target.value)}
-                />
-                {errors.startTime && (
-                  <p className="text-xs text-destructive">{errors.startTime}</p>
-                )}
+            <>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="date">Date</Label>
+                  <Input
+                    id="date"
+                    type="date"
+                    aria-invalid={!!errors.date}
+                    value={values.date}
+                    onChange={(e) => update("date", e.target.value)}
+                  />
+                  {errors.date && (
+                    <p className="text-xs text-destructive">{errors.date}</p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="startTime">Start time</Label>
+                  <Input
+                    id="startTime"
+                    type="time"
+                    aria-invalid={!!errors.startTime}
+                    value={values.startTime}
+                    onChange={(e) => update("startTime", e.target.value)}
+                  />
+                  {errors.startTime && (
+                    <p className="text-xs text-destructive">{errors.startTime}</p>
+                  )}
+                </div>
               </div>
               <div className="space-y-2">
                 <Label>Duration</Label>
@@ -617,6 +619,23 @@ export function CreateEventDialog({
                   </p>
                 )}
               </div>
+            </>
+          )}
+
+          {/* A recurring series starts on a date; per-slot times live below. */}
+          {isRecurring && (
+            <div className="space-y-2">
+              <Label htmlFor="date">Start date</Label>
+              <Input
+                id="date"
+                type="date"
+                aria-invalid={!!errors.date}
+                value={values.date}
+                onChange={(e) => update("date", e.target.value)}
+              />
+              {errors.date && (
+                <p className="text-xs text-destructive">{errors.date}</p>
+              )}
             </div>
           )}
 
@@ -653,7 +672,7 @@ export function CreateEventDialog({
           )}
 
           {isRecurring && (
-            <div className="space-y-5 rounded-lg border bg-muted/30 p-4">
+            <div className="space-y-4 rounded-lg border bg-muted/30 p-4">
               <div className="space-y-2">
                 <Label>How often?</Label>
                 <ToggleGroup
