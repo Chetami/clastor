@@ -24,8 +24,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ChevronDown, FileText, Loader2, Pencil } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { FileText, Loader2, Pencil } from "lucide-react";
+import { MorphChevron } from "@/components/ui/morph-chevron";
 import type { LessonResponse, AttendanceStatus } from "@examify-tms/interfaces";
 import type { InvoiceLessonEdits } from "@/features/payments/api";
 
@@ -166,12 +166,7 @@ export function MarkAttendanceDialog({
                   </span>
                 )}
               </span>
-              <ChevronDown
-                className={cn(
-                  "h-3.5 w-3.5 text-muted-foreground transition-transform",
-                  detailsOpen && "rotate-180",
-                )}
-              />
+              <MorphChevron open={detailsOpen} size={14} />
             </Button>
           </CollapsibleTrigger>
           <CollapsibleContent className="space-y-3 pt-3 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:slide-in-from-top-1">

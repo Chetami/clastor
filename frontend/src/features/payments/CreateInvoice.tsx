@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Check, ChevronDown, DollarSign, Lock } from "lucide-react";
+import { ArrowLeft, Check, DollarSign, Lock } from "lucide-react";
 import { toast } from "sonner";
 import type { LessonResponse } from "@examify-tms/interfaces";
 import { cn } from "@/lib/utils";
+import { MorphChevron } from "@/components/ui/morph-chevron";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
@@ -404,12 +405,7 @@ export default function CreateInvoice() {
                               {upcomingLessons.length}
                             </span>
                           </span>
-                          <ChevronDown
-                            className={cn(
-                              "h-4 w-4 text-muted-foreground transition-transform duration-200",
-                              showUpcoming && "rotate-180",
-                            )}
-                          />
+                          <MorphChevron open={showUpcoming} />
                         </button>
                       </CollapsibleTrigger>
                       <CollapsibleContent className="p-4 pt-0 data-[state=open]:animate-in data-[state=open]:fade-in-0">

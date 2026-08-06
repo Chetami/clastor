@@ -1,8 +1,5 @@
 import { useMemo, useState } from "react";
 import {
-  ArrowDown,
-  ArrowUp,
-  ArrowUpDown,
   Ban,
   CalendarClock,
   ChevronsUpDown,
@@ -17,6 +14,7 @@ import type {
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { SortIndicator } from "@/components/ui/sort-indicator";
 import {
   Select,
   SelectContent,
@@ -161,15 +159,7 @@ export default function SentEmails() {
         }`}
       >
         {label}
-        {active ? (
-          sortOrder === "asc" ? (
-            <ArrowUp className="h-3 w-3" />
-          ) : (
-            <ArrowDown className="h-3 w-3" />
-          )
-        ) : (
-          <ArrowUpDown className="h-3 w-3 opacity-0 group-hover:opacity-50" />
-        )}
+        <SortIndicator active={active} ascending={sortOrder === "asc"} />
       </button>
     );
   }

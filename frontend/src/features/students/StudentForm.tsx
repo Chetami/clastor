@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { ChevronDown, Mail } from "lucide-react";
+import { Mail } from "lucide-react";
+import { MorphChevron } from "@/components/ui/morph-chevron";
 import type { RateType, StudentStatus } from "@examify-tms/interfaces";
 import { useUserCurrency, getCurrencySymbol } from "@/lib/use-currency";
 import { Button } from "@/components/ui/button";
@@ -168,11 +169,7 @@ export function StudentForm({
             className="flex w-full items-center justify-between rounded-lg px-4 py-3 text-sm font-medium transition-colors hover:bg-accent"
           >
             <span>Billing</span>
-            <ChevronDown
-              className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${
-                billingOpen ? "rotate-180" : ""
-              }`}
-            />
+            <MorphChevron open={billingOpen} />
           </button>
         </CollapsibleTrigger>
         <CollapsibleContent className="space-y-4 p-4 pt-0 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:slide-in-from-top-1">
@@ -303,11 +300,7 @@ export function StudentForm({
             className="flex w-full items-center justify-between rounded-lg px-4 py-3 text-sm font-medium transition-colors hover:bg-accent"
           >
             <span>Additional details</span>
-            <ChevronDown
-              className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${
-                additionalOpen ? "rotate-180" : ""
-              }`}
-            />
+            <MorphChevron open={additionalOpen} />
           </button>
         </CollapsibleTrigger>
         <CollapsibleContent className="space-y-4 p-4 pt-0 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:slide-in-from-top-1">

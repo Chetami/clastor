@@ -1,14 +1,9 @@
 import { useMemo, useState } from "react";
-import {
-  ArrowDown,
-  ArrowUp,
-  ArrowUpDown,
-  Search,
-  Users,
-} from "lucide-react";
+import { Search, Users } from "lucide-react";
 import type { AdminTutorSummary } from "@examify-tms/interfaces";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { SortIndicator } from "@/components/ui/sort-indicator";
 import {
   Table,
   TableBody,
@@ -107,15 +102,7 @@ export default function AdminTutors() {
         }`}
       >
         {label}
-        {active ? (
-          sortOrder === "asc" ? (
-            <ArrowUp className="h-3 w-3" />
-          ) : (
-            <ArrowDown className="h-3 w-3" />
-          )
-        ) : (
-          <ArrowUpDown className="h-3 w-3 opacity-0 group-hover:opacity-50" />
-        )}
+        <SortIndicator active={active} ascending={sortOrder === "asc"} />
       </button>
     );
   }

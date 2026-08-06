@@ -1,4 +1,5 @@
-import { Moon, Sun } from "lucide-react";
+import { MorphIcon } from "morphicons/react";
+import { Moon, Sun } from "lucide";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/hooks/use-theme";
 
@@ -13,11 +14,11 @@ export function ThemeToggle() {
       title="Toggle theme"
       data-tour="theme-toggle"
     >
-      {appearance === "dark" ? (
-        <Sun className="size-4" />
-      ) : (
-        <Moon className="size-4" />
-      )}
+      <MorphIcon
+        icon={appearance === "dark" ? Sun : Moon}
+        size={16}
+        spring="snappy"
+      />
     </Button>
   );
 }
