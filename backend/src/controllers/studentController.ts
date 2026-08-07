@@ -3,6 +3,7 @@ import { createStudentInFirestore, listStudentsFromFirestore, getStudentByIdFrom
 import { CreateStudentRequest, UpdateStudentRequest, StudentResponse, StudentListResponse, StudentImportSummary, Student, ApiError } from "@examify-tms/interfaces";
 import { canViewStudent, canEditStudent } from "../permissions/studentPermissions";
 import { resolveTutorNames } from "../services/tutorResolver";
+import { AppError } from "../utils/AppError";
 
 /**
  * Create student controller
@@ -45,9 +46,12 @@ export async function createStudent(
 
     res.status(201).json(response);
   } catch (error) {
+    if (error instanceof AppError) {
+      res.status(error.statusCode).json({ message: error.message });
+      return;
+    }
     console.error("Create student failed:", error);
-    const message = error instanceof Error ? error.message : "Failed to create student";
-    res.status(500).json({ message });
+    res.status(500).json({ message: "Failed to create student" });
   }
 }
 
@@ -230,9 +234,12 @@ export async function updateStudent(
 
     res.status(200).json(response);
   } catch (error) {
+    if (error instanceof AppError) {
+      res.status(error.statusCode).json({ message: error.message });
+      return;
+    }
     console.error("Update student failed:", error);
-    const message = error instanceof Error ? error.message : "Failed to update student";
-    res.status(500).json({ message });
+    res.status(500).json({ message: "Failed to update student" });
   }
 }
 

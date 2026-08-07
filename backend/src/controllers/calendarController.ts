@@ -28,21 +28,11 @@ export async function listExternalEvents(
       return;
     }
 
-    const fromRaw = req.query.from;
-    const toRaw = req.query.to;
-    if (typeof fromRaw !== "string" || typeof toRaw !== "string") {
-      res
-        .status(400)
-        .json({ message: "Both 'from' and 'to' query params are required" });
-      return;
-    }
+    const fromRaw = req.query.from as string;
+    const toRaw = req.query.to as string;
 
     const from = new Date(fromRaw);
     const to = new Date(toRaw);
-    if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) {
-      res.status(400).json({ message: "'from' and 'to' must be valid ISO dates" });
-      return;
-    }
 
     let data: ExternalCalendarEventListResponse["data"] = [];
     try {

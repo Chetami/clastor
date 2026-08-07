@@ -11,6 +11,7 @@ import {
   subjectNamePart,
   subjectPart,
 } from "./emailTemplateStore";
+import { ServiceUnavailableError } from "../utils/AppError";
 
 /**
  * The fully-rendered content of an outbound email, returned by every `send*`
@@ -241,7 +242,7 @@ export async function sendLessonNotification(
   input: LessonNotificationInput
 ): Promise<SentEmailContent> {
   if (!isEmailConfigured()) {
-    throw new Error(
+    throw new ServiceUnavailableError(
       "Email is not configured. Set SMTP_HOST, SMTP_USER and SMTP_PASS to send notifications."
     );
   }
@@ -412,7 +413,7 @@ export async function sendLessonCancellation(
   input: LessonCancellationInput,
 ): Promise<SentEmailContent> {
   if (!isEmailConfigured()) {
-    throw new Error(
+    throw new ServiceUnavailableError(
       "Email is not configured. Set SMTP_HOST, SMTP_USER and SMTP_PASS to send notifications."
     );
   }
@@ -931,7 +932,7 @@ export function buildInvoiceEmailContent(input: InvoiceEmailInput): SentEmailCon
  */
 export async function sendInvoiceEmail(input: InvoiceEmailInput): Promise<SentEmailContent> {
   if (!isEmailConfigured()) {
-    throw new Error(
+    throw new ServiceUnavailableError(
       "Email is not configured. Set SMTP_HOST, SMTP_USER and SMTP_PASS to send invoices."
     );
   }

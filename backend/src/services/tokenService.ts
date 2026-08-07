@@ -13,6 +13,7 @@ import {
   updateLastActive,
 } from "./userService";
 import type { User, UserInfo } from "@examify-tms/interfaces";
+import { UnauthorizedError } from "../utils/AppError";
 
 /**
  * Rotating refresh-token management.
@@ -105,7 +106,7 @@ export async function rotateRefreshToken(
 ): Promise<RefreshResult> {
   const payload = verifyRefreshToken(presentedToken);
   if (!payload) {
-    throw new Error("Invalid refresh token");
+    throw new UnauthorizedError("Invalid refresh token");
   }
 
   const firestore = getFirebaseFirestore();
@@ -126,7 +127,7 @@ export async function rotateRefreshToken(
     // rotated — someone (possibly an attacker) is replaying an old token.
     // Burn the whole family to be safe.
     await revokeFamily(payload.familyId);
-    throw new Error("Refresh token reuse detected");
+    throw new UnauthorizedError("Refresh token reuse detected");
   }
 
   // Valid, live token: revoke it and mint the next one in the same family.

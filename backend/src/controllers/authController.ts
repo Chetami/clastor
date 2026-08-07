@@ -144,16 +144,9 @@ export async function register(
     const firebaseToken = authHeader.substring(7);
     const decodedToken = await verifyFirebaseToken(firebaseToken);
 
-    // 2. Validate name field
+    // 2. Validate name field (structural validation lives in the route schema;
+    //    trim here so the stored value is clean).
     const name = req.body.name?.trim();
-    if (!name) {
-      res.status(400).json({ message: 'Name is required' });
-      return;
-    }
-    if (name.length > 100) {
-      res.status(400).json({ message: 'Name must be 100 characters or less' });
-      return;
-    }
 
     // 3. Check if user already exists in Firestore
     const existingUser = await getUserFromFirestore(decodedToken.uid).catch(() => null);
@@ -199,11 +192,8 @@ export async function refresh(
   req: Request<{}, {}, { refreshToken?: string }>,
   res: Response<RefreshTokenResponse | ApiError>,
 ): Promise<void> {
-  const presentedToken = req.body?.refreshToken;
-  if (!presentedToken) {
-    res.status(400).json({ message: 'Refresh token is required' });
-    return;
-  }
+  // Presence + non-empty are enforced by the route's body schema.
+  const presentedToken = req.body!.refreshToken!;
 
   try {
     const result = await rotateRefreshToken(presentedToken);

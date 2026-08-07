@@ -8,6 +8,7 @@ import type {
   Lesson,
 } from "@examify-tms/interfaces";
 import { mapLesson, listLessonsBySeriesFromFirestore } from "./lessonService";
+import { BadRequestError } from "../utils/AppError";
 import {
   syncLessonToCalendar,
   attachMeetLinkToCalendarEvent,
@@ -177,10 +178,10 @@ export async function createLessonSeriesInFirestore(
     });
 
     if (occurrences.length === 0) {
-      throw new Error("Recurrence rule produced no occurrences");
+      throw new BadRequestError("Recurrence rule produced no occurrences");
     }
     if (occurrences.length > MAX_OCCURRENCES) {
-      throw new Error(
+      throw new BadRequestError(
         `Recurrence produced ${occurrences.length} occurrences (max ${MAX_OCCURRENCES})`
       );
     }
@@ -263,7 +264,7 @@ export async function updateLessonSeriesInFirestore(
 ): Promise<void> {
   try {
     if (RULE_FIELDS.some((f) => data[f] !== undefined)) {
-      throw new Error(
+      throw new BadRequestError(
         "Changing the recurrence rule (slots/cadence/timezone/bounds) is not supported yet"
       );
     }

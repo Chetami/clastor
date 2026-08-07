@@ -2,6 +2,7 @@ import admin from "firebase-admin";
 import { getFirebaseFirestore } from "../config/firebase";
 import { getStripe, getAppUrl } from "../config/stripe";
 import type { StripeConnectStatusResponse } from "@examify-tms/interfaces";
+import { NotFoundError } from "../utils/AppError";
 /**
  * Stripe Connect service
  *
@@ -176,7 +177,7 @@ export async function createDashboardLoginLink(
 ): Promise<string> {
   const record = await getStripeAccountRecord(tutorId);
   if (!record) {
-    throw new Error("No Stripe account is connected for this tutor");
+    throw new NotFoundError("No Stripe account is connected for this tutor");
   }
   const stripe = getStripe();
   const link = await stripe.accounts.createLoginLink(record.stripeAccountId);

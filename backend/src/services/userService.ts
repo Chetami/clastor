@@ -10,6 +10,7 @@ import {
   InvoiceSettings,
 } from "@examify-tms/interfaces";
 import { generateToken } from "../utils/jwt";
+import { BadRequestError } from "../utils/AppError";
 import { parse, isValid } from "date-fns";
 import admin from "firebase-admin";
 import crypto from "crypto";
@@ -374,7 +375,7 @@ export async function updateUserName(
 ): Promise<User> {
   const trimmed = name?.trim();
   if (!trimmed) {
-    throw new Error("Name cannot be empty");
+    throw new BadRequestError("Name cannot be empty");
   }
 
   try {
@@ -404,7 +405,7 @@ export async function updateUserCurrency(
 ): Promise<User> {
   const code = currency?.trim().toUpperCase();
   if (!(SUPPORTED_CURRENCIES as readonly string[]).includes(code)) {
-    throw new Error(`Unsupported currency: ${currency}`);
+    throw new BadRequestError(`Unsupported currency: ${currency}`);
   }
 
   try {

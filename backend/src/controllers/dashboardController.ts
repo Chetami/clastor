@@ -6,13 +6,6 @@ import {
 } from "@examify-tms/interfaces";
 import { getDashboardSummary } from "../services/dashboardService";
 
-const VALID_PERIODS: DashboardPeriod[] = [
-  "week",
-  "month",
-  "six_months",
-  "year",
-];
-
 /**
  * GET /api/dashboard/summary?period=week|month|six_months|year
  * Returns aggregated metrics for the authenticated tutor's dashboard.
@@ -27,10 +20,8 @@ export async function getDashboardSummaryHandler(
       return;
     }
 
-    const raw = (req.query.period as string | undefined) ?? "week";
-    const period = VALID_PERIODS.includes(raw as DashboardPeriod)
-      ? (raw as DashboardPeriod)
-      : "week";
+    // `period` is validated + defaulted to "week" by the route's query schema.
+    const period = req.query.period as DashboardPeriod;
 
     const summary = await getDashboardSummary(req.user.uid, req.user.role, period);
 

@@ -8,6 +8,7 @@ import {
   Subject,
 } from "@examify-tms/interfaces";
 import { getUserFromFirestore } from "./userService";
+import { AppError, NotFoundError } from "../utils/AppError";
 import admin from "firebase-admin";
 import crypto from "crypto";
 
@@ -310,12 +311,12 @@ export async function updateStudentInFirestore(
     const doc = await docRef.get();
 
     if (!doc.exists) {
-      throw new Error("Student not found");
+      throw new NotFoundError("Student not found");
     }
 
     const existingData = doc.data();
     if (!existingData) {
-      throw new Error("Student data not found");
+      throw new NotFoundError("Student data not found");
     }
 
     const updateData: Record<string, any> = {};
@@ -372,6 +373,7 @@ export async function updateStudentInFirestore(
       updatedAt: now.toDate() as any,
     };
   } catch (error) {
+    if (error instanceof AppError) throw error;
     console.error("Failed to update student in Firestore:", error);
     throw new Error("Failed to update student");
   }

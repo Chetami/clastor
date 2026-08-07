@@ -133,14 +133,30 @@ npm run clean        # Remove dist/
 ## Code Organization
 
 ### Backend (`backend/src/`)
-- `server.ts` - Express app setup, middleware, route mounting
+- `server.ts` - Express app setup, middleware, route mounting, central error handler
 - `middleware/auth.ts` - `authenticateJWT`, `requireRole()` factory for role-based authorization
+- `middleware/validateRequest.ts` - `validateRequest({ body, query, params })` factory; parses with Zod, rewrites the request field, returns a structured 400 on failure (unknown keys are stripped)
+- `schemas/` - Backend Zod request-validation schemas (`common.ts` enums + per-domain files). Mirror the OpenAPI request types; the backend cannot import `@examify-tms/shared` (client-only deps) so these are backend-local
+- `utils/AppError.ts` - Typed HTTP error hierarchy (`BadRequestError`=400, `UnauthorizedError`=401, `ForbiddenError`=403, `NotFoundError`=404, `ConflictError`=409, `ServiceUnavailableError`=503). The central error handler in `server.ts` maps these by `statusCode`; throw one from a service instead of `new Error(string)` + string-matching
 - `routes/authRoutes.ts` - Auth endpoints (POST /login, GET /verify)
 - `routes/docsRoutes.ts` - Swagger UI at `/api/docs`
 - `controllers/authController.ts` - Login/verify handlers
 - `services/authService.ts`, `services/userService.ts` - Business logic
 - `config/firebase.ts` - Firebase Admin SDK initialization
 - `utils/jwt.ts` - JWT generation, verification, token extraction
+
+#### Backend request validation & error conventions
+- **Validate at the route boundary.** Add a Zod schema under `schemas/` and apply
+  `validateRequest({ body })` (or `query`/`params`) as middleware in the route
+  file, *before* the controller. Schemas must mirror the OpenAPI request YAML in
+  `interfaces/src/schemas/**/req`.
+- **Throw typed errors, never string-match.** Services throw `AppError`
+  subclasses (e.g. `throw new BadRequestError("Student not found")`). In a
+  controller `catch`, check `if (error instanceof AppError)` and use
+  `error.statusCode`; fall back to a logged 500 for genuine infrastructure
+  faults. Do **not** pick status codes by `error.message.includes(...)`.
+- When a service wraps a Firestore call in try/catch, re-throw `AppError`
+  as-is (`if (error instanceof AppError) throw error;`) so its status survives.
 
 ### Frontend (`frontend/src/`)
 - `main.tsx` - Entry point, wraps app in `AuthProvider`

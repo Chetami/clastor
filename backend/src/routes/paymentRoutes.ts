@@ -15,6 +15,13 @@ import {
   getStudentDebt,
 } from "../controllers/paymentController";
 import { authenticateJWT, requireRole } from "../middleware/auth";
+import { validateRequest } from "../middleware/validateRequest";
+import {
+  createInvoiceSchema,
+  invoiceMessageSchema,
+  markPaidSchema,
+  updateInvoiceSchema,
+} from "../schemas";
 
 const router = Router();
 
@@ -63,6 +70,7 @@ router.post(
   "/",
   authenticateJWT,
   requireRole("tutor", "system_admin"),
+  validateRequest({ body: createInvoiceSchema }),
   createInvoice
 );
 
@@ -75,6 +83,7 @@ router.patch(
   "/:id",
   authenticateJWT,
   requireRole("tutor", "system_admin"),
+  validateRequest({ body: updateInvoiceSchema }),
   updateInvoice
 );
 
@@ -87,6 +96,7 @@ router.post(
   "/:id/mark-paid",
   authenticateJWT,
   requireRole("tutor", "system_admin"),
+  validateRequest({ body: markPaidSchema }),
   markInvoicePaid
 );
 
@@ -110,6 +120,7 @@ router.post(
   "/:id/send/preview",
   authenticateJWT,
   requireRole("tutor", "system_admin"),
+  validateRequest({ body: invoiceMessageSchema }),
   previewSendInvoice
 );
 
@@ -121,6 +132,7 @@ router.post(
   "/:id/send",
   authenticateJWT,
   requireRole("tutor", "system_admin"),
+  validateRequest({ body: invoiceMessageSchema }),
   sendInvoice
 );
 

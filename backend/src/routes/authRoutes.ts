@@ -1,6 +1,8 @@
 import { Router } from "express";
 import { login, verifyToken, register, googleAuth, refresh, logout } from "../controllers/authController";
 import { authenticateJWT } from "../middleware/auth";
+import { validateRequest } from "../middleware/validateRequest";
+import { registerSchema, refreshTokenSchema } from "../schemas";
 
 const router = Router();
 
@@ -22,7 +24,7 @@ router.post("/google", googleAuth);
  * Register endpoint - creates Firestore document for Firebase user, returns custom JWT
  * Note: Does NOT use authenticateJWT middleware because it receives a Firebase ID token
  */
-router.post('/register', register);
+router.post('/register', validateRequest({ body: registerSchema }), register);
 
 /**
  * GET /api/auth/verify
@@ -35,7 +37,7 @@ router.get("/verify", authenticateJWT, verifyToken);
  * Exchange a (rotating) refresh token for a fresh access + refresh token pair.
  * Does not use authenticateJWT — the refresh token is the credential.
  */
-router.post("/refresh", refresh);
+router.post("/refresh", validateRequest({ body: refreshTokenSchema }), refresh);
 
 /**
  * POST /api/auth/logout

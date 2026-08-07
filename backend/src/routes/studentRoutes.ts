@@ -2,6 +2,8 @@ import { Router, Request, Response, NextFunction } from "express";
 import multer from "multer";
 import { createStudent, listStudents, getStudentById, updateStudent, importStudents } from "../controllers/studentController";
 import { authenticateJWT, requireRole } from "../middleware/auth";
+import { validateRequest } from "../middleware/validateRequest";
+import { createStudentSchema, updateStudentSchema } from "../schemas";
 import type { ApiError } from "@examify-tms/interfaces";
 
 const router = Router();
@@ -85,6 +87,7 @@ router.post(
   "/",
   authenticateJWT,
   requireRole("tutor", "system_admin"),
+  validateRequest({ body: createStudentSchema }),
   createStudent
 );
 
@@ -97,6 +100,7 @@ router.put(
   "/:id",
   authenticateJWT,
   requireRole("tutor", "system_admin"),
+  validateRequest({ body: updateStudentSchema }),
   updateStudent
 );
 

@@ -41,16 +41,6 @@ export async function createFeedback(
     const type = req.body.type as FeedbackType;
     const message = req.body.message as string;
 
-    if (!type || !["bug", "feedback", "feature_request"].includes(type)) {
-      res.status(400).json({ message: "Invalid feedback type" });
-      return;
-    }
-
-    if (!message || !message.trim()) {
-      res.status(400).json({ message: "Message is required" });
-      return;
-    }
-
     const files = req.files as Express.Multer.File[] | undefined;
     if (files && files.length > MAX_IMAGES) {
       res
@@ -142,11 +132,6 @@ export async function updateFeedbackStatus(
 
     if (!id) {
       res.status(400).json({ message: "Feedback id is required" });
-      return;
-    }
-
-    if (status !== "open" && status !== "resolved") {
-      res.status(400).json({ message: "Invalid status" });
       return;
     }
 

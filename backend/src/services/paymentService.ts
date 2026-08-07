@@ -10,6 +10,7 @@ import { getStudentByIdFromFirestore } from "./studentService";
 import { getUserFromFirestore } from "./userService";
 import { updateLessonInFirestore, setLessonInvoiceIdInFirestore } from "./lessonService";
 import { recordInvoiceEventSafe } from "./invoiceEventService";
+import { AppError, BadRequestError, ConflictError, NotFoundError } from "../utils/AppError";
 import admin from "firebase-admin";
 import crypto from "crypto";
 
@@ -177,7 +178,7 @@ function decodeInvoiceCursor(cursor: string): InvoiceCursor {
       Buffer.from(cursor, CURSOR_ENCODING).toString("utf8")
     );
   } catch {
-    throw new Error("Invalid cursor");
+    throw new BadRequestError("Invalid cursor");
   }
   if (
     typeof parsed !== "object" ||
@@ -185,11 +186,11 @@ function decodeInvoiceCursor(cursor: string): InvoiceCursor {
     typeof (parsed as InvoiceCursor).v !== "string" ||
     typeof (parsed as InvoiceCursor).id !== "string"
   ) {
-    throw new Error("Invalid cursor");
+    throw new BadRequestError("Invalid cursor");
   }
   const decoded = parsed as InvoiceCursor;
   if (Number.isNaN(new Date(decoded.v).getTime())) {
-    throw new Error("Invalid cursor");
+    throw new BadRequestError("Invalid cursor");
   }
   return decoded;
 }
@@ -331,10 +332,10 @@ export async function createInvoiceInFirestore(
     // Snapshot student details
     const student = await getStudentByIdFromFirestore(data.studentId);
     if (!student) {
-      throw new Error("Student not found");
+      throw new BadRequestError("Student not found");
     }
     if (student.tutorId !== tutorId) {
-      throw new Error("Student does not belong to this tutor");
+      throw new BadRequestError("Student does not belong to this tutor");
     }
 
     const customerName = student.name;
@@ -419,10 +420,9 @@ export async function createInvoiceInFirestore(
       updatedAt: now.toDate() as any,
     };
   } catch (error) {
+    if (error instanceof BadRequestError) throw error;
     console.error("Failed to create invoice in Firestore:", error);
-    throw new Error(
-      error instanceof Error ? error.message : "Failed to create invoice"
-    );
+    throw new Error("Failed to create invoice");
   }
 }
 
@@ -439,7 +439,7 @@ export async function updateInvoiceInFirestore(
     const now = admin.firestore.Timestamp.now();
 
     const existing = await firestore.collection("invoices").doc(invoiceId).get();
-    if (!existing.exists) throw new Error("Invoice not found");
+    if (!existing.exists) throw new NotFoundError("Invoice not found");
     const existingData = existing.data()!;
 
     const updateData: Record<string, unknown> = { updatedAt: now };
@@ -461,7 +461,7 @@ export async function updateInvoiceInFirestore(
 
     if (data.lineItems !== undefined && data.lineItems !== null) {
       if (existingData.status !== "draft") {
-        throw new Error("Line items can only be edited on draft invoices");
+        throw new BadRequestError("Line items can only be edited on draft invoices");
       }
       const { lineItems, subtotal, total } = computeTotals(data.lineItems);
       updateData.lineItems = lineItems;
@@ -471,10 +471,9 @@ export async function updateInvoiceInFirestore(
 
     await firestore.collection("invoices").doc(invoiceId).update(updateData);
   } catch (error) {
+    if (error instanceof AppError) throw error;
     console.error("Failed to update invoice in Firestore:", error);
-    throw new Error(
-      error instanceof Error ? error.message : "Failed to update invoice"
-    );
+    throw new Error("Failed to update invoice");
   }
 }
 
@@ -507,14 +506,14 @@ export async function markInvoicePaidInFirestore(
 
     const ref = firestore.collection("invoices").doc(invoiceId);
     const existing = await ref.get();
-    if (!existing.exists) throw new Error("Invoice not found");
+    if (!existing.exists) throw new NotFoundError("Invoice not found");
     const invoice = existing.data()!;
 
     if (invoice.status === "paid") {
-      throw new Error("Invoice is already paid");
+      throw new ConflictError("Invoice is already paid");
     }
     if (invoice.status === "void") {
-      throw new Error("Cannot mark a voided invoice as paid");
+      throw new ConflictError("Cannot mark a voided invoice as paid");
     }
 
     const paidAt = data.paidAt
@@ -535,10 +534,9 @@ export async function markInvoicePaidInFirestore(
     // Side effect: mark linked lessons as paid
     await markLinkedLessonsPaid(invoice.lineItems);
   } catch (error) {
+    if (error instanceof AppError) throw error;
     console.error("Failed to mark invoice paid in Firestore:", error);
-    throw new Error(
-      error instanceof Error ? error.message : "Failed to mark invoice paid"
-    );
+    throw new Error("Failed to mark invoice paid");
   }
 }
 

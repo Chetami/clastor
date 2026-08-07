@@ -73,6 +73,7 @@ import {
   safeGetActorName,
   type EmailPreviewResponse,
 } from "../utils/controller-helpers";
+import { AppError } from "../utils/AppError";
 
 /**
  * Convert a Lesson (Date-typed) to a LessonResponse (ISO string-typed),
@@ -269,14 +270,13 @@ export async function listLessons(
       hasMore: false,
     });
   } catch (error) {
+    if (error instanceof AppError) {
+      res.status(error.statusCode).json({ message: error.message });
+      return;
+    }
     console.error("List lessons failed:", error);
     const message =
       error instanceof Error ? error.message : "Failed to list lessons";
-    // A bad cursor is a client error.
-    if (message === "Invalid cursor") {
-      res.status(400).json({ message });
-      return;
-    }
     res.status(500).json({ message });
   }
 }
@@ -421,15 +421,8 @@ export async function rescheduleLesson(
     // notifyStudent defaults to true unless explicitly disabled.
     const shouldNotify = req.body?.notifyStudent !== false;
 
-    if (!startDateTime) {
-      res.status(400).json({ message: "startDateTime is required" });
-      return;
-    }
+    // startDateTime presence + validity are enforced by the route schema.
     const newStart = new Date(startDateTime);
-    if (Number.isNaN(newStart.getTime())) {
-      res.status(400).json({ message: "Invalid startDateTime" });
-      return;
-    }
 
     // --- Series scope: update the slot + regenerate all future occurrences ---
     if (req.body?.scope === "this_and_future") {
@@ -1285,10 +1278,6 @@ export async function previewRescheduleLesson(
     const newStart = req.body?.startDateTime
       ? new Date(req.body.startDateTime)
       : new Date(lesson.startDateTime as any);
-    if (Number.isNaN(newStart.getTime())) {
-      res.status(400).json({ message: "Invalid startDateTime" });
-      return;
-    }
     const duration = req.body?.durationMinutes ?? lesson.durationMinutes;
 
     // Series scope: preview the schedule-summary email with derived new slots.

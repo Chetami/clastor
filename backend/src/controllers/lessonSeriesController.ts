@@ -42,6 +42,7 @@ import {
 import { recordSentEmailSafe } from "../services/sentEmailService";
 import { markStudentNotifiedInFirestore } from "../services/lessonService";
 import { getNotifyCooldownMs } from "../config/email";
+import { AppError } from "../utils/AppError";
 
 function toSeriesResponse(series: LessonSeries): LessonSeriesResponse {
   const toIso = (v: any) => (v instanceof Date ? v.toISOString() : v);
@@ -108,20 +109,6 @@ export async function createRecurringLesson(
       return;
     }
 
-    if (!Array.isArray(req.body.slots) || req.body.slots.length === 0) {
-      res.status(400).json({ message: "At least one slot is required" });
-      return;
-    }
-
-    const hasUntil = req.body.until !== undefined && req.body.until !== null;
-    const hasCount = req.body.count !== undefined && req.body.count !== null;
-    if (hasUntil === hasCount) {
-      res
-        .status(400)
-        .json({ message: "Exactly one of 'until' or 'count' must be provided" });
-      return;
-    }
-
     const result = await createLessonSeriesInFirestore(req.body, req.user.uid);
 
     // Respond immediately — the lessons already exist and are visible. Calendar
@@ -151,9 +138,12 @@ export async function createRecurringLesson(
       );
     }
   } catch (error) {
+    if (error instanceof AppError) {
+      res.status(error.statusCode).json({ message: error.message });
+      return;
+    }
     console.error("Create recurring lesson failed:", error);
-    const message = error instanceof Error ? error.message : "Failed to create recurring lesson";
-    res.status(500).json({ message });
+    res.status(500).json({ message: "Failed to create recurring lesson" });
   }
 }
 
@@ -241,10 +231,12 @@ export async function updateLessonSeries(
 
     res.status(200).json(toSeriesResponse(updated));
   } catch (error) {
+    if (error instanceof AppError) {
+      res.status(error.statusCode).json({ message: error.message });
+      return;
+    }
     console.error("Update lesson series failed:", error);
-    const message =
-      error instanceof Error ? error.message : "Failed to update lesson series";
-    res.status(500).json({ message });
+    res.status(500).json({ message: "Failed to update lesson series" });
   }
 }
 

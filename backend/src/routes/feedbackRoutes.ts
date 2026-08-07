@@ -2,6 +2,8 @@ import { Router, Request, Response, NextFunction } from "express";
 import multer from "multer";
 import { createFeedback, listFeedback, updateFeedbackStatus } from "../controllers/feedbackController";
 import { authenticateJWT, requireSystemAdmin } from "../middleware/auth";
+import { validateRequest } from "../middleware/validateRequest";
+import { createFeedbackSchema, updateFeedbackStatusSchema } from "../schemas";
 import type { ApiError } from "@examify-tms/interfaces";
 
 const router = Router();
@@ -38,6 +40,7 @@ router.post(
   "/",
   authenticateJWT,
   uploadFeedbackImages,
+  validateRequest({ body: createFeedbackSchema }),
   createFeedback,
 );
 
@@ -47,6 +50,7 @@ router.patch(
   "/:id/status",
   authenticateJWT,
   requireSystemAdmin,
+  validateRequest({ body: updateFeedbackStatusSchema }),
   updateFeedbackStatus,
 );
 

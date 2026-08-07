@@ -18,6 +18,9 @@ import sentEmailRoutes from "./routes/sentEmailRoutes";
 import { authenticateJWT, requireSystemAdmin } from "./middleware/auth";
 import { initializeFirebase } from "./config/firebase";
 import { ApiError } from "@examify-tms/interfaces";
+import { ZodError } from "zod";
+import { AppError } from "./utils/AppError";
+import { formatZodError } from "./middleware/validateRequest";
 
 // Load environment variables
 dotenv.config();
@@ -75,8 +78,25 @@ app.use((req, res) => {
   res.status(404).json({ message: "Route not found" } as ApiError);
 });
 
-// Error handler
+// Error handler — the last middleware, so every thrown/rejected error lands
+// here. Typed AppErrors map to their declared status; ZodErrors from the
+// request-validation middleware become structured 400s; anything else is a
+// genuine server fault and surfaces as an opaque 500.
 app.use((err: Error, req: express.Request, res: express.Response<ApiError>, next: express.NextFunction) => {
+  // AppError carries an explicit HTTP status (e.g. BadRequestError → 400).
+  if (err instanceof AppError) {
+    res.status(err.statusCode).json({ message: err.message });
+    return;
+  }
+
+  // ZodError from validateRequest() that escaped (or was re-thrown).
+  if (err instanceof ZodError) {
+    res
+      .status(400)
+      .json({ message: "Validation failed", errors: formatZodError(err) } as unknown as ApiError);
+    return;
+  }
+
   console.error("Unhandled error:", err);
   res.status(500).json({ message: "Internal server error" });
 });

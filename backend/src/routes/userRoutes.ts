@@ -2,6 +2,8 @@ import { Router, Request, Response, NextFunction } from "express";
 import multer from "multer";
 import { uploadAvatar, updateMe } from "../controllers/userController";
 import { authenticateJWT } from "../middleware/auth";
+import { validateRequest } from "../middleware/validateRequest";
+import { updateUserSchema } from "../schemas";
 import type { ApiError } from "@examify-tms/interfaces";
 
 const router = Router();
@@ -45,6 +47,6 @@ router.post("/me/avatar", authenticateJWT, uploadAvatarFile, uploadAvatar);
  * PATCH /api/users/me
  * Update editable fields on the authenticated user (e.g. name, currency).
  */
-router.patch("/me", authenticateJWT, updateMe);
+router.patch("/me", authenticateJWT, validateRequest({ body: updateUserSchema }), updateMe);
 
 export default router;

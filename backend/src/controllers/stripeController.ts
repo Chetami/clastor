@@ -18,6 +18,7 @@ import {
   buildCheckoutUrlForInvoice,
   handleCheckoutCompleted,
 } from "../services/stripeCheckoutService";
+import { AppError } from "../utils/AppError";
 
 /**
  * Stripe Connect controllers
@@ -53,10 +54,12 @@ export async function getAccountStatus(
     const status = await getConnectStatus(req.user.uid);
     res.status(200).json(status);
   } catch (error) {
+    if (error instanceof AppError) {
+      res.status(error.statusCode).json({ message: error.message });
+      return;
+    }
     console.error("Get Stripe status failed:", error);
-    const message = error instanceof Error ? error.message : "Failed to get Stripe status";
-    const status = message.includes("not configured") ? 503 : 500;
-    res.status(status).json({ message });
+    res.status(500).json({ message: "Failed to get Stripe status" });
   }
 }
 
@@ -113,11 +116,12 @@ export async function dashboardLink(
     const url = await createDashboardLoginLink(req.user.uid);
     res.status(200).json({ url });
   } catch (error) {
+    if (error instanceof AppError) {
+      res.status(error.statusCode).json({ message: error.message });
+      return;
+    }
     console.error("Stripe dashboard link failed:", error);
-    const message =
-      error instanceof Error ? error.message : "Failed to open Stripe dashboard";
-    const status = message.includes("No Stripe account") ? 404 : 500;
-    res.status(status).json({ message });
+    res.status(500).json({ message: "Failed to open Stripe dashboard" });
   }
 }
 

@@ -1,5 +1,6 @@
 import { getFirebaseAuth } from "../config/firebase";
 import type { DecodedIdToken } from "firebase-admin/auth";
+import { UnauthorizedError } from "../utils/AppError";
 
 /**
  * Verify Firebase ID token
@@ -13,6 +14,6 @@ export async function verifyFirebaseToken(token: string): Promise<DecodedIdToken
     return decodedToken;
   } catch (error) {
     console.error("Firebase token verification failed:", error);
-    throw new Error("Invalid Firebase token");
+    throw new UnauthorizedError("Invalid Firebase token");
   }
 }

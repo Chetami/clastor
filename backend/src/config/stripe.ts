@@ -1,4 +1,5 @@
 import Stripe from "stripe";
+import { ServiceUnavailableError } from "../utils/AppError";
 
 /**
  * Stripe configuration
@@ -28,7 +29,7 @@ export function getStripe(): Stripe {
 
   const secretKey = process.env.STRIPE_SECRET_KEY;
   if (!secretKey) {
-    throw new Error(
+    throw new ServiceUnavailableError(
       "Stripe is not configured. Set STRIPE_SECRET_KEY to accept online payments."
     );
   }

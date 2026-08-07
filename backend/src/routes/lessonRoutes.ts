@@ -24,6 +24,20 @@ import {
   previewNotifySeriesStudent,
 } from "../controllers/lessonSeriesController";
 import { authenticateJWT, requireRole } from "../middleware/auth";
+import { validateRequest } from "../middleware/validateRequest";
+import {
+  cancelLessonSchema,
+  cancelPreviewSchema,
+  createLessonSchema,
+  createRecurringLessonSchema,
+  messageBodySchema,
+  notifyStudentSchema,
+  recordAttendanceSchema,
+  rescheduleLessonSchema,
+  reschedulePreviewSchema,
+  updateLessonSchema,
+  updateLessonSeriesSchema,
+} from "../schemas";
 
 const router = Router();
 
@@ -63,6 +77,7 @@ router.post(
   "/",
   authenticateJWT,
   requireRole("tutor", "system_admin"),
+  validateRequest({ body: createLessonSchema }),
   createLesson
 );
 
@@ -74,6 +89,7 @@ router.post(
   "/recurring",
   authenticateJWT,
   requireRole("tutor", "system_admin"),
+  validateRequest({ body: createRecurringLessonSchema }),
   createRecurringLesson
 );
 
@@ -86,6 +102,7 @@ router.patch(
   "/:id",
   authenticateJWT,
   requireRole("tutor", "system_admin"),
+  validateRequest({ body: updateLessonSchema }),
   updateLesson
 );
 
@@ -97,6 +114,7 @@ router.patch(
   "/series/:id",
   authenticateJWT,
   requireRole("tutor", "system_admin"),
+  validateRequest({ body: updateLessonSeriesSchema }),
   updateLessonSeries
 );
 
@@ -122,6 +140,7 @@ router.post(
   "/series/:id/notify-student/preview",
   authenticateJWT,
   requireRole("tutor", "system_admin"),
+  validateRequest({ body: messageBodySchema }),
   previewNotifySeriesStudent
 );
 
@@ -135,6 +154,7 @@ router.post(
   "/series/:id/notify-student",
   authenticateJWT,
   requireRole("tutor", "system_admin"),
+  validateRequest({ body: notifyStudentSchema }),
   notifySeriesStudent
 );
 
@@ -158,6 +178,7 @@ router.patch(
   "/:id/reschedule/preview",
   authenticateJWT,
   requireRole("tutor", "system_admin"),
+  validateRequest({ body: reschedulePreviewSchema }),
   previewRescheduleLesson
 );
 
@@ -171,6 +192,7 @@ router.patch(
   "/:id/reschedule",
   authenticateJWT,
   requireRole("tutor", "system_admin"),
+  validateRequest({ body: rescheduleLessonSchema }),
   rescheduleLesson
 );
 
@@ -182,6 +204,7 @@ router.patch(
   "/:id/attendance",
   authenticateJWT,
   requireRole("tutor", "system_admin"),
+  validateRequest({ body: recordAttendanceSchema }),
   recordAttendance
 );
 
@@ -194,6 +217,7 @@ router.patch(
   "/:id/cancel/preview",
   authenticateJWT,
   requireRole("tutor", "system_admin"),
+  validateRequest({ body: cancelPreviewSchema }),
   previewCancelLesson
 );
 
@@ -205,6 +229,7 @@ router.patch(
   "/:id/cancel",
   authenticateJWT,
   requireRole("tutor", "system_admin"),
+  validateRequest({ body: cancelLessonSchema }),
   cancelLesson
 );
 
@@ -217,6 +242,7 @@ router.post(
   "/:id/notify-student/preview",
   authenticateJWT,
   requireRole("tutor", "system_admin"),
+  validateRequest({ body: messageBodySchema }),
   previewNotifyStudent
 );
 
@@ -229,6 +255,7 @@ router.post(
   "/:id/notify-student",
   authenticateJWT,
   requireRole("tutor", "system_admin"),
+  validateRequest({ body: notifyStudentSchema }),
   notifyStudent
 );
 

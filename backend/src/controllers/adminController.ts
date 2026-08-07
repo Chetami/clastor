@@ -10,13 +10,6 @@ import {
   listTutorsWithStats,
 } from "../services/adminDashboardService";
 
-const VALID_PERIODS: DashboardPeriod[] = [
-  "week",
-  "month",
-  "six_months",
-  "year",
-];
-
 /**
  * GET /api/admin/overview?period=week|month|six_months|year
  * Platform-wide overview for the system admin dashboard.
@@ -27,10 +20,8 @@ export async function getAdminOverviewHandler(
 ): Promise<void> {
   try {
     const req = _req;
-    const raw = (req.query.period as string | undefined) ?? "week";
-    const period = VALID_PERIODS.includes(raw as DashboardPeriod)
-      ? (raw as DashboardPeriod)
-      : "week";
+    // `period` is validated + defaulted to "week" by the route's query schema.
+    const period = req.query.period as DashboardPeriod;
 
     const overview = await getAdminOverview(period);
     res.status(200).json(overview);

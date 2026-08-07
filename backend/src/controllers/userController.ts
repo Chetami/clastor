@@ -16,6 +16,7 @@ import {
   normalizeWorkingHours,
 } from "../services/userService";
 import { syncTutorProfileCurrency } from "../services/tutorProfileService";
+import { AppError } from "../utils/AppError";
 
 /** Max upload size enforced by multer (5 MB) before processing. */
 const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
@@ -154,6 +155,10 @@ export async function updateMe(
 
     res.status(200).json(toUserInfo(updated));
   } catch (error) {
+    if (error instanceof AppError) {
+      res.status(error.statusCode).json({ message: error.message });
+      return;
+    }
     const message =
       error instanceof Error ? error.message : "Failed to update user";
     console.error("updateMe error:", error);

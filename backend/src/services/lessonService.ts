@@ -9,6 +9,7 @@ import {
 } from "@examify-tms/interfaces";
 import admin from "firebase-admin";
 import crypto from "crypto";
+import { BadRequestError } from "../utils/AppError";
 
 /** Default page size for the cursor-paginated lessons list. */
 const DEFAULT_PAGE_SIZE = 10;
@@ -199,7 +200,7 @@ export function decodeCursor(cursor: string): LessonCursor {
       Buffer.from(cursor, CURSOR_ENCODING).toString("utf8")
     );
   } catch {
-    throw new Error("Invalid cursor");
+    throw new BadRequestError("Invalid cursor");
   }
   if (
     typeof parsed !== "object" ||
@@ -207,11 +208,11 @@ export function decodeCursor(cursor: string): LessonCursor {
     typeof (parsed as LessonCursor).s !== "string" ||
     typeof (parsed as LessonCursor).id !== "string"
   ) {
-    throw new Error("Invalid cursor");
+    throw new BadRequestError("Invalid cursor");
   }
   const decoded = parsed as LessonCursor;
   if (Number.isNaN(new Date(decoded.s).getTime())) {
-    throw new Error("Invalid cursor");
+    throw new BadRequestError("Invalid cursor");
   }
   return decoded;
 }

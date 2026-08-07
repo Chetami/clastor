@@ -5,6 +5,7 @@ import {
   getInvoiceByIdFromFirestore,
   markInvoicePaidFromStripe,
 } from "./paymentService";
+import { BadRequestError, ConflictError, ForbiddenError } from "../utils/AppError";
 
 /**
  * Stripe Checkout service
@@ -33,20 +34,20 @@ export async function createInvoiceCheckoutUrl(
   tutorId: string
 ): Promise<string> {
   if (invoice.tutorId !== tutorId) {
-    throw new Error("Invoice does not belong to this tutor");
+    throw new ForbiddenError("Invoice does not belong to this tutor");
   }
   if (!PAYABLE_STATUSES.has(invoice.status)) {
-    throw new Error(`This invoice cannot be paid (status: ${invoice.status})`);
+    throw new ConflictError(`This invoice cannot be paid (status: ${invoice.status})`);
   }
 
   const record = await getStripeAccountRecord(tutorId);
   if (!record) {
-    throw new Error(
+    throw new BadRequestError(
       "This tutor has not connected a Stripe account to accept payments"
     );
   }
   if (!record.chargesEnabled) {
-    throw new Error(
+    throw new BadRequestError(
       "Stripe account is not ready to accept payments yet. Complete onboarding first."
     );
   }
@@ -54,7 +55,7 @@ export async function createInvoiceCheckoutUrl(
   const amountInCents = Math.round(invoice.total * 100);
   if (amountInCents < 50) {
     // Stripe's minimum per-transaction amount.
-    throw new Error(
+    throw new BadRequestError(
       "Invoice total is below the minimum amount Stripe can charge"
     );
   }

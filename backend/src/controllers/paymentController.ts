@@ -53,6 +53,7 @@ import {
 import {
   recordSentEmailSafe,
 } from "../services/sentEmailService";
+import { AppError } from "../utils/AppError";
 
 /**
  * Convert an Invoice (Date-typed) to an InvoiceResponse (ISO string-typed).
@@ -473,10 +474,12 @@ export async function sendInvoice(
 
     res.status(200).json(toInvoiceResponse(updated));
   } catch (error) {
+    if (error instanceof AppError) {
+      res.status(error.statusCode).json({ message: error.message });
+      return;
+    }
     console.error("Send invoice failed:", error);
-    const message = error instanceof Error ? error.message : "Failed to send invoice";
-    const status = message.includes("not configured") ? 503 : 500;
-    res.status(status).json({ message });
+    res.status(500).json({ message: "Failed to send invoice" });
   }
 }
 
@@ -651,12 +654,12 @@ export async function createInvoice(
 
     res.status(201).json(toInvoiceResponse(invoice));
   } catch (error) {
+    if (error instanceof AppError) {
+      res.status(error.statusCode).json({ message: error.message });
+      return;
+    }
     console.error("Create invoice failed:", error);
-    const message = error instanceof Error ? error.message : "Failed to create invoice";
-    const status = message.includes("not found") || message.includes("belong")
-      ? 400
-      : 500;
-    res.status(status).json({ message });
+    res.status(500).json({ message: "Failed to create invoice" });
   }
 }
 
@@ -701,10 +704,12 @@ export async function updateInvoice(
 
     res.status(200).json(toInvoiceResponse(updated));
   } catch (error) {
+    if (error instanceof AppError) {
+      res.status(error.statusCode).json({ message: error.message });
+      return;
+    }
     console.error("Update invoice failed:", error);
-    const message = error instanceof Error ? error.message : "Failed to update invoice";
-    const status = message.includes("draft") ? 400 : 500;
-    res.status(status).json({ message });
+    res.status(500).json({ message: "Failed to update invoice" });
   }
 }
 
@@ -756,11 +761,12 @@ export async function updateInvoice(
 
     res.status(200).json(toInvoiceResponse(updated));
   } catch (error) {
+    if (error instanceof AppError) {
+      res.status(error.statusCode).json({ message: error.message });
+      return;
+    }
     console.error("Mark invoice paid failed:", error);
-    const message = error instanceof Error ? error.message : "Failed to mark invoice paid";
-    const status =
-      message.includes("already paid") || message.includes("void") ? 409 : 500;
-    res.status(status).json({ message });
+    res.status(500).json({ message: "Failed to mark invoice paid" });
   }
 }
 
