@@ -2,8 +2,6 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/use-auth";
 import { useListLessons } from "@/features/schedule/api";
-import { useListStudents } from "@/features/students/api";
-import { useSubjects } from "@/lib/subjects";
 import { toast } from "sonner";
 import type {
   DashboardPeriod,
@@ -11,13 +9,10 @@ import type {
   UpdateLessonRequest,
 } from "@examify-tms/interfaces";
 import { useDashboardSummary, useUpdateLessonDetails } from "./api";
-import {
-  useInvoiceLesson,
-  useSendInvoice,
-  previewSendInvoiceRequest,
-} from "@/features/payments/api";
+import { useInvoiceLesson } from "@/features/payments/api";
 import type { InvoiceLessonEdits } from "@/features/payments/api";
-import { EmailComposeDialog } from "@/components/email-compose-dialog";
+import { SendInvoiceDialog } from "@/components/send-invoice-dialog";
+import { useStudentLookups } from "@/lib/use-student-lookups";
 import { PeriodSelector } from "./components/period-selector";
 import { StatCards } from "./components/stat-cards";
 import { HoursChart } from "./components/hours-chart";
@@ -49,36 +44,11 @@ export default function Dashboard() {
   const { data: summary, isLoading: summaryLoading } =
     useDashboardSummary(period);
   const { data: lessons = [], isLoading: lessonsLoading } = useListLessons();
-  const { data: students = [] } = useListStudents();
-  const subjects = useSubjects();
+  const { names: studentNames, byId: studentMap, subjectOptions: studentSubjectOptions } =
+    useStudentLookups();
   const invoiceLesson = useInvoiceLesson();
-  const sendInvoice = useSendInvoice();
   const [sendInvoiceId, setSendInvoiceId] = useState<string | null>(null);
   const updateLessonDetails = useUpdateLessonDetails();
-
-  const studentNames = useMemo(() => {
-    const map: Record<string, string> = {};
-    for (const s of students) map[s.id] = s.name;
-    return map;
-  }, [students]);
-
-  // Per-student list of allowed subject names (from the tutor's catalogue),
-  // used to constrain the subject selector in the attendance dialog.
-  const studentSubjectOptions = useMemo(() => {
-    const map: Record<string, string[]> = {};
-    for (const s of students) {
-      map[s.id] = (s.subjectIds ?? [])
-        .map((id) => subjects.find((sub) => sub.id === id)?.name)
-        .filter((n): n is string => !!n);
-    }
-    return map;
-  }, [students, subjects]);
-
-  const studentMap = useMemo(() => {
-    const map: Record<string, (typeof students)[number]> = {};
-    for (const s of students) map[s.id] = s;
-    return map;
-  }, [students]);
 
   const currentLesson = useMemo(() => findCurrentLesson(lessons), [lessons]);
   const todos = useMemo(() => todoLessons(lessons), [lessons]);
@@ -214,27 +184,11 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {sendInvoiceId && (
-        <EmailComposeDialog
-          open
-          onOpenChange={(o) => !o && setSendInvoiceId(null)}
-          title="Send invoice"
-          description="Review and edit the email before sending. The invoice PDF is attached automatically."
-          fetchPreview={(message) =>
-            previewSendInvoiceRequest(sendInvoiceId, message)
-          }
-          onSend={async (message) => {
-            await sendInvoice.mutateAsync({
-              id: sendInvoiceId,
-              message: message || undefined,
-            });
-            toast.success("Invoice sent.");
-            const id = sendInvoiceId;
-            setSendInvoiceId(null);
-            navigate(`/payments/${id}`);
-          }}
-        />
-      )}
+      <SendInvoiceDialog
+        invoiceId={sendInvoiceId}
+        onClose={() => setSendInvoiceId(null)}
+        onSent={(id) => navigate(`/payments/${id}`)}
+      />
     </div>
   );
 }

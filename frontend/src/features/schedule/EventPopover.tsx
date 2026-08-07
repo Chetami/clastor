@@ -1,9 +1,6 @@
 import { useMemo, useState } from "react";
-import type {
-  AttendanceStatus,
-  LessonResponse,
-  UpdateLessonRequest,
-} from "@examify-tms/interfaces";
+import type { AttendanceStatus } from "@examify-tms/interfaces";
+import type { InvoiceLessonEdits } from "@/features/payments/api";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -11,19 +8,9 @@ import {
   PopoverAnchor,
   PopoverContent,
 } from "@/components/ui/popover";
-import { useListStudents } from "@/features/students/api";
-import { useSubjects } from "@/lib/subjects";
 import { lessonIssues } from "@/features/lessons/lesson-series-utils";
-import {
-  useMarkLessonDone,
-  useUpdateLessonDetails,
-} from "@/features/dashboard/api";
-import {
-  useInvoiceLesson,
-  useSendInvoice,
-  previewSendInvoiceRequest,
-  type InvoiceLessonEdits,
-} from "@/features/payments/api";
+import { useMarkAttendanceAndInvoice } from "@/hooks/use-mark-attendance-and-invoice";
+import { SendInvoiceDialog } from "@/components/send-invoice-dialog";
 import {
   useCancelLesson,
   useGetLesson,
@@ -34,7 +21,7 @@ import {
 import { generateMeetLinkRequest } from "./api/requests";
 import { EmailComposeDialog } from "@/components/email-compose-dialog";
 import { MarkAttendanceDialog } from "@/components/mark-attendance-dialog";
-import { ATTENDANCE_LABELS, isLessonFinished } from "./lesson-utils";
+import { isLessonFinished } from "./lesson-utils";
 import { RescheduleDialog } from "./RescheduleDialog";
 import { CancelLessonDialog } from "./CancelLessonDialog";
 import { PopoverBody } from "./event-popover/PopoverBody";
@@ -63,38 +50,27 @@ export function EventPopover({
   anchor,
 }: EventPopoverProps) {
   const { data: lesson, isLoading } = useGetLesson(lessonId ?? undefined);
-  const { data: students = [] } = useListStudents();
-  const subjects = useSubjects();
   const cancelLesson = useCancelLesson(lessonId ?? "");
   const notifyStudent = useNotifyStudent(lessonId ?? "");
   const updateLesson = useUpdateLesson(lessonId ?? "");
-  const markDone = useMarkLessonDone();
-  const updateLessonDetails = useUpdateLessonDetails();
-  const invoiceLesson = useInvoiceLesson();
-  const sendInvoice = useSendInvoice();
+  const {
+    names: studentNames,
+    subjectOptions,
+    confirm,
+    attendancePending,
+    sendInvoiceId,
+    setSendInvoiceId,
+  } = useMarkAttendanceAndInvoice();
   const [actionError, setActionError] = useState<string | null>(null);
   const [meetLoading, setMeetLoading] = useState(false);
   const [notifyOpen, setNotifyOpen] = useState(false);
   const [rescheduleOpen, setRescheduleOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [attendanceOpen, setAttendanceOpen] = useState(false);
-  const [sendInvoiceId, setSendInvoiceId] = useState<string | null>(null);
 
   const studentName = lesson
-    ? (students.find((s) => s.id === lesson.studentId)?.name ?? "Unknown student")
+    ? (studentNames[lesson.studentId] ?? "Unknown student")
     : null;
-
-  const student = useMemo(
-    () => (lesson ? students.find((s) => s.id === lesson.studentId) : undefined),
-    [students, lesson],
-  );
-
-  const subjectOptions = useMemo(() => {
-    const ids = student?.subjectIds ?? [];
-    return ids
-      .map((id) => subjects.find((s) => s.id === id)?.name)
-      .filter((n): n is string => !!n);
-  }, [student, subjects]);
 
   /** Compute the lesson end Date defensively (handles transient bad data). */
   const endDate = useMemo(() => {
@@ -167,51 +143,15 @@ export function EventPopover({
     }
   }
 
-  // Mirrors LessonRow's flow: mark attendance (→ "done"), optionally tweak
-  // subject/duration, and optionally create an invoice to review+send.
+  // Delegates to the shared mark-attendance-and-invoice flow.
   async function handleAttendanceConfirm(
-    id: string,
+    _id: string,
     attendanceStatus: AttendanceStatus,
     shouldInvoice: boolean,
     edits?: InvoiceLessonEdits,
   ) {
     if (!lesson) return;
-    const name = studentName ?? "Unknown student";
-    try {
-      await markDone.mutateAsync({ id, attendanceStatus });
-
-      const hasEdits =
-        edits &&
-        (edits.subject !== undefined || edits.durationMinutes !== undefined);
-      let effective: LessonResponse = lesson;
-      if (hasEdits) {
-        const data: UpdateLessonRequest = {};
-        if (edits!.subject !== undefined) data.subject = edits!.subject;
-        if (edits!.durationMinutes !== undefined) {
-          data.durationMinutes = edits!.durationMinutes;
-        }
-        effective = await updateLessonDetails.mutateAsync({ id, data });
-      }
-
-      if (shouldInvoice && student) {
-        const created = await invoiceLesson.mutateAsync({
-          lesson: effective,
-          rateType: student.rateType,
-          expectedAmount: student.expectedAmount,
-          skipSend: true,
-        });
-        toast.success(`Invoice created for ${name} — review before sending.`);
-        setSendInvoiceId(created.id);
-        return;
-      }
-
-      toast.success(
-        `Marked ${name}'s lesson as ${ATTENDANCE_LABELS[attendanceStatus]}`,
-      );
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to mark lesson");
-      throw err;
-    }
+    await confirm(lesson, attendanceStatus, shouldInvoice, edits);
   }
 
   const detailHref = lesson?.seriesId
@@ -264,11 +204,7 @@ export function EventPopover({
                 notifiedAtIso={lesson.lastStudentNotifiedAt}
                 notifyPending={notifyStudent.isPending}
                 cancelPending={cancelLesson.isPending}
-                attendancePending={
-                  markDone.isPending ||
-                  updateLessonDetails.isPending ||
-                  invoiceLesson.isPending
-                }
+                attendancePending={attendancePending}
                 needsAttendance={needsAttendance}
                 createInvoiceHref={createInvoiceHref}
                 invoiceHref={invoiceHref}
@@ -321,38 +257,17 @@ export function EventPopover({
           onOpenChange={setAttendanceOpen}
           lesson={lesson}
           studentName={studentName ?? "Unknown student"}
-          subjectOptions={subjectOptions}
+          subjectOptions={subjectOptions[lesson.studentId] ?? []}
           onConfirm={handleAttendanceConfirm}
-          isPending={
-            markDone.isPending ||
-            updateLessonDetails.isPending ||
-            invoiceLesson.isPending
-          }
+          isPending={attendancePending}
         />
       )}
 
-      {sendInvoiceId && (
-        <EmailComposeDialog
-          open
-          onOpenChange={(o) => !o && setSendInvoiceId(null)}
-          title="Send invoice"
-          description="Review and edit the email before sending. The invoice PDF is attached automatically."
-          fetchPreview={(message) =>
-            previewSendInvoiceRequest(sendInvoiceId, message)
-          }
-          onSend={async (message) => {
-            await sendInvoice.mutateAsync({
-              id: sendInvoiceId,
-              message: message || undefined,
-            });
-            toast.success("Invoice sent.");
-            const id = sendInvoiceId;
-            setSendInvoiceId(null);
-            onOpenChange(false);
-            window.location.assign(`/payments/${id}`);
-          }}
-        />
-      )}
+      <SendInvoiceDialog
+        invoiceId={sendInvoiceId}
+        onClose={() => setSendInvoiceId(null)}
+        onSent={() => onOpenChange(false)}
+      />
     </>
   );
 }

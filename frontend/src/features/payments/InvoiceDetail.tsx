@@ -5,12 +5,10 @@ import {
   Ban,
   DollarSign,
   Edit,
-  Loader2,
   Mail,
   Printer,
   Send,
 } from "lucide-react";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
@@ -18,13 +16,11 @@ import {
   useMarkInvoicePaid,
   useVoidInvoice,
   useUpdateInvoice,
-  useSendInvoice,
-  previewSendInvoiceRequest,
   getInvoicePdfRequest,
 } from "./api";
 import { InvoiceTimeline } from "./InvoiceTimeline";
 import { EmailHistory } from "@/features/emails/EmailHistory";
-import { EmailComposeDialog } from "@/components/email-compose-dialog";
+import { SendInvoiceDialog } from "@/components/send-invoice-dialog";
 import { formatCurrency } from "./invoice-utils";
 import { InvoiceDetailsCard, InvoiceLineItemsTable } from "./detail/components";
 
@@ -35,7 +31,6 @@ export default function InvoiceDetail() {
   const markPaid = useMarkInvoicePaid();
   const voidInvoice = useVoidInvoice();
   const updateInvoice = useUpdateInvoice();
-  const sendInvoice = useSendInvoice();
   const [actionError, setActionError] = useState<string | null>(null);
   const [sendOpen, setSendOpen] = useState(false);
 
@@ -58,23 +53,6 @@ export default function InvoiceDetail() {
       setActionError(
         err instanceof Error ? err.message : "Failed to generate invoice PDF",
       );
-    }
-  }
-
-  async function handleSend(message: string) {
-    if (!invoice) return;
-    setActionError(null);
-    try {
-      await sendInvoice.mutateAsync({
-        id: invoice.id,
-        message: message || undefined,
-      });
-      toast.success("Invoice sent.");
-    } catch (err) {
-      setActionError(
-        err instanceof Error ? err.message : "Failed to send invoice",
-      );
-      throw err;
     }
   }
 
@@ -248,22 +226,9 @@ export default function InvoiceDetail() {
                 </div>
               </div>
               {canSend && (
-                <Button
-                  className="w-full"
-                  disabled={sendInvoice.isPending}
-                  onClick={() => setSendOpen(true)}
-                >
-                  {sendInvoice.isPending ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Sending…
-                    </>
-                  ) : (
-                    <>
-                      <Send className="h-4 w-4 mr-2" />
-                      {hasBeenSent ? "Resend invoice" : "Send invoice"}
-                    </>
-                  )}
+                <Button className="w-full" onClick={() => setSendOpen(true)}>
+                  <Send className="h-4 w-4 mr-2" />
+                  {hasBeenSent ? "Resend invoice" : "Send invoice"}
                 </Button>
               )}
             </CardContent>
@@ -275,15 +240,9 @@ export default function InvoiceDetail() {
         </div>
       </div>
 
-      <EmailComposeDialog
-        open={sendOpen}
-        onOpenChange={setSendOpen}
-        title={hasBeenSent ? "Resend invoice" : "Send invoice"}
-        description="Review and edit the email before sending. The invoice PDF is attached automatically."
-        fetchPreview={(message) =>
-          previewSendInvoiceRequest(invoice.id, message)
-        }
-        onSend={handleSend}
+      <SendInvoiceDialog
+        invoiceId={sendOpen && invoice ? invoice.id : null}
+        onClose={() => setSendOpen(false)}
       />
     </div>
   );

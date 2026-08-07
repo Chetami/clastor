@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   ClipboardList,
@@ -7,27 +7,11 @@ import {
   Pencil,
   Trash2,
 } from "lucide-react";
-import { toast } from "sonner";
-import type {
-  AttendanceStatus,
-  LessonResponse,
-  UpdateLessonRequest,
-} from "@examify-tms/interfaces";
+import type { LessonResponse } from "@examify-tms/interfaces";
 import { Button } from "@/components/ui/button";
 import { MarkAttendanceDialog } from "@/components/mark-attendance-dialog";
-import { useListStudents } from "@/features/students/api";
-import { useSubjects } from "@/lib/subjects";
-import {
-  useMarkLessonDone,
-  useUpdateLessonDetails,
-} from "@/features/dashboard/api";
-import {
-  useInvoiceLesson,
-  useSendInvoice,
-  previewSendInvoiceRequest,
-  type InvoiceLessonEdits,
-} from "@/features/payments/api";
-import { EmailComposeDialog } from "@/components/email-compose-dialog";
+import { SendInvoiceDialog } from "@/components/send-invoice-dialog";
+import { useMarkAttendanceAndInvoice } from "@/hooks/use-mark-attendance-and-invoice";
 import { CancelLessonDialog } from "@/features/schedule/CancelLessonDialog";
 import { RescheduleDialog } from "@/features/schedule/RescheduleDialog";
 import {
@@ -36,7 +20,6 @@ import {
   lessonBadge,
 } from "@/features/lessons/lesson-display";
 import { lessonIssues, ACCEPTANCE_TONE } from "./lesson-series-utils";
-import { ATTENDANCE_LABELS } from "@/features/schedule/lesson-utils";
 
 export interface LessonRowProps {
   lesson: LessonResponse;
@@ -75,92 +58,14 @@ export function LessonRow({ lesson }: LessonRowProps) {
   const [cancelOpen, setCancelOpen] = useState(false);
   const [attendanceOpen, setAttendanceOpen] = useState(false);
 
-  // Student + subject lookups power the attendance dialog (name, allowed
-  // subjects). React Query dedupes these across every row, so only one
-  // request fires for the whole list.
-  const { data: students = [] } = useListStudents();
-  const subjects = useSubjects();
-  const markDone = useMarkLessonDone();
-  const updateLessonDetails = useUpdateLessonDetails();
-  const invoiceLesson = useInvoiceLesson();
-  const sendInvoice = useSendInvoice();
-  const [sendInvoiceId, setSendInvoiceId] = useState<string | null>(null);
-
-  const studentNames = useMemo(() => {
-    const map: Record<string, string> = {};
-    for (const s of students) map[s.id] = s.name;
-    return map;
-  }, [students]);
-
-  const studentById = useMemo(() => {
-    const map: Record<string, (typeof students)[number]> = {};
-    for (const s of students) map[s.id] = s;
-    return map;
-  }, [students]);
-
-  const subjectOptions = useMemo(() => {
-    const ids = studentById[lesson.studentId]?.subjectIds ?? [];
-    return ids
-      .map((id) => subjects.find((s) => s.id === id)?.name)
-      .filter((n): n is string => !!n);
-  }, [studentById, lesson.studentId, subjects]);
-
-  // Mirrors ActionableLessons' flow so the attendance dialog behaves the
-  // same everywhere: mark done → apply edits → optionally invoice + send.
-  const attendancePending =
-    markDone.isPending || updateLessonDetails.isPending || invoiceLesson.isPending;
-
-  async function handleAttendanceConfirm(
-    lessonId: string,
-    attendanceStatus: AttendanceStatus,
-    shouldInvoice: boolean,
-    edits?: InvoiceLessonEdits,
-  ) {
-    const name = studentNames[lesson.studentId] ?? "Unknown student";
-    try {
-      await markDone.mutateAsync({ id: lessonId, attendanceStatus });
-
-      const hasEdits =
-        edits &&
-        (edits.subject !== undefined || edits.durationMinutes !== undefined);
-      let effective = lesson;
-      if (hasEdits) {
-        const data: UpdateLessonRequest = {};
-        if (edits!.subject !== undefined) data.subject = edits!.subject;
-        if (edits!.durationMinutes !== undefined) {
-          data.durationMinutes = edits!.durationMinutes;
-        }
-        effective = await updateLessonDetails.mutateAsync({
-          id: lessonId,
-          data,
-        });
-      }
-
-      if (shouldInvoice) {
-        const student = studentById[lesson.studentId];
-        if (student) {
-          // Create the invoice but DON'T email yet — open the compose dialog so
-          // the email is reviewed before sending.
-          const created = await invoiceLesson.mutateAsync({
-            lesson: effective,
-            rateType: student.rateType,
-            expectedAmount: student.expectedAmount,
-            skipSend: true,
-          });
-          toast.success(`Invoice created for ${name} — review before sending.`);
-          setSendInvoiceId(created.id);
-          return;
-        }
-      }
-
-      toast.success(
-        `Marked ${name}'s lesson as ${ATTENDANCE_LABELS[attendanceStatus]}`,
-      );
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to mark lesson");
-      throw err;
-    }
-  }
+  const {
+    names: studentNames,
+    subjectOptions,
+    confirm,
+    attendancePending,
+    sendInvoiceId,
+    setSendInvoiceId,
+  } = useMarkAttendanceAndInvoice();
 
   const cancelled = !!lesson.isCancelled;
   const isFinished = end.getTime() < Date.now();
@@ -294,33 +199,19 @@ export function LessonRow({ lesson }: LessonRowProps) {
           onOpenChange={setAttendanceOpen}
           lesson={lesson}
           studentName={studentNames[lesson.studentId] ?? "Unknown student"}
-          subjectOptions={subjectOptions}
-          onConfirm={handleAttendanceConfirm}
+          subjectOptions={subjectOptions[lesson.studentId] ?? []}
+          onConfirm={async (_id, status, shouldInvoice, edits) => {
+            await confirm(lesson, status, shouldInvoice, edits);
+          }}
           isPending={attendancePending}
         />
       )}
 
-      {sendInvoiceId && (
-        <EmailComposeDialog
-          open
-          onOpenChange={(o) => !o && setSendInvoiceId(null)}
-          title="Send invoice"
-          description="Review and edit the email before sending. The invoice PDF is attached automatically."
-          fetchPreview={(message) =>
-            previewSendInvoiceRequest(sendInvoiceId, message)
-          }
-          onSend={async (message) => {
-            await sendInvoice.mutateAsync({
-              id: sendInvoiceId,
-              message: message || undefined,
-            });
-            toast.success("Invoice sent.");
-            const id = sendInvoiceId;
-            setSendInvoiceId(null);
-            navigate(`/payments/${id}`);
-          }}
-        />
-      )}
+      <SendInvoiceDialog
+        invoiceId={sendInvoiceId}
+        onClose={() => setSendInvoiceId(null)}
+        onSent={(id) => navigate(`/payments/${id}`)}
+      />
     </div>
   );
 }

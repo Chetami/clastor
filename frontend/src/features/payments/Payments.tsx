@@ -7,7 +7,6 @@ import {
   Plus,
   Search,
 } from "lucide-react";
-import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -16,11 +15,9 @@ import { Table, TableBody } from "@/components/ui/table";
 import {
   useMarkInvoicePaid,
   useVoidInvoice,
-  useSendInvoice,
-  previewSendInvoiceRequest,
   listInvoicesRequest,
 } from "./api";
-import { EmailComposeDialog } from "@/components/email-compose-dialog";
+import { SendInvoiceDialog } from "@/components/send-invoice-dialog";
 import {
   PAGE_SIZE,
   STATUS_TABS,
@@ -169,7 +166,6 @@ export default function Payments() {
 
   const markPaid = useMarkInvoicePaid();
   const voidInvoice = useVoidInvoice();
-  const sendInvoice = useSendInvoice();
   const [sendInvoiceId, setSendInvoiceId] = useState<string | null>(null);
 
   return (
@@ -258,7 +254,7 @@ export default function Payments() {
                       onEdit={(id) => navigate(`/payments/${id}/edit`)}
                       onMarkPaid={(id) => markPaid.mutate({ id })}
                       onVoid={(id) => voidInvoice.mutate(id)}
-                      sendDisabled={sendInvoice.isPending}
+                      sendDisabled={false}
                       markPaidDisabled={markPaid.isPending}
                       voidDisabled={voidInvoice.isPending}
                     />
@@ -312,25 +308,10 @@ export default function Payments() {
         </CardContent>
       </Card>
 
-      {sendInvoiceId && (
-        <EmailComposeDialog
-          open
-          onOpenChange={(o) => !o && setSendInvoiceId(null)}
-          title="Send invoice"
-          description="Review and edit the email before sending. The invoice PDF is attached automatically."
-          fetchPreview={(message) =>
-            previewSendInvoiceRequest(sendInvoiceId, message)
-          }
-          onSend={async (message) => {
-            await sendInvoice.mutateAsync({
-              id: sendInvoiceId,
-              message: message || undefined,
-            });
-            toast.success("Invoice sent.");
-            setSendInvoiceId(null);
-          }}
-        />
-      )}
+      <SendInvoiceDialog
+        invoiceId={sendInvoiceId}
+        onClose={() => setSendInvoiceId(null)}
+      />
     </div>
   );
 }

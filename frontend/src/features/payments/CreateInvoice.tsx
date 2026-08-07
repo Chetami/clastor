@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
@@ -18,8 +17,8 @@ import { MorphChevron } from "@/components/ui/morph-chevron";
 import { useListStudents } from "@/features/students/api";
 import { useSubjects, resolveSubjectNames } from "@/lib/subjects";
 import { useListLessons } from "@/features/schedule/api";
-import { useCreateInvoice, useSendInvoice, previewSendInvoiceRequest } from "./api";
-import { EmailComposeDialog } from "@/components/email-compose-dialog";
+import { useCreateInvoice } from "./api";
+import { SendInvoiceDialog } from "@/components/send-invoice-dialog";
 import {
   createInvoiceFormSchema,
   type CreateInvoiceFormData,
@@ -100,7 +99,6 @@ export default function CreateInvoice() {
   }, [preselectLessonId, unpaidLessons, selectedLessonIds]);
 
   const createInvoice = useCreateInvoice();
-  const sendInvoice = useSendInvoice();
   const [sendInvoiceId, setSendInvoiceId] = useState<string | null>(null);
 
   const { upcoming: upcomingLessons, completed: completedLessons } = useMemo(
@@ -453,7 +451,7 @@ export default function CreateInvoice() {
               subtotal={subtotal}
               currency={currency}
               createPending={createInvoice.isPending}
-              sendPending={sendInvoice.isPending}
+              sendPending={false}
               hasLineItems={lineItems.length > 0}
               hasStudent={!!studentId}
               onBillingEmailChange={setBillingEmail}
@@ -466,26 +464,11 @@ export default function CreateInvoice() {
         </div>
       </div>
 
-      {sendInvoiceId && (
-        <EmailComposeDialog
-          open
-          onOpenChange={(o) => !o && setSendInvoiceId(null)}
-          title="Send invoice"
-          description="Review and edit the email before sending. The invoice PDF is attached automatically."
-          fetchPreview={(message) =>
-            previewSendInvoiceRequest(sendInvoiceId, message)
-          }
-          onSend={async (message) => {
-            await sendInvoice.mutateAsync({
-              id: sendInvoiceId,
-              message: message || undefined,
-            });
-            toast.success("Invoice sent.");
-            setSendInvoiceId(null);
-            navigate("/payments");
-          }}
-        />
-      )}
+      <SendInvoiceDialog
+        invoiceId={sendInvoiceId}
+        onClose={() => setSendInvoiceId(null)}
+        onSent={() => navigate("/payments")}
+      />
     </>
   );
 }
