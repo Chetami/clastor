@@ -133,7 +133,7 @@ Write-Host "      GOOGLE_OAUTH_REDIRECT_URI, VITE_API_URL) from the URLs you gav
 # Keys that are usually shared/reusable across environments. Env-specific keys
 # (URLs, Firebase) are deliberately excluded — they were set above.
 $copyKeys = @(
-    'JWT_SECRET', 'PORT',
+    'JWT_SECRET', 'REFRESH_TOKEN_SECRET', 'PORT',
     'SMTP_HOST', 'SMTP_PORT', 'SMTP_SECURE', 'SMTP_USER', 'SMTP_PASS', 'EMAIL_FROM',
     'NOTIFY_COOLDOWN_MS',
     'GOOGLE_OAUTH_CLIENT_ID', 'GOOGLE_OAUTH_CLIENT_SECRET',
