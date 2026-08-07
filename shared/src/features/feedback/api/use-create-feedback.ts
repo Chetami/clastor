@@ -1,13 +1,13 @@
 import { useMutation } from "@tanstack/react-query";
 import { createFeedbackRequest } from "./requests";
-import type { FeedbackResponse } from "@examify-tms/interfaces";
+import type { FeedbackResponse, FeedbackType } from "@examify-tms/interfaces";
 
 export function useCreateFeedback() {
   return useMutation<
     FeedbackResponse,
     Error,
     {
-      type: string;
+      type: FeedbackType;
       message: string;
       pageUrl: string;
       images: File[];

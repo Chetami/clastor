@@ -1,6 +1,15 @@
-import type { Student, StudentResponse, Subject } from "@examify-tms/interfaces";
+import type {
+  BillingEmailSource,
+  Student,
+  StudentResponse,
+  Subject,
+} from "@examify-tms/interfaces";
 import type { StudentFormData } from "./student-schema";
 import { formatCompactCurrency } from "../payments/invoice-utils";
+
+// Re-export so existing consumers importing from this module keep working;
+// the canonical definition lives in @examify-tms/interfaces.
+export type { BillingEmailSource };
 
 export const rateTypeLabel: Record<Student["rateType"], string> = {
   hourly: "Hourly",
@@ -47,8 +56,6 @@ export function resolveBillingEmail(
   if (parentEmail && parentEmail.trim().length > 0) return parentEmail;
   return email;
 }
-
-export type BillingEmailSource = "explicit" | "parent" | "student";
 
 /**
  * Resolve the provenance of a student's billing email. Mirrors the backend's
@@ -197,92 +204,3 @@ export const STUDENT_CSV_TEMPLATE = [
     .map(escapeCsvField)
     .join(","),
 ].join("\n");
-
-let nextId = 100;
-export function generateId(): string {
-  nextId += 1;
-  return `stu_${nextId}`;
-}
-
-export const SAMPLE_STUDENTS: Student[] = [
-  {
-    id: "1",
-    tutorId: "tutor_1",
-    name: "Alice Johnson",
-    email: "alice.johnson@example.com",
-    phone: null,
-    parentEmail: "parent.johnson@example.com",
-    billingEmail: "parent.johnson@example.com",
-    billingEmailSource: "parent",
-    subjectIds: [],
-    expectedAmount: 45,
-    rateType: "hourly",
-    frequencyPerWeek: 4,
-    status: "active",
-    timezone: "America/New_York",
-    notes: "Struggles with algebra, focus on quadratic equations.",
-    amountOwed: 90,
-    createdAt: "2025-01-15T10:00:00.000Z",
-    updatedAt: "2025-06-01T10:00:00.000Z",
-  },
-  {
-    id: "2",
-    tutorId: "tutor_1",
-    name: "Marcus Chen",
-    email: "marcus.chen@example.com",
-    phone: "+15551234567",
-    parentEmail: null,
-    billingEmail: "marcus.chen@example.com",
-    billingEmailSource: "student",
-    subjectIds: [],
-    expectedAmount: 120,
-    rateType: "per_lesson",
-    frequencyPerWeek: 2,
-    status: "active",
-    timezone: null,
-    notes: null,
-    amountOwed: 0,
-    createdAt: "2025-02-03T10:00:00.000Z",
-    updatedAt: "2025-05-28T10:00:00.000Z",
-  },
-  {
-    id: "3",
-    tutorId: "tutor_1",
-    name: "Priya Patel",
-    email: "priya.patel@example.com",
-    phone: null,
-    parentEmail: null,
-    billingEmail: "priya.patel@example.com",
-    billingEmailSource: "student",
-    subjectIds: [],
-    expectedAmount: 50,
-    rateType: "hourly",
-    frequencyPerWeek: 3,
-    status: "active",
-    timezone: "Asia/Kolkata",
-    notes: "Preparing for final exams in November.",
-    amountOwed: 150,
-    createdAt: "2025-03-10T10:00:00.000Z",
-    updatedAt: "2025-06-10T10:00:00.000Z",
-  },
-  {
-    id: "4",
-    tutorId: "tutor_1",
-    name: "Liam O'Brien",
-    email: "liam.obrien@example.com",
-    phone: "+15559876543",
-    parentEmail: "obrien.family@example.com",
-    billingEmail: "obrien.family@example.com",
-    billingEmailSource: "parent",
-    subjectIds: [],
-    expectedAmount: 90,
-    rateType: "per_lesson",
-    frequencyPerWeek: 1,
-    status: "past",
-    timezone: null,
-    notes: "Finished course. May return next semester.",
-    amountOwed: 0,
-    createdAt: "2024-09-01T10:00:00.000Z",
-    updatedAt: "2025-04-20T10:00:00.000Z",
-  },
-];

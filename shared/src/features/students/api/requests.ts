@@ -37,10 +37,13 @@ export async function importStudentsRequest(
 ): Promise<StudentImportSummary> {
   const form = new FormData();
   form.append("file", file);
+  // Let the browser set the multipart/form-data Content-Type with the correct
+  // boundary. Hard-coding "multipart/form-data" (as before) omits the boundary
+  // and multer never sees a multipart body, so the import file is dropped.
   const response = await api.post<StudentImportSummary>(
     "/api/students/import",
     form,
-    { headers: { "Content-Type": "multipart/form-data" } },
+    { headers: { "Content-Type": undefined } },
   );
   return response.data;
 }

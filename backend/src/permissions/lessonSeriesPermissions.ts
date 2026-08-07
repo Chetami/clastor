@@ -1,5 +1,5 @@
 import { Request } from "express";
-import * as permissions from "./permissions";
+import { canAccessOwned } from "./permissions";
 import { LessonSeries } from "@examify-tms/interfaces";
 
 /**
@@ -9,16 +9,8 @@ import { LessonSeries } from "@examify-tms/interfaces";
  * - Tutors can only access their own series
  */
 
-export const canViewSeries = (series: LessonSeries, req?: Request): boolean => {
-  if (permissions.isUserSysAdmin(req?.user?.role)) {
-    return true;
-  }
-  return permissions.isSameUser(series.tutorId, req?.user?.uid);
-};
+export const canViewSeries = (series: LessonSeries, req?: Request): boolean =>
+  canAccessOwned(series, req);
 
-export const canEditSeries = (series: LessonSeries, req?: Request): boolean => {
-  if (permissions.isUserSysAdmin(req?.user?.role)) {
-    return true;
-  }
-  return permissions.isSameUser(series.tutorId, req?.user?.uid);
-};
+export const canEditSeries = (series: LessonSeries, req?: Request): boolean =>
+  canAccessOwned(series, req);

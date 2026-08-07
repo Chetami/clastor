@@ -6,15 +6,29 @@ import { JwtPayload, Role } from "@examify-tms/interfaces";
  * JWT utility functions
  */
 
-const JWT_SECRET = process.env.JWT_SECRET || "your-super-secret-jwt-key-change-in-production";
+/**
+ * Read a required secret from the environment. The server MUST NOT start with a
+ * hard-coded/predictable signing key — doing so would let anyone forge access,
+ * refresh, RSVP and OAuth-state tokens. Fail loudly at import time instead.
+ */
+function requireSecret(name: string): string {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(
+      `${name} environment variable is not set. Refusing to start without a secret signing key.`,
+    );
+  }
+  return value;
+}
+
+const JWT_SECRET = requireSecret("JWT_SECRET");
 const JWT_EXPIRY = "15m";
 
 /**
  * Refresh tokens use a SEPARATE secret from access tokens so a refresh token
  * can never be mistaken for an access token (and vice versa) by the verifier.
  */
-const REFRESH_TOKEN_SECRET =
-  process.env.REFRESH_TOKEN_SECRET || "your-super-secret-refresh-key-change-in-production";
+const REFRESH_TOKEN_SECRET = requireSecret("REFRESH_TOKEN_SECRET");
 const REFRESH_TOKEN_EXPIRY = "30d";
 
 /** Payload embedded in a signed refresh token. */

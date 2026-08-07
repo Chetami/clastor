@@ -78,10 +78,13 @@ export default function StudentDetail() {
     setNotesEditing(true);
   }
 
-  function saveNotes() {
+  async function saveNotes() {
     if (!student) return;
     const trimmed = notesDraft.trim();
-    console.log("Notes saved locally:", trimmed);
+    await updateStudent.mutateAsync({
+      id: student.id,
+      data: { notes: trimmed || null },
+    });
     setNotesEditing(false);
   }
 
@@ -282,9 +285,7 @@ export default function StudentDetail() {
               </span>
               <span className="font-medium">
                 {formatCurrency(
-                  student.rateType === "hourly"
-                    ? student.expectedAmount * student.frequencyPerWeek
-                    : student.expectedAmount * student.frequencyPerWeek,
+                  student.expectedAmount * student.frequencyPerWeek,
                   currency,
                 )}
               </span>

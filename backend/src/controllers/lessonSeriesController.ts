@@ -30,6 +30,10 @@ import { canViewSeries, canEditSeries } from "../permissions/lessonSeriesPermiss
 import { getStudentByIdFromFirestore } from "../services/studentService";
 import { getUserFromFirestore } from "../services/userService";
 import {
+  safeGetActorName,
+  type EmailPreviewResponse,
+} from "../utils/controller-helpers";
+import {
   sendSeriesNotificationEmail,
   buildSeriesNotificationContent,
   defaultSeriesNotificationMessage,
@@ -352,15 +356,6 @@ export async function generateSeriesMeetLink(
  * Resolve the display name of the authenticated user for the sent-email log.
  * Best-effort: returns null if the user record can't be loaded.
  */
-async function safeGetActorName(uid: string | undefined): Promise<string | null> {
-  if (!uid) return null;
-  try {
-    const user = await getUserFromFirestore(uid);
-    return user?.name ?? null;
-  } catch {
-    return null;
-  }
-}
 
 /**
  * POST /api/lessons/series/:id/notify-student
@@ -497,14 +492,7 @@ export async function notifySeriesStudent(
  * Shape returned by the series notify preview endpoint (mirrors the lesson
  * preview endpoints).
  */
-interface EmailPreviewResponse {
-  to: string[];
-  subject: string;
-  text: string;
-  html: string;
-  defaultSubject: string;
-  defaultMessage: string;
-}
+
 
 /**
  * Preview the series summary email (one email covering every upcoming lesson

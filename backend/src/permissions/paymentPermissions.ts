@@ -1,5 +1,5 @@
 import { Request } from "express";
-import * as permissions from "./permissions";
+import { canAccessOwned } from "./permissions";
 import { Invoice } from "@examify-tms/interfaces";
 
 /**
@@ -9,23 +9,11 @@ import { Invoice } from "@examify-tms/interfaces";
  * - Tutors can only access their own invoices (invoice.tutorId === tutor's user ID)
  */
 
-export const canViewInvoice = (invoice: Invoice, req?: Request): boolean => {
-  if (permissions.isUserSysAdmin(req?.user?.role)) {
-    return true;
-  }
-  return permissions.isSameUser(invoice.tutorId, req?.user?.uid);
-};
+export const canViewInvoice = (invoice: Invoice, req?: Request): boolean =>
+  canAccessOwned(invoice, req);
 
-export const canEditInvoice = (invoice: Invoice, req?: Request): boolean => {
-  if (permissions.isUserSysAdmin(req?.user?.role)) {
-    return true;
-  }
-  return permissions.isSameUser(invoice.tutorId, req?.user?.uid);
-};
+export const canEditInvoice = (invoice: Invoice, req?: Request): boolean =>
+  canAccessOwned(invoice, req);
 
-export const canDeleteInvoice = (invoice: Invoice, req?: Request): boolean => {
-  if (permissions.isUserSysAdmin(req?.user?.role)) {
-    return true;
-  }
-  return permissions.isSameUser(invoice.tutorId, req?.user?.uid);
-};
+export const canDeleteInvoice = (invoice: Invoice, req?: Request): boolean =>
+  canAccessOwned(invoice, req);

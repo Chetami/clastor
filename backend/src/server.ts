@@ -85,5 +85,4 @@ app.use((err: Error, req: express.Request, res: express.Response<ApiError>, next
 app.listen(PORT, () => {
   console.log(`Backend server running on port ${PORT}`);
   console.log(`Health check: http://localhost:${PORT}/health`);
-  console.log(`API Docs: http://localhost:${PORT}/api/docs`);
 });

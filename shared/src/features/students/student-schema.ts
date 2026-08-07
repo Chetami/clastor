@@ -1,8 +1,10 @@
 import { z } from "zod";
 import { isPossiblePhoneNumber } from "react-phone-number-input";
 import type { UpdateStudentRequest } from "@examify-tms/interfaces";
+// `rateTypeSchema` is shared with the payments module (identical enum); import
+// the canonical definition instead of redefining it here.
+import { rateTypeSchema } from "../payments/invoice-schema";
 
-export const rateTypeSchema = z.enum(["hourly", "per_lesson"]);
 export const studentStatusSchema = z.enum(["active", "past"]);
 
 export const studentFormSchema = z

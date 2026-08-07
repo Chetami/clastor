@@ -36,7 +36,8 @@ afterAll(() => server.close());
 //    sonner / ResponsiveContainer rely on at module-evaluation or render time.
 // ---------------------------------------------------------------------------
 
-// `matchMedia` — used by next-themes and the use-mobile hook.
+// `matchMedia` — used by the use-mobile hook (and any component reading
+// prefers-color-scheme) at render time.
 if (!window.matchMedia) {
   window.matchMedia = (query: string) =>
     ({

@@ -2,6 +2,7 @@ import { api } from "../../../lib/api";
 import type {
   FeedbackResponse,
   FeedbackListResponse,
+  FeedbackType,
   UpdateFeedbackStatusRequest,
 } from "@examify-tms/interfaces";
 
@@ -11,7 +12,7 @@ export async function listFeedbackRequest(): Promise<FeedbackListResponse> {
 }
 
 export async function createFeedbackRequest(params: {
-  type: string;
+  type: FeedbackType;
   message: string;
   pageUrl: string;
   images: File[];

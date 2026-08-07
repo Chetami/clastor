@@ -69,6 +69,10 @@ import {
 } from "@examify-tms/interfaces";
 import { canViewLesson, canEditLesson } from "../permissions/lessonPermissions";
 import { resolveTutorNames } from "../services/tutorResolver";
+import {
+  safeGetActorName,
+  type EmailPreviewResponse,
+} from "../utils/controller-helpers";
 
 /**
  * Convert a Lesson (Date-typed) to a LessonResponse (ISO string-typed),
@@ -108,19 +112,6 @@ export function toLessonResponse(lesson: Lesson): LessonResponse {
   };
 }
 
-/**
- * Resolve the display name of the authenticated user for the sent-email log.
- * Best-effort: returns null if the user record can't be loaded.
- */
-async function safeGetActorName(uid: string | undefined): Promise<string | null> {
-  if (!uid) return null;
-  try {
-    const user = await getUserFromFirestore(uid);
-    return user?.name ?? null;
-  } catch {
-    return null;
-  }
-}
 
 /**
  * Create lesson controller
@@ -1123,14 +1114,6 @@ export async function notifyStudent(
  * (honouring any supplied message) plus the untouched defaults so the compose
  * dialog can prefill / reset its fields.
  */
-interface EmailPreviewResponse {
-  to: string[];
-  subject: string;
-  text: string;
-  html: string;
-  defaultSubject: string;
-  defaultMessage: string;
-}
 
 /**
  * Resolve the data needed to render a lesson-notification email for PREVIEW,

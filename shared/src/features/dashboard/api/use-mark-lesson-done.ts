@@ -16,8 +16,9 @@ export function useMarkLessonDone() {
   >({
     mutationFn: ({ id, attendanceStatus }) =>
       recordAttendanceRequest(id, attendanceStatus),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["lessons"] });
+      queryClient.invalidateQueries({ queryKey: ["lessons", variables.id] });
       queryClient.invalidateQueries({ queryKey: ["dashboard-summary"] });
     },
   });

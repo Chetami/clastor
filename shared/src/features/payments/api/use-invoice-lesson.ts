@@ -60,7 +60,7 @@ export function useInvoiceLesson() {
     },
     onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
-      queryClient.invalidateQueries({ queryKey: ["invoice", response.id] });
+      queryClient.invalidateQueries({ queryKey: ["invoices", response.id] });
       queryClient.invalidateQueries({ queryKey: ["lessons"] });
       queryClient.invalidateQueries({
         queryKey: ["student-invoices", response.studentId],

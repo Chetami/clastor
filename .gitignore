@@ -58,3 +58,7 @@ backend/.deploy-stage/
 # but keep the committed <env>.psd1 definitions at the top level.
 deploy/environments/*/
 frontend/.env.production
+
+# Expo (local dev cache; keep only the README)
+.expo/*
+!.expo/README.md

@@ -13,7 +13,7 @@ export function useSendInvoice() {
     mutationFn: ({ id, message }) => sendInvoiceRequest(id, message),
     onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
-      queryClient.invalidateQueries({ queryKey: ["invoice", response.id] });
+      queryClient.invalidateQueries({ queryKey: ["invoices", response.id] });
       queryClient.invalidateQueries({
         queryKey: ["student-invoices", response.studentId],
       });

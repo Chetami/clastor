@@ -9,7 +9,7 @@ export function useUpdateStudent() {
     onSuccess: (_, variables) => {
       // Invalidate both the students list and the specific student query
       queryClient.invalidateQueries({ queryKey: ["students"] });
-      queryClient.invalidateQueries({ queryKey: ["student", variables.id] });
+      queryClient.invalidateQueries({ queryKey: ["students", variables.id] });
     },
   });
 }

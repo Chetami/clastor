@@ -27,6 +27,8 @@ import {
   ApiError,
 } from "@examify-tms/interfaces";
 import { canViewInvoice, canEditInvoice, canDeleteInvoice } from "../permissions/paymentPermissions";
+import { canViewStudent } from "../permissions/studentPermissions";
+import { getStudentByIdFromFirestore } from "../services/studentService";
 import { generateInvoicePdf } from "../services/invoicePdfService";
 import {
   sendInvoiceEmail,
@@ -37,6 +39,10 @@ import {
 } from "../services/emailService";
 import { getUserFromFirestore } from "../services/userService";
 import { resolveTutorNames } from "../services/tutorResolver";
+import {
+  safeGetActorName,
+  type EmailPreviewResponse,
+} from "../utils/controller-helpers";
 import { isStripeConfigured } from "../config/stripe";
 import { getInvoiceResendCooldownMs, getPublicApiUrl } from "../config/email";
 import { getStripeAccountRecord } from "../services/stripeConnectService";
@@ -498,14 +504,6 @@ async function resolveInvoicePaymentUrl(invoice: Invoice): Promise<string | unde
  * Shape returned by the invoice preview endpoint (mirrors the lesson preview
  * endpoints).
  */
-interface EmailPreviewResponse {
-  to: string[];
-  subject: string;
-  text: string;
-  html: string;
-  defaultSubject: string;
-  defaultMessage: string;
-}
 
 /**
  * Preview the invoice email without sending (and without promoting a draft or
@@ -583,17 +581,6 @@ async function safeGetUser(uid: string) {
   } catch {
     return null;
   }
-}
-
-/**
- * Resolve the display name of the authenticated user for timeline events.
- * Best-effort: returns null if the user record can't be loaded (the event
- * is still recorded, just without an actor attribution).
- */
-async function safeGetActorName(uid: string | undefined): Promise<string | null> {
-  if (!uid) return null;
-  const user = await safeGetUser(uid);
-  return user?.name ?? null;
 }
 
 /**
@@ -870,6 +857,17 @@ export async function getStudentInvoices(
       return;
     }
 
+    // Ownership check: prevent cross-tenant access via a guessed student id.
+    const student = await getStudentByIdFromFirestore(req.params.studentId);
+    if (!student) {
+      res.status(404).json({ message: "Student not found" });
+      return;
+    }
+    if (!canViewStudent(student, req)) {
+      res.status(403).json({ message: "Forbidden" });
+      return;
+    }
+
     const invoices = await getStudentInvoicesFromFirestore(req.params.studentId);
     const response: InvoiceListResponse = {
       data: invoices.map(toInvoiceResponse),
@@ -896,6 +894,17 @@ export async function getStudentDebt(
   try {
     if (!req.user) {
       res.status(401).json({ message: "Unauthorized" });
+      return;
+    }
+
+    // Ownership check: prevent cross-tenant access via a guessed student id.
+    const student = await getStudentByIdFromFirestore(req.params.studentId);
+    if (!student) {
+      res.status(404).json({ message: "Student not found" });
+      return;
+    }
+    if (!canViewStudent(student, req)) {
+      res.status(403).json({ message: "Forbidden" });
       return;
     }
 

@@ -1,12 +1,13 @@
 import { api } from "../../../lib/api";
-import type {
-  DashboardPeriod,
-  DashboardSummaryResponse,
-  GenerateMeetLinkRequest,
-  GenerateMeetLinkResponse,
-  AttendanceStatus,
-  LessonResponse,
-} from "@examify-tms/interfaces";
+import type { DashboardPeriod, DashboardSummaryResponse } from "@examify-tms/interfaces";
+// `generateMeetLinkRequest` and `recordAttendanceRequest` are owned by the
+// schedule feature (identical implementations); re-export them here so the
+// dashboard hooks can import from a single local module without duplicating
+// the request bodies.
+export {
+  generateMeetLinkRequest,
+  recordAttendanceRequest,
+} from "../../schedule/api/requests";
 
 export async function getDashboardSummaryRequest(
   period: DashboardPeriod,
@@ -14,27 +15,6 @@ export async function getDashboardSummaryRequest(
   const response = await api.get<DashboardSummaryResponse>(
     "/api/dashboard/summary",
     { params: { period } },
-  );
-  return response.data;
-}
-
-export async function generateMeetLinkRequest(
-  data?: GenerateMeetLinkRequest,
-): Promise<GenerateMeetLinkResponse> {
-  const response = await api.post<GenerateMeetLinkResponse>(
-    "/api/meetings",
-    data,
-  );
-  return response.data;
-}
-
-export async function recordAttendanceRequest(
-  id: string,
-  attendanceStatus: AttendanceStatus,
-): Promise<LessonResponse> {
-  const response = await api.patch<LessonResponse>(
-    `/api/lessons/${id}/attendance`,
-    { attendanceStatus },
   );
   return response.data;
 }

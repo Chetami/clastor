@@ -53,7 +53,7 @@ describe("jwt utils", () => {
     it("rejects an expired token", () => {
       const expired = jwt.sign(
         { uid: UID, email: EMAIL, role: "tutor", exp: Math.floor(Date.now() / 1000) - 60 },
-        process.env.JWT_SECRET || "your-super-secret-jwt-key-change-in-production",
+        process.env.JWT_SECRET!,
       );
       expect(() => verifyToken(expired)).toThrow("Invalid or expired token");
     });
@@ -113,10 +113,7 @@ describe("jwt utils", () => {
 
     it("returns null when a required claim is missing", () => {
       // Signed with the refresh secret but missing familyId/jti.
-      const refreshSecret =
-        process.env.REFRESH_TOKEN_SECRET ||
-        "your-super-secret-refresh-key-change-in-production";
-      const bad = jwt.sign({ uid: UID }, refreshSecret);
+      const bad = jwt.sign({ uid: UID }, process.env.REFRESH_TOKEN_SECRET!);
       expect(verifyRefreshToken(bad)).toBeNull();
     });
   });
@@ -158,8 +155,7 @@ describe("jwt utils", () => {
 
     it("returns null when a claim has the wrong type", () => {
       // version present but as a string, not a number -> rejected.
-      const secret = process.env.JWT_SECRET || "your-super-secret-jwt-key-change-in-production";
-      const bad = jwt.sign({ lid: "lesson_1", v: "3" }, secret);
+      const bad = jwt.sign({ lid: "lesson_1", v: "3" }, process.env.JWT_SECRET!);
       expect(verifyRsvpToken(bad)).toBeNull();
     });
   });

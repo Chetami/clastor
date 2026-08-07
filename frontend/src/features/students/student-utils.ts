@@ -16,8 +16,6 @@ export {
   escapeCsvField,
   studentsToCsv,
   STUDENT_CSV_TEMPLATE,
-  generateId,
-  SAMPLE_STUDENTS,
 } from "@examify-tms/shared";
 
 // Currency formatters come from the shared payments module; `compactCurrency`

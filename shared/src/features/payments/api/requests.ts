@@ -106,13 +106,6 @@ export async function voidInvoiceRequest(
   return response.data;
 }
 
-export async function deleteInvoiceRequest(
-  id: string,
-): Promise<{ message: string }> {
-  const response = await api.delete<{ message: string }>(`/api/payments/${id}`);
-  return response.data;
-}
-
 export async function listInvoiceEventsRequest(
   id: string,
 ): Promise<InvoiceEventListResponse> {

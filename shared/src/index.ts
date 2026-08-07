@@ -61,17 +61,7 @@ export * from "./features/schedule/working-hours";
 export * from "./features/lessons/lesson-utils";
 
 // ---- Feature: dashboard ----
-// `generateMeetLinkRequest` and `recordAttendanceRequest` are also defined in
-// the schedule feature (identical implementations); they are re-exported via
-// schedule below, so here we only surface dashboard's unique exports to avoid
-// a duplicate-export error.
-export {
-  useDashboardSummary,
-  useGenerateMeetLink,
-  useMarkLessonDone,
-  useUpdateLessonDetails,
-  getDashboardSummaryRequest,
-} from "./features/dashboard/api";
+export * from "./features/dashboard/api";
 export * from "./features/dashboard/lib";
 
 // ---- Feature: account (mirrors backend enums) ----
@@ -80,16 +70,7 @@ export * from "./features/account/reminder-options";
 
 // ---- Feature: students ----
 export * from "./features/students/api";
-// `rateTypeSchema` is intentionally NOT re-exported here — an identical schema
-// already ships from the payments module (export * above). Listing the rest
-// explicitly avoids an ambiguous-export collision at the package barrel.
-export {
-  studentStatusSchema,
-  studentFormSchema,
-  EMPTY_STUDENT_FORM,
-  formToUpdateRequest,
-  type StudentFormData,
-} from "./features/students/student-schema";
+export * from "./features/students/student-schema";
 export * from "./features/students/student-utils";
 
 // ---- Feature: payments ----

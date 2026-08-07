@@ -1,5 +1,5 @@
 import { Request } from "express";
-import * as permissions from "./permissions";
+import { canAccessOwned } from "./permissions";
 import { Lesson } from "@examify-tms/interfaces";
 
 /**
@@ -9,22 +9,8 @@ import { Lesson } from "@examify-tms/interfaces";
  * - Tutors can only access their own lessons (where lesson.tutorId === tutor's user ID)
  */
 
-/**
- * Check if user can view a specific lesson
- */
-export const canViewLesson = (lesson: Lesson, req?: Request): boolean => {
-  if (permissions.isUserSysAdmin(req?.user?.role)) {
-    return true;
-  }
-  return permissions.isSameUser(lesson.tutorId, req?.user?.uid);
-};
+export const canViewLesson = (lesson: Lesson, req?: Request): boolean =>
+  canAccessOwned(lesson, req);
 
-/**
- * Check if user can edit a specific lesson
- */
-export const canEditLesson = (lesson: Lesson, req?: Request): boolean => {
-  if (permissions.isUserSysAdmin(req?.user?.role)) {
-    return true;
-  }
-  return permissions.isSameUser(lesson.tutorId, req?.user?.uid);
-};
+export const canEditLesson = (lesson: Lesson, req?: Request): boolean =>
+  canAccessOwned(lesson, req);

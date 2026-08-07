@@ -6,6 +6,7 @@ import type {
   RescheduleLessonRequest,
   RecordAttendanceRequest,
   AttendanceStatus,
+  LessonAcceptance,
   CreateRecurringLessonRequest,
   CreateRecurringLessonResponse,
   GenerateMeetLinkRequest,
@@ -53,8 +54,8 @@ export interface ListLessonsParams {
   studentId?: string;
   seriesId?: string;
   unpaid?: boolean;
-  acceptanceStatus?: string;
-  attendanceStatus?: string;
+  acceptanceStatus?: LessonAcceptance;
+  attendanceStatus?: AttendanceStatus;
   status?: "upcoming" | "past" | "cancelled" | "all";
   limit?: number;
   cursor?: string;

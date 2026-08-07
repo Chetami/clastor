@@ -7,7 +7,25 @@ const distPath = path.join(__dirname, '..', 'dist', 'index.d.ts');
 
 const content = fs.readFileSync(distPath, 'utf8');
 
-const types = ['ApiError', 'JwtPayload', 'LoginRequest', 'LoginResponse', 'UserInfo', 'Role', 'ReminderLeadTime', 'Subject', 'User', 'RegisterRequest', 'RateType', 'StudentStatus', 'Student', 'CreateStudentRequest', 'StudentResponse', 'UpdateStudentRequest', 'ListStudentsQuery', 'StudentListResponse', 'StudentImportSummary', 'AttendanceStatus', 'LessonAcceptance', 'Lesson', 'LessonTodo', 'CreateLessonRequest', 'UpdateLessonRequest', 'RescheduleLessonRequest', 'RecordAttendanceRequest', 'NotifyStudentRequest', 'CancelLessonRequest', 'ListLessonsQuery', 'LessonResponse', 'LessonListResponse', 'DayOfWeek', 'LessonSlot', 'LessonSeries', 'CreateRecurringLessonRequest', 'UpdateLessonSeriesRequest', 'LessonSeriesResponse', 'GenerateSeriesMeetLinkResponse', 'CreateRecurringLessonResponse', 'GenerateMeetLinkRequest', 'GenerateMeetLinkResponse', 'GoogleConnectionStatus', 'InvoiceStatus', 'PaymentMethod', 'InvoiceLineItem', 'Invoice', 'CreateInvoiceRequest', 'UpdateInvoiceRequest', 'ListInvoicesQuery', 'MarkPaidRequest', 'InvoiceResponse', 'InvoiceListResponse', 'InvoiceEventType', 'InvoiceEvent', 'InvoiceEventResponse', 'InvoiceEventListResponse', 'TutorTemplate', 'TutorProfileStatus', 'TutorProfile', 'UpdateTutorProfileRequest', 'CheckSlugRequest', 'CheckSlugResponse', 'TutorProfileResponse', 'PublicTutorProfileResponse', 'StripeConnectStatusResponse', 'CreateAccountLinkResponse', 'DashboardLinkResponse', 'DashboardPeriod', 'DashboardSeriesPoint', 'DashboardDayBreakdown', 'DashboardSummaryResponse', 'AdminOverviewResponse', 'ExternalCalendarEvent', 'ExternalCalendarEventListResponse', 'WorkingDayWindow', 'WorkingHours', 'BankDetails', 'InvoiceSettings', 'FeedbackType', 'CreateFeedbackRequest', 'UpdateFeedbackStatusRequest', 'FeedbackResponse', 'FeedbackListResponse', 'AdminTutorSummary', 'AdminTutorListResponse', 'TemplateType', 'TemplateSummary', 'EmailTemplatePreview', 'SentEmailType', 'SentEmailStatus', 'SentEmail', 'ListSentEmailsQuery', 'SentEmailResponse', 'SentEmailListResponse', 'EmailPreviewResponse', 'RefreshTokenRequest', 'RefreshTokenResponse'];
+// Auto-derive the list of schema names from the generated `components.schemas`
+// block instead of maintaining a hardcoded array (which historically drifted
+// and dropped types like `BillingEmailSource`, `VerifyTokenRequest`, etc.).
+// Schema keys are the only top-level entries in `schemas: { … }`, emitted by
+// openapi-typescript at 8-space indentation as `Name:`.
+function deriveSchemaNames(src) {
+  const start = src.indexOf('schemas: {');
+  if (start === -1) return [];
+  const block = src.slice(start);
+  const names = new Set();
+  const re = /^        ([A-Z]\w*):/gm;
+  let m;
+  while ((m = re.exec(block)) !== null) {
+    names.add(m[1]);
+  }
+  return [...names].sort();
+}
+
+const types = deriveSchemaNames(content);
 
 const reexports =
   '\n// Re-export types at top level for backward compatibility\n' +
@@ -56,5 +74,5 @@ fs.writeFileSync(
   `export {\n${indexMjs}} from "./esm/featureFlags.js";\n`,
 );
 
-console.log('✓ Added type re-exports for backward compatibility');
+console.log(`✓ Added ${types.length} type re-exports for backward compatibility`);
 console.log('✓ Wrote dist/index.js (CJS) + dist/index.mjs (ESM) barrels');
