@@ -4,7 +4,7 @@ import type {
   PaymentMethod,
   RateType,
 } from "@examify-tms/interfaces";
-import { compareAsc, compareDesc, isPast } from "date-fns";
+import { compareAsc, compareDesc, format as formatDateFns, isPast } from "date-fns";
 import { defaultQuantity, defaultUnitAmount } from "./invoice-schema";
 
 export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
@@ -34,22 +34,11 @@ export function formatCompactCurrency(
 }
 
 export function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-AU", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
+  return formatDateFns(new Date(iso), "d MMM yyyy");
 }
 
 export function formatDateTime(iso: string): string {
-  return new Date(iso).toLocaleString("en-AU", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  });
+  return formatDateFns(new Date(iso), "d MMM yyyy, h:mm a");
 }
 
 export function isOverdue(invoice: InvoiceResponse): boolean {

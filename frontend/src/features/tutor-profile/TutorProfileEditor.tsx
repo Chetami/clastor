@@ -1,20 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
-import {
-  Check,
-  Eye,
-  EyeOff,
-  Globe,
-  Loader2,
-  Pencil,
-  Plus,
-  Rocket,
-  Trash2,
-  X,
-} from "lucide-react";
+import { useMemo, useState } from "react";
 import type { UpdateTutorProfileRequest } from "@examify-tms/interfaces";
+import { Loader2 } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -24,7 +11,6 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 import { useGetTutorProfile } from "./api/use-get-tutor-profile";
 import { useUpdateTutorProfile } from "./api/use-update-tutor-profile";
@@ -37,59 +23,21 @@ import { ProfilePreview } from "./ProfilePreview";
 import { TemplatePicker } from "./TemplatePicker";
 import { profileResponseToValues } from "./preview-utils";
 import {
-  EMPTY_TUTOR_PROFILE_FORM,
   tutorProfileFormSchema,
   type TutorProfileFormData,
 } from "./tutor-profile-schema";
+import { useProfileDraft } from "./editor/useProfileDraft";
+import { ProfileEditorToolbar } from "./editor/ProfileEditorToolbar";
+import { ListEditor, SlugStatus, type View } from "./editor/components";
 
 type FieldErrors = Partial<Record<keyof TutorProfileFormData, string>>;
-type View = "editor" | "preview";
-
-const serialize = (v: TutorProfileFormData): string => JSON.stringify(v);
 
 /**
- * Draft persistence. Unsaved edits are written to localStorage keyed per user,
- * so a refresh or accidental navigation doesn't lose work. The draft is
- * restored on first load (taking priority over the saved profile), and cleared
- * automatically once the form is no longer dirty (i.e. after a save/publish).
+ * Public-profile editor. The localStorage draft persistence lives in
+ * {@link useProfileDraft}; the toolbar and small UI helpers are extracted into
+ * `./editor/`. This component owns the form state mutations + validation +
+ * save/publish/unpublish.
  */
-function draftKey(uid: string | undefined): string | null {
-  return uid ? `examify-tms:profile-draft:${uid}` : null;
-}
-
-function loadDraft(key: string | null): TutorProfileFormData | null {
-  if (!key) return null;
-  try {
-    const raw = localStorage.getItem(key);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== "object") return null;
-    // Merge over the empty form so unknown/missing keys fall back to defaults
-    // and a stale draft from an older schema can't break the editor.
-    return { ...EMPTY_TUTOR_PROFILE_FORM, ...parsed };
-  } catch {
-    return null;
-  }
-}
-
-function writeDraft(key: string | null, values: TutorProfileFormData) {
-  if (!key) return;
-  try {
-    localStorage.setItem(key, JSON.stringify(values));
-  } catch {
-    // Quota or private-mode errors are non-fatal — just skip persisting.
-  }
-}
-
-function clearDraft(key: string | null) {
-  if (!key) return;
-  try {
-    localStorage.removeItem(key);
-  } catch {
-    // ignore
-  }
-}
-
 export default function TutorProfileEditor() {
   const { user } = useAuth();
   const { data: profile, isLoading } = useGetTutorProfile();
@@ -97,38 +45,19 @@ export default function TutorProfileEditor() {
   const publishMutation = usePublishTutorProfile();
   const unpublishMutation = useUnpublishTutorProfile();
 
-  const storageKey = draftKey(user?.uid);
-  const [values, setValues] = useState<TutorProfileFormData>(
-    EMPTY_TUTOR_PROFILE_FORM,
-  );
-  const [view, setView] = useState<View>("editor");
-  const [errors, setErrors] = useState<FieldErrors>({});
-  const [formError, setFormError] = useState<string | null>(null);
-
-  // Seed once: a stored draft wins over the saved profile so resumed edits come
-  // back, otherwise fall back to whatever is on the server. After this one-time
-  // seed we never overwrite `values` from the profile again — background
-  // refetches must not clobber in-flight edits.
-  const hydratedRef = useRef(false);
-  useEffect(() => {
-    if (hydratedRef.current || isLoading) return;
-    hydratedRef.current = true;
-    setValues(loadDraft(storageKey) ?? profileResponseToValues(profile));
-  }, [isLoading, profile, storageKey]);
-
   const baseline = useMemo(
     () => profileResponseToValues(profile),
     [profile],
   );
-  const isDirty = serialize(values) !== serialize(baseline);
+  const { values, setValues, isDirty } = useProfileDraft(
+    user?.uid,
+    baseline,
+    isLoading,
+  );
 
-  // Persist while there are unsaved changes; clear once we're back in sync with
-  // the server (after save/publish/unpublish), so no stale draft lingers.
-  useEffect(() => {
-    if (!hydratedRef.current) return;
-    if (isDirty) writeDraft(storageKey, values);
-    else clearDraft(storageKey);
-  }, [values, isDirty, storageKey]);
+  const [view, setView] = useState<View>("editor");
+  const [errors, setErrors] = useState<FieldErrors>({});
+  const [formError, setFormError] = useState<string | null>(null);
 
   const slugCheck = useCheckSlug(values.slug, profile?.slug);
   const isPublished = profile?.status === "published";
@@ -226,8 +155,7 @@ export default function TutorProfileEditor() {
     }
   }
 
-  // Publish always pushes current edits first, then flips live — no need to
-  // save-then-publish or unpublish-then-republish.
+  // Publish always pushes current edits first, then flips live.
   async function handlePublish() {
     setFormError(null);
     if (!validate()) return;
@@ -250,9 +178,7 @@ export default function TutorProfileEditor() {
       const updated = await unpublishMutation.mutateAsync();
       setValues(profileResponseToValues(updated));
     } catch (err) {
-      setFormError(
-        err instanceof Error ? err.message : "Failed to unpublish.",
-      );
+      setFormError(err instanceof Error ? err.message : "Failed to unpublish.");
     }
   }
 
@@ -270,87 +196,20 @@ export default function TutorProfileEditor() {
 
   return (
     <div className="space-y-6">
-      {/* Top toolbar: title, editor/preview toggle, all actions. */}
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-semibold tracking-tight">
-              Public profile
-            </h1>
-            <StatusChip published={isPublished} />
-          </div>
-
-          <ViewToggle view={view} onChange={setView} />
-        </div>
-
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="min-h-9">
-            {isPublished && (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleUnpublish}
-                disabled={busy}
-              >
-                <EyeOff className="size-4" />
-                Unpublish
-              </Button>
-            )}
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            {isDirty && (
-              <span className="text-xs font-medium text-amber-600">
-                Unsaved changes
-              </span>
-            )}
-            {isPublished && liveUrl && (
-              <Button asChild variant="outline">
-                <a href={liveUrl} target="_blank" rel="noreferrer">
-                  <Globe className="size-4" />
-                  Go to website
-                </a>
-              </Button>
-            )}
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleSave}
-              disabled={!isDirty || saving}
-            >
-              {saving && <Loader2 className="size-4 animate-spin" />}
-              {isPublished ? "Save changes" : "Save draft"}
-            </Button>
-            {!isPublished && (
-              <Button
-                type="button"
-                onClick={handlePublish}
-                disabled={busy}
-              >
-                {publishing ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <Rocket className="size-4" />
-                )}
-                Publish
-              </Button>
-            )}
-          </div>
-        </div>
-
-        <p className="-mt-2 text-sm text-muted-foreground">
-          Your name and photo come from{" "}
-          <Link
-            to="/settings"
-            className="underline underline-offset-4 hover:text-foreground"
-          >
-            Settings
-          </Link>
-          .
-        </p>
-
-        {formError && <p className="text-sm text-destructive">{formError}</p>}
-      </div>
+      <ProfileEditorToolbar
+        isPublished={isPublished}
+        isDirty={isDirty}
+        liveUrl={liveUrl}
+        view={view}
+        saving={saving}
+        publishing={publishing}
+        busy={busy}
+        formError={formError}
+        onViewChange={setView}
+        onUnpublish={handleUnpublish}
+        onSave={handleSave}
+        onPublish={handlePublish}
+      />
 
       {/* Body: editor or preview, with a light fade between them. */}
       {view === "editor" ? (
@@ -552,139 +411,6 @@ export default function TutorProfileEditor() {
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-function ViewToggle({
-  view,
-  onChange,
-}: {
-  view: View;
-  onChange: (v: View) => void;
-}) {
-  const options: { value: View; label: string; icon: typeof Pencil }[] = [
-    { value: "editor", label: "Editor", icon: Pencil },
-    { value: "preview", label: "Preview", icon: Eye },
-  ];
-  return (
-    <div className="inline-flex items-center gap-0.5 rounded-lg border bg-muted/50 p-0.5">
-      {options.map((opt) => {
-        const active = view === opt.value;
-        const Icon = opt.icon;
-        return (
-          <button
-            key={opt.value}
-            type="button"
-            onClick={() => onChange(opt.value)}
-            className={cn(
-              "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-all duration-200",
-              active
-                ? "bg-background text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground",
-            )}
-          >
-            <Icon className="size-4" />
-            {opt.label}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-function StatusChip({ published }: { published: boolean }) {
-  if (published) {
-    return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-600">
-        <span className="size-1.5 rounded-full bg-emerald-500" />
-        Published
-      </span>
-    );
-  }
-  return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2.5 py-0.5 text-xs font-medium text-amber-600">
-      <span className="size-1.5 rounded-full bg-amber-500" />
-      Draft
-    </span>
-  );
-}
-
-function SlugStatus({
-  slug,
-  slugCheck,
-}: {
-  slug: string;
-  slugCheck: ReturnType<typeof useCheckSlug>;
-}) {
-  if (slug.trim().length === 0) return null;
-
-  if (slugCheck.isFetching) {
-    return (
-      <p className="flex items-center gap-1 text-xs text-muted-foreground">
-        <Loader2 className="size-3 animate-spin" /> Checking…
-      </p>
-    );
-  }
-  if (slugCheck.data?.available) {
-    return (
-      <p className="flex items-center gap-1 text-xs text-primary">
-        <Check className="size-3" /> Available
-      </p>
-    );
-  }
-  if (slugCheck.data && !slugCheck.data.available) {
-    return (
-      <p className="flex items-center gap-1 text-xs text-destructive">
-        <X className="size-3" /> That slug is taken or reserved.
-      </p>
-    );
-  }
-  return null;
-}
-
-function ListEditor({
-  label,
-  placeholder,
-  items,
-  onAdd,
-  onChange,
-  onRemove,
-}: {
-  label: string;
-  placeholder: string;
-  items: string[];
-  onAdd: () => void;
-  onChange: (index: number, value: string) => void;
-  onRemove: (index: number) => void;
-}) {
-  return (
-    <div className="space-y-2">
-      <Label>{label}</Label>
-      <div className="space-y-2">
-        {items.map((item, i) => (
-          <div key={i} className="flex items-center gap-2">
-            <Input
-              placeholder={placeholder}
-              value={item}
-              onChange={(e) => onChange(i, e.target.value)}
-            />
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              onClick={() => onRemove(i)}
-              aria-label={`Remove ${label.toLowerCase()} ${i + 1}`}
-            >
-              <Trash2 className="size-4" />
-            </Button>
-          </div>
-        ))}
-      </div>
-      <Button type="button" variant="outline" size="sm" onClick={onAdd}>
-        <Plus className="size-4" />
-        Add {label.toLowerCase().replace(/s$/, "")}
-      </Button>
     </div>
   );
 }

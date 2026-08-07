@@ -1,35 +1,23 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Check, DollarSign, Lock } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
-import type { LessonResponse } from "@examify-tms/interfaces";
-import { cn } from "@/lib/utils";
-import { MorphChevron } from "@/components/ui/morph-chevron";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
-  Checkbox,
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-  Input,
-  Label,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
 } from "@/components/ui";
+import { MorphChevron } from "@/components/ui/morph-chevron";
 import { useListStudents } from "@/features/students/api";
 import { useSubjects, resolveSubjectNames } from "@/lib/subjects";
 import { useListLessons } from "@/features/schedule/api";
-import { lessonBadge } from "@/features/lessons/lesson-display";
 import { useCreateInvoice, useSendInvoice, previewSendInvoiceRequest } from "./api";
 import { EmailComposeDialog } from "@/components/email-compose-dialog";
 import {
@@ -40,20 +28,26 @@ import {
   buildLessonLineItem,
   defaultInvoiceDueDateInput,
   formatCurrency,
-  formatDate,
   partitionInvoiceableLessons,
 } from "./invoice-utils";
 import { useUserCurrency } from "@/lib/use-currency";
+import {
+  LockedPlaceholder,
+  StepHeader,
+  LessonsTable,
+  UpcomingLessonsTable,
+} from "./create-invoice/components";
+import {
+  LineItemsReviewTable,
+  type LineItemDraft,
+} from "./create-invoice/LineItemsReviewTable";
+import { InvoiceDetailsSidebar } from "./create-invoice/InvoiceDetailsSidebar";
 
-interface LineItemDraft {
-  lessonId: string;
-  description: string;
-  durationMinutes: number;
-  rateType: "hourly" | "per_lesson";
-  unitAmount: number;
-  quantity: number;
-}
-
+/**
+ * "Create Invoice" page — a 3-step wizard (student → lessons → review) with a
+ * details sidebar. State + submit logic live here; the lesson tables, line-item
+ * review, and sidebar are extracted into `./create-invoice/` sub-components.
+ */
 export default function CreateInvoice() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -61,9 +55,7 @@ export default function CreateInvoice() {
   const { data: students = [] } = useListStudents();
   const subjects = useSubjects();
 
-  // Deep-link preselection: `/payments/new?student=ID&lesson=ID` (e.g. from
-  // the "Needs invoicing" card) opens the page with the student chosen and
-  // the lesson already checked — the tutor just reviews and confirms.
+  // Deep-link preselection: `/payments/new?student=ID&lesson=ID`.
   const preselectStudentId = searchParams.get("student") ?? "";
   const preselectLessonId = searchParams.get("lesson") ?? "";
 
@@ -99,8 +91,7 @@ export default function CreateInvoice() {
   );
   const lessonsLoading = studentId ? lessonsResult.isLoading : false;
 
-  // Once the student's unpaid lessons have loaded, auto-check the lesson
-  // supplied via the `?lesson=` deep link (if it belongs to this student).
+  // Auto-check the lesson supplied via the `?lesson=` deep link.
   useEffect(() => {
     if (!preselectLessonId || unpaidLessons.length === 0) return;
     if (selectedLessonIds.has(preselectLessonId)) return;
@@ -112,9 +103,6 @@ export default function CreateInvoice() {
   const sendInvoice = useSendInvoice();
   const [sendInvoiceId, setSendInvoiceId] = useState<string | null>(null);
 
-  // Group the student's unpaid lessons into upcoming + completed (chargeable
-  // vs. unrecorded). The eligibility rules live in @examify-tms/shared so the
-  // same logic can drive the mobile client and the "Needs invoicing" surface.
   const { upcoming: upcomingLessons, completed: completedLessons } = useMemo(
     () => partitionInvoiceableLessons(unpaidLessons),
     [unpaidLessons],
@@ -140,7 +128,13 @@ export default function CreateInvoice() {
             amountOverride !== undefined ? amountOverride : base.unitAmount,
         };
       });
-  }, [selectedStudent, unpaidLessons, selectedLessonIds, lineItemAmounts, lineItemQuantities]);
+  }, [
+    selectedStudent,
+    unpaidLessons,
+    selectedLessonIds,
+    lineItemAmounts,
+    lineItemQuantities,
+  ]);
 
   const subtotal = useMemo(
     () =>
@@ -219,15 +213,10 @@ export default function CreateInvoice() {
         status: result.data.status,
       });
 
-      // The "Create & Send" path opens a compose dialog so the tutor can
-      // review/edit the email before it goes out. The create endpoint just
-      // persists to Firestore; the email is sent by the dedicated /send
-      // endpoint (called from the compose dialog).
       if (sendEmail) {
         setSendInvoiceId(created.id);
         return;
       }
-
       navigate("/payments");
     } catch (error) {
       console.error("Failed to create invoice:", error);
@@ -236,446 +225,246 @@ export default function CreateInvoice() {
 
   return (
     <>
-    <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => navigate("/payments")}
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight">
-            Create Invoice
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Build an invoice from a student's unpaid lessons.
-          </p>
-        </div>
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-        <div className="space-y-6">
-          {/* Step 1: Choose student */}
-          <Card>
-            <CardHeader>
-              <StepHeader step={1} title="Choose a student" />
-            </CardHeader>
-            <CardContent>
-              <Select
-                value={studentId}
-                onValueChange={(v) => {
-                  setStudentId(v);
-                  setSelectedLessonIds(new Set());
-                  setLineItemAmounts({});
-                  setLineItemQuantities({});
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a student..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {students.map((s) => {
-                    const subjectsLabel = resolveSubjectNames(
-                      s.subjectIds,
-                      subjects,
-                    );
-                    return (
-                      <SelectItem key={s.id} value={s.id}>
-                        {s.name}
-                        {subjectsLabel ? ` — ${subjectsLabel}` : ""}
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
-              {errors.studentId && (
-                <p className="mt-2 text-xs text-destructive">
-                  {errors.studentId}
-                </p>
-              )}
-              {selectedStudent && (
-                <div className="mt-3 rounded-md border bg-muted/30 p-3 text-sm">
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <span className="text-muted-foreground">Rate:</span>{" "}
-                      {formatCurrency(selectedStudent.expectedAmount, currency)}
-                      {selectedStudent.rateType === "hourly"
-                        ? "/hr"
-                        : "/lesson"}
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">
-                        Billing email:
-                      </span>{" "}
-                      {selectedStudent.billingEmail}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Step 2: Select lessons */}
-          <Card>
-            <CardHeader>
-              <StepHeader
-                step={2}
-                title="Select lessons"
-                locked={!selectedStudent}
-              />
-            </CardHeader>
-            <CardContent>
-              {!selectedStudent ? (
-                <LockedPlaceholder text="Select a student to choose lessons" />
-              ) : lessonsLoading ? (
-                <p className="py-6 text-center text-sm text-muted-foreground">
-                  Loading unpaid lessons...
-                </p>
-              ) : completedLessons.chargeable.length === 0 &&
-                completedLessons.unrecorded.length === 0 &&
-                upcomingLessons.length === 0 ? (
-                <p className="py-6 text-center text-sm text-muted-foreground">
-                  No unpaid lessons for this student.
-                </p>
-              ) : (
-                <div className="space-y-4">
-                  {/* Completed lessons */}
-                  <div>
-                    <p className="mb-2 text-xs font-medium text-muted-foreground">
-                      Completed lessons
-                    </p>
-                    {completedLessons.chargeable.length === 0 &&
-                    completedLessons.unrecorded.length === 0 ? (
-                      <p className="py-3 text-center text-sm text-muted-foreground">
-                        No completed unpaid lessons.
-                      </p>
-                    ) : (
-                      <div className="space-y-4">
-                        {completedLessons.chargeable.length > 0 && (
-                          <div>
-                            <p className="mb-1.5 text-xs font-medium text-muted-foreground">
-                              Recorded · ready to invoice
-                              <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5 text-muted-foreground">
-                                {completedLessons.chargeable.length}
-                              </span>
-                            </p>
-                            <LessonsTable
-                              lessons={completedLessons.chargeable}
-                              selectedLessonIds={selectedLessonIds}
-                              onToggle={toggleLesson}
-                            />
-                          </div>
-                        )}
-                        {completedLessons.unrecorded.length > 0 && (
-                          <div>
-                            <p className="mb-1.5 text-xs font-medium text-muted-foreground">
-                              Not recorded
-                              <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5 text-muted-foreground">
-                                {completedLessons.unrecorded.length}
-                              </span>
-                            </p>
-                            <LessonsTable
-                              lessons={completedLessons.unrecorded}
-                              selectedLessonIds={selectedLessonIds}
-                              onToggle={toggleLesson}
-                            />
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Upcoming lessons (collapsible for prepayment) */}
-                  {upcomingLessons.length > 0 && (
-                    <Collapsible
-                      open={showUpcoming}
-                      onOpenChange={setShowUpcoming}
-                      className="rounded-lg border"
-                    >
-                      <CollapsibleTrigger asChild>
-                        <button
-                          type="button"
-                          className="flex w-full items-center justify-between rounded-lg px-4 py-2.5 text-sm font-medium transition-colors hover:bg-accent"
-                        >
-                          <span>
-                            Prepay upcoming lessons
-                            <span className="ml-2 rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
-                              {upcomingLessons.length}
-                            </span>
-                          </span>
-                          <MorphChevron open={showUpcoming} />
-                        </button>
-                      </CollapsibleTrigger>
-                      <CollapsibleContent className="p-4 pt-0 data-[state=open]:animate-in data-[state=open]:fade-in-0">
-                        <div className="rounded-md border pt-4">
-                          <Table>
-                            <TableHeader>
-                              <TableRow className="bg-muted/30 hover:bg-muted/30">
-                                <TableHead className="w-10" />
-                                <TableHead>Lesson</TableHead>
-                                <TableHead>Date</TableHead>
-                                <TableHead className="text-right">
-                                  Duration
-                                </TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {upcomingLessons.map((lesson) => (
-                                <LessonRow
-                                  key={lesson.id}
-                                  lesson={lesson}
-                                  checked={selectedLessonIds.has(lesson.id)}
-                                  onToggle={() => toggleLesson(lesson.id)}
-                                />
-                              ))}
-                            </TableBody>
-                          </Table>
-                        </div>
-                      </CollapsibleContent>
-                    </Collapsible>
-                  )}
-                </div>
-              )}
-              {errors.lineItems && (
-                <p className="mt-2 text-xs text-destructive">
-                  {errors.lineItems}
-                </p>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Step 3: Review line items */}
-          <Card>
-            <CardHeader>
-              <StepHeader
-                step={3}
-                title="Review line items"
-                locked={lineItems.length === 0}
-              />
-            </CardHeader>
-            <CardContent>
-              {lineItems.length === 0 ? (
-                <LockedPlaceholder text="Select lessons to review line items" />
-              ) : (
-                <>
-                  <div className="rounded-md border">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="bg-muted/30 hover:bg-muted/30">
-                          <TableHead>Description</TableHead>
-                          <TableHead className="text-right">
-                            Hours/Qty
-                          </TableHead>
-                          <TableHead className="text-right">Rate</TableHead>
-                          <TableHead className="text-right">Amount</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {lineItems.map((li) => (
-                          <TableRow key={li.lessonId}>
-                            <TableCell className="text-sm">
-                              {li.description}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <Input
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                value={
-                                  lineItemQuantities[li.lessonId] ??
-                                  li.quantity
-                                }
-                                onChange={(e) =>
-                                  updateQuantity(li.lessonId, e.target.value)
-                                }
-                                className="h-8 w-20 text-right"
-                              />
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex items-center justify-end gap-1">
-                                <DollarSign className="h-3 w-3 text-muted-foreground" />
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  step="0.01"
-                                  value={
-                                    lineItemAmounts[li.lessonId] ??
-                                    li.unitAmount
-                                  }
-                                  onChange={(e) =>
-                                    updateAmount(li.lessonId, e.target.value)
-                                  }
-                                  className="h-8 w-24 text-right"
-                                />
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-right text-sm font-medium">
-                              {formatCurrency(
-                                (lineItemAmounts[li.lessonId] ??
-                                  li.unitAmount) * li.quantity,
-                                currency,
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                  <div className="mt-3 flex justify-end">
-                    <div className="w-full max-w-xs space-y-1 text-sm">
-                      <div className="flex justify-between text-muted-foreground">
-                        <span>Subtotal</span>
-                        <span>{formatCurrency(subtotal, currency)}</span>
-                      </div>
-                      <div className="flex justify-between border-t pt-1 text-base font-semibold">
-                        <span>Total</span>
-                        <span>{formatCurrency(subtotal, currency)}</span>
-                      </div>
-                    </div>
-                  </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate("/payments")}
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div className="space-y-1">
+            <h1 className="text-2xl font-semibold tracking-tight">
+              Create Invoice
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Build an invoice from a student's unpaid lessons.
+            </p>
+          </div>
         </div>
 
-        {/* Sidebar: invoice details */}
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <h2 className="text-base font-semibold">Invoice details</h2>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="billingEmail">Billing Email</Label>
-                <Input
-                  id="billingEmail"
-                  type="email"
-                  placeholder={selectedStudent?.billingEmail ?? ""}
-                  value={billingEmail}
-                  onChange={(e) => setBillingEmail(e.target.value)}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Defaults to the student's billing email. Leave blank to use{" "}
-                  {selectedStudent?.billingEmail ?? "—"}.
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="dueDate">Due Date</Label>
-                <Input
-                  id="dueDate"
-                  type="date"
-                  value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Payment Method</Label>
+        <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+          <div className="space-y-6">
+            {/* Step 1: Choose student */}
+            <Card>
+              <CardHeader>
+                <StepHeader step={1} title="Choose a student" />
+              </CardHeader>
+              <CardContent>
                 <Select
-                  value={paymentMethod}
-                  onValueChange={(v) =>
-                    setPaymentMethod(
-                      v as CreateInvoiceFormData["paymentMethod"],
-                    )
-                  }
+                  value={studentId}
+                  onValueChange={(v) => {
+                    setStudentId(v);
+                    setSelectedLessonIds(new Set());
+                    setLineItemAmounts({});
+                    setLineItemQuantities({});
+                  }}
                 >
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue placeholder="Select a student..." />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="cash">Cash</SelectItem>
-                    <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
-                    <SelectItem value="stripe" disabled>
-                      Stripe (disabled in demo)
-                    </SelectItem>
+                    {students.map((s) => {
+                      const subjectsLabel = resolveSubjectNames(
+                        s.subjectIds,
+                        subjects,
+                      );
+                      return (
+                        <SelectItem key={s.id} value={s.id}>
+                          {s.name}
+                          {subjectsLabel ? ` — ${subjectsLabel}` : ""}
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
-              </div>
+                {errors.studentId && (
+                  <p className="mt-2 text-xs text-destructive">
+                    {errors.studentId}
+                  </p>
+                )}
+                {selectedStudent && (
+                  <div className="mt-3 rounded-md border bg-muted/30 p-3 text-sm">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <span className="text-muted-foreground">Rate:</span>{" "}
+                        {formatCurrency(selectedStudent.expectedAmount, currency)}
+                        {selectedStudent.rateType === "hourly"
+                          ? "/hr"
+                          : "/lesson"}
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">
+                          Billing email:
+                        </span>{" "}
+                        {selectedStudent.billingEmail}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
-              <div className="space-y-2">
-                <Label htmlFor="notes">
-                  Notes{" "}
-                  <span className="text-xs font-normal text-muted-foreground">
-                    (optional)
-                  </span>
-                </Label>
-                <textarea
-                  id="notes"
-                  rows={3}
-                  placeholder="Payment instructions, thank-you note..."
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+            {/* Step 2: Select lessons */}
+            <Card>
+              <CardHeader>
+                <StepHeader
+                  step={2}
+                  title="Select lessons"
+                  locked={!selectedStudent}
                 />
-              </div>
-            </CardContent>
-          </Card>
+              </CardHeader>
+              <CardContent>
+                {!selectedStudent ? (
+                  <LockedPlaceholder text="Select a student to choose lessons" />
+                ) : lessonsLoading ? (
+                  <p className="py-6 text-center text-sm text-muted-foreground">
+                    Loading unpaid lessons...
+                  </p>
+                ) : completedLessons.chargeable.length === 0 &&
+                  completedLessons.unrecorded.length === 0 &&
+                  upcomingLessons.length === 0 ? (
+                  <p className="py-6 text-center text-sm text-muted-foreground">
+                    No unpaid lessons for this student.
+                  </p>
+                ) : (
+                  <div className="space-y-4">
+                    <div>
+                      <p className="mb-2 text-xs font-medium text-muted-foreground">
+                        Completed lessons
+                      </p>
+                      {completedLessons.chargeable.length === 0 &&
+                      completedLessons.unrecorded.length === 0 ? (
+                        <p className="py-3 text-center text-sm text-muted-foreground">
+                          No completed unpaid lessons.
+                        </p>
+                      ) : (
+                        <div className="space-y-4">
+                          {completedLessons.chargeable.length > 0 && (
+                            <div>
+                              <p className="mb-1.5 text-xs font-medium text-muted-foreground">
+                                Recorded · ready to invoice
+                                <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5 text-muted-foreground">
+                                  {completedLessons.chargeable.length}
+                                </span>
+                              </p>
+                              <LessonsTable
+                                lessons={completedLessons.chargeable}
+                                selectedLessonIds={selectedLessonIds}
+                                onToggle={toggleLesson}
+                              />
+                            </div>
+                          )}
+                          {completedLessons.unrecorded.length > 0 && (
+                            <div>
+                              <p className="mb-1.5 text-xs font-medium text-muted-foreground">
+                                Not recorded
+                                <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5 text-muted-foreground">
+                                  {completedLessons.unrecorded.length}
+                                </span>
+                              </p>
+                              <LessonsTable
+                                lessons={completedLessons.unrecorded}
+                                selectedLessonIds={selectedLessonIds}
+                                onToggle={toggleLesson}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
 
-          <Card>
-            <CardContent className="space-y-2 p-4">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Recipient</span>
-                <span className="truncate text-right max-w-[180px]">
-                  {resolvedBillingEmail || "—"}
-                </span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Total</span>
-                <span className="font-semibold">
-                  {formatCurrency(subtotal, currency)}
-                </span>
-              </div>
-              <div className="flex flex-col gap-2 pt-2">
-                <Button
-                  onClick={() => handleSubmit("open", true)}
-                  disabled={
-                    createInvoice.isPending ||
-                    sendInvoice.isPending ||
-                    lineItems.length === 0 ||
-                    !studentId
-                  }
-                >
-                  <Check className="h-4 w-4" />
-                  {sendInvoice.isPending
-                    ? "Sending..."
-                    : createInvoice.isPending
-                      ? "Creating..."
-                      : "Create & Send"}
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => handleSubmit("open", false)}
-                  disabled={
-                    createInvoice.isPending ||
-                    sendInvoice.isPending ||
-                    lineItems.length === 0 ||
-                    !studentId
-                  }
-                >
-                  {createInvoice.isPending ? "Creating..." : "Create"}
-                </Button>
-                <Button
-                  variant="ghost"
-                  onClick={() => handleSubmit("draft", false)}
-                  disabled={
-                    createInvoice.isPending ||
-                    sendInvoice.isPending ||
-                    lineItems.length === 0 ||
-                    !studentId
-                  }
-                >
-                  Save as Draft
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+                    {upcomingLessons.length > 0 && (
+                      <Collapsible
+                        open={showUpcoming}
+                        onOpenChange={setShowUpcoming}
+                        className="rounded-lg border"
+                      >
+                        <CollapsibleTrigger asChild>
+                          <button
+                            type="button"
+                            className="flex w-full items-center justify-between rounded-lg px-4 py-2.5 text-sm font-medium transition-colors hover:bg-accent"
+                          >
+                            <span>
+                              Prepay upcoming lessons
+                              <span className="ml-2 rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
+                                {upcomingLessons.length}
+                              </span>
+                            </span>
+                            <MorphChevron open={showUpcoming} />
+                          </button>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="p-4 pt-0 data-[state=open]:animate-in data-[state=open]:fade-in-0">
+                          <div className="rounded-md border pt-4">
+                            <UpcomingLessonsTable
+                              lessons={upcomingLessons}
+                              selectedLessonIds={selectedLessonIds}
+                              onToggle={toggleLesson}
+                            />
+                          </div>
+                        </CollapsibleContent>
+                      </Collapsible>
+                    )}
+                  </div>
+                )}
+                {errors.lineItems && (
+                  <p className="mt-2 text-xs text-destructive">
+                    {errors.lineItems}
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Step 3: Review line items */}
+            <Card>
+              <CardHeader>
+                <StepHeader
+                  step={3}
+                  title="Review line items"
+                  locked={lineItems.length === 0}
+                />
+              </CardHeader>
+              <CardContent>
+                {lineItems.length === 0 ? (
+                  <LockedPlaceholder text="Select lessons to review line items" />
+                ) : (
+                  <LineItemsReviewTable
+                    lineItems={lineItems}
+                    lineItemAmounts={lineItemAmounts}
+                    lineItemQuantities={lineItemQuantities}
+                    subtotal={subtotal}
+                    currency={currency}
+                    onUpdateAmount={updateAmount}
+                    onUpdateQuantity={updateQuantity}
+                  />
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="space-y-6">
+            <InvoiceDetailsSidebar
+              billingEmail={billingEmail}
+              dueDate={dueDate}
+              paymentMethod={paymentMethod}
+              notes={notes}
+              resolvedBillingEmail={resolvedBillingEmail}
+              subtotal={subtotal}
+              currency={currency}
+              createPending={createInvoice.isPending}
+              sendPending={sendInvoice.isPending}
+              hasLineItems={lineItems.length > 0}
+              hasStudent={!!studentId}
+              onBillingEmailChange={setBillingEmail}
+              onDueDateChange={setDueDate}
+              onPaymentMethodChange={setPaymentMethod}
+              onNotesChange={setNotes}
+              onSubmit={handleSubmit}
+            />
+          </div>
         </div>
       </div>
-    </div>
 
       {sendInvoiceId && (
         <EmailComposeDialog
@@ -698,118 +487,5 @@ export default function CreateInvoice() {
         />
       )}
     </>
-  );
-}
-
-function StepHeader({
-  step,
-  title,
-  locked = false,
-}: {
-  step: number;
-  title: string;
-  locked?: boolean;
-}) {
-  return (
-    <div className="flex items-center gap-2.5">
-      <span
-        className={cn(
-          "flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
-          locked
-            ? "bg-muted text-muted-foreground"
-            : "bg-primary text-primary-foreground",
-        )}
-      >
-        {locked ? <Lock className="h-3 w-3" /> : step}
-      </span>
-      <h2 className="text-base font-semibold">{title}</h2>
-    </div>
-  );
-}
-
-function LockedPlaceholder({ text }: { text: string }) {
-  return (
-    <div className="flex items-center gap-2 py-6 text-sm text-muted-foreground">
-      <Lock className="h-4 w-4 shrink-0" />
-      {text}
-    </div>
-  );
-}
-
-interface LessonRowProps {
-  lesson: LessonResponse;
-  checked: boolean;
-  onToggle: () => void;
-  badge?: { label: string; tone: string };
-}
-
-function LessonRow({ lesson, checked, onToggle, badge }: LessonRowProps) {
-  return (
-    <TableRow
-      onClick={onToggle}
-      className="cursor-pointer"
-      data-state={checked ? "selected" : undefined}
-    >
-      <TableCell>
-        <Checkbox checked={checked} onChange={(e) => e.stopPropagation()} />
-      </TableCell>
-      <TableCell>
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium">{lesson.subject}</span>
-          {badge && (
-            <span
-              className={cn(
-                "shrink-0 rounded px-1.5 py-0.5 text-xs font-medium",
-                badge.tone,
-              )}
-            >
-              {badge.label}
-            </span>
-          )}
-        </div>
-      </TableCell>
-      <TableCell className="text-sm text-muted-foreground">
-        {formatDate(lesson.startDateTime)}
-      </TableCell>
-      <TableCell className="text-right text-sm text-muted-foreground">
-        {lesson.durationMinutes} min
-      </TableCell>
-    </TableRow>
-  );
-}
-
-function LessonsTable({
-  lessons,
-  selectedLessonIds,
-  onToggle,
-}: {
-  lessons: LessonResponse[];
-  selectedLessonIds: Set<string>;
-  onToggle: (id: string) => void;
-}) {
-  return (
-    <div className="rounded-md border">
-      <Table>
-        <TableHeader>
-          <TableRow className="bg-muted/30 hover:bg-muted/30">
-            <TableHead className="w-10" />
-            <TableHead>Lesson</TableHead>
-            <TableHead>Date</TableHead>
-            <TableHead className="text-right">Duration</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {lessons.map((lesson) => (
-            <LessonRow
-              key={lesson.id}
-              lesson={lesson}
-              checked={selectedLessonIds.has(lesson.id)}
-              onToggle={() => onToggle(lesson.id)}
-              badge={lessonBadge(lesson)}
-            />
-          ))}
-        </TableBody>
-      </Table>
-    </div>
   );
 }

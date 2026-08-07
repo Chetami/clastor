@@ -1,45 +1,19 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
-import {
-  STUDENT_NOTIFY_COOLDOWN_MS,
-  formatMsRemaining,
-} from "@examify-tms/shared";
 import type {
   AttendanceStatus,
   LessonResponse,
   UpdateLessonRequest,
 } from "@examify-tms/interfaces";
-import {
-  ArrowRight,
-  Ban,
-  CalendarClock,
-  ClipboardList,
-  Clock,
-  ExternalLink,
-  FileText,
-  Loader2,
-  Mail,
-  MapPin,
-  Repeat,
-  StickyNote,
-  User,
-  Video,
-} from "lucide-react";
+import { toast } from "sonner";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Popover,
   PopoverAnchor,
   PopoverContent,
 } from "@/components/ui/popover";
-import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
-import { toast } from "sonner";
 import { useListStudents } from "@/features/students/api";
 import { useSubjects } from "@/lib/subjects";
-import { lessonBadge } from "@/features/lessons/lesson-display";
-import {
-  ACCEPTANCE_TONE,
-  lessonIssues,
-} from "@/features/lessons/lesson-series-utils";
+import { lessonIssues } from "@/features/lessons/lesson-series-utils";
 import {
   useMarkLessonDone,
   useUpdateLessonDetails,
@@ -63,6 +37,8 @@ import { MarkAttendanceDialog } from "@/components/mark-attendance-dialog";
 import { ATTENDANCE_LABELS, isLessonFinished } from "./lesson-utils";
 import { RescheduleDialog } from "./RescheduleDialog";
 import { CancelLessonDialog } from "./CancelLessonDialog";
+import { PopoverBody } from "./event-popover/PopoverBody";
+import { lessonStatusBadge } from "./event-popover/helpers";
 
 export interface EventAnchor {
   getBoundingClientRect: () => DOMRect;
@@ -75,46 +51,11 @@ interface EventPopoverProps {
   anchor: EventAnchor | null;
 }
 
-interface Badge {
-  label: string;
-  tone: string;
-}
-
 /**
- * App-wide status badge for a lesson. Matches the Lessons list / LessonRow:
- * upcoming lessons surface acceptance (Pending/Declined, or nothing when
- * accepted); past lessons show the attendance-driven label (Not recorded,
- * Present, …). Returns null when there's nothing worth surfacing.
+ * Calendar event popover — the container. Owns data fetching, mutations, and
+ * the action handlers; the visible body (header, details, action rows) is
+ * rendered by the extracted {@link PopoverBody}.
  */
-function lessonStatusBadge(lesson: LessonResponse): Badge | null {
-  const base = lessonBadge(lesson);
-  if (base.label === "Upcoming") {
-    if (lesson.acceptanceStatus === "pending") {
-      return { label: "Pending", tone: ACCEPTANCE_TONE.pending };
-    }
-    if (lesson.acceptanceStatus === "declined") {
-      return { label: "Declined", tone: ACCEPTANCE_TONE.declined };
-    }
-    return null;
-  }
-  return base;
-}
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  });
-}
-
-function formatTime(iso: string) {
-  return new Date(iso).toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
-
 export function EventPopover({
   lessonId,
   open,
@@ -155,12 +96,7 @@ export function EventPopover({
       .filter((n): n is string => !!n);
   }, [student, subjects]);
 
-  /**
-   * Compute the lesson end Date defensively. If `startDateTime` is missing
-   * or unparseable (can happen transiently during navigation / cache
-   * transitions), we treat the lesson as not yet ready rather than
-   * throwing inside `.toISOString()`.
-   */
+  /** Compute the lesson end Date defensively (handles transient bad data). */
   const endDate = useMemo(() => {
     if (!lesson) return null;
     const startMs = new Date(lesson.startDateTime).getTime();
@@ -170,8 +106,6 @@ export function EventPopover({
 
   const ready = !!(lesson && studentName && endDate);
 
-  // Past-lesson follow-ups: attendance + invoicing. `lessonIssues` only flags
-  // non-cancelled, past lessons, so these drive the context actions.
   const issues = useMemo(() => (lesson ? lessonIssues(lesson) : []), [lesson]);
   const needsAttendance = issues.some((i) => i.kind === "attendance");
   const needsInvoice = issues.some((i) => i.kind === "unpaid");
@@ -193,8 +127,6 @@ export function EventPopover({
   async function handleCancel() {
     if (!lessonId || !lesson) return;
     setActionError(null);
-    // Open the dialog when the student accepted (to offer notification) or
-    // when the lesson belongs to a series (to offer the scope choice).
     if (lesson.acceptanceStatus === "accepted" || lesson.seriesId) {
       setCancelOpen(true);
       return;
@@ -203,7 +135,9 @@ export function EventPopover({
       await cancelLesson.mutateAsync();
       onOpenChange(false);
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : "Failed to cancel lesson");
+      setActionError(
+        err instanceof Error ? err.message : "Failed to cancel lesson",
+      );
     }
   }
 
@@ -217,7 +151,10 @@ export function EventPopover({
         startDateTime: lesson.startDateTime,
         durationMinutes: lesson.durationMinutes,
       });
-      await updateLesson.mutateAsync({ location: "Google Meet", meetLink: meetingLink });
+      await updateLesson.mutateAsync({
+        location: "Google Meet",
+        meetLink: meetingLink,
+      });
       toast.success("Google Meet link created");
     } catch (err) {
       toast.error(
@@ -231,8 +168,7 @@ export function EventPopover({
   }
 
   // Mirrors LessonRow's flow: mark attendance (→ "done"), optionally tweak
-  // subject/duration, and optionally create an invoice to review+send. Keeps
-  // the popover open so the next follow-up (e.g. Create invoice) appears.
+  // subject/duration, and optionally create an invoice to review+send.
   async function handleAttendanceConfirm(
     id: string,
     attendanceStatus: AttendanceStatus,
@@ -418,319 +354,5 @@ export function EventPopover({
         />
       )}
     </>
-  );
-}
-
-interface PopoverBodyProps {
-  subject: string | null | undefined;
-  studentName: string;
-  startIso: string;
-  endIso: string;
-  durationMinutes: number;
-  location: string | null | undefined;
-  lessonMeetLink?: string | null;
-  notes: string | null | undefined;
-  badge: Badge | null;
-  seriesId: string | null;
-  isCancelled: boolean;
-  lessonFinished: boolean;
-  notifiedAtIso: string | null | undefined;
-  notifyPending: boolean;
-  cancelPending: boolean;
-  attendancePending: boolean;
-  needsAttendance: boolean;
-  createInvoiceHref: string | null;
-  invoiceHref: string | null;
-  actionError: string | null;
-  detailHref: string;
-  onNotify: () => void;
-  onReschedule: () => void;
-  onCancel: () => void;
-  onGenerateMeet: () => void;
-  onMarkAttendance: () => void;
-  meetLoading: boolean;
-}
-
-function PopoverBody({
-  subject,
-  studentName,
-  startIso,
-  endIso,
-  durationMinutes,
-  location,
-  lessonMeetLink,
-  notes,
-  badge,
-  seriesId,
-  isCancelled,
-  lessonFinished,
-  notifiedAtIso,
-  notifyPending,
-  cancelPending,
-  attendancePending,
-  needsAttendance,
-  createInvoiceHref,
-  invoiceHref,
-  actionError,
-  detailHref,
-  onNotify,
-  onReschedule,
-  onCancel,
-  onGenerateMeet,
-  onMarkAttendance,
-  meetLoading,
-}: PopoverBodyProps) {
-  const meetLink = lessonMeetLink ?? null;
-  const notifiedAt = notifiedAtIso ? new Date(notifiedAtIso) : null;
-  const nextAllowedAt = notifiedAt
-    ? new Date(notifiedAt.getTime() + STUDENT_NOTIFY_COOLDOWN_MS)
-    : null;
-  const cooldownActive = nextAllowedAt
-    ? Date.now() < nextAllowedAt.getTime()
-    : false;
-  const cooldownRemaining =
-    nextAllowedAt && cooldownActive
-      ? formatMsRemaining(nextAllowedAt.getTime() - Date.now())
-      : null;
-
-  const showActions = !isCancelled;
-  const showUpcomingActions = showActions && !lessonFinished;
-
-  return (
-    <div className="flex flex-col">
-      {/* Header */}
-      <div className="space-y-1.5 border-b p-4">
-        <div className="flex items-start justify-between gap-2">
-          <h3 className="text-sm font-semibold leading-tight">
-            {subject || "Lesson"}
-          </h3>
-          {badge && (
-            <span
-              className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${badge.tone}`}
-            >
-              {badge.label}
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <User className="h-3.5 w-3.5" />
-          <span className="font-medium text-foreground">{studentName}</span>
-          {seriesId && (
-            <Link
-              to={`/lessons/series/${seriesId}`}
-              className="ml-1 inline-flex items-center gap-1 hover:text-foreground"
-            >
-              <Repeat className="h-3 w-3" />
-              Series
-            </Link>
-          )}
-        </div>
-      </div>
-
-      {/* Essential details */}
-      <dl className="space-y-3 p-4 text-xs">
-        <Detail icon={<Clock className="h-3.5 w-3.5" />} label="When">
-          <div className="font-medium leading-tight">{formatDate(startIso)}</div>
-          <div className="mt-0.5 text-muted-foreground">
-            {formatTime(startIso)} – {formatTime(endIso)} ({durationMinutes} min)
-          </div>
-        </Detail>
-
-        <Detail
-          icon={
-            meetLink ? (
-              <Video className="h-3.5 w-3.5" />
-            ) : (
-              <MapPin className="h-3.5 w-3.5" />
-            )
-          }
-          label={meetLink ? "Google Meet" : "Location"}
-        >
-          <div className="flex flex-wrap items-center gap-2">
-            {meetLink ? (
-              <a
-                href={meetLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
-              >
-                Join meeting
-                <ExternalLink className="h-3 w-3" />
-              </a>
-            ) : location ? (
-              <span className="font-medium">{location}</span>
-            ) : (
-              <span className="text-muted-foreground">Not specified</span>
-            )}
-            {!meetLink && (
-              <Button
-                size="sm"
-                variant="secondary"
-                className="h-7 gap-1 px-2 text-xs"
-                onClick={onGenerateMeet}
-                disabled={meetLoading}
-              >
-                {meetLoading ? (
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                ) : (
-                  <Video className="h-3 w-3" />
-                )}
-                Meet
-              </Button>
-            )}
-          </div>
-        </Detail>
-
-        {notes && (
-          <Detail icon={<StickyNote className="h-3.5 w-3.5" />} label="Notes">
-            <p className="line-clamp-1 whitespace-pre-wrap font-medium">
-              {notes}
-            </p>
-          </Detail>
-        )}
-      </dl>
-
-      {actionError && (
-        <p className="px-4 pb-2 text-xs text-destructive">{actionError}</p>
-      )}
-
-      {/* Actions — context-sensitive. Upcoming lessons get scheduling actions;
-          past lessons get follow-ups (attendance / invoicing). Each row of
-          buttons stretches to fill the width equally. */}
-      {showActions && (
-        <div className="space-y-2 border-t p-3">
-          {showUpcomingActions ? (
-            <>
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="flex-1 gap-1"
-                  onClick={onReschedule}
-                  title="Move this lesson to a new time"
-                >
-                  <CalendarClock className="h-3.5 w-3.5" />
-                  Reschedule
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="flex-1 gap-1"
-                  onClick={onNotify}
-                  disabled={notifyPending || cooldownActive}
-                  title="Send a reminder email to the student"
-                >
-                  {notifyPending ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Mail className="h-3.5 w-3.5" />
-                  )}
-                  Notify
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="flex-1 gap-1 text-destructive hover:text-destructive"
-                  onClick={onCancel}
-                  disabled={cancelPending}
-                  title="Cancel this occurrence"
-                >
-                  {cancelPending ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Ban className="h-3.5 w-3.5" />
-                  )}
-                  Cancel
-                </Button>
-              </div>
-              {cooldownRemaining && (
-                <p className="text-[11px] text-muted-foreground">
-                  Student notified — can resend in {cooldownRemaining}
-                </p>
-              )}
-            </>
-          ) : (
-            <div className="flex gap-2">
-              {needsAttendance && (
-                <Button
-                  size="sm"
-                  className="flex-1 gap-1"
-                  onClick={onMarkAttendance}
-                  disabled={attendancePending}
-                >
-                  {attendancePending ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <ClipboardList className="h-3.5 w-3.5" />
-                  )}
-                  Mark attendance
-                </Button>
-              )}
-              {createInvoiceHref && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="flex-1 gap-1"
-                  asChild
-                >
-                  <Link to={createInvoiceHref}>
-                    <FileText className="h-3.5 w-3.5" />
-                    Create invoice
-                  </Link>
-                </Button>
-              )}
-              {invoiceHref && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="flex-1 gap-1"
-                  asChild
-                >
-                  <Link to={invoiceHref}>
-                    <FileText className="h-3.5 w-3.5" />
-                    View invoice
-                  </Link>
-                </Button>
-              )}
-            </div>
-          )}
-          <Button size="sm" variant="secondary" className="w-full gap-1" asChild>
-            <Link to={detailHref}>
-              View details
-              <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
-          </Button>
-        </div>
-      )}
-
-      {isCancelled && (
-        <div className="border-t p-3">
-          <Button size="sm" variant="secondary" className="w-full gap-1" asChild>
-            <Link to={detailHref}>
-              View details
-              <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
-          </Button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-interface DetailProps {
-  icon: React.ReactNode;
-  label: string;
-  children: React.ReactNode;
-}
-
-function Detail({ icon, label, children }: DetailProps) {
-  return (
-    <div className="flex items-start gap-2">
-      <div className="mt-0.5 text-muted-foreground">{icon}</div>
-      <div className="min-w-0 flex-1">
-        <p className="text-muted-foreground">{label}</p>
-        <div className="text-foreground">{children}</div>
-      </div>
-    </div>
   );
 }

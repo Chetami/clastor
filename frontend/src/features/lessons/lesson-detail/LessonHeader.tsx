@@ -28,9 +28,10 @@ import {
   isLessonFinished,
   lessonEndDate,
   formatMsRemaining,
+  formatLessonDateTime,
+  formatLessonTime,
 } from "@/features/schedule/lesson-utils";
 import { lessonBadge } from "@/features/lessons/lesson-display";
-import { formatDateTime, formatTime } from "./format";
 
 interface LessonHeaderProps {
   lesson: LessonResponse;
@@ -110,11 +111,11 @@ export function LessonHeader({
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
               <span className="inline-flex items-center gap-1.5">
                 <Calendar className="h-3.5 w-3.5" />
-                {formatDateTime(lesson.startDateTime)}
+                {formatLessonDateTime(lesson.startDateTime)}
               </span>
               <span className="inline-flex items-center gap-1.5">
                 <Clock className="h-3.5 w-3.5" />
-                {formatTime(lesson.startDateTime)}–{formatTime(end.toISOString())}{" "}
+                {formatLessonTime(lesson.startDateTime)}–{formatLessonTime(end.toISOString())}{" "}
                 ({lesson.durationMinutes} min)
               </span>
               {existingMeet ? (

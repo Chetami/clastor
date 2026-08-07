@@ -10,9 +10,7 @@ import {
   Mail,
   Pencil,
   Phone,
-  StickyNote,
   Users,
-  FileText,
 } from "lucide-react";
 import { formatPhoneNumberIntl } from "react-phone-number-input";
 import { Button } from "@/components/ui/button";
@@ -24,7 +22,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
 import { StudentForm } from "./StudentForm";
 import { useGetStudent, useUpdateStudent } from "./api";
 import { useStudentInvoices, useStudentDebt } from "./invoices-api";
@@ -40,6 +37,21 @@ import {
 import type { Invoice } from "@examify-tms/interfaces";
 import { useUserCurrency } from "@/lib/use-currency";
 import { EmailHistory } from "@/features/emails/EmailHistory";
+import { formatDate } from "@/features/payments/invoice-utils";
+import {
+  DetailRow,
+  StudentInvoicesCard,
+  StudentNotesCard,
+} from "./detail/components";
+
+const billingEmailSourceLabel: Record<
+  "explicit" | "parent" | "student",
+  string
+> = {
+  explicit: "Custom",
+  parent: "Parent email",
+  student: "Student email",
+};
 
 export default function StudentDetail() {
   const { studentId } = useParams<{ studentId: string }>();
@@ -51,17 +63,6 @@ export default function StudentDetail() {
   const updateStudent = useUpdateStudent();
   const subjectMap = useSubjectMap();
   const [editing, setEditing] = useState(false);
-  const [notesEditing, setNotesEditing] = useState(false);
-  const [notesDraft, setNotesDraft] = useState("");
-
-  const billingEmailSourceLabel: Record<
-    NonNullable<typeof student>["billingEmailSource"],
-    string
-  > = {
-    explicit: "Custom",
-    parent: "Parent email",
-    student: "Student email",
-  };
 
   async function handleEdit(values: StudentFormData) {
     if (!student) return;
@@ -72,37 +73,12 @@ export default function StudentDetail() {
     setEditing(false);
   }
 
-  function startEditNotes() {
+  async function handleSaveNotes(notes: string | null) {
     if (!student) return;
-    setNotesDraft(student.notes ?? "");
-    setNotesEditing(true);
-  }
-
-  async function saveNotes() {
-    if (!student) return;
-    const trimmed = notesDraft.trim();
     await updateStudent.mutateAsync({
       id: student.id,
-      data: { notes: trimmed || null },
+      data: { notes },
     });
-    setNotesEditing(false);
-  }
-
-  const openInvoices = invoices.filter(
-    (inv: Invoice) => inv.status === "open" || inv.status === "overdue",
-  );
-
-  function getInvoiceStatusColor(status: Invoice["status"]) {
-    switch (status) {
-      case "paid":
-        return "default";
-      case "overdue":
-        return "destructive";
-      case "open":
-        return "secondary";
-      default:
-        return "outline";
-    }
   }
 
   if (isLoading) {
@@ -135,6 +111,10 @@ export default function StudentDetail() {
 
   const frequencyUnit =
     student.rateType === "hourly" ? "hours / week" : "lessons / week";
+
+  const openInvoices = invoices.filter(
+    (inv: Invoice) => inv.status === "open" || inv.status === "overdue",
+  );
 
   return (
     <div className="space-y-6">
@@ -301,118 +281,28 @@ export default function StudentDetail() {
                     : "font-medium text-emerald-600 dark:text-emerald-400"
                 }
               >
-                {totalDebt > 0 ? formatCurrency(totalDebt, currency) : "Nothing due"}
+                {totalDebt > 0
+                  ? formatCurrency(totalDebt, currency)
+                  : "Nothing due"}
               </span>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {openInvoices.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <FileText className="h-4 w-4" />
-              Open Invoices ({openInvoices.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {openInvoices.map((invoice: Invoice) => (
-                <div
-                  key={invoice.id}
-                  className="flex items-center justify-between rounded-lg border p-4"
-                >
-                  <div className="flex items-center gap-4">
-                    <FileText className="h-5 w-5 text-muted-foreground" />
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">
-                          {invoice.invoiceNumber}
-                        </span>
-                        <Badge variant={getInvoiceStatusColor(invoice.status)}>
-                          {invoice.status}
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        {invoice.lineItems.length} lesson
-                        {invoice.lineItems.length !== 1 ? "s" : ""} · Due{" "}
-                        {invoice.dueDate
-                          ? new Date(invoice.dueDate).toLocaleDateString()
-                          : "No due date"}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-bold">{formatCurrency(invoice.total, invoice.currency)}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {invoice.issueDate
-                        ? new Date(invoice.issueDate).toLocaleDateString()
-                        : ""}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      <StudentInvoicesCard invoices={openInvoices} />
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <StickyNote className="h-4 w-4" />
-            Notes
-          </CardTitle>
-          {!notesEditing && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-muted-foreground"
-              onClick={startEditNotes}
-            >
-              <Pencil className="h-3.5 w-3.5" />
-              {student.notes ? "Edit" : "Add note"}
-            </Button>
-          )}
-        </CardHeader>
-        <CardContent>
-          {notesEditing ? (
-            <div className="space-y-3">
-              <textarea
-                autoFocus
-                rows={5}
-                value={notesDraft}
-                onChange={(e) => setNotesDraft(e.target.value)}
-                placeholder="Add notes about this student..."
-                className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              />
-              <div className="flex justify-end gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setNotesEditing(false)}
-                >
-                  Cancel
-                </Button>
-                <Button size="sm" onClick={saveNotes}>
-                  Save
-                </Button>
-              </div>
-            </div>
-          ) : student.notes ? (
-            <p className="whitespace-pre-wrap text-sm">{student.notes}</p>
-          ) : (
-            <p className="text-sm text-muted-foreground">No notes yet.</p>
-          )}
-        </CardContent>
-      </Card>
+      <StudentNotesCard
+        notes={student.notes}
+        isSaving={updateStudent.isPending}
+        onSave={handleSaveNotes}
+      />
 
       <EmailHistory studentId={student.id} />
 
       <p className="text-xs text-muted-foreground">
-        Added {new Date(student.createdAt).toLocaleDateString()} · Updated{" "}
-        {new Date(student.updatedAt).toLocaleDateString()}
+        Added {formatDate(student.createdAt)} · Updated{" "}
+        {formatDate(student.updatedAt)}
       </p>
 
       <Dialog open={editing} onOpenChange={setEditing}>
@@ -433,33 +323,6 @@ export default function StudentDetail() {
           />
         </DialogContent>
       </Dialog>
-    </div>
-  );
-}
-
-interface DetailRowProps {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  muted?: boolean;
-}
-
-function DetailRow({ icon, label, value, muted }: DetailRowProps) {
-  return (
-    <div className="flex items-start gap-3">
-      <div className="mt-0.5 text-muted-foreground">{icon}</div>
-      <div className="min-w-0">
-        <p className="text-xs text-muted-foreground">{label}</p>
-        <p
-          className={
-            muted
-              ? "truncate text-sm text-muted-foreground"
-              : "truncate text-sm font-medium"
-          }
-        >
-          {value}
-        </p>
-      </div>
     </div>
   );
 }

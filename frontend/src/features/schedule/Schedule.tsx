@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
-import { toast } from "sonner";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
-import type { EventApi, EventInput } from "@fullcalendar/core";
-import { useListLessons, useExternalCalendarEvents, useRescheduleLesson, previewRescheduleEmailRequest } from "./api";
+import type { EventInput } from "@fullcalendar/core";
+import { useListLessons, useExternalCalendarEvents, previewRescheduleEmailRequest } from "./api";
 import { useListStudents } from "@/features/students/api";
 import { useGoogleConnectionStatus } from "@/features/settings/api/use-google-connect";
 import { useAuthStore } from "@/store/auth-store";
@@ -20,16 +19,8 @@ import { CreateEventDialog } from "./CreateEventDialog";
 import { EventPopover, type EventAnchor } from "./EventPopover";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { cn } from "@/lib/utils";
+import { useDropReschedule } from "./useDropReschedule";
+import { DropConfirmDialog } from "./DropConfirmDialog";
 
 export default function Schedule() {
   const calendarRef = useRef<FullCalendar>(null);
@@ -42,12 +33,9 @@ export default function Schedule() {
   } | null>(null);
 
   // Lessons are scoped to the calendar's visible window so navigating
-  // weeks/days only fetches what's in view. Disabled until FullCalendar
-  // reports its first window via `datesSet`.
+  // weeks/days only fetches what's in view.
   const { data: lessons = [] } = useListLessons(
-    visibleWindow
-      ? { from: visibleWindow.from, to: visibleWindow.to }
-      : undefined,
+    visibleWindow ? { from: visibleWindow.from, to: visibleWindow.to } : undefined,
     { enabled: !!visibleWindow },
   );
   const { data: students = [] } = useListStudents();
@@ -79,9 +67,7 @@ export default function Schedule() {
     [externalEvents],
   );
 
-  // Merge lessons + external events into a single EventInput[] for FullCalendar.
-  // External (read-only) events are marked non-editable so they can't be
-  // dragged/resized; lesson events inherit the calendar's `editable` flag.
+  // External (read-only) events are non-editable; lesson events inherit editable.
   const allEvents: EventInput[] = useMemo(
     () => [
       ...lessonEvents,
@@ -90,7 +76,6 @@ export default function Schedule() {
     [lessonEvents, externalCalendarEvents],
   );
 
-  // Shaded working-hours bands. False when not configured (no bands).
   const businessHours = useMemo(
     () => workingHoursToBusinessHours(user?.workingHours),
     [user?.workingHours],
@@ -104,115 +89,20 @@ export default function Schedule() {
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [eventPopoverOpen, setEventPopoverOpen] = useState(false);
 
-  // Pending drag/resize reschedule: holds the proposed new slot + a revert
-  // callback so the calendar event snaps back if the tutor cancels or the
-  // save fails.
-  const [dropPending, setDropPending] = useState<{
-    lessonId: string;
-    startDateTime: string;
-    durationMinutes: number;
-    label: string;
-    seriesId: string | null;
-    revert: () => void;
-  } | null>(null);
-  const [dropNotify, setDropNotify] = useState(true);
-  const [dropScope, setDropScope] = useState<"this" | "this_and_future">("this");
-  const [composeDrop, setComposeDrop] = useState<{
-    lessonId: string;
-    startDateTime: string;
-    durationMinutes: number;
-    scope: "this" | "this_and_future";
-    isSeries: boolean;
-  } | null>(null);
-  const reschedule = useRescheduleLesson(dropPending?.lessonId ?? "");
-
-  function openDropConfirm(event: EventApi, revert: () => void) {
-    const start = event.start;
-    const end = event.end;
-    if (!start || !end) {
-      revert();
-      return;
-    }
-    const durationMinutes = Math.max(
-      1,
-      Math.round((end.getTime() - start.getTime()) / 60000),
-    );
-    const studentName = event.extendedProps.studentName as string | undefined;
-    const seriesId = (event.extendedProps.seriesId as string | null) ?? null;
-    setDropNotify(true);
-    setDropScope("this");
-    setDropPending({
-      lessonId: event.id,
-      startDateTime: start.toISOString(),
-      durationMinutes,
-      seriesId,
-      label: `${start.toLocaleString("en-US", {
-        weekday: "short",
-        month: "short",
-        day: "numeric",
-        hour: "numeric",
-        minute: "2-digit",
-      })} · ${durationMinutes} min${
-        studentName ? ` · ${studentName}` : ""
-      }`,
-      revert,
-    });
-  }
-
-  function cancelDrop() {
-    dropPending?.revert();
-    setDropPending(null);
-  }
-
-  async function confirmDrop() {
-    if (!dropPending) return;
-
-    // When notifying, show the email review step first (no reschedule yet).
-    if (dropNotify) {
-      setComposeDrop({
-        lessonId: dropPending.lessonId,
-        startDateTime: dropPending.startDateTime,
-        durationMinutes: dropPending.durationMinutes,
-        scope: dropScope,
-        isSeries: !!dropPending.seriesId,
-      });
-      return;
-    }
-
-    await runDropReschedule(null);
-  }
-
-  async function runDropReschedule(message: string | null) {
-    if (!dropPending) return;
-    try {
-      await reschedule.mutateAsync({
-        startDateTime: dropPending.startDateTime,
-        durationMinutes: dropPending.durationMinutes,
-        notifyStudent: dropNotify,
-        message,
-        ...(dropPending.seriesId ? { scope: dropScope } : {}),
-      });
-      toast.success(
-        dropNotify
-          ? dropScope === "this_and_future"
-            ? "Series rescheduled — student notified."
-            : "Lesson rescheduled — student notified."
-          : dropScope === "this_and_future"
-            ? "Series rescheduled."
-            : "Lesson rescheduled.",
-      );
-      setDropPending(null);
-      setComposeDrop(null);
-    } catch (err) {
-      dropPending.revert();
-      toast.error(
-        err instanceof Error ? err.message : "Failed to reschedule lesson",
-      );
-      setDropPending(null);
-      setComposeDrop(null);
-      throw err;
-    }
-  }
+  const {
+    dropPending,
+    dropNotify,
+    setDropNotify,
+    dropScope,
+    setDropScope,
+    composeDrop,
+    reschedulePending,
+    openDropConfirm,
+    cancelDrop,
+    confirmDrop,
+    runDropReschedule,
+    clearComposeDrop,
+  } = useDropReschedule();
 
   const changeView = (next: string) => {
     calendarRef.current?.getApi().changeView(next);
@@ -350,14 +240,10 @@ export default function Schedule() {
               type="button"
               className="gi-calendar-header"
               onClick={() =>
-                calendarRef.current
-                  ?.getApi()
-                  .changeView("timeGridDay", arg.date)
+                calendarRef.current?.getApi().changeView("timeGridDay", arg.date)
               }
             >
-              <span className="gi-calendar-header__day">
-                {arg.date.getDate()}
-              </span>
+              <span className="gi-calendar-header__day">{arg.date.getDate()}</span>
               <span className="gi-calendar-header__weekday">
                 {arg.date.toLocaleDateString("en-US", { weekday: "short" })}
               </span>
@@ -366,10 +252,7 @@ export default function Schedule() {
           views={{
             timeGridWeek: {},
             timeGridDay: {},
-            timeGridFourDay: {
-              type: "timeGrid",
-              dayCount: 4,
-            },
+            timeGridFourDay: { type: "timeGrid", dayCount: 4 },
           }}
           events={allEvents}
           eventClassNames={(arg) => {
@@ -392,7 +275,6 @@ export default function Schedule() {
             </div>
           )}
           eventClick={(info) => {
-            // External (read-only) events aren't actionable.
             if (info.event.extendedProps.kind === "external") return;
             const el = info.el;
             setEventAnchor({
@@ -437,79 +319,24 @@ export default function Schedule() {
         onOpenChange={setEventPopoverOpen}
         anchor={eventAnchor}
       />
-      <Dialog
+      <DropConfirmDialog
         open={!!dropPending}
-        onOpenChange={(o) => {
-          if (!o) cancelDrop();
-        }}
-      >
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>
-              {dropScope === "this_and_future"
-                ? "Reschedule series?"
-                : "Reschedule lesson?"}
-            </DialogTitle>
-            <DialogDescription>{dropPending?.label}</DialogDescription>
-          </DialogHeader>
-          {dropPending?.seriesId && (
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => setDropScope("this")}
-                className={cn(
-                  "rounded-md border p-2.5 text-left text-xs transition-colors",
-                  dropScope === "this"
-                    ? "border-primary ring-1 ring-primary bg-primary/5"
-                    : "border-muted hover:bg-muted/50",
-                )}
-              >
-                <span className="font-medium block">Just this lesson</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setDropScope("this_and_future")}
-                className={cn(
-                  "rounded-md border p-2.5 text-left text-xs transition-colors",
-                  dropScope === "this_and_future"
-                    ? "border-primary ring-1 ring-primary bg-primary/5"
-                    : "border-muted hover:bg-muted/50",
-                )}
-              >
-                <span className="font-medium block">This &amp; future</span>
-              </button>
-            </div>
-          )}
-          <label className="flex items-center gap-2 cursor-pointer">
-            <Checkbox
-              checked={dropNotify}
-              onChange={(e) => setDropNotify(e.target.checked)}
-            />
-            <span className="text-sm">Notify student about the new time</span>
-          </label>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={cancelDrop}
-              disabled={reschedule.isPending}
-            >
-              Cancel
-            </Button>
-            <Button onClick={confirmDrop} disabled={reschedule.isPending}>
-              {reschedule.isPending ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : null}
-              {dropNotify ? "Review email" : "Confirm"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        label={dropPending?.label}
+        hasSeries={!!dropPending?.seriesId}
+        scope={dropScope}
+        notify={dropNotify}
+        pending={reschedulePending}
+        onScopeChange={setDropScope}
+        onNotifyChange={setDropNotify}
+        onCancel={cancelDrop}
+        onConfirm={confirmDrop}
+      />
 
       {composeDrop && (
         <EmailComposeDialog
           open
           onOpenChange={(o) => {
-            if (!o) setComposeDrop(null);
+            if (!o) clearComposeDrop();
           }}
           title="Review reschedule email"
           description={

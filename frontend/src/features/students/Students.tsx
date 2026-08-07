@@ -1,30 +1,17 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  ChevronRight,
   Download,
   FileSpreadsheet,
-  Mail,
-  MoreHorizontal,
-  Pencil,
   Plus,
   Search,
   Upload,
   Users,
 } from "lucide-react";
 import { toast } from "sonner";
-import type { StudentImportSummary, StudentResponse } from "@examify-tms/interfaces";
+import type { StudentResponse } from "@examify-tms/interfaces";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,28 +26,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { StudentForm } from "./StudentForm";
 import type { StudentFormData } from "./student-schema";
 import {
   useCreateStudent,
-  useImportStudents,
   useListStudents,
   useUpdateStudent,
 } from "./api";
 import { useSubjectMap, useSubjects } from "@/lib/subjects";
 import {
-  compactCurrency,
   downloadCsv,
-  formatCurrency,
-  formatFrequency,
-  getInitials,
-  rateUnit,
   STUDENT_CSV_TEMPLATE,
   studentsToCsv,
   studentToFormValues,
 } from "./student-utils";
 import { useStudentsDebts } from "./invoices-api";
 import { useUserCurrency } from "@/lib/use-currency";
+import { FilterOption, StudentListItem } from "./list/components";
+import { StudentFormDialog } from "./list/StudentFormDialog";
+import { ImportStudentsDialog } from "./list/ImportStudentsDialog";
 
 type StatusFilter = StudentResponse["status"] | "all";
 type SortKey =
@@ -96,13 +79,9 @@ export default function Students() {
   const [addOpen, setAddOpen] = useState(false);
   const [editing, setEditing] = useState<StudentResponse | null>(null);
   const [importOpen, setImportOpen] = useState(false);
-  const [importFile, setImportFile] = useState<File | null>(null);
-  const [importResult, setImportResult] =
-    useState<StudentImportSummary | null>(null);
 
   const createStudent = useCreateStudent();
   const updateStudent = useUpdateStudent();
-  const importStudents = useImportStudents();
 
   const activeCount = students.filter((s) => s.status === "active").length;
   const pastCount = students.filter((s) => s.status === "past").length;
@@ -132,7 +111,7 @@ export default function Students() {
       return matchesStatus && matchesSearch;
     });
 
-    const sorted = [...filtered].sort((a, b) => {
+    return [...filtered].sort((a, b) => {
       switch (sortKey) {
         case "name-asc":
           return a.name.localeCompare(b.name);
@@ -154,7 +133,6 @@ export default function Students() {
           return 0;
       }
     });
-    return sorted;
   }, [students, statusFilter, search, sortKey, studentDebts, subjectMap]);
 
   async function handleAdd(values: StudentFormData) {
@@ -184,7 +162,6 @@ export default function Students() {
       setAddOpen(false);
     } catch (error) {
       console.error("Failed to create student:", error);
-      // Error will be handled by react-query automatically
     }
   }
 
@@ -219,7 +196,6 @@ export default function Students() {
       setEditing(null);
     } catch (error) {
       console.error("Failed to update student:", error);
-      // Error will be handled by react-query automatically
     }
   }
 
@@ -231,35 +207,9 @@ export default function Students() {
     const csv = studentsToCsv(students, subjects);
     const date = new Date().toISOString().slice(0, 10);
     downloadCsv(`students-${date}.csv`, csv);
-    toast.success(`Exported ${students.length} student${students.length === 1 ? "" : "s"}.`);
-  }
-
-  function handleDownloadTemplate() {
-    downloadCsv("students-template.csv", STUDENT_CSV_TEMPLATE);
-  }
-
-  function openImport() {
-    setImportFile(null);
-    setImportResult(null);
-    setImportOpen(true);
-  }
-
-  async function handleImport() {
-    if (!importFile) return;
-    try {
-      const summary = await importStudents.mutateAsync(importFile);
-      setImportResult(summary);
-      if (summary.created > 0) {
-        toast.success(
-          `Imported ${summary.created} student${summary.created === 1 ? "" : "s"}.`,
-        );
-      }
-    } catch (error) {
-      console.error("Failed to import students:", error);
-      toast.error(
-        error instanceof Error ? error.message : "Failed to import students.",
-      );
-    }
+    toast.success(
+      `Exported ${students.length} student${students.length === 1 ? "" : "s"}.`,
+    );
   }
 
   return (
@@ -335,7 +285,7 @@ export default function Students() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onSelect={openImport}>
+                  <DropdownMenuItem onSelect={() => setImportOpen(true)}>
                     <Upload className="h-4 w-4" />
                     Import from CSV…
                   </DropdownMenuItem>
@@ -343,41 +293,25 @@ export default function Students() {
                     <Download className="h-4 w-4" />
                     Export to CSV
                   </DropdownMenuItem>
-                  <DropdownMenuItem onSelect={handleDownloadTemplate}>
+                  <DropdownMenuItem
+                    onSelect={() =>
+                      downloadCsv("students-template.csv", STUDENT_CSV_TEMPLATE)
+                    }
+                  >
                     <FileSpreadsheet className="h-4 w-4" />
                     Download template
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-              <Dialog open={addOpen} onOpenChange={setAddOpen}>
-                <DialogTrigger asChild>
-                  <Button
-                    size="sm"
-                    disabled={createStudent.isPending}
-                    data-tour="add-student"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Add Student
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Add Student</DialogTitle>
-                    <DialogDescription>
-                      Enter the student's details below. Click save when you're
-                      done.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <StudentForm
-                    submitLabel={
-                      createStudent.isPending ? "Creating..." : "Save Student"
-                    }
-                    onCancel={() => setAddOpen(false)}
-                    onSubmit={handleAdd}
-                    disabled={createStudent.isPending}
-                  />
-                </DialogContent>
-              </Dialog>
+              <Button
+                size="sm"
+                disabled={createStudent.isPending}
+                data-tour="add-student"
+                onClick={() => setAddOpen(true)}
+              >
+                <Plus className="h-4 w-4" />
+                Add Student
+              </Button>
             </div>
           </CardHeader>
           <CardContent>
@@ -393,103 +327,20 @@ export default function Students() {
             ) : (
               <ul className="-mx-6 divide-y">
                 {visibleStudents.map((student) => {
-                  const debt = studentDebts[student.id] ?? 0;
-                  const hasDebt = debt > 0;
                   const debtQueryIndex = studentIds.indexOf(student.id);
-                  const isLoadingDebt =
-                    debtQueryIndex >= 0 &&
-                    (debtQueries[debtQueryIndex]?.isLoading ?? false);
-
                   return (
-                    <li
+                    <StudentListItem
                       key={student.id}
-                      className="group flex cursor-pointer items-center justify-between gap-4 px-6 py-3 transition-colors hover:bg-accent/40"
-                      onClick={() => navigate(`/students/${student.id}`)}
-                    >
-                      <div className="flex min-w-0 flex-1 items-center gap-3">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-medium text-primary">
-                          {getInitials(student.name)}
-                        </div>
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className="truncate font-medium">
-                              {student.name}
-                            </p>
-                            <span
-                              className={
-                                student.status === "active"
-                                  ? "shrink-0 rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400"
-                                  : "shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground"
-                              }
-                            >
-                              {student.status === "active" ? "Active" : "Past"}
-                            </span>
-                          </div>
-                          <p className="flex items-center gap-1 truncate text-sm text-muted-foreground">
-                            <Mail className="h-3 w-3 shrink-0" />
-                            {student.email}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="hidden text-right sm:block">
-                          <p className="font-medium">
-                            {compactCurrency(student.expectedAmount, currency)}
-                            <span className="ml-0.5 text-xs font-normal text-muted-foreground">
-                              {rateUnit(student.rateType)}
-                            </span>
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {formatFrequency(
-                              student.frequencyPerWeek,
-                              student.rateType,
-                            )}
-                          </p>
-                          {hasDebt && (
-                            <p className="text-xs font-medium text-destructive">
-                              {isLoadingDebt ? (
-                                <span className="text-muted-foreground">
-                                  Loading...
-                                </span>
-                              ) : (
-                                `Owed: ${formatCurrency(debt, currency)}`
-                              )}
-                            </p>
-                          )}
-                        </div>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <MoreHorizontal className="h-4 w-4" />
-                              <span className="sr-only">Open menu</span>
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent
-                            align="end"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <DropdownMenuItem
-                              onSelect={() => setEditing(student)}
-                            >
-                              <Pencil className="h-4 w-4" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onSelect={() =>
-                                navigate(`/students/${student.id}`)
-                              }
-                            >
-                              <ChevronRight className="h-4 w-4" />
-                              View Details
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </li>
+                      student={student}
+                      debt={studentDebts[student.id] ?? 0}
+                      isLoadingDebt={
+                        debtQueryIndex >= 0 &&
+                        (debtQueries[debtQueryIndex]?.isLoading ?? false)
+                      }
+                      currency={currency}
+                      onNavigate={() => navigate(`/students/${student.id}`)}
+                      onEdit={() => setEditing(student)}
+                    />
                   );
                 })}
               </ul>
@@ -498,181 +349,31 @@ export default function Students() {
         </Card>
       )}
 
-      <Dialog
+      <StudentFormDialog
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        title="Add Student"
+        description="Enter the student's details below. Click save when you're done."
+        submitLabel={createStudent.isPending ? "Creating..." : "Save Student"}
+        onSubmit={handleAdd}
+        onCancel={() => setAddOpen(false)}
+        disabled={createStudent.isPending}
+      />
+
+      <StudentFormDialog
         open={editing !== null}
         onOpenChange={(open) => !open && setEditing(null)}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Student</DialogTitle>
-            <DialogDescription>
-              Update the student's details below.
-            </DialogDescription>
-          </DialogHeader>
-          {editing && (
-            <StudentForm
-              key={editing.id}
-              defaultValues={studentToFormValues(editing)}
-              submitLabel={
-                updateStudent.isPending ? "Saving..." : "Save Changes"
-              }
-              onCancel={() => setEditing(null)}
-              onSubmit={handleEdit}
-              disabled={updateStudent.isPending}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
+        title="Edit Student"
+        description="Update the student's details below."
+        submitLabel={updateStudent.isPending ? "Saving..." : "Save Changes"}
+        onSubmit={handleEdit}
+        onCancel={() => setEditing(null)}
+        disabled={updateStudent.isPending}
+        defaultValues={editing ? studentToFormValues(editing) : undefined}
+        formKey={editing?.id}
+      />
 
-      <Dialog
-        open={importOpen}
-        onOpenChange={(open) => {
-          setImportOpen(open);
-          if (!open) {
-            setImportFile(null);
-            setImportResult(null);
-          }
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Import students from CSV</DialogTitle>
-            <DialogDescription>
-              Upload a CSV file with a header row. Subject names must match your
-              subject catalogue and are separated by semicolons (e.g.
-              <span className="font-medium"> Mathematics; Physics</span>).
-              Existing emails are skipped.
-            </DialogDescription>
-          </DialogHeader>
-
-          {importResult ? (
-            <div className="space-y-4">
-              <div className="grid grid-cols-3 gap-3 text-center">
-                <div className="rounded-md border p-3">
-                  <p className="text-2xl font-semibold">
-                    {importResult.total}
-                  </p>
-                  <p className="text-xs text-muted-foreground">Rows</p>
-                </div>
-                <div className="rounded-md border p-3">
-                  <p className="text-2xl font-semibold text-emerald-600 dark:text-emerald-400">
-                    {importResult.created}
-                  </p>
-                  <p className="text-xs text-muted-foreground">Created</p>
-                </div>
-                <div className="rounded-md border p-3">
-                  <p className="text-2xl font-semibold text-destructive">
-                    {importResult.skipped}
-                  </p>
-                  <p className="text-xs text-muted-foreground">Skipped</p>
-                </div>
-              </div>
-              {importResult.errors.length > 0 && (
-                <div className="max-h-48 overflow-y-auto rounded-md border">
-                  <ul className="divide-y text-sm">
-                    {importResult.errors.map((e, i) => (
-                      <li
-                        key={i}
-                        className="flex items-start gap-2 px-3 py-2"
-                      >
-                        <span className="shrink-0 rounded bg-muted px-1.5 text-xs text-muted-foreground">
-                          row {e.row}
-                        </span>
-                        <span className="text-muted-foreground">
-                          {e.message}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="flex flex-col gap-2">
-                <Input
-                  type="file"
-                  accept=".csv,text/csv,text/plain"
-                  onChange={(e) =>
-                    setImportFile(e.target.files?.[0] ?? null)
-                  }
-                />
-                {importFile && (
-                  <p className="text-xs text-muted-foreground">
-                    Selected: {importFile.name}
-                  </p>
-                )}
-              </div>
-              <button
-                type="button"
-                onClick={handleDownloadTemplate}
-                className="text-xs text-primary underline-offset-2 hover:underline"
-              >
-                Download a CSV template
-              </button>
-            </div>
-          )}
-
-          <DialogFooter>
-            {importResult ? (
-              <Button
-                type="button"
-                onClick={() => {
-                  setImportOpen(false);
-                  setImportFile(null);
-                  setImportResult(null);
-                }}
-              >
-                Done
-              </Button>
-            ) : (
-              <>
-                <Button
-                  variant="outline"
-                  type="button"
-                  onClick={() => setImportOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="button"
-                  disabled={!importFile || importStudents.isPending}
-                  onClick={handleImport}
-                >
-                  {importStudents.isPending ? "Importing…" : "Import"}
-                </Button>
-              </>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ImportStudentsDialog open={importOpen} onOpenChange={setImportOpen} />
     </div>
-  );
-}
-
-interface FilterOptionProps {
-  checked: boolean;
-  label: string;
-  count: number;
-  onSelect: () => void;
-}
-
-function FilterOption({ checked, label, count, onSelect }: FilterOptionProps) {
-  return (
-    <button
-      type="button"
-      onClick={onSelect}
-      aria-pressed={checked}
-      className={
-        checked
-          ? "inline-flex h-7 items-center gap-1.5 rounded px-3 text-sm font-medium text-foreground shadow-sm transition-colors"
-          : "inline-flex h-7 items-center gap-1.5 rounded px-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-      }
-    >
-      {label}
-      <span className="rounded bg-muted px-1.5 text-xs text-muted-foreground">
-        {count}
-      </span>
-    </button>
   );
 }

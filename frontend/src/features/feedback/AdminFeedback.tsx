@@ -3,12 +3,9 @@ import {
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
-  Bug,
   Check,
   ChevronRight,
-  Lightbulb,
   Loader2,
-  MessageSquare,
   MessageSquareText,
   RotateCcw,
   Search,
@@ -16,12 +13,10 @@ import {
 import { toast } from "sonner";
 import type {
   FeedbackResponse,
-  FeedbackType,
   UpdateFeedbackStatusRequest,
 } from "@examify-tms/interfaces";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -31,73 +26,20 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { useListFeedback, useUpdateFeedbackStatus } from "./api";
+import { formatDate } from "@/features/payments/invoice-utils";
+import {
+  STATUS_META,
+  STATUS_TABS,
+  TYPE_META,
+  TYPE_TABS,
+  type StatusFilter,
+  type TypeFilter,
+} from "./admin/constants";
+import { FeedbackDetailDialog } from "./admin/FeedbackDetailDialog";
 
-type StatusFilter = "all" | "open" | "resolved";
-type TypeFilter = "all" | FeedbackType;
 type SortField = "createdAt" | "type" | "tutorName";
 type SortOrder = "asc" | "desc";
-
-const STATUS_TABS: { value: StatusFilter; label: string }[] = [
-  { value: "all", label: "All" },
-  { value: "open", label: "Open" },
-  { value: "resolved", label: "Resolved" },
-];
-
-const TYPE_TABS: { value: TypeFilter; label: string }[] = [
-  { value: "all", label: "All" },
-  { value: "bug", label: "Bugs" },
-  { value: "feedback", label: "Feedback" },
-  { value: "feature_request", label: "Ideas" },
-];
-
-const TYPE_META: Record<
-  FeedbackType,
-  { label: string; variant: "danger" | "secondary" | "warning"; icon: typeof Bug }
-> = {
-  bug: { label: "Bug", variant: "danger", icon: Bug },
-  feedback: { label: "Feedback", variant: "secondary", icon: MessageSquare },
-  feature_request: {
-    label: "Feature Idea",
-    variant: "warning",
-    icon: Lightbulb,
-  },
-};
-
-const STATUS_META: Record<
-  FeedbackResponse["status"],
-  { label: string; variant: "warning" | "success" }
-> = {
-  open: { label: "Open", variant: "warning" },
-  resolved: { label: "Resolved", variant: "success" },
-};
-
-function formatDate(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
-
-function formatDateTime(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleString(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  });
-}
 
 export default function AdminFeedback() {
   const { data: feedback = [], isLoading, error } = useListFeedback();
@@ -110,7 +52,11 @@ export default function AdminFeedback() {
   const [selected, setSelected] = useState<FeedbackResponse | null>(null);
 
   const counts = useMemo(() => {
-    const c: Record<StatusFilter, number> = { all: feedback.length, open: 0, resolved: 0 };
+    const c: Record<StatusFilter, number> = {
+      all: feedback.length,
+      open: 0,
+      resolved: 0,
+    };
     for (const f of feedback) c[f.status] = (c[f.status] ?? 0) + 1;
     return c;
   }, [feedback]);
@@ -152,10 +98,7 @@ export default function AdminFeedback() {
     });
   }, [feedback, statusFilter, typeFilter, search, sortField, sortOrder]);
 
-  function toggleStatus(
-    item: FeedbackResponse,
-    e?: React.MouseEvent,
-  ): void {
+  function toggleStatus(item: FeedbackResponse, e?: React.MouseEvent): void {
     e?.stopPropagation();
     const next: UpdateFeedbackStatusRequest["status"] =
       item.status === "open" ? "resolved" : "open";
@@ -166,9 +109,7 @@ export default function AdminFeedback() {
           setSelected((prev) =>
             prev && prev.id === updated.id ? updated : prev,
           );
-          toast.success(
-            next === "resolved" ? "Marked as resolved" : "Reopened",
-          );
+          toast.success(next === "resolved" ? "Marked as resolved" : "Reopened");
         },
         onError: () => {
           toast.error("Failed to update status. Please try again.");
@@ -184,30 +125,6 @@ export default function AdminFeedback() {
       setSortField(field);
       setSortOrder(field === "createdAt" ? "desc" : "asc");
     }
-  }
-
-  function SortHeader({ field, label }: { field: SortField; label: string }) {
-    const active = sortField === field;
-    return (
-      <button
-        type="button"
-        onClick={() => toggleSort(field)}
-        className={`group inline-flex items-center gap-1 transition-colors hover:text-foreground ${
-          active ? "text-foreground" : ""
-        }`}
-      >
-        {label}
-        {active ? (
-          sortOrder === "asc" ? (
-            <ArrowUp className="h-3 w-3" />
-          ) : (
-            <ArrowDown className="h-3 w-3" />
-          )
-        ) : (
-          <ArrowUpDown className="h-3 w-3 opacity-0 group-hover:opacity-50" />
-        )}
-      </button>
-    );
   }
 
   return (
@@ -294,15 +211,33 @@ export default function AdminFeedback() {
                   <TableHeader>
                     <TableRow className="bg-muted/30 hover:bg-muted/30">
                       <TableHead className="pl-4">
-                        <SortHeader field="type" label="Type" />
+                        <SortHeader
+                          field="type"
+                          label="Type"
+                          active={sortField === "type"}
+                          order={sortOrder}
+                          onToggle={toggleSort}
+                        />
                       </TableHead>
                       <TableHead className="max-w-md">Message</TableHead>
                       <TableHead className="hidden md:table-cell">
-                        <SortHeader field="tutorName" label="Submitted by" />
+                        <SortHeader
+                          field="tutorName"
+                          label="Submitted by"
+                          active={sortField === "tutorName"}
+                          order={sortOrder}
+                          onToggle={toggleSort}
+                        />
                       </TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead className="hidden lg:table-cell">
-                        <SortHeader field="createdAt" label="Created" />
+                        <SortHeader
+                          field="createdAt"
+                          label="Created"
+                          active={sortField === "createdAt"}
+                          order={sortOrder}
+                          onToggle={toggleSort}
+                        />
                       </TableHead>
                       <TableHead className="w-10" />
                     </TableRow>
@@ -396,7 +331,7 @@ export default function AdminFeedback() {
       <FeedbackDetailDialog
         feedback={selected}
         onOpenChange={(open) => !open && setSelected(null)}
-        onToggleStatus={toggleStatus}
+        onToggleStatus={(f) => toggleStatus(f)}
         isToggling={
           !!selected &&
           updateStatus.isPending &&
@@ -407,137 +342,38 @@ export default function AdminFeedback() {
   );
 }
 
-function FeedbackDetailDialog({
-  feedback,
-  onOpenChange,
-  onToggleStatus,
-  isToggling,
+/** Sortable table header. Hoisted out of the parent so it isn't redefined per render. */
+function SortHeader({
+  field,
+  label,
+  active,
+  order,
+  onToggle,
 }: {
-  feedback: FeedbackResponse | null;
-  onOpenChange: (open: boolean) => void;
-  onToggleStatus: (feedback: FeedbackResponse) => void;
-  isToggling: boolean;
+  field: SortField;
+  label: string;
+  active: boolean;
+  order: SortOrder;
+  onToggle: (field: SortField) => void;
 }) {
   return (
-    <Dialog open={!!feedback} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
-        {feedback && (
-          <FeedbackDetailBody
-            feedback={feedback}
-            onToggleStatus={onToggleStatus}
-            isToggling={isToggling}
-          />
-        )}
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function FeedbackDetailBody({
-  feedback,
-  onToggleStatus,
-  isToggling,
-}: {
-  feedback: FeedbackResponse;
-  onToggleStatus: (feedback: FeedbackResponse) => void;
-  isToggling: boolean;
-}) {
-  const typeMeta = TYPE_META[feedback.type];
-  const statusMeta = STATUS_META[feedback.status];
-  const TypeIcon = typeMeta.icon;
-  const isOpen = feedback.status === "open";
-
-  return (
-    <>
-      <DialogHeader>
-        <div className="flex items-center gap-2">
-          <Badge variant={typeMeta.variant}>
-            <TypeIcon className="mr-1 h-3 w-3" />
-            {typeMeta.label}
-          </Badge>
-          <Badge variant={statusMeta.variant}>{statusMeta.label}</Badge>
-        </div>
-        <DialogTitle className="sr-only">Feedback details</DialogTitle>
-        <DialogDescription className="sr-only">
-          Full details for feedback submitted on {formatDateTime(feedback.createdAt)}.
-        </DialogDescription>
-      </DialogHeader>
-
-      <div className="space-y-4">
-        <div>
-          <p className="whitespace-pre-wrap break-words text-sm">
-            {feedback.message}
-          </p>
-        </div>
-
-        {feedback.images.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {feedback.images.map((src, i) => (
-              <a
-                key={i}
-                href={src}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block h-24 w-24 overflow-hidden rounded-md border"
-              >
-                <img
-                  src={src}
-                  alt={`Attachment ${i + 1}`}
-                  className="h-full w-full object-cover"
-                />
-              </a>
-            ))}
-          </div>
-        )}
-
-        <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
-          <dt className="text-muted-foreground">From</dt>
-          <dd>
-            <div className="flex flex-col">
-              <span>{feedback.tutorName ?? "Unknown"}</span>
-              {feedback.tutorEmail && (
-                <span className="text-xs text-muted-foreground">
-                  {feedback.tutorEmail}
-                </span>
-              )}
-            </div>
-          </dd>
-          <dt className="text-muted-foreground">Submitted</dt>
-          <dd>{formatDateTime(feedback.createdAt)}</dd>
-          {feedback.pageUrl && (
-            <>
-              <dt className="text-muted-foreground">Page</dt>
-              <dd className="truncate font-mono text-xs">{feedback.pageUrl}</dd>
-            </>
-          )}
-          {feedback.userAgent && (
-            <>
-              <dt className="text-muted-foreground align-top">Device</dt>
-              <dd className="text-xs text-muted-foreground">
-                {feedback.userAgent}
-              </dd>
-            </>
-          )}
-        </dl>
-      </div>
-
-      <DialogFooter>
-        <Button
-          type="button"
-          variant={isOpen ? "default" : "outline"}
-          disabled={isToggling}
-          onClick={() => onToggleStatus(feedback)}
-        >
-          {isToggling ? (
-            <Loader2 className="animate-spin" />
-          ) : isOpen ? (
-            <Check />
-          ) : (
-            <RotateCcw />
-          )}
-          {isOpen ? "Resolve" : "Reopen"}
-        </Button>
-      </DialogFooter>
-    </>
+    <button
+      type="button"
+      onClick={() => onToggle(field)}
+      className={`group inline-flex items-center gap-1 transition-colors hover:text-foreground ${
+        active ? "text-foreground" : ""
+      }`}
+    >
+      {label}
+      {active ? (
+        order === "asc" ? (
+          <ArrowUp className="h-3 w-3" />
+        ) : (
+          <ArrowDown className="h-3 w-3" />
+        )
+      ) : (
+        <ArrowUpDown className="h-3 w-3 opacity-0 group-hover:opacity-50" />
+      )}
+    </button>
   );
 }

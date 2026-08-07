@@ -27,6 +27,7 @@ export {
   formatMsRemaining,
   formatLessonDate,
   formatLessonTime,
+  formatLessonDateTime,
   type DerivedLessonStatus,
 } from "@examify-tms/shared";
 

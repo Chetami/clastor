@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Video, TriangleAlert, MapPin, Globe, Plus, X, Repeat, Clock } from "lucide-react";
+import { Clock, Repeat } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   Dialog,
   DialogContent,
@@ -27,9 +26,6 @@ import { useCreateLesson, useCreateRecurringLesson } from "./api";
 import { pollSeriesMeetLink } from "./api";
 import { generateMeetLinkRequest, updateLessonRequest } from "./api/requests";
 import {
-  DAYS,
-  DAY_FULL_LABELS,
-  DURATION_PRESETS,
   describeRecurrence,
   describeOneOff,
   eventFormSchema,
@@ -43,22 +39,21 @@ import { isSlotOutsideWorkingHours } from "./working-hours-utils";
 import { useAuthStore } from "@/store/auth-store";
 import { queryClient } from "@examify-tms/shared";
 import type { DayOfWeek, ExternalCalendarEvent } from "@examify-tms/interfaces";
+import {
+  TIME_RE,
+  browserTimezone,
+  emptyValues,
+  endOfYearDateStr,
+  toDateStr,
+  toTimeStr,
+  weekdayOf,
+} from "./create-event/form-helpers";
+import { DurationPicker } from "./create-event/DurationPicker";
+import { RecurringSlotsEditor } from "./create-event/RecurringSlotsEditor";
+import { EventWarnings } from "./create-event/EventWarnings";
+import { LocationPicker, type LocationMode } from "./create-event/LocationPicker";
 
-interface CreateEventDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  start: Date | null;
-  end: Date | null;
-  externalEvents?: ExternalCalendarEvent[];
-}
-
-const pad = (n: number) => String(n).padStart(2, "0");
-const toDateStr = (d: Date) =>
-  `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-const toTimeStr = (d: Date) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
-const TIME_RE = /^([01]\d|2[0-3]):([0-5]\d)$/;
-
-const JS_DAY_NAMES: DayOfWeek[] = [
+const DAYS_ARR: DayOfWeek[] = [
   "sunday",
   "monday",
   "tuesday",
@@ -68,101 +63,22 @@ const JS_DAY_NAMES: DayOfWeek[] = [
   "saturday",
 ];
 
-function weekdayOf(dateStr: string): DayOfWeek | null {
-  if (!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return null;
-  return JS_DAY_NAMES[new Date(`${dateStr}T00:00:00`).getDay()];
+interface CreateEventDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  start: Date | null;
+  end: Date | null;
+  externalEvents?: ExternalCalendarEvent[];
 }
 
-function browserTimezone(): string {
-  return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
-}
-
-function endOfYearDateStr(dateStr: string): string {
-  const year = /^\d{4}-\d{2}-\d{2}$/.test(dateStr)
-    ? Number(dateStr.slice(0, 4))
-    : new Date().getFullYear();
-  return `${year}-12-31`;
-}
-
-function emptyValues(): EventFormData {
-  return {
-    studentId: "",
-    studentName: "",
-    subject: "",
-    date: "",
-    startTime: "",
-    location: "",
-    notes: "",
-    repeat: "none",
-    slots: [],
-    durationMinutes: 60,
-    endsMode: "until",
-    endDate: "",
-    occurrenceCount: undefined,
-  };
-}
-
-type LocationMode = "zoom" | "meet" | "inperson" | "other" | "";
 type FieldErrors = Partial<Record<keyof EventFormData, string>>;
 
 /**
- * Shared duration control for one-off and recurring lessons: quick-pick chips
- * plus an "Other" toggle that reveals a custom number input.
+ * "New lesson" dialog supporting both one-off and recurring-series creation.
+ * The form state + handlers (the controller) live here; the recurring config,
+ * duration picker, warnings, and location selector are extracted into
+ * `./create-event/` sub-components.
  */
-function DurationPicker({
-  value,
-  onChange,
-}: {
-  value: number;
-  onChange: (minutes: number) => void;
-}) {
-  const [other, setOther] = useState(false);
-  const isPreset = (DURATION_PRESETS as readonly number[]).includes(value);
-  const showCustom = other || !isPreset;
-  return (
-    <>
-      <ToggleGroup
-        type="single"
-        variant="outline"
-        value={showCustom ? "other" : String(value)}
-        onValueChange={(v) => {
-          if (!v) return;
-          if (v === "other") {
-            setOther(true);
-          } else {
-            setOther(false);
-            onChange(Number(v));
-          }
-        }}
-        className="flex flex-wrap justify-start gap-2"
-      >
-        {DURATION_PRESETS.map((d) => (
-          <ToggleGroupItem key={d} value={String(d)}>
-            {d} min
-          </ToggleGroupItem>
-        ))}
-        <ToggleGroupItem value="other">Other</ToggleGroupItem>
-      </ToggleGroup>
-      {showCustom && (
-        <div className="flex items-center gap-1.5">
-          <Input
-            type="number"
-            min={5}
-            step={5}
-            className="h-9 w-24"
-            value={value || ""}
-            placeholder="e.g. 50"
-            onChange={(e) =>
-              onChange(Math.max(1, e.target.valueAsNumber || 0))
-            }
-          />
-          <span className="text-xs text-muted-foreground">min</span>
-        </div>
-      )}
-    </>
-  );
-}
-
 export function CreateEventDialog({
   open,
   onOpenChange,
@@ -184,18 +100,17 @@ export function CreateEventDialog({
   const submitError =
     createLesson.error?.message ?? createRecurring.error?.message;
 
-  const selectedStudent = useMemo(() => {
-    return students.find((s) => s.id === values.studentId);
-  }, [students, values.studentId]);
+  const selectedStudent = useMemo(
+    () => students.find((s) => s.id === values.studentId),
+    [students, values.studentId],
+  );
 
   const studentSubjects = useMemo(() => {
     if (!selectedStudent) return [];
     return subjects.filter((s) => selectedStudent.subjectIds?.includes(s.id));
   }, [selectedStudent, subjects]);
 
-  // Warn (non-blocking) if the chosen one-off slot overlaps an external Google
-  // Calendar event. Only computed for the single-lesson case where a concrete
-  // date + time range is known.
+  // Warn (non-blocking) if the one-off slot overlaps an external Google event.
   const overlaps = useMemo(() => {
     if (isRecurring) return [];
     if (!values.date || !values.startTime || !TIME_RE.test(values.startTime)) {
@@ -221,8 +136,7 @@ export function CreateEventDialog({
     externalEvents,
   ]);
 
-  // Warn (non-blocking) if the chosen one-off slot is outside the tutor's
-  // configured working hours (day off, or before/after the daily window).
+  // Warn (non-blocking) if the one-off slot is outside working hours.
   const outsideHours = useMemo(() => {
     if (isRecurring) return false;
     if (!values.date || !values.startTime || !TIME_RE.test(values.startTime)) {
@@ -243,8 +157,6 @@ export function CreateEventDialog({
     user?.workingHours,
   ]);
 
-  // Plain-English restatement of what will be created, shown live so the user
-  // can verify before submitting (one-off or recurring).
   const summary = useMemo(
     () => (isRecurring ? describeRecurrence(values) : describeOneOff(values)),
     [isRecurring, values],
@@ -280,23 +192,16 @@ export function CreateEventDialog({
       update("location", "");
       return;
     }
-    if (mode === "zoom") {
-      setLocationMode("zoom");
-      update("location", "Zoom");
-      return;
-    }
-    if (mode === "inperson") {
-      setLocationMode("inperson");
-      update("location", "In Person");
-      return;
-    }
-    if (mode === "meet") {
-      setLocationMode("meet");
-      update("location", "Google Meet");
-      return;
-    }
-    setLocationMode("other");
-    update("location", "");
+    setLocationMode(mode);
+    const label =
+      mode === "zoom"
+        ? "Zoom"
+        : mode === "inperson"
+          ? "In Person"
+          : mode === "meet"
+            ? "Google Meet"
+            : "";
+    update("location", label);
   }
 
   function handleStudentChange(id: string) {
@@ -333,8 +238,7 @@ export function CreateEventDialog({
     }
     // Seed a first slot from the chosen start date + time, and default the end
     // date to the end of that year, so the user rarely has to think about
-    // bounding or timing the series. Duration is already the shared source of
-    // truth from the one-off side.
+    // bounding or timing the series.
     setValues((prev) => {
       const base = {
         ...prev,
@@ -371,15 +275,22 @@ export function CreateEventDialog({
     setValues((prev) => {
       if (prev.slots.length >= 7) return prev;
       const usedDays = new Set(prev.slots.map((s) => s.dayOfWeek));
-      const nextDay = (DAYS.find((d) => !usedDays.has(d)) ?? "monday") as DayOfWeek;
+      const nextDay = (DAYS_ARR.find((d) => !usedDays.has(d)) ??
+        "monday") as DayOfWeek;
       const lastTime =
         prev.slots[prev.slots.length - 1]?.timeOfDay ??
         (prev.startTime && TIME_RE.test(prev.startTime) ? prev.startTime : "09:00");
-      return { ...prev, slots: [...prev.slots, { dayOfWeek: nextDay, timeOfDay: lastTime }] };
+      return {
+        ...prev,
+        slots: [...prev.slots, { dayOfWeek: nextDay, timeOfDay: lastTime }],
+      };
     });
   }
 
-  function updateSlot(index: number, patch: Partial<{ dayOfWeek: DayOfWeek; timeOfDay: string }>) {
+  function updateSlot(
+    index: number,
+    patch: Partial<{ dayOfWeek: DayOfWeek; timeOfDay: string }>,
+  ) {
     setValues((prev) => ({
       ...prev,
       slots: prev.slots.map((s, i) => (i === index ? { ...s, ...patch } : s)),
@@ -394,10 +305,7 @@ export function CreateEventDialog({
     }));
   }
 
-  /**
-   * Provision + attach a Google Meet link to an already-created lesson. Runs in
-   * the background after the dialog closes; resolves to the link or null.
-   */
+  /** Provision + attach a Google Meet link to an already-created lesson. */
   async function attachMeetLink(
     lessonId: string,
     data: EventFormData,
@@ -417,7 +325,6 @@ export function CreateEventDialog({
       });
       return meetingLink;
     } catch {
-      // best-effort — lesson was created, Meet link just didn't attach
       return null;
     }
   }
@@ -449,8 +356,6 @@ export function CreateEventDialog({
           },
         });
 
-        // Meet provisioning is slow; run it silently in the background and
-        // refresh the lessons query once the link is attached.
         if (locationMode === "meet") {
           void attachMeetLink(lesson.id, result.data).then((link) => {
             if (link) queryClient.invalidateQueries({ queryKey: ["lessons"] });
@@ -459,8 +364,6 @@ export function CreateEventDialog({
       } else {
         const student = students.find((s) => s.id === result.data.studentId);
         const timezone = student?.timezone || browserTimezone();
-        // The backend returns fast (after the Firestore write); Google Calendar
-        // sync + Meet provisioning continue in the background.
         const created = await createRecurring.mutateAsync(
           toCreateRecurringLessonRequest(result.data, timezone),
         );
@@ -475,8 +378,6 @@ export function CreateEventDialog({
           },
         });
 
-        // The Meet link is provisioned in the background; poll silently and
-        // refresh the lessons query once it lands.
         if (locationMode === "meet") {
           void pollSeriesMeetLink(created.seriesId).then((link) => {
             if (link) queryClient.invalidateQueries({ queryKey: ["lessons"] });
@@ -603,7 +504,9 @@ export function CreateEventDialog({
                     onChange={(e) => update("startTime", e.target.value)}
                   />
                   {errors.startTime && (
-                    <p className="text-xs text-destructive">{errors.startTime}</p>
+                    <p className="text-xs text-destructive">
+                      {errors.startTime}
+                    </p>
                   )}
                 </div>
               </div>
@@ -639,218 +542,18 @@ export function CreateEventDialog({
             </div>
           )}
 
-          {overlaps.length > 0 && (
-            <div className="flex items-start gap-2 rounded-md border border-amber-500/50 bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-400">
-              <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
-              <div className="space-y-0.5">
-                <p className="font-medium">
-                  Overlaps with a Google Calendar event
-                </p>
-                <ul className="list-inside list-disc text-amber-600/90 dark:text-amber-400/90">
-                  {overlaps.map((ev) => (
-                    <li key={ev.id}>{ev.title}</li>
-                  ))}
-                </ul>
-                <p className="text-amber-600/80 dark:text-amber-400/80">
-                  You can still create this lesson.
-                </p>
-              </div>
-            </div>
-          )}
-
-          {outsideHours && (
-            <div className="flex items-start gap-2 rounded-md border border-amber-500/50 bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-400">
-              <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
-              <div className="space-y-0.5">
-                <p className="font-medium">Outside your working hours</p>
-                <p className="text-amber-600/80 dark:text-amber-400/80">
-                  This time is outside the working hours you set. You can still
-                  create this lesson, or adjust your hours in Settings.
-                </p>
-              </div>
-            </div>
-          )}
+          <EventWarnings overlaps={overlaps} outsideHours={outsideHours} />
 
           {isRecurring && (
-            <div className="space-y-4 rounded-lg border bg-muted/30 p-4">
-              <div className="space-y-2">
-                <Label>How often?</Label>
-                <ToggleGroup
-                  type="single"
-                  variant="outline"
-                  value={values.repeat}
-                  onValueChange={(v) =>
-                    v && handleRepeatChange(v as EventFormData["repeat"])
-                  }
-                  className="flex flex-wrap justify-start gap-2"
-                >
-                  <ToggleGroupItem value="weekly">Weekly</ToggleGroupItem>
-                  <ToggleGroupItem value="biweekly">
-                    Every 2 weeks
-                  </ToggleGroupItem>
-                  <ToggleGroupItem value="monthly">
-                    Every 4 weeks
-                  </ToggleGroupItem>
-                </ToggleGroup>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Weekly lesson times</Label>
-                <div className="space-y-2">
-                  {values.slots.map((slot, index) => (
-                    <div key={index} className="flex items-center gap-2">
-                      <Select
-                        value={slot.dayOfWeek}
-                        onValueChange={(d) =>
-                          updateSlot(index, { dayOfWeek: d as DayOfWeek })
-                        }
-                      >
-                        <SelectTrigger className="flex-1">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {DAYS.map((day) => (
-                            <SelectItem key={day} value={day}>
-                              {DAY_FULL_LABELS[day]}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <Input
-                        type="time"
-                        className="h-9 flex-1"
-                        value={slot.timeOfDay}
-                        onChange={(e) =>
-                          updateSlot(index, { timeOfDay: e.target.value })
-                        }
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-9 w-9 shrink-0 text-muted-foreground"
-                        onClick={() => removeSlot(index)}
-                        disabled={values.slots.length <= 1}
-                        aria-label="Remove this lesson time"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-                {values.slots.length < 7 && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={addSlot}
-                  >
-                    <Plus className="mr-1.5 h-4 w-4" />
-                    Add a lesson time
-                  </Button>
-                )}
-                {errors.slots && (
-                  <p className="text-xs text-destructive">{errors.slots}</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label>Lesson duration</Label>
-                <DurationPicker
-                  value={values.durationMinutes}
-                  onChange={(n) => update("durationMinutes", n)}
-                />
-                {errors.durationMinutes && (
-                  <p className="text-xs text-destructive">
-                    {errors.durationMinutes}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label>Ends</Label>
-                <div
-                  className={
-                    "flex items-center gap-3 rounded-md border p-2 transition-colors " +
-                    (values.endsMode === "until"
-                      ? "border-primary bg-primary/5"
-                      : "border-input")
-                  }
-                  onClick={() => update("endsMode", "until")}
-                >
-                  <span
-                    className={
-                      "flex h-4 w-4 shrink-0 items-center justify-center rounded-full border " +
-                      (values.endsMode === "until"
-                        ? "border-primary"
-                        : "border-muted-foreground/40")
-                    }
-                  >
-                    {values.endsMode === "until" && (
-                      <span className="h-2 w-2 rounded-full bg-primary" />
-                    )}
-                  </span>
-                  <span className="text-sm font-medium">On</span>
-                  <Input
-                    type="date"
-                    className="h-8"
-                    value={values.endDate}
-                    onClick={(e) => e.stopPropagation()}
-                    onChange={(e) => {
-                      update("endsMode", "until");
-                      update("endDate", e.target.value);
-                    }}
-                  />
-                </div>
-                <div
-                  className={
-                    "flex items-center gap-3 rounded-md border p-2 transition-colors " +
-                    (values.endsMode === "count"
-                      ? "border-primary bg-primary/5"
-                      : "border-input")
-                  }
-                  onClick={() => update("endsMode", "count")}
-                >
-                  <span
-                    className={
-                      "flex h-4 w-4 shrink-0 items-center justify-center rounded-full border " +
-                      (values.endsMode === "count"
-                        ? "border-primary"
-                        : "border-muted-foreground/40")
-                    }
-                  >
-                    {values.endsMode === "count" && (
-                      <span className="h-2 w-2 rounded-full bg-primary" />
-                    )}
-                  </span>
-                  <span className="text-sm font-medium">After</span>
-                  <Input
-                    type="number"
-                    min={1}
-                    className="h-8 w-20"
-                    placeholder="12"
-                    value={values.occurrenceCount ?? ""}
-                    onClick={(e) => e.stopPropagation()}
-                    onChange={(e) => {
-                      update("endsMode", "count");
-                      update(
-                        "occurrenceCount",
-                        e.target.valueAsNumber || undefined,
-                      );
-                    }}
-                  />
-                  <span className="text-sm text-muted-foreground">lessons</span>
-                </div>
-                {errors.endDate && (
-                  <p className="text-xs text-destructive">{errors.endDate}</p>
-                )}
-                {errors.occurrenceCount && (
-                  <p className="text-xs text-destructive">
-                    {errors.occurrenceCount}
-                  </p>
-                )}
-              </div>
-            </div>
+            <RecurringSlotsEditor
+              values={values}
+              errors={errors}
+              onRepeatChange={handleRepeatChange}
+              onUpdate={update}
+              onAddSlot={addSlot}
+              onUpdateSlot={updateSlot}
+              onRemoveSlot={removeSlot}
+            />
           )}
 
           {summary && (
@@ -864,54 +567,12 @@ export function CreateEventDialog({
             </div>
           )}
 
-          <div className="space-y-2">
-            <Label>
-              Location{" "}
-              <span className="text-xs font-normal text-muted-foreground">
-                (optional)
-              </span>
-            </Label>
-            <ToggleGroup
-              type="single"
-              variant="outline"
-              value={locationMode}
-              onValueChange={(v) => handleLocationModeChange(v as LocationMode)}
-              className="flex-wrap justify-start gap-2"
-            >
-              <ToggleGroupItem value="zoom" aria-label="Zoom">
-                <Video className="mr-1.5 h-4 w-4" />
-                Zoom
-              </ToggleGroupItem>
-              <ToggleGroupItem value="meet" aria-label="Google Meet">
-                <Video className="mr-1.5 h-4 w-4" />
-                Meet
-              </ToggleGroupItem>
-              <ToggleGroupItem value="inperson" aria-label="In Person">
-                <MapPin className="mr-1.5 h-4 w-4" />
-                In Person
-              </ToggleGroupItem>
-              <ToggleGroupItem value="other" aria-label="Other">
-                <Globe className="mr-1.5 h-4 w-4" />
-                Other
-              </ToggleGroupItem>
-            </ToggleGroup>
-            {locationMode === "zoom" && (
-              <div className="flex items-start gap-2 rounded-md border border-amber-500/50 bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-400">
-                <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
-                <p className="font-medium">
-                  Zoom integration is not available yet.
-                </p>
-              </div>
-            )}
-            {locationMode === "other" && (
-              <Input
-                id="location"
-                placeholder="e.g. Microsoft Teams, Skype…"
-                value={values.location}
-                onChange={(e) => update("location", e.target.value)}
-              />
-            )}
-          </div>
+          <LocationPicker
+            locationMode={locationMode}
+            locationValue={values.location ?? ""}
+            onModeChange={handleLocationModeChange}
+            onLocationChange={(v) => update("location", v)}
+          />
 
           <div className="space-y-2">
             <Label htmlFor="notes">

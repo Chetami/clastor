@@ -1,5 +1,6 @@
 import {
   addMinutes,
+  format as formatDateFns,
   intervalToDuration,
   isPast,
   isToday as isTodayDateFns,
@@ -139,22 +140,23 @@ export function formatMsRemaining(ms: number): string {
 }
 
 /* -------------------------------------------------------------------------- */
-/* Lesson date/time formatters (en-AU, to match the rest of the app).         */
+/* Lesson date/time formatters (date-fns, consistent across web + mobile).    */
 /* -------------------------------------------------------------------------- */
+
+const toDate = (iso: string | Date): Date =>
+  iso instanceof Date ? iso : new Date(iso);
 
 /** Formats an ISO date as "Mon, 5 Jan". */
 export function formatLessonDate(iso: string | Date): string {
-  return new Date(iso).toLocaleDateString("en-AU", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  });
+  return formatDateFns(toDate(iso), "EEE, d MMM");
 }
 
-/** Formats an ISO date as "5:30 pm". */
+/** Formats an ISO date as "5:30 PM". */
 export function formatLessonTime(iso: string | Date): string {
-  return new Date(iso).toLocaleTimeString("en-AU", {
-    hour: "numeric",
-    minute: "2-digit",
-  });
+  return formatDateFns(toDate(iso), "h:mm a");
+}
+
+/** Formats an ISO date as "Mon, 5 Jan, 4:30 PM" (date + time combined). */
+export function formatLessonDateTime(iso: string | Date): string {
+  return formatDateFns(toDate(iso), "EEE, d MMM, h:mm a");
 }

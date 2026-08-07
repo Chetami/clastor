@@ -25,9 +25,8 @@ import {
   generateMeetLinkRequest,
   getGoogleAuthUrl,
 } from "@/features/schedule/api/requests";
-import { lessonEndDate } from "@/features/schedule/lesson-utils";
+import { lessonEndDate, formatLessonDateTime, formatLessonTime } from "@/features/schedule/lesson-utils";
 import { DetailRow } from "./ui";
-import { formatDateTime, formatTime } from "./format";
 
 type UpdateLessonMutation = UseMutationResult<
   LessonResponse,
@@ -114,12 +113,12 @@ export function LessonDetailsCard({
         <DetailRow
           icon={<Calendar className="h-4 w-4" />}
           label="When"
-          value={formatDateTime(lesson.startDateTime)}
+          value={formatLessonDateTime(lesson.startDateTime)}
         />
         <DetailRow
           icon={<Clock className="h-4 w-4" />}
           label="Duration"
-          value={`${formatTime(lesson.startDateTime)} – ${formatTime(
+          value={`${formatLessonTime(lesson.startDateTime)} – ${formatLessonTime(
             end.toISOString(),
           )} (${lesson.durationMinutes} min)`}
         />
