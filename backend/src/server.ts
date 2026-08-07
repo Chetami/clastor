@@ -1,6 +1,6 @@
+import "./env";
 import express from "express";
 import cors from "cors";
-import dotenv from "dotenv";
 import authRoutes from "./routes/authRoutes";
 import googleAuthRoutes from "./routes/googleAuthRoutes";
 import studentRoutes from "./routes/studentRoutes";
@@ -21,9 +21,6 @@ import { ApiError } from "@examify-tms/interfaces";
 import { ZodError } from "zod";
 import { AppError } from "./utils/AppError";
 import { formatZodError } from "./middleware/validateRequest";
-
-// Load environment variables
-dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;

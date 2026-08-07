@@ -96,7 +96,10 @@ export function generateRefreshToken(
  */
 export function verifyRefreshToken(token: string): RefreshTokenPayload | null {
   try {
-    const decoded = jwt.verify(token, REFRESH_TOKEN_SECRET) as RefreshTokenPayload;
+    const decoded = jwt.verify(
+      token,
+      REFRESH_TOKEN_SECRET,
+    ) as RefreshTokenPayload;
     if (!decoded.uid || !decoded.familyId || !decoded.jti) return null;
     return decoded;
   } catch {
@@ -189,7 +192,7 @@ export interface RsvpTokenPayload {
  * check that `version` matches the lesson's current `rsvpTokenVersion`.
  */
 export function verifyRsvpToken(
-  token: string | undefined
+  token: string | undefined,
 ): RsvpTokenPayload | null {
   if (!token) return null;
   try {
