@@ -14,6 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import type { LessonResponse } from "@examify-tms/interfaces";
 import {
+  deriveLessonStatus,
   useGetStudent,
   useListLessons,
   useUserCurrency,
@@ -227,9 +228,8 @@ function NavBar({
 
 function LessonMiniRow({ lesson }: { lesson: LessonResponse }) {
   const cancelled =
-    lesson.isCancelled ||
-    lesson.attendanceStatus === "tutor_cancelled" ||
-    lesson.attendanceStatus === "tutor_cancelled_makeup_issued";
+    deriveLessonStatus(lesson.attendanceStatus, lesson.isCancelled) ===
+    "cancelled";
 
   return (
     <View style={styles.lessonRow}>

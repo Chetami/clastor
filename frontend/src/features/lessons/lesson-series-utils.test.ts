@@ -98,6 +98,44 @@ describe("lessonIssues", () => {
     ).toEqual([]);
   });
 
+  it("does NOT flag unpaid for a credited absence with no invoice", () => {
+    // A lesson where a make-up credit was issued is never billed, so it must
+    // not surface a "Create invoice" nudge even though no invoice exists.
+    expect(
+      lessonIssues(
+        lesson({
+          attendanceStatus: "absent_makeup_issued",
+          invoiceId: null,
+          isPaid: false,
+        }),
+      ),
+    ).toEqual([]);
+  });
+
+  it("does NOT flag unpaid for a tutor-cancelled credited lesson", () => {
+    expect(
+      lessonIssues(
+        lesson({
+          attendanceStatus: "tutor_cancelled_makeup_issued",
+          invoiceId: null,
+          isPaid: false,
+        }),
+      ),
+    ).toEqual([]);
+  });
+
+  it("still flags unpaid for a non-credited absence", () => {
+    expect(
+      lessonIssues(
+        lesson({
+          attendanceStatus: "absent_no_makeup",
+          invoiceId: null,
+          isPaid: false,
+        }),
+      ),
+    ).toEqual([{ kind: "unpaid", label: "Unpaid" }]);
+  });
+
   it("surfaces both issues when attendance is unrecorded and it is uninvoiced", () => {
     expect(
       lessonIssues(

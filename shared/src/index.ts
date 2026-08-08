@@ -59,6 +59,7 @@ export * from "./features/schedule/working-hours";
 
 // ---- Feature: lessons (domain utils; schedule owns the API hooks above) ----
 export * from "./features/lessons/lesson-utils";
+export * from "./features/lessons/lesson-series-utils";
 
 // ---- Feature: dashboard ----
 export * from "./features/dashboard/api";

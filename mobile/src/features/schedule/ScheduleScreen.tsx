@@ -12,7 +12,11 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import type { LessonResponse } from "@examify-tms/interfaces";
-import { useListLessons, useListStudents } from "@examify-tms/shared";
+import {
+  deriveLessonStatus,
+  useListLessons,
+  useListStudents,
+} from "@examify-tms/shared";
 import { colors, spacing } from "@/lib/theme";
 import {
   ACCEPTANCE_LABELS,
@@ -175,11 +179,7 @@ function acceptanceDotColor(acceptance: string): string {
 }
 
 function deriveCancelled(lesson: LessonResponse): boolean {
-  if (lesson.isCancelled) return true;
-  return (
-    lesson.attendanceStatus === "tutor_cancelled" ||
-    lesson.attendanceStatus === "tutor_cancelled_makeup_issued"
-  );
+  return deriveLessonStatus(lesson.attendanceStatus, lesson.isCancelled) === "cancelled";
 }
 
 const styles = StyleSheet.create({
