@@ -628,7 +628,6 @@ export async function rescheduleSeriesFromOccurrence(
 
     const tz = series.timezone;
     const firestore = getFirebaseFirestore();
-    const nowMs = Date.now();
     const now = admin.firestore.Timestamp.now();
 
     // Derive the old slot's day-of-week and the new slot's day + time, all in
@@ -654,19 +653,22 @@ export async function rescheduleSeriesFromOccurrence(
     const newDuration = durationMinutesOverride ?? series.durationMinutes;
 
     // Load all lessons, identify future non-exception non-cancelled ones to
-    // delete (regenerate them with the new time).
+    // delete (regenerate them with the new time). Only lessons from the
+    // rescheduled occurrence onwards are affected — lessons before oldStart
+    // are preserved as-is.
     const snapshot = await firestore
       .collection("lessons")
       .where("seriesId", "==", seriesId)
       .get();
 
+    const oldStartMs = oldStart.getTime();
     const toRemove = snapshot.docs.filter((d) => {
       const data = d.data();
       if (data.isCancelled) return false;
       if (data.isException) return false;
       const start = data.startDateTime;
       if (!start) return false;
-      return start.toDate().getTime() >= nowMs;
+      return start.toDate().getTime() >= oldStartMs;
     });
 
     const removed = toRemove.map((d) => mapLesson(d.id, d.data()));
@@ -678,10 +680,12 @@ export async function rescheduleSeriesFromOccurrence(
       await batch.commit();
     }
 
-    // Regenerate from the current week with the updated rule.
-    const todayStr = formatInTimeZone(new Date(), tz, "yyyy-MM-dd");
+    // Regenerate from the rescheduled occurrence's date with the updated rule.
+    // Using oldStart (not "today") ensures lessons between today and the
+    // rescheduled occurrence are preserved, not regenerated.
+    const rescheduleStartStr = formatInTimeZone(oldStart, tz, "yyyy-MM-dd");
     const occurrences = generateOccurrences({
-      startDate: todayStr,
+      startDate: rescheduleStartStr,
       timezone: tz,
       intervalWeeks: series.intervalWeeks,
       slots: updatedSlots,
