@@ -568,10 +568,11 @@ export function previewRescheduledSlots(
  */
 export async function deleteSeriesAndFuture(
   seriesId: string,
+  fromDate?: Date,
 ): Promise<Lesson[]> {
   try {
     const firestore = getFirebaseFirestore();
-    const nowMs = Date.now();
+    const cutoffMs = fromDate ? fromDate.getTime() : Date.now();
 
     const snapshot = await firestore
       .collection("lessons")
@@ -581,7 +582,7 @@ export async function deleteSeriesAndFuture(
     const futureDocs = snapshot.docs.filter((d) => {
       const start = d.data()?.startDateTime;
       if (!start) return false;
-      return start.toDate().getTime() >= nowMs;
+      return start.toDate().getTime() >= cutoffMs;
     });
 
     const removed = futureDocs.map((d) => mapLesson(d.id, d.data()));

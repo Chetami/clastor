@@ -691,7 +691,10 @@ export async function cancelLesson(
         return;
       }
 
-      const removed = await deleteSeriesAndFuture(lesson.seriesId);
+      const removed = await deleteSeriesAndFuture(
+        lesson.seriesId,
+        new Date(lesson.startDateTime as any),
+      );
 
       // Best-effort calendar cleanup.
       try {
@@ -1404,7 +1407,10 @@ export async function previewCancelLesson(
       const [student, tutor, upcoming] = await Promise.all([
         getStudentByIdFromFirestore(lesson.studentId),
         getUserFromFirestore(lesson.tutorId),
-        listLessonsBySeriesFromFirestore(lesson.seriesId, { futureOnly: true }),
+        listLessonsBySeriesFromFirestore(lesson.seriesId, {
+          futureOnly: true,
+          fromDate: new Date(lesson.startDateTime as any),
+        }),
       ]);
       if (!student?.email) {
         res.status(400).json({ message: "This student has no email address on file" });

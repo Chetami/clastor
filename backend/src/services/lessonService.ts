@@ -588,7 +588,7 @@ export async function markStudentNotifiedInFirestore(
  */
 export async function listLessonsBySeriesFromFirestore(
   seriesId: string,
-  opts: { futureOnly?: boolean } = {}
+  opts: { futureOnly?: boolean; fromDate?: Date } = {}
 ): Promise<Lesson[]> {
   try {
     const firestore = getFirebaseFirestore();
@@ -597,14 +597,14 @@ export async function listLessonsBySeriesFromFirestore(
       .where("seriesId", "==", seriesId)
       .get();
 
-    const nowMs = Date.now();
+    const cutoffMs = opts.fromDate ? opts.fromDate.getTime() : Date.now();
     const lessons: Lesson[] = [];
     snapshot.forEach((doc) => {
       const lesson = mapLesson(doc.id, doc.data());
       if (opts.futureOnly) {
         if (lesson.isCancelled) return;
         const start = new Date(lesson.startDateTime as any).getTime();
-        if (start < nowMs) return;
+        if (start < cutoffMs) return;
       }
       lessons.push(lesson);
     });
