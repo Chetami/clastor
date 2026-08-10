@@ -91,6 +91,14 @@ properties:
     description: >-
       Controls whether outbound emails are reviewed before sending. Null means
       review is enabled (the default).
+  signupSurvey:
+    allOf:
+      - $ref: './SignupSurvey.yaml'
+    description: >-
+      Optional pre-signup qualifier survey (intent, student count, tutoring
+      format, current tools). Captured before account creation and persisted
+      at registration so onboarding and messaging can be personalised. Null
+      when the user skipped the survey or signed up before it existed.
 description: |-
   User interface
   Represents a user in the Firestore users collection

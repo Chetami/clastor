@@ -196,6 +196,7 @@ describe("register controller", () => {
       null,
       undefined,
       "Australia/Sydney",
+      null,
     );
     expect(tokenService.issueNewTokenPair).toHaveBeenCalledWith(dbUser);
   });
@@ -234,7 +235,7 @@ describe("register controller", () => {
       res,
     );
 
-    // createUserInFirestore(id, email, name, role, avatarUrl, currency, timezone)
+    // createUserInFirestore(id, email, name, role, avatarUrl, currency, timezone, signupSurvey)
     expect(userService.createUserInFirestore).toHaveBeenCalledWith(
       "fb-uid-1",
       "tutor@example.com",
@@ -242,6 +243,7 @@ describe("register controller", () => {
       "tutor",
       null,
       undefined,
+      null,
       null,
     );
   });
@@ -267,6 +269,7 @@ describe("googleAuth controller", () => {
       "https://example.com/me.png",
       undefined,
       "Australia/Sydney",
+      null,
     );
     expect(tokenService.issueNewTokenPair).toHaveBeenCalledWith(dbUser);
   });
@@ -299,6 +302,7 @@ describe("googleAuth controller", () => {
       "tutor",
       "https://example.com/me.png",
       undefined,
+      null,
       null,
     );
   });

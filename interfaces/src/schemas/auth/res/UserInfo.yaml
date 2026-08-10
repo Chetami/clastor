@@ -80,6 +80,13 @@ properties:
     description: >-
       Controls whether outbound emails are reviewed before sending. Null means
       review is enabled (the default).
+  signupSurvey:
+    allOf:
+      - $ref: '../../users/SignupSurvey.yaml'
+    description: >-
+      Optional pre-signup qualifier survey captured on the landing flow.
+      Present in the auth response so the client can personalise onboarding.
+      Null when the user skipped the survey or signed up before it existed.
 description: |-
   User info response object
   Basic user information returned by authentication endpoints

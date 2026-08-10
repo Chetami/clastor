@@ -1,0 +1,13 @@
+type: object
+required:
+  - joined
+properties:
+  joined:
+    type: boolean
+    description: >-
+      True when the entry was newly created. False when the email was already
+      on the waitlist (the existing entry is updated with the latest survey).
+    example: true
+description: |-
+  Join waitlist response body
+  Returned from backend /api/auth/waitlist endpoint.

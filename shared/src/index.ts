@@ -50,8 +50,12 @@ export {
   verifyRequest,
   refreshRequest,
   revokeRefreshToken,
+  joinWaitlistRequest,
   useVerifyToken,
 } from "./features/auth/api";
+
+// ---- Feature: signup (pre-signup qualifier survey) ----
+export * from "./features/signup/signup-utils";
 
 // ---- Feature: schedule ----
 export * from "./features/schedule/api";

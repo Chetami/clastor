@@ -1,7 +1,9 @@
 import { api, SKIP_AUTH_REFRESH } from "../../../lib/api";
 import type {
+  JoinWaitlistResponse,
   LoginResponse,
   RefreshTokenResponse,
+  SignupSurvey,
   UserInfo,
 } from "@examify-tms/interfaces";
 
@@ -124,4 +126,22 @@ export async function revokeRefreshToken(
     { refreshToken },
     { headers: { [SKIP_AUTH_REFRESH]: "true" } },
   );
+}
+
+/**
+ * Join the organisation waitlist (pre-signup, public — no Firebase token).
+ * Stores the email + qualifier survey in a Firestore `waitlist` collection
+ * for launch outreach. Returns `{ joined: boolean }` — `joined` is false when
+ * the email was already on the list (the existing entry is updated).
+ */
+export async function joinWaitlistRequest(
+  email: string,
+  signupSurvey?: SignupSurvey,
+): Promise<JoinWaitlistResponse> {
+  const response = await api.post<JoinWaitlistResponse>(
+    "/api/auth/waitlist",
+    { email, signupSurvey: signupSurvey ?? null },
+    { headers: { [SKIP_AUTH_REFRESH]: "true" } },
+  );
+  return response.data;
 }

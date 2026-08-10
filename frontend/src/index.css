@@ -22,6 +22,28 @@
   animation: view-in 0.3s ease-out both;
 }
 
+/* Pre-signup qualifier — step transitions. A confident, slightly springy
+   slide-up + fade so each question feels like it eases into place. */
+@keyframes survey-step-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.survey-step-in {
+  animation: survey-step-in 0.34s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .survey-step-in {
+    animation: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-card-in {
     animation: none;

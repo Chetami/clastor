@@ -5,9 +5,45 @@
 import { z } from "zod";
 import { feedbackTypeSchema, schemaUtils } from "./common";
 
+export const signupSurveySchema = z
+  .object({
+    intent: z
+      .enum(["independent_tutor", "small_business", "exploring"])
+      .nullish(),
+    studentCountBucket: z
+      .enum([
+        "1-5",
+        "6-15",
+        "16-30",
+        "30+",
+        "1-15",
+        "16-50",
+        "51-100",
+        "101-250",
+        "250-500",
+        "500+",
+      ])
+      .nullish(),
+    tutoringFormat: z
+      .enum(["one_on_one", "group", "both"])
+      .nullish(),
+    tutorCountBucket: z
+      .enum(["1-5", "6-10", "11-20", "21-50", "50+"])
+      .nullish(),
+    currentTools: z.array(z.string()).max(20).default([]),
+  })
+  .strict()
+  .nullish();
+
+export const joinWaitlistSchema = z.object({
+  email: z.string().trim().email("A valid email is required").max(254),
+  signupSurvey: signupSurveySchema,
+});
+
 export const registerSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(100, "Name must be 100 characters or less"),
   timezone: z.string().optional(),
+  signupSurvey: signupSurveySchema,
 });
 
 export const refreshTokenSchema = z.object({

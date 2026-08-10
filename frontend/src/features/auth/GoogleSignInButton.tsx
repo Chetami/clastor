@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { useGoogleSignIn } from "@/features/auth/api";
-import type { LoginResponse } from "@examify-tms/interfaces";
+import type { LoginResponse, SignupSurvey } from "@examify-tms/interfaces";
 
 function GoogleIcon({ className }: { className?: string }) {
   return (
@@ -33,18 +33,20 @@ function GoogleIcon({ className }: { className?: string }) {
 
 type GoogleSignInButtonProps = {
   label?: string;
+  signupSurvey?: SignupSurvey;
   onSuccess?: (data: LoginResponse) => void;
 };
 
 export function GoogleSignInButton({
   label = "Continue with Google",
+  signupSurvey,
   onSuccess,
 }: GoogleSignInButtonProps) {
   const googleSignIn = useGoogleSignIn();
 
   async function handleClick() {
     try {
-      const data = await googleSignIn.mutateAsync();
+      const data = await googleSignIn.mutateAsync(signupSurvey);
       onSuccess?.(data);
     } catch {
       // error is surfaced via mutation state

@@ -1,6 +1,6 @@
-import { useMemo, useState, type FormEvent } from "react";
+import { useMemo, useRef, useState, type FormEvent } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { CircleAlert } from "lucide-react";
+import { CircleAlert, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,6 +18,8 @@ import {
 import { useRegister } from "@/features/auth/api";
 import { GoogleSignInButton } from "@/features/auth/GoogleSignInButton";
 import { BrandMark } from "@/features/auth/BrandMark";
+import { loadSurvey, clearSurvey } from "./survey-storage";
+import type { SignupSurvey } from "@examify-tms/interfaces";
 
 const STRENGTH_LEVELS = [
   { label: "Weak", bar: "bg-red-500", text: "text-red-500" },
@@ -53,6 +55,11 @@ export default function SignUpPage() {
 
   const register = useRegister();
 
+  // Pre-signup survey answers captured on the qualifier flow (if any). Read
+  // once on mount and forwarded to the register endpoint so they land on the
+  // user document.
+  const surveyRef = useRef<SignupSurvey | null>(loadSurvey());
+
   const strength = useMemo(() => scorePassword(password), [password]);
   const strengthLevel = password ? STRENGTH_LEVELS[strength - 1] : null;
 
@@ -71,7 +78,13 @@ export default function SignUpPage() {
     }
 
     try {
-      const data = await register.mutateAsync({ name, email, password });
+      const data = await register.mutateAsync({
+        name,
+        email,
+        password,
+        signupSurvey: surveyRef.current,
+      });
+      clearSurvey();
       navigate(data.user.onboardingComplete ? "/dashboard" : "/onboarding");
     } catch {
       // error is surfaced via mutation state
@@ -95,11 +108,13 @@ export default function SignUpPage() {
           <div className="space-y-4">
             <GoogleSignInButton
               label="Sign up with Google"
-              onSuccess={(data) =>
+              signupSurvey={surveyRef.current}
+              onSuccess={(data) => {
+                clearSurvey();
                 navigate(
                   data.user.onboardingComplete ? "/dashboard" : "/onboarding",
-                )
-              }
+                );
+              }}
             />
 
             <div className="relative">
@@ -224,7 +239,7 @@ export default function SignUpPage() {
           </div>
         </CardContent>
 
-        <CardFooter className="flex justify-center">
+        <CardFooter className="flex flex-col items-center gap-3">
           <p className="text-sm text-muted-foreground">
             Already have an account?{" "}
             <Link
@@ -234,6 +249,13 @@ export default function SignUpPage() {
               Sign in
             </Link>
           </p>
+          <Link
+            to="/signup"
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="size-3" />
+            Back to survey
+          </Link>
         </CardFooter>
       </Card>
     </div>

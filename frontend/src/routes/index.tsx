@@ -1,12 +1,14 @@
-import { createBrowserRouter, Navigate } from "react-router-dom";
+import { createBrowserRouter } from "react-router-dom";
 import { RootLayout } from "./__root";
 import { ProtectedRoute } from "./protected";
+import { IndexRedirect } from "./index-redirect";
 import { DashboardRoute } from "./dashboard-route";
 import { AdminRoute } from "./admin-route";
 import { TutorRoute } from "./tutor-route";
 import { NotFound } from "./not-found";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import LoginPage from "@/features/auth/login/LoginPage";
+import SignupSurveyPage from "@/features/auth/signup/SignupSurveyPage";
 import SignUpPage from "@/features/auth/signup/SignUpPage";
 import Students from "@/features/students/Students";
 import StudentDetail from "@/features/students/StudentDetail";
@@ -35,6 +37,7 @@ export const router = createBrowserRouter([
   {
     element: <RootLayout />,
     children: [
+      { index: true, element: <IndexRedirect /> },
       {
         element: <ProtectedRoute />,
         children: [
@@ -50,7 +53,6 @@ export const router = createBrowserRouter([
             {
               element: <DashboardLayout />,
               children: [
-                { index: true, element: <Navigate to="/dashboard" replace /> },
                 { path: "dashboard", element: <DashboardRoute /> },
                 { path: "account", element: <Account /> },
                 {
@@ -108,6 +110,10 @@ export const router = createBrowserRouter([
       },
       {
         path: "signup",
+        element: <SignupSurveyPage />,
+      },
+      {
+        path: "signup/account",
         element: <SignUpPage />,
       },
       {

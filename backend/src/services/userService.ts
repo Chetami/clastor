@@ -9,6 +9,7 @@ import {
   BankDetails,
   InvoiceSettings,
   EmailReviewSettings,
+  SignupSurvey,
 } from "@examify-tms/interfaces";
 import { generateToken } from "../utils/jwt";
 import { BadRequestError } from "../utils/AppError";
@@ -93,6 +94,7 @@ export function toUserInfo(user: User): UserInfo {
     tourSeen: user.tourSeen === true,
     invoiceSettings: user.invoiceSettings ?? null,
     emailReviewSettings: user.emailReviewSettings ?? null,
+    signupSurvey: user.signupSurvey ?? null,
   };
 }
 
@@ -256,6 +258,64 @@ export function normalizeEmailReviewSettings(
 }
 
 /**
+ * Coerce a raw pre-signup survey payload into a clean SignupSurvey object (or
+ * null). Unknown enum values are dropped to null; non-string currentTools
+ * entries are stripped. Returns null when the whole object is absent so we
+ * don't persist an empty shell for users who skipped the qualifier flow.
+ */
+const SURVEY_INTENTS = new Set([
+  "independent_tutor",
+  "small_business",
+  "exploring",
+]);
+const SURVEY_BUCKETS = new Set([
+  "1-5",
+  "6-15",
+  "16-30",
+  "30+",
+  "1-15",
+  "16-50",
+  "51-100",
+  "101-250",
+  "250-500",
+  "500+",
+]);
+const SURVEY_FORMATS = new Set(["one_on_one", "group", "both"]);
+const SURVEY_TUTOR_BUCKETS = new Set(["1-5", "6-10", "11-20", "21-50", "50+"]);
+
+type Survey = NonNullable<SignupSurvey>;
+
+export function normalizeSignupSurvey(raw: unknown): SignupSurvey {
+  if (raw == null || typeof raw !== "object") return null;
+  const r = raw as Record<string, unknown>;
+  const intent =
+    typeof r.intent === "string" && SURVEY_INTENTS.has(r.intent)
+      ? (r.intent as Survey["intent"])
+      : null;
+  const studentCountBucket =
+    typeof r.studentCountBucket === "string" &&
+    SURVEY_BUCKETS.has(r.studentCountBucket)
+      ? (r.studentCountBucket as Survey["studentCountBucket"])
+      : null;
+  const tutoringFormat =
+    typeof r.tutoringFormat === "string" && SURVEY_FORMATS.has(r.tutoringFormat)
+      ? (r.tutoringFormat as Survey["tutoringFormat"])
+      : null;
+  const tutorCountBucket =
+    typeof r.tutorCountBucket === "string" &&
+    SURVEY_TUTOR_BUCKETS.has(r.tutorCountBucket)
+      ? (r.tutorCountBucket as Survey["tutorCountBucket"])
+      : null;
+  const currentTools = Array.isArray(r.currentTools)
+    ? r.currentTools.filter((t): t is string => typeof t === "string")
+    : [];
+  if (!intent && !studentCountBucket && !tutoringFormat && !tutorCountBucket && currentTools.length === 0) {
+    return null;
+  }
+  return { intent, studentCountBucket, tutoringFormat, tutorCountBucket, currentTools };
+}
+
+/**
  * Get user document from Firestore
  * @param uid - User UID
  * @returns User object from Firestore
@@ -290,6 +350,7 @@ export async function getUserFromFirestore(uid: string): Promise<User> {
       emailReviewSettings: normalizeEmailReviewSettings(
         userData!.emailReviewSettings,
       ),
+      signupSurvey: normalizeSignupSurvey(userData!.signupSurvey),
       createdAt: userData!.createdAt.toDate(),
       updatedAt: userData!.updatedAt.toDate(),
       lastActive: userData!.lastActive?.toDate(),
@@ -685,6 +746,7 @@ export async function markTourSeen(uid: string): Promise<User> {
  * @param avatarUrl - Optional profile picture URL
  * @param currency - ISO 4217 currency code (defaults to AUD)
  * @param timezone - Optional IANA timezone identifier detected at sign-up
+ * @param signupSurvey - Optional pre-signup qualifier survey answers
  * @returns Created user object
  */
 export async function createUserInFirestore(
@@ -695,12 +757,14 @@ export async function createUserInFirestore(
   avatarUrl: string | null = null,
   currency: string = DEFAULT_CURRENCY,
   timezone: string | null = null,
+  signupSurvey: SignupSurvey = null,
 ): Promise<User> {
   try {
     const firestore = getFirebaseFirestore();
     const now = admin.firestore.Timestamp.now();
     const normalizedCurrency = normalizeCurrency(currency);
     const normalizedTimezone = normalizeTimezone(timezone);
+    const normalizedSurvey = normalizeSignupSurvey(signupSurvey);
 
     const userData: Record<string, unknown> = {
       name,
@@ -717,6 +781,7 @@ export async function createUserInFirestore(
       lastActive: now,
     };
     if (normalizedTimezone) userData.timezone = normalizedTimezone;
+    if (normalizedSurvey) userData.signupSurvey = normalizedSurvey;
 
     await firestore.collection('users').doc(id).set(userData);
 
@@ -734,6 +799,8 @@ export async function createUserInFirestore(
       onboardingComplete: false,
       tourSeen: false,
       invoiceSettings: null,
+      emailReviewSettings: null,
+      signupSurvey: normalizedSurvey,
       createdAt: now.toDate() as any,
       updatedAt: now.toDate() as any,
       lastActive: now.toDate() as any,

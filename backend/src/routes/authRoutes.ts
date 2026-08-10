@@ -1,8 +1,8 @@
 import { Router } from "express";
-import { login, verifyToken, register, googleAuth, refresh, logout } from "../controllers/authController";
+import { login, verifyToken, register, googleAuth, refresh, logout, joinWaitlist } from "../controllers/authController";
 import { authenticateJWT } from "../middleware/auth";
 import { validateRequest } from "../middleware/validateRequest";
-import { registerSchema, refreshTokenSchema } from "../schemas";
+import { registerSchema, refreshTokenSchema, joinWaitlistSchema } from "../schemas";
 
 const router = Router();
 
@@ -44,5 +44,12 @@ router.post("/refresh", validateRequest({ body: refreshTokenSchema }), refresh);
  * Revoke the presented refresh token server-side. Always succeeds (200).
  */
 router.post("/logout", logout);
+
+/**
+ * POST /api/auth/waitlist
+ * Pre-signup waitlist join for organisations (org features not live yet).
+ * Public — no auth required; stores email + survey in the waitlist collection.
+ */
+router.post("/waitlist", validateRequest({ body: joinWaitlistSchema }), joinWaitlist);
 
 export default router;

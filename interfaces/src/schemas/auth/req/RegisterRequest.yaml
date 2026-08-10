@@ -15,6 +15,14 @@ properties:
       calendar invites show local times. Optional; null/omitted means unset
       (the tutor can set it later in Settings).
     example: Australia/Sydney
+  signupSurvey:
+    allOf:
+      - $ref: '../../users/SignupSurvey.yaml'
+    description: >-
+      Optional pre-signup qualifier survey answers (intent, student count,
+      tutoring format, current tools). Captured on the landing flow and
+      forwarded here so they land on the user document at registration.
+      Omitted/null when the user skipped the survey.
 description: |-
   Register request body
   Sent from frontend to backend /api/auth/register endpoint

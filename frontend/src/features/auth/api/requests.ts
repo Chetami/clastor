@@ -14,7 +14,7 @@ import {
   verifyRequest,
   refreshRequest,
 } from "@examify-tms/shared";
-import type { LoginResponse, RefreshTokenResponse } from "@examify-tms/interfaces";
+import type { LoginResponse, RefreshTokenResponse, SignupSurvey } from "@examify-tms/interfaces";
 
 // Re-export the platform-agnostic auth requests so existing imports
 // (`@/features/auth/api` barrel) keep resolving without touching call sites.
@@ -78,6 +78,7 @@ export async function registerRequest(
   name: string,
   email: string,
   password: string,
+  signupSurvey?: SignupSurvey,
 ): Promise<LoginResponse> {
   let firebaseUserCredential: { user: { getIdToken: () => Promise<string>; delete: () => Promise<void> } } | null = null;
 
@@ -96,6 +97,7 @@ export async function registerRequest(
     return registerFirebaseToken(firebaseToken, {
       name,
       timezone: detectBrowserTimezone(),
+      signupSurvey: signupSurvey ?? null,
     });
   } catch (error) {
     const code = (error as { code?: string }).code ?? "";
@@ -130,7 +132,9 @@ export async function logoutRequest(refreshToken?: string | null): Promise<void>
   await firebaseSignOut(firebaseAuth);
 }
 
-export async function googleSignInRequest(): Promise<LoginResponse> {
+export async function googleSignInRequest(
+  signupSurvey?: SignupSurvey,
+): Promise<LoginResponse> {
   try {
     const firebaseAuth = getFirebaseAuth();
     const provider = new GoogleAuthProvider();
@@ -140,6 +144,7 @@ export async function googleSignInRequest(): Promise<LoginResponse> {
     // creates the Firestore document on first Google sign-in.
     return exchangeGoogleFirebaseToken(firebaseToken, {
       timezone: detectBrowserTimezone(),
+      signupSurvey: signupSurvey ?? null,
     });
   } catch (error) {
     const code = (error as { code?: string }).code ?? "";

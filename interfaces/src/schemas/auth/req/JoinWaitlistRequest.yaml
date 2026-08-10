@@ -1,0 +1,21 @@
+type: object
+required:
+  - email
+properties:
+  email:
+    type: string
+    format: email
+    description: Email address to notify when organisation features launch.
+    example: org@example.com
+  signupSurvey:
+    allOf:
+      - $ref: '../../users/SignupSurvey.yaml'
+    description: >-
+      The qualifier survey answers captured before the waitlist join, so the
+      team has context (intent, student/tutor counts, current tools) when
+      prioritising outreach. Null when the user skipped the survey.
+description: |-
+  Join waitlist request body
+  Sent from the pre-signup survey when the user selected the organisation
+  intent (organisation features are not live yet). Stores the email + survey
+  in a Firestore `waitlist` collection for launch outreach.

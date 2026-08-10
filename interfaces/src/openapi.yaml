@@ -26,6 +26,8 @@ components:
       $ref: './schemas/auth/req/LoginRequest.yaml'
     RegisterRequest:
       $ref: './schemas/auth/req/RegisterRequest.yaml'
+    JoinWaitlistRequest:
+      $ref: './schemas/auth/req/JoinWaitlistRequest.yaml'
     VerifyTokenRequest:
       $ref: './schemas/auth/req/VerifyTokenRequest.yaml'
     RefreshTokenRequest:
@@ -35,6 +37,8 @@ components:
       $ref: './schemas/auth/res/LoginResponse.yaml'
     RegisterResponse:
       $ref: './schemas/auth/res/RegisterResponse.yaml'
+    JoinWaitlistResponse:
+      $ref: './schemas/auth/res/JoinWaitlistResponse.yaml'
     VerifyTokenResponse:
       $ref: './schemas/auth/res/VerifyTokenResponse.yaml'
     RefreshTokenResponse:
@@ -68,6 +72,8 @@ components:
       $ref: './schemas/users/InvoiceSettings.yaml'
     EmailReviewSettings:
       $ref: './schemas/users/EmailReviewSettings.yaml'
+    SignupSurvey:
+      $ref: './schemas/users/SignupSurvey.yaml'
     # Student Enums
     RateType:
       $ref: './schemas/students/RateType.yaml'

@@ -1,0 +1,69 @@
+type: object
+nullable: true
+description: >-
+  Optional pre-signup survey captured on the landing/qualifier flow. Stored
+  on the user document at registration so the app can personalise onboarding
+  and so the team has aggregate segmentation data. Null when the user signed
+  up before the survey existed or skipped it (e.g. direct Google sign-in).
+properties:
+  intent:
+    type: string
+    nullable: true
+    enum:
+      - independent_tutor
+      - small_business
+      - exploring
+    description: What the user is signing up to do with Clastor.
+    example: independent_tutor
+  studentCountBucket:
+    type: string
+    nullable: true
+    enum:
+      - '1-5'
+      - '6-15'
+      - '16-30'
+      - '30+'
+      - '1-15'
+      - '16-50'
+      - '51-100'
+      - '101-250'
+      - '250-500'
+      - '500+'
+    description: >-
+      Self-reported number of active students, bucketed. The 1–5/6–15/16–30/30+
+      buckets are shown to independent tutors; the wider 1–15 … 500+ buckets
+      are shown to organisations (which tend to have far more students).
+    example: '6-15'
+  tutoringFormat:
+    type: string
+    nullable: true
+    enum:
+      - one_on_one
+      - group
+      - both
+    description: >-
+      Whether the tutor teaches one-on-one, group classes, or both.
+    example: one_on_one
+  tutorCountBucket:
+    type: string
+    nullable: true
+    enum:
+      - '1-5'
+      - '6-10'
+      - '11-20'
+      - '21-50'
+      - '50+'
+    description: >-
+      Self-reported number of tutors in the organisation, bucketed. Only
+      collected when the signup intent is `small_business`; null otherwise.
+    example: '6-10'
+  currentTools:
+    type: array
+    description: >-
+      How the tutor manages their tutoring today (e.g. spreadsheets, paper,
+      Google Calendar, Stripe, another app). Free-form analytics signal; empty
+      array means unanswered.
+    items:
+      type: string
+    default: []
+    example: [spreadsheets, paper]

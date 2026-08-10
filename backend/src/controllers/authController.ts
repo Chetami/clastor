@@ -1,9 +1,10 @@
 import { Request, Response } from "express";
 import { verifyFirebaseToken } from "../services/authService";
 import { getUserFromFirestore, updateLastActive, createUserInFirestore, toUserInfo } from "../services/userService";
+import { addToWaitlist } from "../services/waitlistService";
 import { issueNewTokenPair, rotateRefreshToken, revokeRefreshToken } from "../services/tokenService";
 import { LoginResponse, UserInfo, ApiError } from "@examify-tms/interfaces";
-import { RegisterRequest, RefreshTokenResponse } from "@examify-tms/interfaces";
+import { RegisterRequest, RefreshTokenResponse, JoinWaitlistRequest, JoinWaitlistResponse } from "@examify-tms/interfaces";
 
 /**
  * Login controller
@@ -109,6 +110,7 @@ export async function googleAuth(
         avatarUrl,
         undefined,
         tz,
+        req.body?.signupSurvey ?? null,
       );
     }
 
@@ -164,6 +166,7 @@ export async function register(
       null,
       undefined,
       typeof req.body.timezone === 'string' ? req.body.timezone : null,
+      req.body.signupSurvey ?? null,
     );
 
     // 5. Generate access + refresh token pair
@@ -216,5 +219,30 @@ export async function logout(
   res: Response<{ message: string }>,
 ): Promise<void> {
   await revokeRefreshToken(req.body?.refreshToken);
-  res.status(200).json({ message: 'Logged out' });
+  res.status(200).json({ message: "Logged out" });
+}
+
+/**
+ * Join waitlist controller
+ * Pre-signup endpoint for organisations (org features not live yet). Stores
+ * the email + qualifier survey in a Firestore `waitlist` collection. Public
+ * — no Firebase token required.
+ */
+export async function joinWaitlist(
+  req: Request<{}, {}, JoinWaitlistRequest>,
+  res: Response<JoinWaitlistResponse | ApiError>,
+): Promise<void> {
+  try {
+    const email = req.body.email?.trim();
+    if (!email) {
+      res.status(400).json({ message: "A valid email is required" });
+      return;
+    }
+
+    const joined = await addToWaitlist(email, req.body.signupSurvey ?? null);
+    res.status(200).json({ joined });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to join waitlist";
+    res.status(400).json({ message });
+  }
 }
