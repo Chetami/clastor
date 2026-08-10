@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { navItems } from "@/config/nav";
 import { useAuth } from "@/hooks/use-auth";
 import { NavUser } from "./nav-user";
+import { BuyMeACoffeeButton } from "./buy-me-a-coffee-button";
 import { FeedbackDialog } from "@/features/feedback/FeedbackDialog";
 import { useListFeedback } from "@/features/feedback/api";
 
@@ -93,7 +94,7 @@ export function AppSidebar() {
 
         <SidebarFooter>
           <div className="group-data-[collapsible=icon]:hidden">
-            <div className="rounded-lg border bg-muted/50 p-3 text-center">
+            <div className="rounded-lg border bg-white p-3 text-center dark:bg-muted/50">
               <p className="text-sm font-medium">
                 <span className="mr-1">🚀</span>
                 We're in beta
@@ -109,6 +110,7 @@ export function AppSidebar() {
               >
                 Report a bug or give feedback
               </Button>
+              <BuyMeACoffeeButton className="mt-2.5 [&_a]:mx-auto" />
             </div>
           </div>
           <div className="group-data-[collapsible=icon]:flex hidden justify-center">
