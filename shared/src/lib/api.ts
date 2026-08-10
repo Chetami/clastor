@@ -18,9 +18,14 @@ export const api = axios.create({
   },
 });
 
-// Marks a request so the 401-response interceptor won't try to refresh on it
-// (used by the /refresh call itself, to avoid an infinite refresh loop).
-const SKIP_AUTH_REFRESH = "X-Skip-Auth-Refresh";
+// Marks a request so the 401-response interceptor won't try to refresh on it.
+// Used by the /refresh call itself (to avoid an infinite refresh loop) AND by
+// the Firebase-token exchange calls (/login, /google, /register): those carry
+// a Firebase ID token in Authorization, NOT an app JWT, so a 401 from them is a
+// real auth failure — refreshing + retrying would swap the Firebase token for
+// an app JWT and produce misleading errors. Tagging them skips that path and
+// surfaces the backend's actual 401 message to the caller.
+export const SKIP_AUTH_REFRESH = "X-Skip-Auth-Refresh";
 
 api.interceptors.request.use((config) => {
   if (!config.baseURL) {
@@ -59,7 +64,11 @@ async function refreshAccessToken(): Promise<string> {
       { headers: { "Content-Type": "application/json", [SKIP_AUTH_REFRESH]: "true" } },
     );
 
-    const { jwtToken, refreshToken: newRefreshToken } = res.data;
+    const { jwtToken, refreshToken: newRefreshToken, user } = res.data;
+    // Keep the in-memory identity in sync with the server's view of the user
+    // (role/onboarding/profile can change between refreshes; without this the
+    // client would keep a stale UserInfo until the next /verify).
+    if (user) useAuthStore.getState().setUser(user);
     useAuthStore.getState().setTokens(jwtToken, newRefreshToken);
     return jwtToken;
   })().finally(() => {

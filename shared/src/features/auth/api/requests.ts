@@ -1,4 +1,4 @@
-import { api } from "../../../lib/api";
+import { api, SKIP_AUTH_REFRESH } from "../../../lib/api";
 import type {
   LoginResponse,
   RefreshTokenResponse,
@@ -10,7 +10,21 @@ import type {
  * The Firebase sign-in calls that produce the initial ID token live in each
  * app (web: `firebase/auth`, mobile: `@react-native-firebase/auth`) and then
  * hand the token to {@link exchangeFirebaseToken}.
+ *
+ * Every exchange below is tagged with {@link SKIP_AUTH_REFRESH}: these
+ * requests carry a Firebase ID token in Authorization, not an app JWT, so a
+ * 401 is a genuine auth failure (invalid Firebase token / user not found) and
+ * must NOT trigger the api client's transparent refresh+retry (which would
+ * replace the Firebase token with an app JWT and misreport the error).
  */
+
+/** Shared header config for Firebase-token exchange requests. */
+function firebaseExchangeHeaders(firebaseToken: string) {
+  return {
+    Authorization: `Bearer ${firebaseToken}`,
+    [SKIP_AUTH_REFRESH]: "true",
+  };
+}
 
 /**
  * Exchange a Firebase ID token for the app's own JWT + refresh token pair.
@@ -25,7 +39,7 @@ export async function exchangeFirebaseToken(
     "/api/auth/login",
     body,
     {
-      headers: { Authorization: `Bearer ${firebaseToken}` },
+      headers: firebaseExchangeHeaders(firebaseToken),
     },
   );
   return response.data;
@@ -45,7 +59,29 @@ export async function exchangeGoogleFirebaseToken(
     "/api/auth/google",
     body,
     {
-      headers: { Authorization: `Bearer ${firebaseToken}` },
+      headers: firebaseExchangeHeaders(firebaseToken),
+    },
+  );
+  return response.data;
+}
+
+/**
+ * Exchange a Firebase ID token for the app's own JWT + refresh token pair via
+ * the register endpoint. Unlike {@link exchangeFirebaseToken} (which hits
+ * `/api/auth/login` and requires the Firestore user doc to already exist),
+ * this hits `/api/auth/register`, which CREATES the Firestore document from
+ * the provided name/timezone and the decoded Firebase profile. Used by the
+ * sign-up flow for brand-new email/password accounts.
+ */
+export async function registerFirebaseToken(
+  firebaseToken: string,
+  body?: Record<string, unknown>,
+): Promise<LoginResponse> {
+  const response = await api.post<LoginResponse>(
+    "/api/auth/register",
+    body,
+    {
+      headers: firebaseExchangeHeaders(firebaseToken),
     },
   );
   return response.data;
@@ -71,7 +107,7 @@ export async function refreshRequest(
   const response = await api.post<RefreshTokenResponse>(
     "/api/auth/refresh",
     { refreshToken },
-    { headers: { "X-Skip-Auth-Refresh": "true" } },
+    { headers: { [SKIP_AUTH_REFRESH]: "true" } },
   );
   return response.data;
 }
@@ -86,6 +122,6 @@ export async function revokeRefreshToken(
   await api.post(
     "/api/auth/logout",
     { refreshToken },
-    { headers: { "X-Skip-Auth-Refresh": "true" } },
+    { headers: { [SKIP_AUTH_REFRESH]: "true" } },
   );
 }

@@ -9,6 +9,7 @@ import { getFirebaseAuth } from "@/config/firebase";
 import {
   exchangeFirebaseToken,
   exchangeGoogleFirebaseToken,
+  registerFirebaseToken,
   revokeRefreshToken,
   verifyRequest,
   refreshRequest,
@@ -89,7 +90,10 @@ export async function registerRequest(
     );
 
     const firebaseToken = await firebaseUserCredential.user.getIdToken();
-    return exchangeFirebaseToken(firebaseToken, {
+    // Route through /api/auth/register (not /api/auth/login) so the backend
+    // CREATES the Firestore document for this brand-new Firebase user. The
+    // login endpoint requires the doc to already exist and would 401.
+    return registerFirebaseToken(firebaseToken, {
       name,
       timezone: detectBrowserTimezone(),
     });
