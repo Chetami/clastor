@@ -1,0 +1,20 @@
+type: object
+nullable: true
+description: |-
+  Controls whether outbound emails are reviewed before sending. When
+  `reviewEnabled` is false, emails (invoice sends, reminders, etc.) are sent
+  immediately in the background with no compose/preview step. Individual
+  surfaces can also be registered as background-send exceptions in the
+  `EMAIL_SEND_CONTEXTS` registry (shared), which bypass review even when this
+  is enabled. The whole object is nullable: null means review is enabled (the
+  default), so legacy docs are unaffected.
+properties:
+  reviewEnabled:
+    type: boolean
+    default: true
+    description: >-
+      Whether to show the email review/compose step before sending outbound
+      emails. When false, every outbound email sends immediately in the
+      background. Defaults to true (review on) when the field is absent.
+example:
+  reviewEnabled: true

@@ -66,6 +66,8 @@ components:
       $ref: './schemas/users/BankDetails.yaml'
     InvoiceSettings:
       $ref: './schemas/users/InvoiceSettings.yaml'
+    EmailReviewSettings:
+      $ref: './schemas/users/EmailReviewSettings.yaml'
     # Student Enums
     RateType:
       $ref: './schemas/students/RateType.yaml'

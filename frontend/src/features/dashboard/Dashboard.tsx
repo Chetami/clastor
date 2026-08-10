@@ -13,6 +13,10 @@ import { useInvoiceLesson } from "@/features/payments/api";
 import type { InvoiceLessonEdits } from "@/features/payments/api";
 import { SendInvoiceDialog } from "@/components/send-invoice-dialog";
 import { useStudentLookups } from "@/lib/use-student-lookups";
+import {
+  EMAIL_SEND_CONTEXTS,
+  shouldSkipReview,
+} from "@examify-tms/shared";
 import { PeriodSelector } from "./components/period-selector";
 import { StatCards } from "./components/stat-cards";
 import { HoursChart } from "./components/hours-chart";
@@ -94,6 +98,42 @@ export default function Dashboard() {
     if (!student) return;
     const name = studentNames[effective.studentId] ?? "Student";
 
+    // Decide whether to review the email before sending or fire it off in the
+    // background. The attendance-marking surface is registered as a
+    // background-send exception, and the user can also disable review globally
+    // via Settings → Review emails before sending.
+    if (
+      shouldSkipReview(
+        EMAIL_SEND_CONTEXTS.ATTENDANCE_MARKING.key,
+        user?.emailReviewSettings ?? null,
+      )
+    ) {
+      // Background: create + send immediately without blocking the UI or
+      // showing a review dialog. Toasts communicate the outcome.
+      toast.info(`Creating and sending invoice to ${name}…`);
+      invoiceLesson.mutate(
+        {
+          lesson: effective,
+          rateType: student.rateType,
+          expectedAmount: student.expectedAmount,
+          skipSend: false,
+        },
+        {
+          onSuccess: () =>
+            toast.success(`Invoice created and sent to ${name}.`),
+          onError: (err) =>
+            toast.error(
+              err instanceof Error
+                ? `Couldn't send invoice to ${name}: ${err.message}`
+                : `Couldn't send invoice to ${name}.`,
+            ),
+        },
+      );
+      return;
+    }
+
+    // Review: create the invoice (unsent) and open the compose dialog so the
+    // tutor can edit/preview the email before sending.
     const createdInvoice = await invoiceLesson.mutateAsync({
       lesson: effective,
       rateType: student.rateType,

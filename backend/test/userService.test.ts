@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { normalizeWorkingHours } from "../src/services/userService";
+import {
+  normalizeWorkingHours,
+  normalizeEmailReviewSettings,
+} from "../src/services/userService";
 import type { WorkingHours } from "@examify-tms/interfaces";
 
 const ALL_DAYS: (keyof WorkingHours)[] = [
@@ -162,6 +165,66 @@ describe("normalizeWorkingHours", () => {
     it("normalize(normalize(x)) === normalize(x)", () => {
       const once = normalizeWorkingHours(sample);
       const twice = normalizeWorkingHours(once);
+      expect(twice).toEqual(once);
+    });
+  });
+});
+
+describe("normalizeEmailReviewSettings", () => {
+  describe("absent / empty input collapses to null (review enabled)", () => {
+    it("returns null for null", () => {
+      expect(normalizeEmailReviewSettings(null)).toBeNull();
+    });
+
+    it("returns null for undefined", () => {
+      expect(normalizeEmailReviewSettings(undefined)).toBeNull();
+    });
+
+    it("returns null for non-object input", () => {
+      expect(normalizeEmailReviewSettings("off")).toBeNull();
+      expect(normalizeEmailReviewSettings(42)).toBeNull();
+    });
+
+    it("returns null for an empty object", () => {
+      expect(normalizeEmailReviewSettings({})).toBeNull();
+    });
+  });
+
+  describe("reviewEnabled: false — the only value that survives", () => {
+    it("preserves an explicit { reviewEnabled: false }", () => {
+      expect(normalizeEmailReviewSettings({ reviewEnabled: false })).toEqual({
+        reviewEnabled: false,
+      });
+    });
+  });
+
+  describe("reviewEnabled: true / truthy — collapses to null", () => {
+    it("returns null for { reviewEnabled: true }", () => {
+      expect(
+        normalizeEmailReviewSettings({ reviewEnabled: true }),
+      ).toBeNull();
+    });
+
+    it("returns null for a non-boolean reviewEnabled", () => {
+      expect(
+        normalizeEmailReviewSettings({ reviewEnabled: "false" }),
+      ).toBeNull();
+      expect(
+        normalizeEmailReviewSettings({ reviewEnabled: 0 }),
+      ).toBeNull();
+    });
+
+    it("ignores unrelated fields", () => {
+      expect(
+        normalizeEmailReviewSettings({ other: true, foo: "bar" }),
+      ).toBeNull();
+    });
+  });
+
+  describe("idempotency", () => {
+    it("normalize(normalize(x)) === normalize(x)", () => {
+      const once = normalizeEmailReviewSettings({ reviewEnabled: false });
+      const twice = normalizeEmailReviewSettings(once);
       expect(twice).toEqual(once);
     });
   });

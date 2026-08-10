@@ -1,5 +1,6 @@
 import { api } from "../../../lib/api";
 import type {
+  EmailReviewSettings,
   GoogleConnectionStatus,
   InvoiceSettings,
   ReminderLeadTime,
@@ -80,6 +81,21 @@ export async function updateInvoiceSettingsRequest(
 ): Promise<UserInfo> {
   const response = await api.patch<UserInfo>("/api/users/me", {
     invoiceSettings,
+  });
+  return response.data;
+}
+
+/**
+ * Update the tutor's email-review preference. When `reviewEnabled` is false,
+ * outbound emails send immediately in the background with no compose/preview
+ * step. Pass null to restore the default (review enabled). Returns the updated
+ * user.
+ */
+export async function updateEmailReviewSettingsRequest(
+  emailReviewSettings: EmailReviewSettings,
+): Promise<UserInfo> {
+  const response = await api.patch<UserInfo>("/api/users/me", {
+    emailReviewSettings,
   });
   return response.data;
 }

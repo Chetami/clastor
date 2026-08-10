@@ -82,6 +82,7 @@ export * from "./features/payments/invoice-utils";
 
 // ---- Feature: lessons (via schedule) ----
 export * from "./features/emails/api";
+export * from "./features/emails/review-contexts";
 export * from "./features/feedback/api";
 export * from "./features/templates/api";
 export * from "./features/tutor-profile/api";

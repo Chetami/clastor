@@ -43,6 +43,12 @@ const invoiceSettingsSchema = z
   })
   .nullish();
 
+const emailReviewSettingsSchema = z
+  .object({
+    reviewEnabled: z.boolean().optional(),
+  })
+  .nullish();
+
 export const updateUserSchema = z.object({
   name: z.string().optional(),
   currency: z.string().optional(),
@@ -53,4 +59,5 @@ export const updateUserSchema = z.object({
   onboardingComplete: z.boolean().optional(),
   tourSeen: z.boolean().optional(),
   invoiceSettings: invoiceSettingsSchema,
+  emailReviewSettings: emailReviewSettingsSchema,
 });

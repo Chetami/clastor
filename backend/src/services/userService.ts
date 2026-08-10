@@ -8,6 +8,7 @@ import {
   WorkingHours,
   BankDetails,
   InvoiceSettings,
+  EmailReviewSettings,
 } from "@examify-tms/interfaces";
 import { generateToken } from "../utils/jwt";
 import { BadRequestError } from "../utils/AppError";
@@ -91,6 +92,7 @@ export function toUserInfo(user: User): UserInfo {
     onboardingComplete: user.onboardingComplete === true,
     tourSeen: user.tourSeen === true,
     invoiceSettings: user.invoiceSettings ?? null,
+    emailReviewSettings: user.emailReviewSettings ?? null,
   };
 }
 
@@ -239,6 +241,21 @@ export function normalizeInvoiceSettings(raw: unknown): InvoiceSettings {
 }
 
 /**
+ * Coerce a raw email-review payload into a clean EmailReviewSettings object
+ * (or null). Absent/null input collapses to null, which the client treats as
+ * "review enabled" (the default). Only an explicit `reviewEnabled: false` is
+ * preserved so the global kill switch survives a round-trip.
+ */
+export function normalizeEmailReviewSettings(
+  raw: unknown,
+): EmailReviewSettings {
+  if (raw == null || typeof raw !== "object") return null;
+  const r = raw as Record<string, unknown>;
+  if (r.reviewEnabled === false) return { reviewEnabled: false };
+  return null;
+}
+
+/**
  * Get user document from Firestore
  * @param uid - User UID
  * @returns User object from Firestore
@@ -270,6 +287,9 @@ export async function getUserFromFirestore(uid: string): Promise<User> {
       onboardingComplete: userData!.onboardingComplete === true,
       tourSeen: userData!.tourSeen === true,
       invoiceSettings: normalizeInvoiceSettings(userData!.invoiceSettings),
+      emailReviewSettings: normalizeEmailReviewSettings(
+        userData!.emailReviewSettings,
+      ),
       createdAt: userData!.createdAt.toDate(),
       updatedAt: userData!.updatedAt.toDate(),
       lastActive: userData!.lastActive?.toDate(),
@@ -583,6 +603,34 @@ export async function updateUserInvoiceSettings(
   } catch (error) {
     console.error("Failed to update invoice settings:", error);
     throw new Error("Failed to update invoice settings");
+  }
+}
+
+/**
+ * Update the tutor's email-review preference (whether outbound emails are
+ * reviewed before sending). Stored on the user document and read by clients
+ * to decide whether to show the compose/preview dialog. Passing null (or
+ * `reviewEnabled: true`) clears the preference so review is re-enabled.
+ * @param uid - User UID
+ * @param emailReviewSettings - Raw email-review payload (normalized server-side)
+ * @returns Updated User object
+ */
+export async function updateUserEmailReviewSettings(
+  uid: string,
+  emailReviewSettings: unknown,
+): Promise<User> {
+  try {
+    const firestore = getFirebaseFirestore();
+    const normalized = normalizeEmailReviewSettings(emailReviewSettings);
+    await firestore.collection("users").doc(uid).update({
+      emailReviewSettings: normalized ?? admin.firestore.FieldValue.delete(),
+      updatedAt: admin.firestore.Timestamp.now(),
+    });
+
+    return getUserFromFirestore(uid);
+  } catch (error) {
+    console.error("Failed to update email review settings:", error);
+    throw new Error("Failed to update email review settings");
   }
 }
 

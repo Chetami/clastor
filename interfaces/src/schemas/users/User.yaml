@@ -85,6 +85,12 @@ properties:
     description: >-
       Invoice customisation preferences (ABN + bank details) printed on this
       tutor's invoices. Null means no extra details are shown.
+  emailReviewSettings:
+    allOf:
+      - $ref: './EmailReviewSettings.yaml'
+    description: >-
+      Controls whether outbound emails are reviewed before sending. Null means
+      review is enabled (the default).
 description: |-
   User interface
   Represents a user in the Firestore users collection

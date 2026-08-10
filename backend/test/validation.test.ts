@@ -279,6 +279,34 @@ describe("domain request schemas", () => {
         }).success,
       ).toBe(true);
     });
+
+    it("accepts { reviewEnabled: false } for emailReviewSettings", () => {
+      expect(
+        updateUserSchema.safeParse({
+          emailReviewSettings: { reviewEnabled: false },
+        }).success,
+      ).toBe(true);
+    });
+
+    it("accepts null to clear emailReviewSettings", () => {
+      expect(
+        updateUserSchema.safeParse({ emailReviewSettings: null }).success,
+      ).toBe(true);
+    });
+
+    it("accepts an empty object for emailReviewSettings", () => {
+      expect(
+        updateUserSchema.safeParse({ emailReviewSettings: {} }).success,
+      ).toBe(true);
+    });
+
+    it("rejects a non-boolean reviewEnabled", () => {
+      expect(
+        updateUserSchema.safeParse({
+          emailReviewSettings: { reviewEnabled: "yes" },
+        }).success,
+      ).toBe(false);
+    });
   });
 
   describe("registerSchema", () => {

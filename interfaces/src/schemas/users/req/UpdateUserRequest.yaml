@@ -58,6 +58,13 @@ properties:
       Invoice customisation preferences (ABN + bank details). Pass null to
       clear all invoice details. Individual nested fields are nullable so a
       tutor can save partial details.
+  emailReviewSettings:
+    allOf:
+      - $ref: '../EmailReviewSettings.yaml'
+    description: >-
+      Controls whether outbound emails are reviewed before sending. Pass
+      `{ reviewEnabled: false }` to send all emails immediately in the
+      background. Pass null to restore the default (review enabled).
 description: |-
   Request body for updating a user
   All fields are optional; only provided fields will be updated

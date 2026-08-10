@@ -16,6 +16,7 @@ import { SubjectsCard } from "@/features/subjects/SubjectsCard";
 import { GoogleConnectionCard } from "./GoogleConnectionCard";
 import { WorkingHoursCard } from "./WorkingHoursCard";
 import { InvoiceSettingsForm } from "./InvoiceSettingsForm";
+import { EmailReviewCard } from "./EmailReviewCard";
 
 export default function Settings() {
   return (
@@ -82,6 +83,7 @@ export default function Settings() {
 
       <WorkingHoursCard />
       <InvoiceSettingsForm />
+      <EmailReviewCard />
       <GoogleConnectionCard />
 
       <Card>
