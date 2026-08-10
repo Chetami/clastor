@@ -49,8 +49,9 @@ export async function loginRequest(
     const firebaseToken = await credential.user.getIdToken();
     return exchangeFirebaseToken(firebaseToken);
   } catch (error) {
-    if (error instanceof Error && error.message) throw error;
-    throw mapFirebaseError(error);
+    const code = (error as { code?: string }).code ?? "";
+    if (code.startsWith("auth/")) throw mapFirebaseError(error);
+    throw error;
   }
 }
 
@@ -68,8 +69,9 @@ export async function googleSignInRequest(idToken: string): Promise<LoginRespons
     const firebaseToken = await userCredential.user.getIdToken();
     return exchangeGoogleFirebaseToken(firebaseToken);
   } catch (error) {
-    if (error instanceof Error && error.message) throw error;
-    throw mapFirebaseError(error);
+    const code = (error as { code?: string }).code ?? "";
+    if (code.startsWith("auth/")) throw mapFirebaseError(error);
+    throw error;
   }
 }
 

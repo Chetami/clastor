@@ -67,10 +67,11 @@ export async function loginRequest(
     const firebaseToken = await userCredential.user.getIdToken();
     return exchangeFirebaseToken(firebaseToken);
   } catch (error) {
-    if (error instanceof Error && error.message) {
-      throw error;
+    const code = (error as { code?: string }).code ?? "";
+    if (code.startsWith("auth/")) {
+      throw mapFirebaseError(error);
     }
-    throw mapFirebaseError(error);
+    throw error;
   }
 }
 

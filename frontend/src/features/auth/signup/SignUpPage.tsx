@@ -128,7 +128,10 @@ export default function SignUpPage() {
 
             <form onSubmit={handleSubmit} className="space-y-4">
               {errorMessage && (
-                <Alert variant="destructive">
+                <Alert
+                  variant="destructive"
+                  className="flex items-start gap-2.5 [&>svg]:static [&>svg]:mt-0.5 [&>svg~*]:pl-0 [&>svg+div]:translate-y-0"
+                >
                   <CircleAlert className="h-4 w-4" />
                   <AlertDescription>{errorMessage}</AlertDescription>
                 </Alert>

@@ -124,6 +124,18 @@ describe("loginRequest", () => {
     // an app JWT and misreporting the error.
     expect(captures[0].headers[SKIP_HEADER]).toBe("true");
   });
+
+  it("maps Firebase auth errors to friendly messages", async () => {
+    firebaseAuthModule.signInWithEmailAndPassword.mockRejectedValue(
+      Object.assign(new Error("Firebase: Error (auth/invalid-credential)."), {
+        code: "auth/invalid-credential",
+      }),
+    );
+
+    await expect(
+      loginRequest("tutor@example.com", "wrong-password"),
+    ).rejects.toThrow("Invalid email or password");
+  });
 });
 
 describe("registerRequest (regression: must NOT hit /api/auth/login)", () => {

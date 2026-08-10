@@ -21,12 +21,16 @@ import { BrandMark } from "@/features/auth/BrandMark";
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [googleError, setGoogleError] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const login = useLogin();
 
+  const authError = googleError ?? login.error?.message;
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
+    setGoogleError(null);
 
     try {
       const data = await login.mutateAsync({ email, password });
@@ -56,6 +60,13 @@ export default function LoginPage() {
                   data.user.onboardingComplete ? "/dashboard" : "/onboarding",
                 )
               }
+              onError={(error) =>
+                setGoogleError(
+                  error instanceof Error
+                    ? error.message
+                    : "Google sign-in failed. Please try again.",
+                )
+              }
             />
 
             <div className="relative">
@@ -68,12 +79,13 @@ export default function LoginPage() {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
-              {login.isError && (
-                <Alert variant="destructive">
+              {authError && (
+                <Alert
+                  variant="destructive"
+                  className="flex items-start gap-2.5 [&>svg]:static [&>svg]:mt-0.5 [&>svg~*]:pl-0 [&>svg+div]:translate-y-0"
+                >
                   <CircleAlert className="h-4 w-4" />
-                  <AlertDescription>
-                    {login.error.message}
-                  </AlertDescription>
+                  <AlertDescription>{authError}</AlertDescription>
                 </Alert>
               )}
 

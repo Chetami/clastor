@@ -35,12 +35,14 @@ type GoogleSignInButtonProps = {
   label?: string;
   signupSurvey?: SignupSurvey;
   onSuccess?: (data: LoginResponse) => void;
+  onError?: (error: unknown) => void;
 };
 
 export function GoogleSignInButton({
   label = "Continue with Google",
   signupSurvey,
   onSuccess,
+  onError,
 }: GoogleSignInButtonProps) {
   const googleSignIn = useGoogleSignIn();
 
@@ -48,8 +50,8 @@ export function GoogleSignInButton({
     try {
       const data = await googleSignIn.mutateAsync(signupSurvey);
       onSuccess?.(data);
-    } catch {
-      // error is surfaced via mutation state
+    } catch (error) {
+      onError?.(error);
     }
   }
 
