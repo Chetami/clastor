@@ -9,14 +9,10 @@ import {
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody } from "@/components/ui/table";
-import {
-  useMarkInvoicePaid,
-  useVoidInvoice,
-  listInvoicesRequest,
-} from "./api";
+import { useMarkInvoicePaid, useVoidInvoice, listInvoicesRequest } from "./api";
 import { SendInvoiceDialog } from "@/components/send-invoice-dialog";
 import {
   PAGE_SIZE,
@@ -25,10 +21,7 @@ import {
   type SortOrder,
   type StatusFilter,
 } from "./list/constants";
-import {
-  InvoicesTableHeader,
-  InvoiceRow,
-} from "./list/components";
+import { InvoicesTableHeader, InvoiceRow } from "./list/components";
 
 export default function Payments() {
   const navigate = useNavigate();
@@ -169,10 +162,10 @@ export default function Payments() {
   const [sendInvoiceId, setSendInvoiceId] = useState<string | null>(null);
 
   return (
-    <div className="space-y-6">
+    <div>
       <Card>
-        <CardContent className="min-w-0 space-y-4 p-4">
-          <div className="flex flex-wrap items-center gap-1 rounded-md border bg-muted/40 p-1">
+        <CardHeader className="flex flex-col gap-4 space-y-0 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-1 rounded-md border bg-muted/40 p-1">
             {STATUS_TABS.map((tab) => (
               <button
                 key={tab.value}
@@ -191,19 +184,10 @@ export default function Payments() {
                 {tab.label}
               </button>
             ))}
-            <Button
-              size="sm"
-              className="ml-auto"
-              onClick={() => navigate("/payments/new")}
-              data-tour="create-invoice"
-            >
-              <Plus className="h-4 w-4" />
-              Create Invoice
-            </Button>
           </div>
 
-          <div className="flex items-center justify-between gap-2">
-            <div className="relative w-full max-w-xs">
+          <div className="flex items-center gap-2">
+            <div className="relative w-full sm:w-60">
               <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={search}
@@ -212,8 +196,18 @@ export default function Payments() {
                 className="pl-8"
               />
             </div>
+            <Button
+              size="sm"
+              className="shrink-0"
+              onClick={() => navigate("/payments/new")}
+              data-tour="create-invoice"
+            >
+              <Plus className="h-4 w-4" />
+              Create Invoice
+            </Button>
           </div>
-
+        </CardHeader>
+        <CardContent className="min-w-0 space-y-4">
           {/* Content area */}
           {isLoading ? (
             <div className="flex items-center justify-center py-16">
