@@ -99,25 +99,25 @@ export function ThingsToDo({
           ) : (
             <Tabs defaultValue={defaultTab}>
               <TabsList className="w-full">
-                <TabsTrigger value="attendance" className="flex-1 gap-1.5">
+                <TabsTrigger value="attendance">
                   Attendance
                   {attendanceCount > 0 && (
-                    <span className="ml-1 rounded-full bg-muted-foreground/15 px-1.5 text-xs">
+                    <span className="rounded-full bg-muted-foreground/15 px-1.5 text-xs tabular-nums">
                       {attendanceCount}
                     </span>
                   )}
                 </TabsTrigger>
-                <TabsTrigger value="lesson-todos" className="flex-1 gap-1.5">
+                <TabsTrigger value="lesson-todos">
                   Lesson todos
                   {checklistCount > 0 && (
-                    <span className="ml-1 rounded-full bg-muted-foreground/15 px-1.5 text-xs">
+                    <span className="rounded-full bg-muted-foreground/15 px-1.5 text-xs tabular-nums">
                       {checklistCount}
                     </span>
                   )}
                 </TabsTrigger>
               </TabsList>
 
-              <TabsContent value="attendance">
+              <TabsContent value="attendance" className="mt-2">
                 <AttendanceList
                   lessons={attendanceLessons}
                   studentNames={studentNames}
@@ -127,7 +127,7 @@ export function ThingsToDo({
                 />
               </TabsContent>
 
-              <TabsContent value="lesson-todos">
+              <TabsContent value="lesson-todos" className="mt-2">
                 <ChecklistList
                   items={checklistItems}
                   studentNames={studentNames}
@@ -202,16 +202,16 @@ function AttendanceList({
               <Button
                 size="sm"
                 variant="outline"
-                className="shrink-0 gap-1.5"
+                className="shrink-0"
                 disabled={markDonePending}
                 onClick={() => onMark(l.id)}
               >
                 {markDonePending && markDoneId === l.id ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  <Loader2 className="size-3 animate-spin" />
                 ) : (
-                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  <CheckCircle2 className="size-3" />
                 )}
-                Mark Attendance
+                Attendance
               </Button>
             </li>
           );
