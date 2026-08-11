@@ -217,7 +217,7 @@ export function MarkAttendanceDialog({
           <Checkbox
             id="send-invoice"
             checked={sendInvoice}
-            onChange={(e) => setSendInvoice(e.target.checked)}
+            onCheckedChange={(checked) => setSendInvoice(checked === true)}
           />
           <FileText className="h-4 w-4 text-muted-foreground" />
           <span className="text-sm">Create and send invoice</span>

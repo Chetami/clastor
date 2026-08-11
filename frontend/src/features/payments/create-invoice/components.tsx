@@ -65,7 +65,7 @@ function LessonRow({ lesson, checked, onToggle, badge }: LessonRowProps) {
       data-state={checked ? "selected" : undefined}
     >
       <TableCell>
-        <Checkbox checked={checked} onChange={(e) => e.stopPropagation()} />
+        <Checkbox checked={checked} onClick={(e) => e.stopPropagation()} />
       </TableCell>
       <TableCell>
         <div className="flex items-center gap-2">

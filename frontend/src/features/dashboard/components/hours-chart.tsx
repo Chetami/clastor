@@ -6,6 +6,7 @@ import {
   XAxis,
   LabelList,
   ReferenceLine,
+  type RenderableText,
 } from "recharts";
 import {
   ChartContainer,
@@ -27,19 +28,13 @@ import {
 const chartConfig = {
   current: {
     label: "This period",
-    color: "hsl(var(--primary))",
+    color: "var(--primary)",
   },
   previous: {
     label: "Last period",
-    color: "hsl(var(--muted-foreground))",
+    color: "var(--muted-foreground)",
   },
 } satisfies ChartConfig;
-
-type TooltipProps = {
-  active?: boolean;
-  payload?: Array<{ dataKey?: string | number; value?: number | string }>;
-  label?: string | number;
-};
 
 export function HoursChart({ summary }: { summary: DashboardSummaryResponse }) {
   const data = buildChartData(summary.hoursSeries, summary.previousHoursSeries);
@@ -50,10 +45,11 @@ export function HoursChart({ summary }: { summary: DashboardSummaryResponse }) {
   const todayLabel = todayBucketLabel(summary.hoursSeries);
   const showLabels = !isDenseSeries(summary.hoursSeries);
 
-  const renderTooltip = ({ active, payload }: TooltipProps) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const renderTooltip = ({ active, payload }: any) => {
     if (!active || !payload?.length) return null;
-    const cur = Number(payload.find((p) => p.dataKey === "current")?.value ?? 0);
-    const prev = Number(payload.find((p) => p.dataKey === "previous")?.value ?? 0);
+    const cur = Number(payload.find((p: { dataKey?: string | number; value?: number | string }) => p.dataKey === "current")?.value ?? 0);
+    const prev = Number(payload.find((p: { dataKey?: string | number; value?: number | string }) => p.dataKey === "previous")?.value ?? 0);
     const pct = total > 0 ? Math.round((cur / total) * 100) : 0;
     return (
       <div className="rounded-lg border bg-background px-2.5 py-1.5 text-xs shadow-xl">
@@ -100,26 +96,26 @@ export function HoursChart({ summary }: { summary: DashboardSummaryResponse }) {
 
             <ReferenceLine
               y={avg}
-              stroke="hsl(var(--muted-foreground))"
+              stroke="var(--muted-foreground)"
               strokeOpacity={0.5}
               strokeDasharray="4 4"
               label={{
                 value: `avg ${formatHours(avg)}`,
                 position: "insideTopRight",
-                fill: "hsl(var(--muted-foreground))",
+                fill: "var(--muted-foreground)",
                 fontSize: 10,
               }}
             />
             {todayLabel && (
               <ReferenceLine
                 x={todayLabel}
-                stroke="hsl(var(--primary))"
+                stroke="var(--primary)"
                 strokeOpacity={0.35}
                 strokeDasharray="3 3"
                 label={{
                   value: "today",
                   position: "top",
-                  fill: "hsl(var(--muted-foreground))",
+                  fill: "var(--muted-foreground)",
                   fontSize: 10,
                 }}
               />
@@ -139,7 +135,7 @@ export function HoursChart({ summary }: { summary: DashboardSummaryResponse }) {
                   offset={8}
                   className="fill-muted-foreground"
                   fontSize={10}
-                  formatter={(value: number) =>
+                  formatter={(value: RenderableText) =>
                     Number(value) > 0 ? String(Number(value).toFixed(1)) : ""
                   }
                 />

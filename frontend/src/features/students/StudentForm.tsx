@@ -325,7 +325,7 @@ export function StudentForm({
               <Checkbox
                 id="timezoneEnabled"
                 checked={values.timezoneEnabled}
-                onChange={(e) => update("timezoneEnabled", e.target.checked)}
+                onCheckedChange={(checked) => update("timezoneEnabled", checked === true)}
                 disabled
               />
               <Label
