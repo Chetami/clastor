@@ -1,7 +1,8 @@
-import { GraduationCap, Mail } from "lucide-react"; // [1] Added Mail import
+import { Mail } from "lucide-react"; // [1] Added Mail import
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { BrandMark } from "@/features/auth/BrandMark";
 import { FOUNDERS } from "../founders";
 
 /**
@@ -11,9 +12,7 @@ import { FOUNDERS } from "../founders";
 export function WelcomeStep() {
   return (
     <div className="flex flex-col items-center gap-4 text-center">
-      <div className="flex size-14 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
-        <GraduationCap className="size-8" />
-      </div>
+      <BrandMark size={56} showName={false} />
 
       <div className="flex flex-col gap-2 mb-2">
         <h2 className="text-2xl font-semibold tracking-tight">

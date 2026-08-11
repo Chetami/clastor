@@ -1,8 +1,8 @@
 import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
-import { GraduationCap } from "lucide-react";
 
+import { BrandMark } from "@/features/auth/BrandMark";
 import { getPublicProfileRequest } from "./api/requests";
 import { getTemplate } from "./templates/registry";
 
@@ -20,10 +20,7 @@ export default function PublicTutorPage() {
     <div className="min-h-dvh bg-background text-foreground">
       <header className="border-b">
         <div className="mx-auto flex max-w-3xl items-center gap-2 px-4 py-4">
-          <div className="flex size-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
-            <GraduationCap className="size-4" />
-          </div>
-          <span className="font-semibold">Clastor</span>
+          <BrandMark size={28} />
         </div>
       </header>
 
