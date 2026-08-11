@@ -116,7 +116,7 @@ export const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(
     };
 
     return (
-      <div className="flex items-center">
+      <div className="flex items-stretch">
         <NumericFormat
           value={value}
           onValueChange={handleChange}
@@ -136,11 +136,11 @@ export const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(
           getInputRef={combinedRef} // Use combined ref
           {...props}
         />
-        <div className="flex flex-col">
+        <div className="flex flex-col h-9">
           <Button
             type="button"
             aria-label="Increase value"
-            className="px-2 h-4 rounded-l-none rounded-br-none border-input border-l-0 focus-visible:relative"
+            className="flex-1 min-h-0 h-auto px-2 rounded-l-none rounded-br-none border-input border-l-0 focus-visible:relative active:translate-y-0!"
             variant="outline"
             onClick={handleIncrement}
             disabled={value === max}
@@ -150,7 +150,7 @@ export const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(
           <Button
             type="button"
             aria-label="Decrease value"
-            className="px-2 h-4 rounded-l-none rounded-tr-none border-input border-l-0  focus-visible:relative"
+            className="flex-1 min-h-0 h-auto px-2 rounded-l-none rounded-tr-none border-input border-l-0 focus-visible:relative active:translate-y-0!"
             variant="outline"
             onClick={handleDecrement}
             disabled={value === min}
