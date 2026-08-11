@@ -44,7 +44,7 @@ export function LineItemsReviewTable({
 }: LineItemsReviewTableProps) {
   return (
     <>
-      <div className="rounded-md border">
+      <div className="overflow-x-auto rounded-md border">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/30 hover:bg-muted/30">
