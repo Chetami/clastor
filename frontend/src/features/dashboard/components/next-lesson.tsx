@@ -2,7 +2,13 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CalendarClock, Video, ExternalLink, Loader2, Mail } from "lucide-react";
+import {
+  CalendarClock,
+  Video,
+  ExternalLink,
+  Loader2,
+  Mail,
+} from "lucide-react";
 import { toast } from "sonner";
 import type { LessonResponse } from "@examify-tms/interfaces";
 import { useGenerateMeetLink } from "../api";
@@ -12,11 +18,7 @@ import {
   previewNotifyStudentRequest,
 } from "@/features/schedule/api";
 import { EmailComposeDialog } from "@/components/email-compose-dialog";
-import {
-  lessonTimeRange,
-  relativeDayLabel,
-  timeUntil,
-} from "../lib";
+import { lessonTimeRange, relativeDayLabel, timeUntil } from "../lib";
 import { STUDENT_NOTIFY_COOLDOWN_MS } from "@examify-tms/shared";
 
 type Props = {
@@ -77,7 +79,10 @@ export function NextLesson({ lesson, studentName }: Props) {
       // Persist the link to the lesson so the button becomes "Join Meet" on
       // the next render and the calendar/schedule can display it too. We don't
       // auto-open the room — the user can join via the "Join Meet" button.
-      await updateLesson.mutateAsync({ location: "Google Meet", meetLink: res.meetingLink });
+      await updateLesson.mutateAsync({
+        location: "Google Meet",
+        meetLink: res.meetingLink,
+      });
       toast.success("Google Meet link created");
     } catch (err) {
       toast.error(
@@ -96,12 +101,12 @@ export function NextLesson({ lesson, studentName }: Props) {
   };
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center gap-2 space-y-0 p-4 pb-2">
+    <Card className="gap-4">
+      <CardHeader className="flex flex-row items-center gap-2 space-y-0 ">
         <CalendarClock className="h-4 w-4 text-muted-foreground" />
         <CardTitle className="text-base">Next lesson</CardTitle>
       </CardHeader>
-      <CardContent className="p-4 pt-2">
+      <CardContent>
         <div className="flex items-center justify-between gap-4">
           {/* Clickable summary → lesson detail (replaces the old "View lesson" link) */}
           <Link
@@ -112,7 +117,8 @@ export function NextLesson({ lesson, studentName }: Props) {
               {timeUntil(lesson.startDateTime)}
             </p>
             <p className="text-xs text-muted-foreground">
-              {relativeDayLabel(lesson.startDateTime)} · {lessonTimeRange(lesson)}
+              {relativeDayLabel(lesson.startDateTime)} ·{" "}
+              {lessonTimeRange(lesson)}
             </p>
             <p className="text-sm font-medium">
               {studentName} · {lesson.subject}

@@ -35,7 +35,7 @@ function Tile({ icon, label, value, delta, children }: TileProps) {
   const isDown = (delta ?? null) !== null && delta! < 0;
 
   return (
-    <Card className="p-4">
+    <Card className="p-4 gap-1">
       <div className="flex items-center justify-between">
         <p className="text-[11px] text-muted-foreground">{label}</p>
         <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary/10 text-primary">

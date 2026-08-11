@@ -73,7 +73,7 @@ export function ThingsToDo({
     ? attendanceLessons.find((l) => l.id === openDialogLessonId)
     : undefined;
   const openDialogStudentName = openDialogLesson
-    ? studentNames[openDialogLesson.studentId] ?? "Unknown student"
+    ? (studentNames[openDialogLesson.studentId] ?? "Unknown student")
     : undefined;
 
   return (

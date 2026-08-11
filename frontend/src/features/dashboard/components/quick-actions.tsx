@@ -12,7 +12,7 @@ const INTERNAL = [
 export function QuickActions() {
   return (
     <Card data-tour="quick-actions">
-      <CardContent className="space-y-3 p-4">
+      <CardContent>
         <div className="grid grid-cols-3 gap-2">
           {INTERNAL.map((action) => (
             <Button
