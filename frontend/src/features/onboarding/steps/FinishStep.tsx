@@ -1,7 +1,9 @@
-import { Check, PartyPopper } from "lucide-react";
+import { useEffect, useRef } from "react";
+import { Check, Mail } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { fireConfettiCannons } from "@/lib/confetti";
 import { FOUNDERS } from "../founders";
 
 /**
@@ -10,12 +12,16 @@ import { FOUNDERS } from "../founders";
  * page) marks onboarding complete and sends them to the dashboard.
  */
 export function FinishStep() {
+  // Fire the confetti cannons once when the finish step is reached.
+  const fired = useRef(false);
+  useEffect(() => {
+    if (fired.current) return;
+    fired.current = true;
+    fireConfettiCannons();
+  }, []);
+
   return (
     <div className="flex flex-col items-center gap-8 text-center">
-      <div className="flex size-14 items-center justify-center rounded-full bg-primary/10 text-primary">
-        <PartyPopper className="size-7" />
-      </div>
-
       <div className="flex flex-col gap-2">
         <h2 className="text-2xl font-semibold tracking-tight">
           You're all set!
@@ -69,9 +75,12 @@ export function FinishStep() {
                 asChild
                 variant="outline"
                 size="sm"
-                className="w-full text-xs"
+                className="w-full gap-1.5 text-xs"
               >
-                <a href={founder.contactHref}>{founder.contactLabel}</a>
+                <a href={founder.contactHref}>
+                  <Mail className="size-3.5 shrink-0" />
+                  {founder.contactLabel}
+                </a>
               </Button>
             </div>
           ))}

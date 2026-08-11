@@ -184,7 +184,8 @@ export default function StudentDetail() {
             <DetailRow
               icon={<Mail className="h-4 w-4" />}
               label="Email"
-              value={student.email}
+              value={student.email ?? "\u2014"}
+              muted={!student.email}
             />
             <DetailRow
               icon={<BookOpen className="h-4 w-4" />}
@@ -239,7 +240,7 @@ export default function StudentDetail() {
               </span>
               <div className="text-right">
                 <p className="max-w-[200px] truncate font-medium">
-                  {student.billingEmail}
+                  {student.billingEmail ?? "—"}
                 </p>
                 <p className="text-xs text-muted-foreground">
                   {billingEmailSourceLabel[student.billingEmailSource]}

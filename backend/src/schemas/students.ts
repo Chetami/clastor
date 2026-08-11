@@ -7,7 +7,7 @@ import { rateTypeSchema, studentStatusSchema } from "./common";
 
 export const createStudentSchema = z.object({
   name: z.string().min(1, "Name is required"),
-  email: z.string().min(1, "Email is required").email("Enter a valid email"),
+  email: z.string().email("Enter a valid email").nullish(),
   phone: z.string().nullish(),
   parentEmail: z.string().email("Enter a valid email").nullish(),
   billingEmail: z.string().email("Enter a valid email").nullish(),

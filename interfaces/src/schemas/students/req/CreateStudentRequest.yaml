@@ -1,7 +1,6 @@
 type: object
 required:
   - name
-  - email
   - subjectIds
   - expectedAmount
   - rateType
@@ -14,7 +13,8 @@ properties:
   email:
     type: string
     format: email
-    description: Student's email address
+    nullable: true
+    description: Student's email address (optional)
     example: alice.johnson@example.com
   phone:
     type: string

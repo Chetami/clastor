@@ -45,16 +45,17 @@ export function formatFrequency(
  * Resolve the effective billing email for a student: an explicit override
  * wins, then the parent email, then the student's own email. Mirrors the
  * backend's read-time resolution so the UI can preview what "auto" will
- * produce.
+ * produce. Returns null when none of these are set.
  */
 export function resolveBillingEmail(
   explicit: string | null | undefined,
   parentEmail: string | null | undefined,
-  email: string,
-): string {
+  email: string | null | undefined,
+): string | null {
   if (explicit && explicit.trim().length > 0) return explicit;
   if (parentEmail && parentEmail.trim().length > 0) return parentEmail;
-  return email;
+  if (email && email.trim().length > 0) return email;
+  return null;
 }
 
 /**
@@ -97,7 +98,7 @@ export function studentToFormValues(
   const billingEmailMode = source === "explicit" ? "custom" : "auto";
   return {
     name: student.name,
-    email: student.email,
+    email: student.email ?? "",
     phone: student.phone ?? "",
     parentEmail,
     billingEmailMode,
@@ -168,7 +169,7 @@ export function studentsToCsv(
   const rows = students.map((s) =>
     [
       s.name,
-      s.email,
+      s.email ?? "",
       s.phone ?? "",
       s.parentEmail ?? "",
       studentSubjectsToNames(s.subjectIds, subjects),

@@ -58,7 +58,7 @@ export default function PaymentsScreen() {
           query.length === 0 ||
           inv.invoiceNumber.toLowerCase().includes(query) ||
           inv.customerName.toLowerCase().includes(query) ||
-          inv.billingEmail.toLowerCase().includes(query);
+          (inv.billingEmail ?? "").toLowerCase().includes(query);
         return matchesStatus && matchesSearch;
       })
       .sort(

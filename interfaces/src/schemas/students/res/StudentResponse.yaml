@@ -2,7 +2,6 @@ type: object
 required:
   - id
   - name
-  - email
   - subjectIds
   - expectedAmount
   - rateType
@@ -25,7 +24,8 @@ properties:
   email:
     type: string
     format: email
-    description: Student's email address
+    nullable: true
+    description: Student's email address (optional)
     example: alice.johnson@example.com
   phone:
     type: string
@@ -43,11 +43,12 @@ properties:
   billingEmail:
     type: string
     format: email
+    nullable: true
     description: >-
       Email used as the default recipient when creating invoices for this
-      student. Always non-null: resolved at read time as the tutor's
-      explicit override (if set), otherwise parentEmail, otherwise the
-      student's own email.
+      student. Resolved at read time as the tutor's explicit override (if
+      set), otherwise parentEmail, otherwise the student's own email. May
+      be null when none of these are set.
     example: billing.johnson@example.com
   billingEmailSource:
     $ref: '../BillingEmailSource.yaml'

@@ -51,18 +51,19 @@ function generateStudentId(): string {
 }
 
 /**
- * Resolve the billing email for a student. Always returns a non-null value:
- * the tutor's explicit override if set, otherwise the parent email,
- * otherwise the student's own email (which is always required).
+ * Resolve the billing email for a student: the tutor's explicit override
+ * if set, otherwise the parent email, otherwise the student's own email.
+ * Returns null when none of these are set (student email is optional).
  */
 export function resolveBillingEmail(
   explicit: string | null | undefined,
   parentEmail: string | null | undefined,
-  email: string
-): string {
+  email: string | null | undefined
+): string | null {
   if (explicit && explicit.trim().length > 0) return explicit;
   if (parentEmail && parentEmail.trim().length > 0) return parentEmail;
-  return email;
+  if (email && email.trim().length > 0) return email;
+  return null;
 }
 
 /**
@@ -403,7 +404,9 @@ export async function importStudentsFromCsv(
   // Load existing students so we can skip duplicate emails for this tutor.
   const existing = await listStudentsFromFirestore(userId, "tutor");
   const existingEmails = new Set(
-    existing.map((s) => s.email.trim().toLowerCase())
+    existing
+      .map((s) => s.email?.trim().toLowerCase())
+      .filter((e): e is string => !!e)
   );
 
   let records: Record<string, string>[];
@@ -451,11 +454,7 @@ export async function importStudentsFromCsv(
       skip("Missing name");
       return;
     }
-    if (!email) {
-      skip(`Row ${rowNumber} (${name}): missing email`);
-      return;
-    }
-    if (!EMAIL_RE.test(email)) {
+    if (email && !EMAIL_RE.test(email)) {
       skip(`Row ${rowNumber} (${name}): invalid email "${email}"`);
       return;
     }
@@ -500,23 +499,27 @@ export async function importStudentsFromCsv(
       return;
     }
 
-    const normalizedEmail = email.toLowerCase();
-    if (existingEmails.has(normalizedEmail)) {
-      skip(`Row ${rowNumber} (${name}): duplicate email "${email}" (already exists)`);
-      return;
+    // Only de-duplicate on email when one is present. Rows without an
+    // email can't be keyed, so they're allowed through.
+    if (email) {
+      const normalizedEmail = email.toLowerCase();
+      if (existingEmails.has(normalizedEmail)) {
+        skip(`Row ${rowNumber} (${name}): duplicate email "${email}" (already exists)`);
+        return;
+      }
+      if (seenEmails.has(normalizedEmail)) {
+        skip(`Row ${rowNumber} (${name}): duplicate email "${email}" (already in this file)`);
+        return;
+      }
+      seenEmails.add(normalizedEmail);
     }
-    if (seenEmails.has(normalizedEmail)) {
-      skip(`Row ${rowNumber} (${name}): duplicate email "${email}" (already in this file)`);
-      return;
-    }
-    seenEmails.add(normalizedEmail);
 
     pending.push({
       row: rowNumber,
       name,
       request: {
         name,
-        email,
+        email: email || null,
         phone: get("phone") || null,
         parentEmail: get("parentEmail") || null,
         billingEmail: null,

@@ -149,16 +149,16 @@ export function InvoiceRow({
             {inv.customerName}
           </span>
           <span className="block truncate text-xs text-muted-foreground md:hidden">
-            {inv.billingEmail}
+            {inv.billingEmail ?? "—"}
           </span>
         </div>
       </TableCell>
       <TableCell className="hidden overflow-hidden md:table-cell">
         <span
           className="block truncate text-muted-foreground"
-          title={inv.billingEmail}
+          title={inv.billingEmail ?? undefined}
         >
-          {inv.billingEmail}
+          {inv.billingEmail ?? "—"}
         </span>
       </TableCell>
       <TableCell className="hidden lg:table-cell text-muted-foreground">

@@ -1,18 +1,29 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Check, Loader2 } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  CalendarPlus,
+  Check,
+  Loader2,
+  UserPlus,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { BrandMark } from "@/features/auth/BrandMark";
 import { useAuthStore } from "@/store/auth-store";
 import { useListStudents } from "@/features/students/api/use-list-students";
 import { useListLessons } from "@/features/schedule/api/use-list-lessons";
 import { useCompleteOnboarding } from "./api/use-complete-onboarding";
 import { WelcomeStep } from "./steps/WelcomeStep";
 import { SubjectsStep } from "./steps/SubjectsStep";
-import { AddStudentStep } from "./steps/AddStudentStep";
-import { ScheduleLessonStep } from "./steps/ScheduleLessonStep";
+import {
+  AddStudentStep,
+  type AddStudentStepHandle,
+} from "./steps/AddStudentStep";
+import { ScheduleLessonStep, type ScheduleLessonStepHandle } from "./steps/ScheduleLessonStep";
 import { GoogleConnectStep } from "./steps/GoogleConnectStep";
 import { FinishStep } from "./steps/FinishStep";
 
@@ -83,19 +94,58 @@ export default function OnboardingPage() {
   const isLast = step === STEPS.length - 1;
   const progressValue = ((step + 1) / STEPS.length) * 100;
 
-  // Gated steps: the student step requires a student to exist, and the lesson
-  // step requires a booked lesson (the next step is calendar/sync, but the
-  // whole point of the wizard is to land that first lesson).
-  const canAdvance =
-    (step !== STUDENT_STEP_INDEX || hasStudents) &&
-    (step !== LESSON_STEP_INDEX || hasLessons);
+  // The "Add student" / "Book lesson" actions live in the footer and are
+  // driven by each step via an imperative handle. Each step reports its phase
+  // (form vs. animated success), readiness, and pending/error state so the
+  // footer button can reflect them — and so we can hide it while a success
+  // animation auto-advances.
+  const studentStepRef = useRef<AddStudentStepHandle>(null);
+  const [studentPhase, setStudentPhase] = useState<"form" | "success">("form");
+  const [studentAutoAdvance, setStudentAutoAdvance] = useState(false);
+  const [studentCanSubmit, setStudentCanSubmit] = useState(false);
+  const [studentPending, setStudentPending] = useState(false);
+  const [studentError, setStudentError] = useState<string | null>(null);
 
-  const gateMessage =
-    step === STUDENT_STEP_INDEX
-      ? "Add a student to continue."
-      : step === LESSON_STEP_INDEX
-        ? "Book a lesson to continue."
-        : null;
+  const handleStudentState = useCallback(
+    (s: {
+      phase: "form" | "success";
+      autoAdvance: boolean;
+      canSubmit: boolean;
+      isPending: boolean;
+      error: string | null;
+    }) => {
+      setStudentPhase(s.phase);
+      setStudentAutoAdvance(s.autoAdvance);
+      setStudentCanSubmit(s.canSubmit);
+      setStudentPending(s.isPending);
+      setStudentError(s.error);
+    },
+    [],
+  );
+
+  const lessonStepRef = useRef<ScheduleLessonStepHandle>(null);
+  const [lessonPhase, setLessonPhase] = useState<"form" | "success">("form");
+  const [lessonAutoAdvance, setLessonAutoAdvance] = useState(false);
+  const [lessonCanSubmit, setLessonCanSubmit] = useState(false);
+  const [lessonPending, setLessonPending] = useState(false);
+  const [lessonError, setLessonError] = useState<string | null>(null);
+
+  const handleLessonState = useCallback(
+    (s: {
+      phase: "form" | "success";
+      autoAdvance: boolean;
+      canSubmit: boolean;
+      isPending: boolean;
+      error: string | null;
+    }) => {
+      setLessonPhase(s.phase);
+      setLessonAutoAdvance(s.autoAdvance);
+      setLessonCanSubmit(s.canSubmit);
+      setLessonPending(s.isPending);
+      setLessonError(s.error);
+    },
+    [],
+  );
 
   function skipToDashboard() {
     // Leave the wizard without completing; the dashboard banner will nudge
@@ -117,10 +167,14 @@ export default function OnboardingPage() {
     }
   }
 
+  const advance = useCallback(() => {
+    setStep((s) => Math.min(STEPS.length - 1, s + 1));
+  }, []);
+
   return (
     <div className="flex min-h-svh flex-col">
       <header className="flex h-16 shrink-0 items-center justify-between border-b px-4">
-        <span className="text-sm font-semibold">Clastor</span>
+        <BrandMark size={32} />
         <Button variant="ghost" size="sm" onClick={skipToDashboard}>
           Skip for now
         </Button>
@@ -141,8 +195,22 @@ export default function OnboardingPage() {
           <CardContent className="p-6">
             {step === 0 && <WelcomeStep />}
             {step === 1 && <SubjectsStep />}
-            {step === 2 && <AddStudentStep />}
-            {step === 3 && <ScheduleLessonStep />}
+            {step === 2 && (
+              <AddStudentStep
+                ref={studentStepRef}
+                hasStudents={hasStudents}
+                onAdvance={advance}
+                onStateChange={handleStudentState}
+              />
+            )}
+            {step === 3 && (
+              <ScheduleLessonStep
+                ref={lessonStepRef}
+                hasLessons={hasLessons}
+                onAdvance={advance}
+                onStateChange={handleLessonState}
+              />
+            )}
             {step === 4 && <GoogleConnectStep />}
             {step === 5 && <FinishStep />}
           </CardContent>
@@ -170,23 +238,56 @@ export default function OnboardingPage() {
               )}
               Finish
             </Button>
-          ) : (
+          ) : (step === STUDENT_STEP_INDEX && studentAutoAdvance) ||
+            (step === LESSON_STEP_INDEX && lessonAutoAdvance) ? (
+            <div />
+          ) : step === STUDENT_STEP_INDEX && studentPhase === "form" ? (
             <Button
-              onClick={() => setStep((s) => Math.min(STEPS.length - 1, s + 1))}
-              disabled={!canAdvance}
-              title={!canAdvance ? gateMessage ?? undefined : undefined}
+              onClick={() => studentStepRef.current?.submit()}
+              disabled={!studentCanSubmit || studentPending}
             >
+              {studentPending ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <UserPlus className="size-4" />
+              )}
+              Add student
+            </Button>
+          ) : step === LESSON_STEP_INDEX && lessonPhase === "form" ? (
+            <Button
+              onClick={() => lessonStepRef.current?.submit()}
+              disabled={!lessonCanSubmit || lessonPending}
+            >
+              {lessonPending ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <CalendarPlus className="size-4" />
+              )}
+              Book lesson
+            </Button>
+          ) : (
+            <Button onClick={advance}>
               {step === 0 ? "Get started" : "Continue"}
               <ArrowRight className="size-4" />
             </Button>
           )}
         </div>
 
-        {!canAdvance && gateMessage && (
-          <p className="text-center text-xs text-muted-foreground">
-            {gateMessage}
-          </p>
-        )}
+        {step === STUDENT_STEP_INDEX &&
+          studentPhase === "form" &&
+          studentError && (
+            <p className="text-center text-xs text-destructive">
+              {studentError}
+            </p>
+          )}
+
+        {step === LESSON_STEP_INDEX &&
+          lessonPhase === "form" &&
+          lessonError && (
+            <p className="text-center text-xs text-destructive">
+              {lessonError}
+            </p>
+          )}
 
         {complete.isError && (
           <p className="text-center text-sm text-destructive">

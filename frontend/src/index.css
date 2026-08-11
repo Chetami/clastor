@@ -95,6 +95,68 @@
   }
 }
 
+/* Onboarding "student added" confirmation — an animated checkmark (circle
+   pops in with a slight overshoot, the tick draws along its path) followed by
+   the message easing up. Plays once when a student is created, before the
+   wizard auto-advances to the schedule step. */
+@keyframes ob-success-pop {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes ob-success-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes ob-success-text {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.ob-success-circle {
+  transform-origin: center;
+  animation: ob-success-pop 0.32s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.ob-success-check {
+  stroke-dasharray: 40;
+  stroke-dashoffset: 40;
+  animation: ob-success-draw 0.3s ease-out 0.18s forwards;
+}
+
+.ob-success-text {
+  animation: ob-success-text 0.3s ease-out 0.32s both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ob-success-circle,
+  .ob-success-check,
+  .ob-success-text {
+    animation: none;
+  }
+  .ob-success-check {
+    stroke-dashoffset: 0;
+  }
+}
+
 @layer base {
   /* ── Amber (default) ─────────────────────────────────────
      Zinc base colour + Amber primary. Cool-gray neutrals

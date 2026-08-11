@@ -209,6 +209,11 @@ describe("resolveBillingEmail", () => {
     expect(resolveBillingEmail(null, null, EMAIL)).toBe(EMAIL);
     expect(resolveBillingEmail(undefined, undefined, EMAIL)).toBe(EMAIL);
   });
+
+  it("returns null when no email sources are set", () => {
+    expect(resolveBillingEmail(null, null, null)).toBeNull();
+    expect(resolveBillingEmail(undefined, undefined, "")).toBeNull();
+  });
 });
 
 describe("resolveBillingEmailSource", () => {

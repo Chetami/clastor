@@ -1,8 +1,13 @@
-import { useState } from "react";
-import { CheckCircle2, Loader2, UserPlus } from "lucide-react";
+import {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from "react";
+import { UserPlus } from "lucide-react";
 import type { CreateStudentRequest } from "@examify-tms/interfaces";
 
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SubjectMultiSelect } from "@/components/subjects/SubjectMultiSelect";
@@ -10,86 +15,159 @@ import { useCreateStudent } from "@/features/students/api/use-create-student";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+const AUTO_ADVANCE_MS = 1200;
+
+export type AddStudentStepHandle = {
+  submit: () => Promise<void>;
+};
+
+type AddStudentPhase = "form" | "success";
+
+type AddStudentStepState = {
+  phase: AddStudentPhase;
+  autoAdvance: boolean;
+  canSubmit: boolean;
+  isPending: boolean;
+  error: string | null;
+};
+
+type AddStudentStepProps = {
+  hasStudents: boolean;
+  onAdvance: () => void;
+  onStateChange: (state: AddStudentStepState) => void;
+};
+
 /**
  * Slim "add your first student" form. Captures just enough to be useful
- * (name + email required) and creates a real student record immediately.
- * Optional subject is pre-fillable from the catalogue set in the previous
- * step. Skippable.
+ * (name required; email optional) and creates a real student record via the
+ * imperative submit handle — the parent wizard owns the footer "Add student"
+ * action and gates it on a name. After a successful create it plays a
+ * checkmark animation and auto-advances to the next step. If revisited after
+ * a student already exists, it shows the confirmation statically (no
+ * auto-advance) so the parent's Continue can move on.
  */
-export function AddStudentStep() {
+export const AddStudentStep = forwardRef<
+  AddStudentStepHandle,
+  AddStudentStepProps
+>(function AddStudentStep({ hasStudents, onAdvance, onStateChange }, ref) {
   const createStudent = useCreateStudent();
+
+  // "success" is only reached via a real create in this session. Returning to
+  // the step after a student already exists starts in a static (non-auto-
+  // advancing) success view.
+  const [created, setCreated] = useState(false);
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
   const [subjectIds, setSubjectIds] = useState<string[]>([]);
+  const [emailError, setEmailError] = useState<string | undefined>();
 
-  const [createdName, setCreatedName] = useState<string | null>(null);
-  const [errors, setErrors] = useState<{ name?: string; email?: string }>({});
+  const showSuccess = created || hasStudents;
+  const autoAdvance = created;
+  const phase: AddStudentPhase = showSuccess ? "success" : "form";
 
-  function validate() {
-    const next: { name?: string; email?: string } = {};
-    if (!name.trim()) next.name = "Name is required";
-    if (!email.trim()) next.email = "Email is required";
-    else if (!EMAIL_RE.test(email.trim())) next.email = "Enter a valid email";
-    setErrors(next);
-    return Object.keys(next).length === 0;
-  }
+  useEffect(() => {
+    onStateChange({
+      phase,
+      autoAdvance,
+      canSubmit: name.trim().length > 0,
+      isPending: createStudent.isPending,
+      error: createStudent.error?.message ?? null,
+    });
+  }, [
+    phase,
+    autoAdvance,
+    name,
+    createStudent.isPending,
+    createStudent.error,
+    onStateChange,
+  ]);
 
-  async function handleSubmit() {
-    if (!validate()) return;
-    const payload: CreateStudentRequest = {
-      name: name.trim(),
-      email: email.trim(),
-      phone: phone.trim() || null,
-      parentEmail: null,
-      billingEmail: null,
-      subjectIds,
-      expectedAmount: 0,
-      rateType: "hourly",
-      frequencyPerWeek: 0,
-      status: "active",
-      timezone: null,
-      notes: null,
-    };
-    try {
-      await createStudent.mutateAsync(payload);
-      setCreatedName(name.trim());
-    } catch {
-      // surfaced via mutation state
+  // Auto-advance a beat after the success animation kicks in. The students
+  // list refetch (triggered by the create) resolves well within this window,
+  // so the next step mounts with fresh data.
+  const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (phase === "success" && autoAdvance) {
+      advanceTimer.current = setTimeout(onAdvance, AUTO_ADVANCE_MS);
     }
-  }
+    return () => {
+      if (advanceTimer.current) {
+        clearTimeout(advanceTimer.current);
+        advanceTimer.current = null;
+      }
+    };
+  }, [phase, autoAdvance, onAdvance]);
 
-  function resetForm() {
-    setName("");
-    setEmail("");
-    setPhone("");
-    setSubjectIds([]);
-    setCreatedName(null);
-  }
+  useImperativeHandle(
+    ref,
+    () => ({
+      async submit() {
+        if (email.trim() && !EMAIL_RE.test(email.trim())) {
+          setEmailError("Enter a valid email");
+          return;
+        }
+        setEmailError(undefined);
+        const payload: CreateStudentRequest = {
+          name: name.trim(),
+          email: email.trim() || null,
+          phone: null,
+          parentEmail: null,
+          billingEmail: null,
+          subjectIds,
+          expectedAmount: 0,
+          rateType: "hourly",
+          frequencyPerWeek: 0,
+          status: "active",
+          timezone: null,
+          notes: null,
+        };
+        try {
+          await createStudent.mutateAsync(payload);
+          setCreated(true);
+        } catch {
+          // surfaced via mutation state
+        }
+      },
+    }),
+    [name, email, subjectIds, createStudent],
+  );
 
-  if (createdName) {
+  if (showSuccess) {
     return (
-      <div className="flex flex-col items-center gap-4 py-4 text-center">
-        <CheckCircle2 className="size-12 text-emerald-500" />
-        <div className="flex flex-col gap-1">
-          <h2 className="text-lg font-semibold tracking-tight">
-            {createdName} is on board
-          </h2>
+      <div className="flex flex-col items-center gap-4 py-10 text-center">
+        <svg
+          viewBox="0 0 52 52"
+          className="size-14 overflow-visible text-emerald-500"
+          aria-hidden="true"
+        >
+          <circle
+            cx="26"
+            cy="26"
+            r="24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="3"
+            className="ob-success-circle"
+          />
+          <path
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="4"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M14 27 l8 8 l16 -16"
+            className="ob-success-check"
+          />
+        </svg>
+        <div className="ob-success-text flex flex-col gap-1">
+          <h2 className="text-lg font-semibold tracking-tight">Student added</h2>
           <p className="mx-auto max-w-sm text-sm text-muted-foreground">
-            You'll see them in your Students list. Next, let's schedule their
-            first lesson.
+            {autoAdvance
+              ? "Taking you to the next step\u2026"
+              : "Continue to schedule their first lesson."}
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={resetForm}>
-          <UserPlus className="size-4" />
-          Add another student
-        </Button>
-        {createStudent.isError && (
-          <p className="text-xs text-destructive">
-            {createStudent.error.message}
-          </p>
-        )}
       </div>
     );
   }
@@ -101,10 +179,6 @@ export function AddStudentStep() {
           <UserPlus className="size-4" />
           Add your first student
         </h2>
-        <p className="text-sm text-muted-foreground">
-          Just a name and email to start — you can flesh out their details
-          later.
-        </p>
       </div>
 
       <div className="flex flex-col gap-4">
@@ -116,13 +190,15 @@ export function AddStudentStep() {
             placeholder="e.g. Alex Chen"
             onChange={(e) => setName(e.target.value)}
           />
-          {errors.name && (
-            <span className="text-xs text-destructive">{errors.name}</span>
-          )}
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="ob-student-email">Email</Label>
+          <Label htmlFor="ob-student-email">
+            Email{" "}
+            <span className="text-xs font-normal text-muted-foreground">
+              (optional)
+            </span>
+          </Label>
           <Input
             id="ob-student-email"
             type="email"
@@ -130,19 +206,12 @@ export function AddStudentStep() {
             placeholder="e.g. alex@example.com"
             onChange={(e) => setEmail(e.target.value)}
           />
-          {errors.email && (
-            <span className="text-xs text-destructive">{errors.email}</span>
+          {emailError && (
+            <span className="text-xs text-destructive">{emailError}</span>
           )}
-        </div>
-
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="ob-student-phone">Phone (optional)</Label>
-          <Input
-            id="ob-student-phone"
-            value={phone}
-            placeholder="e.g. +1 555 0100"
-            onChange={(e) => setPhone(e.target.value)}
-          />
+          <p className="text-xs">
+            Allows Clastor to send notifications on your behalf
+          </p>
         </div>
 
         <div className="flex flex-col gap-1.5">
@@ -150,26 +219,6 @@ export function AddStudentStep() {
           <SubjectMultiSelect value={subjectIds} onChange={setSubjectIds} />
         </div>
       </div>
-
-      <div className="flex items-center gap-3">
-        <Button
-          type="button"
-          onClick={handleSubmit}
-          disabled={createStudent.isPending}
-        >
-          {createStudent.isPending ? (
-            <Loader2 className="size-4 animate-spin" />
-          ) : (
-            <UserPlus className="size-4" />
-          )}
-          Add student
-        </Button>
-        {createStudent.isError && (
-          <span className="text-xs text-destructive">
-            {createStudent.error.message}
-          </span>
-        )}
-      </div>
     </div>
   );
-}
+});

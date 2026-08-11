@@ -10,7 +10,11 @@ export const studentStatusSchema = z.enum(["active", "past"]);
 export const studentFormSchema = z
   .object({
     name: z.string().min(1, "Name is required").trim(),
-    email: z.string().min(1, "Email is required").email("Enter a valid email"),
+    email: z
+      .string()
+      .trim()
+      .optional()
+      .or(z.literal("")),
     phone: z
       .string()
       .trim()
@@ -48,6 +52,16 @@ export const studentFormSchema = z
     notes: z.string().trim().optional().or(z.literal("")),
   })
   .superRefine((data, ctx) => {
+    if (data.email && data.email.length > 0) {
+      const emailResult = z.string().email().safeParse(data.email);
+      if (!emailResult.success) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["email"],
+          message: "Enter a valid email",
+        });
+      }
+    }
     if (data.parentEmail && data.parentEmail.length > 0) {
       const emailResult = z.string().email().safeParse(data.parentEmail);
       if (!emailResult.success) {
@@ -103,7 +117,7 @@ export const EMPTY_STUDENT_FORM: StudentFormData = {
 export function formToUpdateRequest(data: StudentFormData): UpdateStudentRequest {
   return {
     name: data.name,
-    email: data.email,
+    email: data.email || null,
     phone: data.phone || null,
     parentEmail: data.parentEmail || null,
     billingEmail:

@@ -106,7 +106,12 @@ export function StudentForm({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="email">Email</Label>
+        <Label htmlFor="email">
+          Email{" "}
+          <span className="text-xs font-normal text-muted-foreground">
+            (optional)
+          </span>
+        </Label>
         <Input
           id="email"
           type="email"
@@ -191,13 +196,20 @@ export function StudentForm({
             {values.billingEmailMode === "auto" ? (
               <div className="flex items-start gap-2 rounded-md border border-border/60 bg-muted/40 px-3 py-2 text-sm">
                 <Mail className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-                <p className="text-muted-foreground">
-                  Invoices will be sent to{" "}
-                  <span className="font-medium text-foreground">
-                    {billingAutoEmail}
-                  </span>{" "}
-                  ({billingAutoSourceLabel})
-                </p>
+                {billingAutoEmail ? (
+                  <p className="text-muted-foreground">
+                    Invoices will be sent to{" "}
+                    <span className="font-medium text-foreground">
+                      {billingAutoEmail}
+                    </span>{" "}
+                    ({billingAutoSourceLabel})
+                  </p>
+                ) : (
+                  <p className="text-muted-foreground">
+                    No billing email set. Add a student or parent email so
+                    invoices have a recipient.
+                  </p>
+                )}
               </div>
             ) : (
               <div className="space-y-2 pt-2">
@@ -215,7 +227,8 @@ export function StudentForm({
                   </p>
                 )}
                 <p className="text-xs text-muted-foreground">
-                  Auto would use {billingAutoEmail} ({billingAutoSourceLabel}).
+                  Auto would use{" "}
+                  {billingAutoEmail ?? "no email"} ({billingAutoSourceLabel}).
                   Use a custom address if invoices should go elsewhere.
                 </p>
               </div>

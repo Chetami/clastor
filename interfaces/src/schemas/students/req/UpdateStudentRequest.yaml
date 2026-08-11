@@ -7,7 +7,10 @@ properties:
   email:
     type: string
     format: email
-    description: Student's email address
+    nullable: true
+    description: >-
+      Student's email address (optional). Send null to clear an existing
+      email.
     example: alice.johnson@example.com
   phone:
     type: string

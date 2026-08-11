@@ -1,15 +1,15 @@
-import { useEffect, useMemo, useState } from "react";
-import { format } from "date-fns";
 import {
-  CalendarPlus,
-  CheckCircle2,
-  Clock,
-  Loader2,
-  Users,
-} from "lucide-react";
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { format } from "date-fns";
+import { CalendarPlus, Loader2, Users } from "lucide-react";
 import type { CreateLessonRequest } from "@examify-tms/interfaces";
 
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -22,13 +22,9 @@ import {
 import { useSubjects } from "@/lib/subjects";
 import { useListStudents } from "@/features/students/api/use-list-students";
 import { useCreateLesson } from "@/features/schedule/api/use-create-lesson";
+import { DurationPicker } from "@/features/schedule/create-event/DurationPicker";
 
-const DURATIONS = [
-  { value: 30, label: "30 min" },
-  { value: 60, label: "1 hour" },
-  { value: 90, label: "1.5 hours" },
-  { value: 120, label: "2 hours" },
-];
+const AUTO_ADVANCE_MS = 1200;
 
 /** Default to tomorrow at 4pm. */
 function defaultDate(): string {
@@ -37,13 +33,41 @@ function defaultDate(): string {
   return format(d, "yyyy-MM-dd");
 }
 
+export type ScheduleLessonStepHandle = {
+  submit: () => Promise<void>;
+};
+
+type ScheduleLessonPhase = "form" | "success";
+
+type ScheduleLessonStepState = {
+  phase: ScheduleLessonPhase;
+  autoAdvance: boolean;
+  canSubmit: boolean;
+  isPending: boolean;
+  error: string | null;
+};
+
+type ScheduleLessonStepProps = {
+  hasLessons: boolean;
+  onAdvance: () => void;
+  onStateChange: (state: ScheduleLessonStepState) => void;
+};
+
 /**
  * The aha moment: schedule the first lesson. A lean one-off scheduler that
  * defaults to the most recently added student (e.g. the one from the previous
- * step) and tags it with a subject. Creates a real lesson immediately.
- * Skippable.
+ * step) and tags it with a subject. The footer "Book lesson" action drives an
+ * imperative submit handle. After a successful create it plays a checkmark
+ * animation and auto-advances; if revisited after a lesson already exists it
+ * shows the confirmation statically so Continue can move on.
  */
-export function ScheduleLessonStep() {
+export const ScheduleLessonStep = forwardRef<
+  ScheduleLessonStepHandle,
+  ScheduleLessonStepProps
+>(function ScheduleLessonStep(
+  { hasLessons, onAdvance, onStateChange },
+  ref,
+) {
   const studentsQuery = useListStudents();
   const subjects = useSubjects();
   const createLesson = useCreateLesson();
@@ -57,16 +81,16 @@ export function ScheduleLessonStep() {
     [studentsQuery.data],
   );
 
+  // "success" is only reached via a real create in this session. Returning to
+  // the step after a lesson already exists starts in a static (non-auto-
+  // advancing) success view.
+  const [created, setCreated] = useState(false);
+
   const [studentId, setStudentId] = useState("");
   const [subjectId, setSubjectId] = useState("");
   const [date, setDate] = useState(defaultDate());
   const [startTime, setStartTime] = useState("16:00");
   const [duration, setDuration] = useState(60);
-  const [notes, setNotes] = useState("");
-  const [created, setCreated] = useState<{
-    at: string;
-    student: string;
-  } | null>(null);
 
   // Default-select the newest student once the list loads.
   useEffect(() => {
@@ -80,7 +104,78 @@ export function ScheduleLessonStep() {
   const selectedStudent = students.find((s) => s.id === studentId);
   const subjectName = subjects.find((s) => s.id === subjectId)?.name ?? null;
 
-  if (studentsQuery.isLoading) {
+  const showSuccess = created || hasLessons;
+  const autoAdvance = created;
+  const phase: ScheduleLessonPhase = showSuccess ? "success" : "form";
+
+  useEffect(() => {
+    onStateChange({
+      phase,
+      autoAdvance,
+      canSubmit: !!studentId,
+      isPending: createLesson.isPending,
+      error: createLesson.error?.message ?? null,
+    });
+  }, [
+    phase,
+    autoAdvance,
+    studentId,
+    createLesson.isPending,
+    createLesson.error,
+    onStateChange,
+  ]);
+
+  // Auto-advance a beat after the success animation kicks in. The lessons
+  // list refetch (triggered by the create) resolves well within this window.
+  const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (phase === "success" && autoAdvance) {
+      advanceTimer.current = setTimeout(onAdvance, AUTO_ADVANCE_MS);
+    }
+    return () => {
+      if (advanceTimer.current) {
+        clearTimeout(advanceTimer.current);
+        advanceTimer.current = null;
+      }
+    };
+  }, [phase, autoAdvance, onAdvance]);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      async submit() {
+        if (!selectedStudent) return;
+        const startDateTime = new Date(
+          `${date}T${startTime}:00`,
+        ).toISOString();
+        const payload: CreateLessonRequest = {
+          studentId: selectedStudent.id,
+          subject: subjectName,
+          startDateTime,
+          durationMinutes: duration,
+          location: null,
+          notes: null,
+          remindersEnabled: true,
+        };
+        try {
+          await createLesson.mutateAsync(payload);
+          setCreated(true);
+        } catch {
+          // surfaced via mutation state
+        }
+      },
+    }),
+    [selectedStudent, subjectName, date, startTime, duration, createLesson],
+  );
+
+  // Keep the spinner up while the list is loading OR while it's empty but a
+  // refetch is in flight (e.g. we just advanced here after adding a student
+  // and the invalidation hasn't resolved yet). Otherwise we'd flash the "Add
+  // a student first" empty state before the new student arrives.
+  if (
+    studentsQuery.isLoading ||
+    (students.length === 0 && studentsQuery.isFetching)
+  ) {
     return (
       <div className="flex items-center justify-center py-8 text-muted-foreground">
         <Loader2 className="size-5 animate-spin" />
@@ -107,60 +202,43 @@ export function ScheduleLessonStep() {
     );
   }
 
-  if (created) {
+  if (showSuccess) {
     return (
-      <div className="flex flex-col items-center gap-4 py-4 text-center">
-        <CheckCircle2 className="size-12 text-emerald-500" />
-        <div className="flex flex-col gap-1">
-          <h2 className="text-lg font-semibold tracking-tight">
-            Lesson booked!
-          </h2>
+      <div className="flex flex-col items-center gap-4 py-10 text-center">
+        <svg
+          viewBox="0 0 52 52"
+          className="size-14 overflow-visible text-emerald-500"
+          aria-hidden="true"
+        >
+          <circle
+            cx="26"
+            cy="26"
+            r="24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="3"
+            className="ob-success-circle"
+          />
+          <path
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="4"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M14 27 l8 8 l16 -16"
+            className="ob-success-check"
+          />
+        </svg>
+        <div className="ob-success-text flex flex-col gap-1">
+          <h2 className="text-lg font-semibold tracking-tight">Lesson booked!</h2>
           <p className="mx-auto max-w-sm text-sm text-muted-foreground">
-            Your first lesson is on the calendar! You're officially up and
-            running. Head over to your Schedule anytime to see or manage
-            it.{" "}
+            {autoAdvance
+              ? "Taking you to the next step\u2026"
+              : "Continue to connect your calendar."}
           </p>
-        </div>
-        <div className="flex w-full max-w-xs flex-col gap-2 rounded-lg border bg-muted/30 p-4 text-left text-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">Student</span>
-            <span className="font-medium">{created.student}</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">When</span>
-            <span className="font-medium">
-              {format(new Date(created.at), "EEE d MMM, h:mma")}
-            </span>
-          </div>
-          {subjectName && (
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Subject</span>
-              <span className="font-medium">{subjectName}</span>
-            </div>
-          )}
         </div>
       </div>
     );
-  }
-
-  async function handleSubmit() {
-    if (!selectedStudent) return;
-    const startDateTime = new Date(`${date}T${startTime}:00`).toISOString();
-    const payload: CreateLessonRequest = {
-      studentId: selectedStudent.id,
-      subject: subjectName,
-      startDateTime,
-      durationMinutes: duration,
-      location: null,
-      notes: notes.trim() || null,
-      remindersEnabled: true,
-    };
-    try {
-      await createLesson.mutateAsync(payload);
-      setCreated({ at: startDateTime, student: selectedStudent.name });
-    } catch {
-      // surfaced via mutation state
-    }
   }
 
   return (
@@ -239,58 +317,11 @@ export function ScheduleLessonStep() {
           </div>
         </div>
 
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-2">
           <Label>Duration</Label>
-          <Select
-            value={String(duration)}
-            onValueChange={(v) => setDuration(Number(v))}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {DURATIONS.map((d) => (
-                <SelectItem key={d.value} value={String(d.value)}>
-                  <span className="inline-flex items-center gap-1.5">
-                    <Clock className="size-3.5 text-muted-foreground" />
-                    {d.label}
-                  </span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <DurationPicker value={duration} onChange={setDuration} />
         </div>
-
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="ob-lesson-notes">Notes (optional)</Label>
-          <Input
-            id="ob-lesson-notes"
-            value={notes}
-            placeholder="e.g. Bring textbook chapter 4"
-            onChange={(e) => setNotes(e.target.value)}
-          />
-        </div>
-      </div>
-
-      <div className="flex items-center gap-3">
-        <Button
-          type="button"
-          onClick={handleSubmit}
-          disabled={createLesson.isPending || !studentId}
-        >
-          {createLesson.isPending ? (
-            <Loader2 className="size-4 animate-spin" />
-          ) : (
-            <CalendarPlus className="size-4" />
-          )}
-          Book lesson
-        </Button>
-        {createLesson.isError && (
-          <span className="text-xs text-destructive">
-            {createLesson.error.message}
-          </span>
-        )}
       </div>
     </div>
   );
-}
+});

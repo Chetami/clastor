@@ -55,7 +55,7 @@ export default function StudentsScreen() {
         const matchesSearch =
           query.length === 0 ||
           s.name.toLowerCase().includes(query) ||
-          s.email.toLowerCase().includes(query);
+          (s.email ?? "").toLowerCase().includes(query);
         return matchesStatus && matchesSearch;
       })
       .sort((a, b) => a.name.localeCompare(b.name));

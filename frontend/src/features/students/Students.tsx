@@ -104,7 +104,7 @@ export default function Students() {
       const matchesSearch =
         query.length === 0 ||
         s.name.toLowerCase().includes(query) ||
-        s.email.toLowerCase().includes(query) ||
+        (s.email ?? "").toLowerCase().includes(query) ||
         (s.subjectIds ?? []).some((id) =>
           subjectMap.get(id)?.name.toLowerCase().includes(query),
         );
@@ -144,7 +144,7 @@ export default function Students() {
 
       await createStudent.mutateAsync({
         name: values.name,
-        email: values.email,
+        email: values.email || null,
         phone: values.phone?.trim() || undefined,
         parentEmail: values.parentEmail?.trim() || undefined,
         billingEmail,
@@ -177,7 +177,7 @@ export default function Students() {
         id: editing.id,
         data: {
           name: values.name,
-          email: values.email,
+          email: values.email || null,
           phone: values.phone?.trim() || null,
           parentEmail: values.parentEmail?.trim() || null,
           billingEmail,

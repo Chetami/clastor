@@ -36,7 +36,10 @@ properties:
   billingEmail:
     type: string
     format: email
-    description: Snapshot of the resolved billing email at creation time
+    nullable: true
+    description: >-
+      Snapshot of the resolved billing email at creation time. May be null
+      when the student has no email, parent email, or explicit override.
     example: parent.johnson@example.com
   status:
     $ref: '../InvoiceStatus.yaml'
