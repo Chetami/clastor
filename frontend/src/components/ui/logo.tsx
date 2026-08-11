@@ -12,7 +12,8 @@ export function Logo({ className = "", size = 40 }: LogoProps) {
       alt="Clastor"
       width={size}
       height={size}
-      className={cn("shrink-0", className)}
+      className={cn("shrink-0 rounded-md", className)}
+      style={{ borderRadius: '0.375rem' }}
     />
   );
 }
