@@ -56,11 +56,18 @@ const COLOR_SCHEME_CLASSES: Record<ColorScheme, string> = {
   rose: "theme-rose",
 };
 
+function getSystemAppearance(): Appearance {
+  if (typeof window === "undefined" || !window.matchMedia) return "light";
+  return window.matchMedia("(prefers-color-scheme: dark)").matches
+    ? "dark"
+    : "light";
+}
+
 function getInitialAppearance(): Appearance {
   if (typeof window === "undefined") return "light";
   const stored = localStorage.getItem(APPEARANCE_KEY);
   if (stored === "light" || stored === "dark") return stored;
-  return "light";
+  return getSystemAppearance();
 }
 
 function getInitialColorScheme(): ColorScheme {
@@ -81,15 +88,44 @@ type ThemeContextValue = {
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [appearance, setAppearance] = useState<Appearance>(getInitialAppearance);
+  const [appearance, setAppearanceState] = useState<Appearance>(
+    getInitialAppearance,
+  );
   const [colorScheme, setColorScheme] = useState<ColorScheme>(
     getInitialColorScheme,
   );
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", appearance === "dark");
-    localStorage.setItem(APPEARANCE_KEY, appearance);
   }, [appearance]);
+
+  // Follow the browser preference when the user hasn't explicitly chosen.
+  useEffect(() => {
+    if (!window.matchMedia) return;
+    const mql = window.matchMedia("(prefers-color-scheme: dark)");
+    const onChange = (e: MediaQueryListEvent) => {
+      if (!localStorage.getItem(APPEARANCE_KEY)) {
+        setAppearanceState(e.matches ? "dark" : "light");
+      }
+    };
+    mql.addEventListener("change", onChange);
+    return () => mql.removeEventListener("change", onChange);
+  }, []);
+
+  const setAppearance = useCallback((next: Appearance) => {
+    localStorage.setItem(APPEARANCE_KEY, next);
+    setAppearanceState(next);
+  }, []);
+
+  const toggleAppearance = useCallback(
+    () =>
+      setAppearanceState((prev) => {
+        const next = prev === "dark" ? "light" : "dark";
+        localStorage.setItem(APPEARANCE_KEY, next);
+        return next;
+      }),
+    [],
+  );
 
   useEffect(() => {
     const html = document.documentElement;
@@ -101,11 +137,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(COLOR_SCHEME_KEY, colorScheme);
   }, [colorScheme]);
 
-  const toggleAppearance = useCallback(
-    () => setAppearance((prev) => (prev === "dark" ? "light" : "dark")),
-    [],
-  );
-
   const value = useMemo<ThemeContextValue>(
     () => ({
       appearance,
@@ -114,7 +145,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       toggleAppearance,
       setColorScheme,
     }),
-    [appearance, colorScheme, toggleAppearance],
+    [appearance, colorScheme, setAppearance, toggleAppearance],
   );
 
   return (
