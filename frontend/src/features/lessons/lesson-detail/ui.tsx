@@ -1,5 +1,6 @@
 import { useRef, useLayoutEffect } from "react";
 import { Check, Loader2 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 
 interface DetailRowProps {
   icon: React.ReactNode;
@@ -68,7 +69,7 @@ export function AutoGrowTextarea({
     el.style.height = `${el.scrollHeight}px`;
   }, [value]);
   return (
-    <textarea
+    <Textarea
       ref={ref}
       value={value}
       onChange={onChange}

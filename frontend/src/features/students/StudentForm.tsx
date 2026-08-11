@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { PhoneInput } from "@/components/ui/phone-input";
 import {
   EMPTY_STUDENT_FORM,
@@ -349,14 +350,13 @@ export function StudentForm({
                 (optional)
               </span>
             </Label>
-            <textarea
+            <Textarea
               id="notes"
               rows={3}
               placeholder="Any extra details about this student..."
               aria-invalid={!!errors.notes}
               value={values.notes}
               onChange={(e) => update("notes", e.target.value)}
-              className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
             />
           </div>
         </CollapsibleContent>

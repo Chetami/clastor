@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -581,13 +582,12 @@ export function CreateEventDialog({
                 (optional)
               </span>
             </Label>
-            <textarea
+            <Textarea
               id="notes"
               rows={3}
               placeholder="What to cover, prep notes, etc."
               value={values.notes}
               onChange={(e) => update("notes", e.target.value)}
-              className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             />
           </div>
 

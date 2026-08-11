@@ -18,6 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui";
+import { Textarea } from "@/components/ui/textarea";
 import { useGetInvoice } from "./api/use-get-invoice";
 import { useUpdateInvoice } from "./api/use-update-invoice";
 import { useListStudents } from "@/features/students/api";
@@ -329,13 +330,12 @@ export default function EditInvoice() {
                     (optional)
                   </span>
                 </Label>
-                <textarea
+                <Textarea
                   id="notes"
                   rows={3}
                   placeholder="Payment instructions, thank-you note..."
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                 />
               </div>
             </CardContent>

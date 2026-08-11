@@ -4,6 +4,7 @@ import type { Invoice } from "@examify-tms/interfaces";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
 import { formatCurrency, formatDate } from "@/features/payments/invoice-utils";
 
 function invoiceStatusVariant(
@@ -155,13 +156,12 @@ export function StudentNotesCard({
       <CardContent>
         {editing ? (
           <div className="space-y-3">
-            <textarea
+            <Textarea
               autoFocus
               rows={5}
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
               placeholder="Add notes about this student..."
-              className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             />
             <div className="flex justify-end gap-2">
               <Button
