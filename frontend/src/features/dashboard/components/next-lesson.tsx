@@ -127,7 +127,7 @@ export function NextLesson({ lesson, studentName }: Props) {
 
           {/* Open the call when a link exists; otherwise offer to generate a Meet */}
           {callLink ? (
-            <Button asChild size="sm" className="shrink-0 gap-1.5">
+            <Button asChild size="lg" className="shrink-0 gap-1.5">
               <a href={callLink} target="_blank" rel="noopener noreferrer">
                 <Video className="h-4 w-4" />
                 {isMeet ? "Join Meet" : "Join call"}
@@ -136,7 +136,7 @@ export function NextLesson({ lesson, studentName }: Props) {
             </Button>
           ) : (
             <Button
-              size="sm"
+              size="lg"
               variant="secondary"
               className="shrink-0 gap-1.5"
               onClick={handleGenerate}
