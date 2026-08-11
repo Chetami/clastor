@@ -353,7 +353,6 @@ export default function Students() {
         open={addOpen}
         onOpenChange={setAddOpen}
         title="Add Student"
-        description="Enter the student's details below. Click save when you're done."
         submitLabel={createStudent.isPending ? "Creating..." : "Save Student"}
         onSubmit={handleAdd}
         onCancel={() => setAddOpen(false)}

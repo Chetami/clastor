@@ -89,7 +89,7 @@ export function StudentForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+    <form onSubmit={handleSubmit} className="space-y-3" noValidate>
       <div className="space-y-2">
         <Label htmlFor="name">Name</Label>
         <Input
@@ -119,7 +119,7 @@ export function StudentForm({
         )}
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="phone">
             Phone{" "}
@@ -232,9 +232,27 @@ export function StudentForm({
         />
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="space-y-2">
+        <Label>Rate Type</Label>
+        <div className="grid grid-cols-2 gap-2">
+          <ToggleOption
+            checked={values.rateType === "hourly"}
+            label="Hourly"
+            onSelect={() => update("rateType", "hourly" as RateType)}
+          />
+          <ToggleOption
+            checked={values.rateType === "per_lesson"}
+            label="Per Lesson"
+            onSelect={() => update("rateType", "per_lesson" as RateType)}
+          />
+        </div>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="expectedAmount">Expected Amount</Label>
+          <Label htmlFor="expectedAmount">
+            {values.rateType === "hourly" ? "Hourly Rate" : "Per-Lesson Rate"}
+          </Label>
           <div className="relative">
             <NumberInput
               id="expectedAmount"
@@ -270,22 +288,6 @@ export function StudentForm({
               {errors.frequencyPerWeek}
             </p>
           )}
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <Label>Rate Type</Label>
-        <div className="grid grid-cols-2 gap-2">
-          <ToggleOption
-            checked={values.rateType === "hourly"}
-            label="Hourly"
-            onSelect={() => update("rateType", "hourly" as RateType)}
-          />
-          <ToggleOption
-            checked={values.rateType === "per_lesson"}
-            label="Per Lesson"
-            onSelect={() => update("rateType", "per_lesson" as RateType)}
-          />
         </div>
       </div>
 
@@ -339,26 +341,26 @@ export function StudentForm({
               We're working on supporting custom timezones in the future.
             </p>
           </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="notes">
+              Notes{" "}
+              <span className="text-xs font-normal text-muted-foreground">
+                (optional)
+              </span>
+            </Label>
+            <textarea
+              id="notes"
+              rows={3}
+              placeholder="Any extra details about this student..."
+              aria-invalid={!!errors.notes}
+              value={values.notes}
+              onChange={(e) => update("notes", e.target.value)}
+              className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+            />
+          </div>
         </CollapsibleContent>
       </Collapsible>
-
-      <div className="space-y-2">
-        <Label htmlFor="notes">
-          Notes{" "}
-          <span className="text-xs font-normal text-muted-foreground">
-            (optional)
-          </span>
-        </Label>
-        <textarea
-          id="notes"
-          rows={3}
-          placeholder="Any extra details about this student..."
-          aria-invalid={!!errors.notes}
-          value={values.notes}
-          onChange={(e) => update("notes", e.target.value)}
-          className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-        />
-      </div>
 
       <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
         <Button

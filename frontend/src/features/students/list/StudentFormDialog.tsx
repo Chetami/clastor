@@ -12,7 +12,7 @@ interface StudentFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: string;
-  description: string;
+  description?: string;
   submitLabel: string;
   onSubmit: (values: StudentFormData) => void | Promise<void>;
   onCancel: () => void;
@@ -44,7 +44,7 @@ export function StudentFormDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
+          {description && <DialogDescription>{description}</DialogDescription>}
         </DialogHeader>
         <StudentForm
           key={formKey}
