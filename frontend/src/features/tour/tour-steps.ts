@@ -48,14 +48,6 @@ export const TOUR_STEPS: TourStep[] = [
   },
   {
     route: "/dashboard",
-    element: '[data-tour="quick-actions"]',
-    popover: {
-      title: "Quick actions",
-      description:
-        "Back on your dashboard, reach all three of those actions in a single click.",
-    },
-  },
-  {
     element: '[data-tour="things-to-do"]',
     popover: {
       title: "Things to do",

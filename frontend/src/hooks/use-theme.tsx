@@ -10,52 +10,50 @@ import {
 } from "react";
 
 export type Appearance = "light" | "dark";
-export type ColorScheme =
-  | "graphite"
-  | "ocean"
-  | "emerald"
-  | "violet"
-  | "rose"
-  | "amber"
-  | "sunset"
-  | "teal"
-  | "berry";
+export type ColorScheme = "amber" | "emerald" | "rose";
 
 export const COLOR_SCHEMES: {
   value: ColorScheme;
   label: string;
+  /** Tinted neutral base (light-mode muted-foreground) — shows the base hue. */
+  base: string;
   /** Light-mode primary swatch, used for preview chips. */
   swatch: string;
-  /** Light-mode accent (secondary) swatch. */
-  accent: string;
-  /** Light-mode secondary swatch (three-colour schemes only). */
-  secondary?: string;
+  /** Dark-mode primary swatch, used for preview chips. */
+  darkSwatch: string;
 }[] = [
-  { value: "graphite", label: "Graphite", swatch: "hsl(0 0% 9%)", accent: "hsl(0 0% 45%)" },
-  { value: "ocean", label: "Ocean", swatch: "hsl(221.2 83.2% 53.3%)", accent: "hsl(199.2 89.5% 48.2%)" },
-  { value: "emerald", label: "Emerald", swatch: "hsl(142.1 76.2% 36.3%)", accent: "hsl(38 92% 50%)" },
-  { value: "violet", label: "Violet", swatch: "hsl(258 90% 52%)", accent: "hsl(292 84% 61%)" },
-  { value: "rose", label: "Rose", swatch: "hsl(347 77% 50%)", accent: "hsl(330 81% 60%)" },
-  { value: "amber", label: "Amber", swatch: "hsl(33 88% 38%)", accent: "hsl(25 95% 53%)" },
-  { value: "sunset", label: "Sunset", swatch: "hsl(0 72% 51%)", secondary: "hsl(21 90% 48%)", accent: "hsl(38 92% 50%)" },
-  { value: "teal", label: "Teal", swatch: "hsl(199 89% 42%)", secondary: "hsl(173 80% 35%)", accent: "hsl(142 71% 45%)" },
-  { value: "berry", label: "Berry", swatch: "hsl(327 79% 56%)", secondary: "hsl(263 70% 50%)", accent: "hsl(347 77% 50%)" },
+  {
+    value: "amber",
+    label: "Amber",
+    base: "oklch(0.552 0.016 285.938)",
+    swatch: "oklch(0.555 0.163 48.998)",
+    darkSwatch: "oklch(0.473 0.137 46.201)",
+  },
+  {
+    value: "emerald",
+    label: "Emerald",
+    base: "oklch(0.542 0.034 322.5)",
+    swatch: "oklch(0.508 0.118 165.612)",
+    darkSwatch: "oklch(0.432 0.095 166.913)",
+  },
+  {
+    value: "rose",
+    label: "Rose",
+    base: "oklch(0.56 0.021 213.5)",
+    swatch: "oklch(0.514 0.222 16.935)",
+    darkSwatch: "oklch(0.455 0.188 13.697)",
+  },
 ];
 
 const APPEARANCE_KEY = "theme";
 const COLOR_SCHEME_KEY = "color-scheme";
+const DEFAULT_COLOR_SCHEME: ColorScheme = "amber";
 
-/** CSS class applied to <html> for each scheme (graphite needs none). */
+/** CSS class applied to <html> for each scheme (amber needs none — falls through to :root). */
 const COLOR_SCHEME_CLASSES: Record<ColorScheme, string> = {
-  graphite: "",
-  ocean: "theme-ocean",
+  amber: "",
   emerald: "theme-emerald",
-  violet: "theme-violet",
   rose: "theme-rose",
-  amber: "theme-amber",
-  sunset: "theme-sunset",
-  teal: "theme-teal",
-  berry: "theme-berry",
 };
 
 function getInitialAppearance(): Appearance {
@@ -66,10 +64,10 @@ function getInitialAppearance(): Appearance {
 }
 
 function getInitialColorScheme(): ColorScheme {
-  if (typeof window === "undefined") return "ocean";
+  if (typeof window === "undefined") return DEFAULT_COLOR_SCHEME;
   const stored = localStorage.getItem(COLOR_SCHEME_KEY) as ColorScheme | null;
   if (stored && stored in COLOR_SCHEME_CLASSES) return stored;
-  return "ocean";
+  return DEFAULT_COLOR_SCHEME;
 }
 
 type ThemeContextValue = {

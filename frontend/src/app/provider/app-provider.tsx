@@ -6,6 +6,7 @@ import { useAuthStore } from "@/store/auth-store";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/hooks/use-theme";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 function FullScreenLoader() {
   return (
@@ -37,7 +38,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
-        <AuthBoot>{children}</AuthBoot>
+        <TooltipProvider>
+          <AuthBoot>{children}</AuthBoot>
+        </TooltipProvider>
         <Toaster richColors closeButton position="top-right" />
       </ThemeProvider>
       <ReactQueryDevtools initialIsOpen={false} />

@@ -11,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useCreateFeedback } from "./api";
 import type { FeedbackType } from "@examify-tms/interfaces";
@@ -137,12 +138,11 @@ export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
           </ToggleGroup>
 
           <div className="space-y-2">
-            <textarea
+            <Textarea
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               rows={5}
               placeholder="Tell us what's on your mind…"
-              className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               autoFocus
             />
           </div>

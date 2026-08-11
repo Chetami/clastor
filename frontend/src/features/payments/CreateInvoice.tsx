@@ -242,8 +242,8 @@ export default function CreateInvoice() {
           </div>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-          <div className="space-y-6">
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="min-w-0 space-y-6">
             {/* Step 1: Choose student */}
             <Card>
               <CardHeader>
@@ -441,7 +441,7 @@ export default function CreateInvoice() {
             </Card>
           </div>
 
-          <div className="space-y-6">
+          <div className="min-w-0 space-y-6">
             <InvoiceDetailsSidebar
               billingEmail={billingEmail}
               dueDate={dueDate}

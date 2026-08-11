@@ -121,8 +121,8 @@ export function WorkingHoursEditor() {
                 <Checkbox
                   id={`wh-${day}`}
                   checked={row.enabled}
-                  onChange={(e) =>
-                    updateDay(day, { enabled: e.target.checked })
+                  onCheckedChange={(checked) =>
+                    updateDay(day, { enabled: checked === true })
                   }
                 />
                 <label

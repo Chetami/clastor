@@ -161,7 +161,7 @@ export function CancelLessonDialog({
               <label className="flex items-start gap-2 cursor-pointer">
                 <Checkbox
                   checked={notifyStudent}
-                  onChange={(e) => setNotifyStudent(e.target.checked)}
+                  onCheckedChange={(checked) => setNotifyStudent(checked === true)}
                   className="mt-0.5"
                 />
                 <div className="space-y-1">

@@ -10,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui";
+import { Textarea } from "@/components/ui/textarea";
 import { formatCurrency } from "../invoice-utils";
 import type { CreateInvoiceFormData } from "../invoice-schema";
 
@@ -120,13 +121,12 @@ export function InvoiceDetailsSidebar({
                 (optional)
               </span>
             </Label>
-            <textarea
+            <Textarea
               id="notes"
               rows={3}
               placeholder="Payment instructions, thank-you note..."
               value={notes}
               onChange={(e) => onNotesChange(e.target.value)}
-              className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
             />
           </div>
         </CardContent>

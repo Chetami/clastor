@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/use-auth";
 import { useGetTutorProfile } from "./api/use-get-tutor-profile";
 import { useUpdateTutorProfile } from "./api/use-update-tutor-profile";
@@ -265,13 +266,12 @@ export default function TutorProfileEditor() {
                     (optional)
                   </span>
                 </Label>
-                <textarea
+                <Textarea
                   id="bio"
                   rows={5}
                   placeholder="Tell students and parents about your teaching style and experience..."
                   value={values.bio}
                   onChange={(e) => update("bio", e.target.value)}
-                  className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 />
               </div>
             </CardContent>

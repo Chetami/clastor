@@ -10,8 +10,17 @@ import {
 import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 import { useUserCurrency } from "@/lib/use-currency";
-import type { DashboardPeriod, DashboardSummaryResponse } from "@examify-tms/interfaces";
-import { formatCurrencyWhole, formatHours, deltaPercent, previousPeriodLabel, currentPeriodLabel } from "../lib";
+import type {
+  DashboardPeriod,
+  DashboardSummaryResponse,
+} from "@examify-tms/interfaces";
+import {
+  formatCurrencyWhole,
+  formatHours,
+  deltaPercent,
+  previousPeriodLabel,
+  currentPeriodLabel,
+} from "../lib";
 
 type TileProps = {
   icon: React.ReactNode;
@@ -26,7 +35,7 @@ function Tile({ icon, label, value, delta, children }: TileProps) {
   const isDown = (delta ?? null) !== null && delta! < 0;
 
   return (
-    <Card className="p-4">
+    <Card className="p-4 gap-1">
       <div className="flex items-center justify-between">
         <p className="text-[11px] text-muted-foreground">{label}</p>
         <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary/10 text-primary">
@@ -34,7 +43,9 @@ function Tile({ icon, label, value, delta, children }: TileProps) {
         </div>
       </div>
       <div className="mt-2 flex items-baseline gap-2">
-        <p className="text-xl font-semibold leading-none tracking-tight">{value}</p>
+        <p className="text-xl font-semibold leading-none tracking-tight">
+          {value}
+        </p>
         {delta !== undefined && delta !== null && (
           <span
             className={cn(
@@ -81,7 +92,10 @@ export function StatCards({
   plannedLessonCount: number;
 }) {
   const currency = useUserCurrency();
-  const hoursDelta = deltaPercent(summary.hoursWorked, summary.previousHoursWorked);
+  const hoursDelta = deltaPercent(
+    summary.hoursWorked,
+    summary.previousHoursWorked,
+  );
   const incomeDelta = deltaPercent(summary.income, summary.previousIncome);
   const lessonsDelta = deltaPercent(
     summary.lessonsTaught,
@@ -106,7 +120,11 @@ export function StatCards({
           {summary.overdueAmount > 0 && (
             <span className="font-medium text-red-600 dark:text-red-500">
               {" "}
-              · incl. {formatCurrencyWhole(summary.overdueAmount, currency)} overdue
+              · incl. {formatCurrencyWhole(
+                summary.overdueAmount,
+                currency,
+              )}{" "}
+              overdue
             </span>
           )}
         </p>
@@ -146,7 +164,8 @@ export function StatCards({
         {plannedLessonCount > 0 ? (
           <p>
             {plannedLessonCount} planned{" "}
-            {plannedLessonCount === 1 ? "lesson" : "lessons"} {currentPeriodLabel(period).toLowerCase()}
+            {plannedLessonCount === 1 ? "lesson" : "lessons"}{" "}
+            {currentPeriodLabel(period).toLowerCase()}
           </p>
         ) : (
           <p>Nothing planned {currentPeriodLabel(period).toLowerCase()}</p>

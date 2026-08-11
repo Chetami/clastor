@@ -84,7 +84,7 @@ export function DropConfirmDialog({
         <label className="flex items-center gap-2 cursor-pointer">
           <Checkbox
             checked={notify}
-            onChange={(e) => onNotifyChange(e.target.checked)}
+            onCheckedChange={(checked) => onNotifyChange(checked === true)}
           />
           <span className="text-sm">Notify student about the new time</span>
         </label>

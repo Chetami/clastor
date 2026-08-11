@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { GraduationCap } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
   Sidebar,
@@ -8,13 +8,12 @@ import {
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarSeparator,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { navItems } from "@/config/nav";
@@ -37,6 +36,20 @@ export function AppSidebar() {
   const location = useLocation();
   const { user } = useAuth();
   const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const { state } = useSidebar();
+  const [showCard, setShowCard] = useState(state === "expanded");
+  const [showIcon, setShowIcon] = useState(state === "collapsed");
+
+  useEffect(() => {
+    if (state === "expanded") {
+      setShowIcon(false);
+      const t = setTimeout(() => setShowCard(true), 200);
+      return () => clearTimeout(t);
+    }
+    setShowCard(false);
+    const t = setTimeout(() => setShowIcon(true), 200);
+    return () => clearTimeout(t);
+  }, [state]);
 
   const items = navItems.filter(
     (item) => !item.roles || (user?.role && item.roles.includes(user.role)),
@@ -65,11 +78,8 @@ export function AppSidebar() {
           </SidebarMenu>
         </SidebarHeader>
 
-        <SidebarSeparator />
-
         <SidebarContent>
           <SidebarGroup>
-            <SidebarGroupLabel>Menu</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {items.map((item) => (
@@ -93,34 +103,50 @@ export function AppSidebar() {
         </SidebarContent>
 
         <SidebarFooter>
-          <div className="group-data-[collapsible=icon]:hidden">
-            <div className="rounded-lg border bg-white p-3 text-center dark:bg-muted/50">
-              <p className="text-sm font-medium">
-                <span className="mr-1">🚀</span>
-                We're in beta
-              </p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Spotted a bug or have feedback? We'd love to hear from you.
-              </p>
-              <Button
-                variant="outline"
-                size="sm"
-                className="mt-2.5 w-full"
-                onClick={() => setFeedbackOpen(true)}
-              >
-                Report a bug or give feedback
-              </Button>
-              <BuyMeACoffeeButton className="mt-2.5 [&_a]:mx-auto" />
+          <div
+            className={`grid transition-all duration-200 ease-out ${
+              showCard
+                ? "grid-rows-[1fr] opacity-100"
+                : "grid-rows-[0fr] opacity-0"
+            }`}
+          >
+            <div className="overflow-hidden">
+              <div className="rounded-lg border bg-white p-3 text-center dark:bg-muted/50">
+                <p className="text-sm font-medium">
+                  <span className="mr-1">🚀</span>
+                  We're in beta
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Spotted a bug or have feedback? We'd love to hear from you.
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-2.5 w-full"
+                  onClick={() => setFeedbackOpen(true)}
+                >
+                  Report a bug or give feedback
+                </Button>
+                <BuyMeACoffeeButton className="mt-2.5 [&_a]:mx-auto" />
+              </div>
             </div>
           </div>
-          <div className="group-data-[collapsible=icon]:flex hidden justify-center">
-            <SidebarMenuButton
-              tooltip="Give Feedback"
-              onClick={() => setFeedbackOpen(true)}
-              className="mx-auto"
-            >
-              <span className="text-base">🚀</span>
-            </SidebarMenuButton>
+          <div
+            className={`grid transition-all duration-200 ease-out ${
+              showIcon
+                ? "grid-rows-[1fr] opacity-100"
+                : "grid-rows-[0fr] opacity-0"
+            }`}
+          >
+            <div className="overflow-hidden">
+              <SidebarMenuButton
+                tooltip="Give Feedback"
+                onClick={() => setFeedbackOpen(true)}
+                className="mx-auto"
+              >
+                <span className="text-base">🚀</span>
+              </SidebarMenuButton>
+            </div>
           </div>
           <NavUser user={user} />
         </SidebarFooter>

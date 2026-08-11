@@ -9,14 +9,10 @@ import {
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody } from "@/components/ui/table";
-import {
-  useMarkInvoicePaid,
-  useVoidInvoice,
-  listInvoicesRequest,
-} from "./api";
+import { useMarkInvoicePaid, useVoidInvoice, listInvoicesRequest } from "./api";
 import { SendInvoiceDialog } from "@/components/send-invoice-dialog";
 import {
   PAGE_SIZE,
@@ -25,10 +21,7 @@ import {
   type SortOrder,
   type StatusFilter,
 } from "./list/constants";
-import {
-  InvoicesTableHeader,
-  InvoiceRow,
-} from "./list/components";
+import { InvoicesTableHeader, InvoiceRow } from "./list/components";
 
 export default function Payments() {
   const navigate = useNavigate();
@@ -169,10 +162,10 @@ export default function Payments() {
   const [sendInvoiceId, setSendInvoiceId] = useState<string | null>(null);
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardContent className="space-y-4 p-4">
-          <div className="flex flex-wrap items-center gap-1 rounded-md border bg-muted/40 p-1">
+    <div className="flex h-full flex-col">
+      <Card className="h-full">
+        <CardHeader className="flex flex-col gap-4 space-y-0 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-1 rounded-md border bg-muted/40 p-1">
             {STATUS_TABS.map((tab) => (
               <button
                 key={tab.value}
@@ -191,19 +184,10 @@ export default function Payments() {
                 {tab.label}
               </button>
             ))}
-            <Button
-              size="sm"
-              className="ml-auto"
-              onClick={() => navigate("/payments/new")}
-              data-tour="create-invoice"
-            >
-              <Plus className="h-4 w-4" />
-              Create Invoice
-            </Button>
           </div>
 
-          <div className="flex items-center justify-between gap-2">
-            <div className="relative w-full max-w-xs">
+          <div className="flex items-center gap-2">
+            <div className="relative w-full sm:w-60">
               <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={search}
@@ -212,23 +196,33 @@ export default function Payments() {
                 className="pl-8"
               />
             </div>
+            <Button
+              size="sm"
+              className="shrink-0"
+              onClick={() => navigate("/payments/new")}
+              data-tour="create-invoice"
+            >
+              <Plus className="h-4 w-4" />
+              Create Invoice
+            </Button>
           </div>
-
+        </CardHeader>
+        <CardContent className="flex min-h-0 min-w-0 flex-1 flex-col gap-4">
           {/* Content area */}
           {isLoading ? (
-            <div className="flex items-center justify-center py-16">
+            <div className="flex flex-1 items-center justify-center py-16">
               <p className="text-sm text-muted-foreground">
                 Loading invoices...
               </p>
             </div>
           ) : error ? (
-            <div className="flex items-center justify-center py-16">
+            <div className="flex flex-1 items-center justify-center py-16">
               <p className="text-sm text-destructive">
                 Failed to load invoices. Please try again.
               </p>
             </div>
           ) : displayData.length === 0 ? (
-            <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
+            <div className="flex flex-1 flex-col items-center justify-center gap-2 py-16 text-center">
               <FileText className="h-8 w-8 text-muted-foreground" />
               <p className="text-sm text-muted-foreground">
                 {debouncedSearch
@@ -237,8 +231,11 @@ export default function Payments() {
               </p>
             </div>
           ) : (
-            <div className="rounded-md border">
-              <Table containerClassName="max-h-[calc(100vh-21rem)]">
+            <div className="min-h-0 min-w-0 flex-1 overflow-hidden rounded-md border">
+              <Table
+                containerClassName="h-full overflow-auto"
+                className="table-fixed"
+              >
                 <InvoicesTableHeader
                   sortField={sortField}
                   sortOrder={sortOrder}
@@ -265,7 +262,7 @@ export default function Payments() {
           )}
 
           {/* Footer: always visible (Stripe-style) */}
-          <div className="flex items-center justify-between border-t pt-3">
+          <div className="mt-auto flex shrink-0 items-center justify-between border-t pt-3">
             <div className="text-xs text-muted-foreground">
               {isFetching
                 ? "Updating..."

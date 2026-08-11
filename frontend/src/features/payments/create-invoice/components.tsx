@@ -65,7 +65,7 @@ function LessonRow({ lesson, checked, onToggle, badge }: LessonRowProps) {
       data-state={checked ? "selected" : undefined}
     >
       <TableCell>
-        <Checkbox checked={checked} onChange={(e) => e.stopPropagation()} />
+        <Checkbox checked={checked} onClick={(e) => e.stopPropagation()} />
       </TableCell>
       <TableCell>
         <div className="flex items-center gap-2">
@@ -103,7 +103,7 @@ export function LessonsTable({
   onToggle: (id: string) => void;
 }) {
   return (
-    <div className="rounded-md border">
+    <div className="overflow-x-auto rounded-md border">
       <Table>
         <TableHeader>
           <TableRow className="bg-muted/30 hover:bg-muted/30">
