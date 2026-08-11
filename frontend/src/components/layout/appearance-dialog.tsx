@@ -22,12 +22,11 @@ export function AppearanceDialog({
         <DialogHeader>
           <DialogTitle>Appearance</DialogTitle>
           <DialogDescription>
-            Choose a colour scheme. Each tints the background and pairs a
-            primary with a complementary accent. Your light or dark preference
-            still applies on top.
+            Choose a colour scheme. Each pairs a neutral base with a primary
+            accent. Your light or dark preference still applies on top.
           </DialogDescription>
         </DialogHeader>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <div className="flex flex-col gap-3">
           {COLOR_SCHEMES.map((scheme) => {
             const selected = scheme.value === colorScheme;
             return (
@@ -40,20 +39,18 @@ export function AppearanceDialog({
                   selected ? "border-primary" : "border-transparent bg-muted/40"
                 }`}
               >
-                <span className="flex -space-x-2">
+                <span className="flex -space-y-2">
+                  <span
+                    className="size-7 rounded-full ring-2 ring-background"
+                    style={{ backgroundColor: scheme.base }}
+                  />
                   <span
                     className="size-7 rounded-full ring-2 ring-background"
                     style={{ backgroundColor: scheme.swatch }}
                   />
-                  {scheme.secondary && (
-                    <span
-                      className="size-7 rounded-full ring-2 ring-background"
-                      style={{ backgroundColor: scheme.secondary }}
-                    />
-                  )}
                   <span
                     className="size-7 rounded-full ring-2 ring-background"
-                    style={{ backgroundColor: scheme.accent }}
+                    style={{ backgroundColor: scheme.darkSwatch }}
                   />
                 </span>
                 <span className="flex flex-col">
