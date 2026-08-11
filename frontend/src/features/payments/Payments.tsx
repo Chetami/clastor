@@ -171,7 +171,7 @@ export default function Payments() {
   return (
     <div className="space-y-6">
       <Card>
-        <CardContent className="space-y-4 p-4">
+        <CardContent className="min-w-0 space-y-4 p-4">
           <div className="flex flex-wrap items-center gap-1 rounded-md border bg-muted/40 p-1">
             {STATUS_TABS.map((tab) => (
               <button
@@ -237,8 +237,11 @@ export default function Payments() {
               </p>
             </div>
           ) : (
-            <div className="rounded-md border">
-              <Table containerClassName="max-h-[calc(100vh-21rem)]">
+            <div className="min-w-0 overflow-hidden rounded-md border">
+              <Table
+                containerClassName="max-h-[calc(100vh-21rem)]"
+                className="table-fixed"
+              >
                 <InvoicesTableHeader
                   sortField={sortField}
                   sortOrder={sortOrder}

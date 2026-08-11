@@ -80,18 +80,22 @@ export function InvoicesTableHeader({
   return (
     <TableHeader>
       <TableRow className="sticky top-0 z-10 bg-muted shadow-sm hover:bg-muted">
-        <TableHead className="pl-4">{head("invoiceNumber", "Invoice")}</TableHead>
-        <TableHead>{head("total", "Amount")}</TableHead>
-        <TableHead>Status</TableHead>
-        <TableHead>{head("customerName", "Customer")}</TableHead>
-        <TableHead className="hidden md:table-cell">Billing Email</TableHead>
-        <TableHead className="hidden lg:table-cell">
+        <TableHead className="w-[5.5rem] pl-4">
+          {head("invoiceNumber", "Invoice")}
+        </TableHead>
+        <TableHead className="w-[4.5rem]">{head("total", "Amount")}</TableHead>
+        <TableHead className="w-[5rem]">Status</TableHead>
+        <TableHead className="w-[8rem]">{head("customerName", "Customer")}</TableHead>
+        <TableHead className="hidden md:table-cell md:w-[12rem]">
+          Billing Email
+        </TableHead>
+        <TableHead className="hidden lg:table-cell lg:w-[6rem]">
           {head("dueDate", "Due")}
         </TableHead>
-        <TableHead className="hidden lg:table-cell">
+        <TableHead className="hidden lg:table-cell lg:w-[6rem]">
           {head("createdAt", "Created")}
         </TableHead>
-        <TableHead className="w-10" />
+        <TableHead className="w-12 shrink-0" />
       </TableRow>
     </TableHeader>
   );
@@ -128,23 +132,34 @@ export function InvoiceRow({
       className="cursor-pointer"
       onClick={() => onNavigate(inv.id)}
     >
-      <TableCell className="pl-4 font-medium">{inv.invoiceNumber}</TableCell>
+      <TableCell className="overflow-hidden pl-4 font-medium">
+        <span className="block truncate" title={inv.invoiceNumber}>
+          {inv.invoiceNumber}
+        </span>
+      </TableCell>
       <TableCell className="font-medium">
         {formatCompactCurrency(inv.total, inv.currency)}
       </TableCell>
       <TableCell>
         <Badge variant={meta.variant}>{meta.label}</Badge>
       </TableCell>
-      <TableCell>
+      <TableCell className="overflow-hidden">
         <div className="flex flex-col">
-          <span>{inv.customerName}</span>
-          <span className="text-xs text-muted-foreground md:hidden">
+          <span className="block truncate" title={inv.customerName}>
+            {inv.customerName}
+          </span>
+          <span className="block truncate text-xs text-muted-foreground md:hidden">
             {inv.billingEmail}
           </span>
         </div>
       </TableCell>
-      <TableCell className="hidden text-muted-foreground md:table-cell">
-        {inv.billingEmail}
+      <TableCell className="hidden overflow-hidden md:table-cell">
+        <span
+          className="block truncate text-muted-foreground"
+          title={inv.billingEmail}
+        >
+          {inv.billingEmail}
+        </span>
       </TableCell>
       <TableCell className="hidden lg:table-cell text-muted-foreground">
         {formatDate(inv.dueDate)}
@@ -152,7 +167,10 @@ export function InvoiceRow({
       <TableCell className="hidden lg:table-cell text-muted-foreground">
         {formatDate(inv.createdAt)}
       </TableCell>
-      <TableCell onClick={(e) => e.stopPropagation()}>
+      <TableCell
+        className="w-12 shrink-0 pr-4"
+        onClick={(e) => e.stopPropagation()}
+      >
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="h-8 w-8">
