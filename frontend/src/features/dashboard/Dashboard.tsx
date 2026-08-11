@@ -13,10 +13,7 @@ import { useInvoiceLesson } from "@/features/payments/api";
 import type { InvoiceLessonEdits } from "@/features/payments/api";
 import { SendInvoiceDialog } from "@/components/send-invoice-dialog";
 import { useStudentLookups } from "@/lib/use-student-lookups";
-import {
-  EMAIL_SEND_CONTEXTS,
-  shouldSkipReview,
-} from "@examify-tms/shared";
+import { EMAIL_SEND_CONTEXTS, shouldSkipReview } from "@examify-tms/shared";
 import { PeriodSelector } from "./components/period-selector";
 import { StatCards } from "./components/stat-cards";
 import { HoursChart } from "./components/hours-chart";
@@ -24,7 +21,7 @@ import { IncomeChart } from "./components/income-chart";
 import { NextLesson } from "./components/next-lesson";
 import { CurrentLesson } from "./components/current-lesson";
 import { ThingsToDo } from "./components/things-to-do";
-import { QuickActions } from "./components/quick-actions";
+// import { QuickActions } from "./components/quick-actions";
 import {
   StatCardsSkeleton,
   NextLessonSkeleton,
@@ -48,8 +45,11 @@ export default function Dashboard() {
   const { data: summary, isLoading: summaryLoading } =
     useDashboardSummary(period);
   const { data: lessons = [], isLoading: lessonsLoading } = useListLessons();
-  const { names: studentNames, byId: studentMap, subjectOptions: studentSubjectOptions } =
-    useStudentLookups();
+  const {
+    names: studentNames,
+    byId: studentMap,
+    subjectOptions: studentSubjectOptions,
+  } = useStudentLookups();
   const invoiceLesson = useInvoiceLesson();
   const [sendInvoiceId, setSendInvoiceId] = useState<string | null>(null);
   const updateLessonDetails = useUpdateLessonDetails();
@@ -81,8 +81,7 @@ export default function Dashboard() {
     let effective = lesson;
     const hasEdits =
       edits &&
-      (edits.subject !== undefined ||
-        edits.durationMinutes !== undefined);
+      (edits.subject !== undefined || edits.durationMinutes !== undefined);
     if (hasEdits) {
       const data: UpdateLessonRequest = {};
       if (edits!.subject !== undefined) data.subject = edits!.subject;
@@ -195,7 +194,8 @@ export default function Dashboard() {
               }
             />
           )}
-          <QuickActions />
+          {/* dont need this anymore  */}
+          {/* <QuickActions /> */}
 
           {lessonsLoading ? (
             <TodoLessonsSkeleton />
