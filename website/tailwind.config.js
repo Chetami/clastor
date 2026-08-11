@@ -6,7 +6,7 @@ export default {
     extend: {
       fontFamily: {
         sans: [
-          "Inter",
+          "Plus Jakarta Sans",
           "ui-sans-serif",
           "system-ui",
           "-apple-system",
@@ -16,9 +16,16 @@ export default {
           "Arial",
           "sans-serif",
         ],
+        display: [
+          "Instrument Serif",
+          "Georgia",
+          "ui-serif",
+          "serif",
+        ],
       },
       letterSpacing: {
         tightest: "-0.04em",
+        tighter: "-0.02em",
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -56,7 +63,9 @@ export default {
           DEFAULT: "hsl(var(--brand))",
           foreground: "hsl(var(--brand-foreground))",
           soft: "hsl(var(--brand-soft))",
+          hover: "hsl(var(--brand-hover))",
         },
+        warm: "hsl(var(--warm))",
         destructive: {
           DEFAULT: "hsl(var(--destructive))",
           foreground: "hsl(var(--destructive-foreground))",
@@ -67,7 +76,7 @@ export default {
       },
       keyframes: {
         "fade-up": {
-          from: { opacity: "0", transform: "translateY(16px)" },
+          from: { opacity: "0", transform: "translateY(20px)" },
           to: { opacity: "1", transform: "translateY(0)" },
         },
         "fade-in": {
@@ -75,19 +84,24 @@ export default {
           to: { opacity: "1" },
         },
         "scale-in": {
-          from: { opacity: "0", transform: "scale(0.98)" },
+          from: { opacity: "0", transform: "scale(0.97)" },
           to: { opacity: "1", transform: "scale(1)" },
         },
         float: {
           "0%, 100%": { transform: "translateY(0)" },
-          "50%": { transform: "translateY(-6px)" },
+          "50%": { transform: "translateY(-8px)" },
+        },
+        marquee: {
+          from: { transform: "translateX(0)" },
+          to: { transform: "translateX(-50%)" },
         },
       },
       animation: {
-        "fade-up": "fade-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) both",
-        "fade-in": "fade-in 0.6s ease-out both",
-        "scale-in": "scale-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) both",
-        float: "float 6s ease-in-out infinite",
+        "fade-up": "fade-up 0.7s cubic-bezier(0.16, 1, 0.3, 1) both",
+        "fade-in": "fade-in 0.7s ease-out both",
+        "scale-in": "scale-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) both",
+        float: "float 7s ease-in-out infinite",
+        marquee: "marquee 40s linear infinite",
       },
     },
   },

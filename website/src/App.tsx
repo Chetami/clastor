@@ -1,9 +1,13 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Navbar } from "@/sections/Navbar";
 import { Hero } from "@/sections/Hero";
+import { SocialProof } from "@/sections/SocialProof";
 import { Features } from "@/sections/Features";
 import { HowItWorks } from "@/sections/HowItWorks";
+import { Audience } from "@/sections/Audience";
 import { WhyClastor } from "@/sections/WhyClastor";
+import { Testimonials } from "@/sections/Testimonials";
+import { FAQ } from "@/sections/FAQ";
 import { FinalCTA } from "@/sections/FinalCTA";
 import { Footer } from "@/sections/Footer";
 import PrivacyPage from "@/pages/Privacy";
@@ -13,9 +17,13 @@ function Landing() {
   return (
     <>
       <Hero />
+      <SocialProof />
       <Features />
       <HowItWorks />
+      <Audience />
       <WhyClastor />
+      <Testimonials />
+      <FAQ />
       <FinalCTA />
     </>
   );
@@ -24,7 +32,7 @@ function Landing() {
 export default function App() {
   return (
     <BrowserRouter>
-      <div className="min-h-screen bg-background">
+      <div className="bg-paper min-h-screen">
         <Navbar />
         <main>
           <Routes>

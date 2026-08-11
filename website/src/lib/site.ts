@@ -8,5 +8,6 @@ export const BRAND_NAME = "Clastor";
 export const NAV_LINKS = [
   { label: "Features", href: "/#features" },
   { label: "How it works", href: "/#how-it-works" },
-  { label: "Why Clastor", href: "/#why-clastor" },
+  { label: "For teams", href: "/#for-teams" },
+  { label: "FAQ", href: "/#faq" },
 ] as const;

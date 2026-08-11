@@ -1,15 +1,15 @@
-import { ArrowRight, CalendarDays, Check, ReceiptText } from "lucide-react";
+import { ArrowRight, CalendarDays, Check, ReceiptText, Sparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { APP_URL } from "@/lib/site";
 
 export function Hero() {
   return (
-    <section id="top" className="relative overflow-hidden pt-28 sm:pt-32">
-      {/* Calm depth: faint grid + soft brand glow, low-key, not a giant gradient. */}
-      <div className="bg-grid pointer-events-none absolute inset-0 opacity-60 [mask-image:radial-gradient(ellipse_at_top,black,transparent_70%)]" />
+    <section id="top" className="bg-paper relative overflow-hidden pt-32 sm:pt-40">
+      {/* Warm depth: faint grid + soft brand glow. */}
+      <div className="bg-grid pointer-events-none absolute inset-0 opacity-70 [mask-image:radial-gradient(ellipse_at_top,black,transparent_70%)]" />
       <div
-        className="pointer-events-none absolute left-1/2 top-[-10%] h-[420px] w-[680px] -translate-x-1/2 rounded-full opacity-[0.18] blur-3xl"
+        className="pointer-events-none absolute left-1/2 top-[-12%] h-[480px] w-[760px] -translate-x-1/2 rounded-full opacity-[0.14] blur-3xl"
         style={{
           background:
             "radial-gradient(closest-side, hsl(var(--brand)), transparent)",
@@ -18,42 +18,63 @@ export function Hero() {
 
       <div className="relative mx-auto max-w-6xl px-5 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-3xl text-center">
-          <div className="animate-fade-in brand-chip">
-            <span className="relative flex h-1.5 w-1.5">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand opacity-75" />
-              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-brand" />
-            </span>
+          <div
+            className="animate-fade-in brand-chip"
+            style={{ animationDelay: "0ms" }}
+          >
+            <Sparkles className="h-3.5 w-3.5" />
             The business of tutoring, handled
           </div>
 
-          <h1 className="mt-6 text-balance text-4xl font-semibold leading-[1.05] tracking-tightest text-foreground sm:text-5xl md:text-6xl">
-            Run your tutoring business without the admin headache.
+          <h1 className="mt-7 text-balance font-display text-5xl leading-[1.02] tracking-tightest text-foreground sm:text-6xl md:text-7xl lg:text-[5.25rem]">
+            <span
+              className="inline-block animate-fade-up"
+              style={{ animationDelay: "80ms" }}
+            >
+              Teach more.
+            </span>{" "}
+            <span
+              className="inline-block animate-fade-up"
+              style={{ animationDelay: "180ms" }}
+            >
+              <span className="display-accent">Admin</span> less.
+            </span>
           </h1>
 
-          <p className="mx-auto mt-5 max-w-xl text-pretty text-lg leading-relaxed text-muted-foreground">
-            Manage students, lessons, scheduling, invoices, and payments in one
-            calm, organized workspace — so you can spend more time teaching.
+          <p
+            className="mx-auto mt-7 max-w-xl animate-fade-up text-pretty text-lg leading-relaxed text-muted-foreground sm:text-xl"
+            style={{ animationDelay: "300ms" }}
+          >
+            Clastor runs the business side of tutoring — scheduling,
+            reminders, invoicing, and payments, all connected. You get your
+            time back.
           </p>
 
-          <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <Button asChild variant="brand" size="lg" className="w-full sm:w-auto">
+          <div
+            className="mt-9 flex animate-fade-up flex-col items-center justify-center gap-3 sm:flex-row"
+            style={{ animationDelay: "420ms" }}
+          >
+            <Button asChild variant="brand" size="xl" className="w-full sm:w-auto">
               <a href={APP_URL}>
-                Try Clastor Free
+                Start free
                 <ArrowRight className="h-4 w-4" />
               </a>
             </Button>
             <Button
               asChild
               variant="outline"
-              size="lg"
+              size="xl"
               className="w-full sm:w-auto"
             >
-              <a href="/#how-it-works">See how it works</a>
+              <a href="#how-it-works">See how it works</a>
             </Button>
           </div>
 
-          <p className="mt-4 text-sm text-muted-foreground">
-            No credit card required · Works with your Google Calendar
+          <p
+            className="mt-5 animate-fade-up text-sm text-muted-foreground"
+            style={{ animationDelay: "540ms" }}
+          >
+            No credit card required · Syncs with your Google Calendar
           </p>
         </div>
 
@@ -66,8 +87,11 @@ export function Hero() {
 /** A stylized, abstract product preview built from UI primitives — no mockups. */
 function HeroPreview() {
   return (
-    <div className="relative mx-auto mt-16 max-w-4xl animate-scale-in">
-      <div className="rounded-2xl border border-border bg-card p-2 shadow-xl shadow-foreground/5 ring-1 ring-border/40">
+    <div
+      className="relative mx-auto mt-16 max-w-4xl animate-scale-in"
+      style={{ animationDelay: "600ms" }}
+    >
+      <div className="rounded-2xl border border-border bg-card p-2 shadow-2xl shadow-foreground/10 ring-1 ring-border/40">
         <div className="overflow-hidden rounded-xl border border-border bg-background">
           {/* Window bar */}
           <div className="flex items-center gap-2 border-b border-border bg-secondary/60 px-4 py-3">
@@ -120,9 +144,9 @@ function HeroPreview() {
                 </div>
               </div>
 
-              <div className="rounded-lg border border-emerald-500/20 bg-emerald-50 p-3">
+              <div className="rounded-lg border border-brand/20 bg-brand-soft p-3">
                 <div className="flex items-center gap-2">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-white">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand text-brand-foreground">
                     <Check className="h-3.5 w-3.5" />
                   </span>
                   <div>
@@ -152,7 +176,7 @@ function HeroPreview() {
       {/* Floating accent chip — subtle, respects reduced motion via CSS */}
       <div className="animate-float absolute -right-3 -top-4 hidden rounded-xl border border-border bg-card px-3 py-2 text-xs font-medium shadow-lg sm:block">
         <span className="flex items-center gap-1.5 text-foreground">
-          <span className="h-2 w-2 rounded-full bg-emerald-500" />
+          <span className="h-2 w-2 rounded-full bg-brand" />
           Everything connected
         </span>
       </div>

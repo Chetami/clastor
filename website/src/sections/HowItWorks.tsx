@@ -1,7 +1,9 @@
 import { UserPlus, CalendarCheck, Wallet, type LucideIcon } from "lucide-react";
 
-import { SectionHeading } from "@/components/SectionHeading";
+import { Button } from "@/components/ui/button";
 import { useReveal } from "@/hooks/useReveal";
+import { APP_URL } from "@/lib/site";
+import { ArrowRight } from "lucide-react";
 
 interface Step {
   icon: LucideIcon;
@@ -21,16 +23,16 @@ const STEPS: Step[] = [
   {
     icon: CalendarCheck,
     step: "02",
-    title: "Schedule lessons & track progress",
+    title: "Schedule & track",
     description:
       "Book one-off or recurring lessons. The calendar invite and reminder go out automatically, and progress is logged as you go.",
   },
   {
     icon: Wallet,
     step: "03",
-    title: "Send invoices and get paid",
+    title: "Invoice & get paid",
     description:
-      "At the end of the month, turn unpaid lessons into a polished invoice in a click. Students pay online — money lands in your account.",
+      "At month's end, turn unpaid lessons into a polished invoice in a click. Students pay online — money lands in your account.",
   },
 ];
 
@@ -40,14 +42,20 @@ export function HowItWorks() {
   return (
     <section
       id="how-it-works"
-      className="scroll-mt-20 border-y border-border bg-secondary/40 py-24 sm:py-28"
+      className="scroll-mt-20 border-y border-border bg-secondary/40 py-24 sm:py-32"
     >
       <div ref={ref} className="mx-auto max-w-6xl px-5 sm:px-6 lg:px-8">
-        <SectionHeading
-          eyebrow="How it works"
-          title="Up and running in three steps"
-          description="No setup marathon. Clastor is built to be simple — you'll be scheduling your first lesson within minutes."
-        />
+        <div className="reveal mx-auto max-w-2xl text-center">
+          <p className="eyebrow">How it works</p>
+          <h2 className="mt-4 text-balance font-display text-4xl leading-[1.1] tracking-tighter text-foreground sm:text-5xl">
+            Up and running in{" "}
+            <span className="display-accent">three steps.</span>
+          </h2>
+          <p className="mt-5 text-pretty text-lg leading-relaxed text-muted-foreground">
+            No setup marathon. You'll be scheduling your first lesson within
+            minutes — Clastor is built to be simple.
+          </p>
+        </div>
 
         <div className="relative mt-16">
           {/* Connecting line (desktop) */}
@@ -62,6 +70,15 @@ export function HowItWorks() {
             ))}
           </ol>
         </div>
+
+        <div className="reveal mt-16 text-center" style={{ ["--reveal-delay" as string]: "120ms" }}>
+          <Button asChild variant="brand" size="lg">
+            <a href={APP_URL}>
+              Start scheduling in minutes
+              <ArrowRight className="h-4 w-4" />
+            </a>
+          </Button>
+        </div>
       </div>
     </section>
   );
@@ -72,16 +89,16 @@ function StepItem({ step, index }: { step: Step; index: number }) {
   return (
     <li
       className="reveal relative"
-      style={{ ["--reveal-delay" as string]: `${index * 90}ms` }}
+      style={{ ["--reveal-delay" as string]: `${index * 100}ms` }}
     >
       <div className="flex flex-col items-start">
-        <div className="relative z-10 flex h-14 w-14 items-center justify-center rounded-xl border border-border bg-card shadow-sm">
+        <div className="relative z-10 flex h-14 w-14 items-center justify-center rounded-2xl border border-border bg-card shadow-sm">
           <Icon className="h-6 w-6 text-brand" />
           <span className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-brand text-[11px] font-semibold text-brand-foreground">
             {step.step}
           </span>
         </div>
-        <h3 className="mt-5 text-lg font-semibold tracking-tight text-foreground">
+        <h3 className="mt-5 font-display text-xl tracking-tight text-foreground">
           {step.title}
         </h3>
         <p className="mt-2 text-sm leading-relaxed text-muted-foreground">

@@ -9,14 +9,14 @@ export function LogoMark({ className }: { className?: string }) {
   return (
     <span
       className={cn(
-        "inline-flex h-8 w-8 items-center justify-center rounded-lg bg-brand text-brand-foreground",
+        "inline-flex h-9 w-9 items-center justify-center rounded-xl bg-brand text-brand-foreground",
         className,
       )}
       aria-hidden="true"
     >
       <svg
-        width="18"
-        height="18"
+        width="20"
+        height="20"
         viewBox="0 0 32 32"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
@@ -29,11 +29,22 @@ export function LogoMark({ className }: { className?: string }) {
   );
 }
 
-export function Logo({ className }: { className?: string }) {
+export function Logo({
+  className,
+  onDark = false,
+}: {
+  className?: string;
+  onDark?: boolean;
+}) {
   return (
     <span className={cn("inline-flex items-center gap-2.5", className)}>
       <LogoMark />
-      <span className="text-lg font-semibold tracking-tight text-foreground">
+      <span
+        className={cn(
+          "font-display text-xl tracking-tight",
+          onDark ? "text-background" : "text-foreground",
+        )}
+      >
         Clastor
       </span>
     </span>

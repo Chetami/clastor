@@ -1,6 +1,5 @@
 import { Check, TrendingUp } from "lucide-react";
 
-import { SectionHeading } from "@/components/SectionHeading";
 import { useReveal } from "@/hooks/useReveal";
 
 const OUTCOMES: string[] = [
@@ -15,26 +14,33 @@ export function WhyClastor() {
   const ref = useReveal<HTMLDivElement>();
 
   return (
-    <section id="why-clastor" className="scroll-mt-20 py-24 sm:py-28">
+    <section
+      id="why-clastor"
+      className="scroll-mt-20 border-y border-border bg-secondary/40 py-24 sm:py-32"
+    >
       <div ref={ref} className="mx-auto max-w-6xl px-5 sm:px-6 lg:px-8">
         <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
           <div className="reveal">
-            <SectionHeading
-              align="left"
-              eyebrow="Why Clastor"
-              title="Built so you can get back to teaching"
-              description="You became a tutor to teach — not to chase invoices and copy times between four apps. Clastor takes care of the business side so it stops eating your week."
-            />
+            <p className="eyebrow">Why Clastor</p>
+            <h2 className="mt-4 text-balance font-display text-4xl leading-[1.1] tracking-tighter text-foreground sm:text-5xl">
+              Built so you can get back to{" "}
+              <span className="display-accent">teaching.</span>
+            </h2>
+            <p className="mt-5 text-pretty text-lg leading-relaxed text-muted-foreground">
+              You became a tutor to teach — not to chase invoices and copy
+              times between four apps. Clastor takes care of the business
+              side so it stops eating your week.
+            </p>
 
             <ul className="mt-8 space-y-4">
               {OUTCOMES.map((outcome, i) => (
                 <li
                   key={outcome}
                   className="reveal flex items-start gap-3"
-                  style={{ ["--reveal-delay" as string]: `${i * 70}ms` }}
+                  style={{ ["--reveal-delay" as string]: `${i * 80}ms` }}
                 >
-                  <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-soft text-brand">
-                    <Check className="h-3.5 w-3.5" />
+                  <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand text-brand-foreground">
+                    <Check className="h-3 w-3" />
                   </span>
                   <span className="text-base text-foreground">{outcome}</span>
                 </li>
@@ -54,23 +60,23 @@ function WhyClastorVisual() {
   return (
     <div
       className="reveal relative"
-      style={{ ["--reveal-delay" as string]: "120ms" }}
+      style={{ ["--reveal-delay" as string]: "150ms" }}
     >
-      <div className="rounded-2xl border border-border bg-card p-6 shadow-xl shadow-foreground/5">
+      <div className="rounded-2xl border border-border bg-card p-6 shadow-2xl shadow-foreground/10">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-medium text-muted-foreground">
               This month at a glance
             </p>
-            <p className="mt-1 text-3xl font-semibold tracking-tight text-foreground">
+            <p className="mt-1 font-display text-4xl tracking-tighter text-foreground">
               $2,840
             </p>
-            <p className="mt-1 inline-flex items-center gap-1 text-sm font-medium text-emerald-600">
+            <p className="mt-1 inline-flex items-center gap-1 text-sm font-medium text-brand">
               <TrendingUp className="h-4 w-4" />
               +12% vs. last month
             </p>
           </div>
-          <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-brand-soft text-brand">
+          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-soft text-brand">
             <TrendingUp className="h-5 w-5" />
           </span>
         </div>
@@ -99,11 +105,11 @@ function WhyClastorVisual() {
       </div>
 
       {/* Soft floating reassurance chip */}
-      <div className="animate-float absolute -bottom-5 -left-4 hidden rounded-xl border border-border bg-background px-4 py-3 shadow-lg sm:block">
+      <div className="animate-float absolute -bottom-5 -left-4 hidden rounded-xl border border-border bg-card px-4 py-3 shadow-lg sm:block">
         <p className="text-xs font-medium text-muted-foreground">
           Expected next month
         </p>
-        <p className="text-lg font-semibold text-foreground">$3,120</p>
+        <p className="font-display text-xl text-foreground">$3,120</p>
       </div>
     </div>
   );
@@ -112,7 +118,7 @@ function WhyClastorVisual() {
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-lg font-semibold text-foreground">{value}</p>
+      <p className="font-display text-xl text-foreground">{value}</p>
       <p className="text-xs text-muted-foreground">{label}</p>
     </div>
   );
