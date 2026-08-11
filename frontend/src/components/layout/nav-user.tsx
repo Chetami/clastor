@@ -11,11 +11,7 @@ import { useNavigate } from "react-router-dom";
 
 import { AppearanceDialog } from "@/components/layout/appearance-dialog";
 
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,9 +30,14 @@ import {
 import { useLogout } from "@/features/auth/api";
 import { useProductTour } from "@/features/tour/use-product-tour";
 import type { UserInfo } from "@examify-tms/interfaces";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export function NavUser({ user }: { user: UserInfo | null }) {
-  const { isMobile } = useSidebar();
+  const { isMobile, state } = useSidebar();
   const logout = useLogout();
   const { start: startTour } = useProductTour();
   const navigate = useNavigate();
@@ -49,31 +50,61 @@ export function NavUser({ user }: { user: UserInfo | null }) {
   const displayName = user.name ?? user.email;
   const initials = user.name
     ? user.name.slice(0, 2).toUpperCase()
-    : user.email?.slice(0, 2).toUpperCase() ?? "?";
+    : (user.email?.slice(0, 2).toUpperCase() ?? "?");
+  
+  const isCollapsed = state === "collapsed" && !isMobile;
 
   return (
     <SidebarMenu>
       <SidebarMenuItem>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <SidebarMenuButton
-              size="lg"
-              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-            >
-              <Avatar className="size-8 shrink-0 rounded-lg">
-                {user.avatarUrl && (
-                  <AvatarImage src={user.avatarUrl} alt={displayName} />
-                )}
-                <AvatarFallback className="rounded-lg">{initials}</AvatarFallback>
-              </Avatar>
-              <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-semibold">{displayName}</span>
-                <span className="truncate text-xs capitalize text-muted-foreground">
-                  {user.role.replace("_", " ")}
-                </span>
-              </div>
-              <ChevronsUpDown className="ml-auto size-4" />
-            </SidebarMenuButton>
+            {isCollapsed ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <SidebarMenuButton
+                    size="lg"
+                    className="h-auto! w-auto! rounded-full p-1.5 data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                  >
+                    <Avatar className="size-8 shrink-0 rounded-full">
+                      {user.avatarUrl && (
+                        <AvatarImage src={user.avatarUrl} alt={displayName} />
+                      )}
+                      <AvatarFallback className="rounded-full">
+                        {initials}
+                      </AvatarFallback>
+                    </Avatar>
+                  </SidebarMenuButton>
+                </TooltipTrigger>
+                <TooltipContent side="right" align="start">
+                  <p className="font-semibold">{displayName}</p>
+                  <p className="text-xs text-muted-foreground capitalize">
+                    {user.role.replace("_", " ")}
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            ) : (
+              <SidebarMenuButton
+                size="lg"
+                className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+              >
+                <Avatar className="size-8 shrink-0 rounded-lg">
+                  {user.avatarUrl && (
+                    <AvatarImage src={user.avatarUrl} alt={displayName} />
+                  )}
+                  <AvatarFallback className="rounded-lg">
+                    {initials}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="grid flex-1 text-left text-sm leading-tight">
+                  <span className="truncate font-semibold">{displayName}</span>
+                  <span className="truncate text-xs capitalize text-muted-foreground">
+                    {user.role.replace("_", " ")}
+                  </span>
+                </div>
+                <ChevronsUpDown className="ml-auto size-4" />
+              </SidebarMenuButton>
+            )}
           </DropdownMenuTrigger>
           <DropdownMenuContent
             className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
@@ -87,7 +118,9 @@ export function NavUser({ user }: { user: UserInfo | null }) {
                   {user.avatarUrl && (
                     <AvatarImage src={user.avatarUrl} alt={displayName} />
                   )}
-                  <AvatarFallback className="rounded-lg">{initials}</AvatarFallback>
+                  <AvatarFallback className="rounded-lg">
+                    {initials}
+                  </AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-semibold">{displayName}</span>
@@ -129,7 +162,10 @@ export function NavUser({ user }: { user: UserInfo | null }) {
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>
-      <AppearanceDialog open={appearanceOpen} onOpenChange={setAppearanceOpen} />
+      <AppearanceDialog
+        open={appearanceOpen}
+        onOpenChange={setAppearanceOpen}
+      />
     </SidebarMenu>
   );
 }
