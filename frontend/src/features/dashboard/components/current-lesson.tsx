@@ -30,7 +30,10 @@ export function CurrentLesson({ lesson, studentName }: Props) {
       });
       // Persist the link on the lesson so the button becomes "Join Meet" on
       // the next render and the calendar/schedule can display it too.
-      await updateLesson.mutateAsync({ location: "Google Meet", meetLink: res.meetingLink });
+      await updateLesson.mutateAsync({
+        location: "Google Meet",
+        meetLink: res.meetingLink,
+      });
       toast.success("Google Meet link created");
     } catch (err) {
       toast.error(
@@ -43,7 +46,7 @@ export function CurrentLesson({ lesson, studentName }: Props) {
 
   return (
     <Card className="border-primary/40 bg-primary/5">
-      <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+      <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3">
           <span className="relative flex h-2.5 w-2.5 mt-1.5">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75" />
