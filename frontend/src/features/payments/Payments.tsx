@@ -162,8 +162,8 @@ export default function Payments() {
   const [sendInvoiceId, setSendInvoiceId] = useState<string | null>(null);
 
   return (
-    <div>
-      <Card>
+    <div className="flex h-full flex-col">
+      <Card className="h-full">
         <CardHeader className="flex flex-col gap-4 space-y-0 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-1 rounded-md border bg-muted/40 p-1">
             {STATUS_TABS.map((tab) => (
@@ -207,22 +207,22 @@ export default function Payments() {
             </Button>
           </div>
         </CardHeader>
-        <CardContent className="min-w-0 space-y-4">
+        <CardContent className="flex min-h-0 min-w-0 flex-1 flex-col gap-4">
           {/* Content area */}
           {isLoading ? (
-            <div className="flex items-center justify-center py-16">
+            <div className="flex flex-1 items-center justify-center py-16">
               <p className="text-sm text-muted-foreground">
                 Loading invoices...
               </p>
             </div>
           ) : error ? (
-            <div className="flex items-center justify-center py-16">
+            <div className="flex flex-1 items-center justify-center py-16">
               <p className="text-sm text-destructive">
                 Failed to load invoices. Please try again.
               </p>
             </div>
           ) : displayData.length === 0 ? (
-            <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
+            <div className="flex flex-1 flex-col items-center justify-center gap-2 py-16 text-center">
               <FileText className="h-8 w-8 text-muted-foreground" />
               <p className="text-sm text-muted-foreground">
                 {debouncedSearch
@@ -231,9 +231,9 @@ export default function Payments() {
               </p>
             </div>
           ) : (
-            <div className="min-w-0 overflow-hidden rounded-md border">
+            <div className="min-h-0 min-w-0 flex-1 overflow-hidden rounded-md border">
               <Table
-                containerClassName="max-h-[calc(100vh-21rem)]"
+                containerClassName="h-full overflow-auto"
                 className="table-fixed"
               >
                 <InvoicesTableHeader
@@ -262,7 +262,7 @@ export default function Payments() {
           )}
 
           {/* Footer: always visible (Stripe-style) */}
-          <div className="flex items-center justify-between border-t pt-3">
+          <div className="mt-auto flex shrink-0 items-center justify-between border-t pt-3">
             <div className="text-xs text-muted-foreground">
               {isFetching
                 ? "Updating..."
