@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
-import { GraduationCap } from "lucide-react";
 import { useEffect, useState } from "react";
+import { Logo } from "@/components/ui/logo";
 
 import {
   Sidebar,
@@ -63,9 +63,7 @@ export function AppSidebar() {
             <SidebarMenuItem>
               <SidebarMenuButton size="lg" asChild>
                 <Link to="/dashboard">
-                  <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground">
-                    <GraduationCap className="size-4" />
-                  </div>
+                  <Logo size={32} className="shrink-0 rounded-sm" />
                   <div className="grid flex-1 text-left text-sm leading-tight">
                     <span className="truncate font-semibold">Clastor</span>
                     <span className="truncate text-xs text-muted-foreground">
