@@ -59,15 +59,17 @@ export default function SignupSurveyPage() {
         : true;
 
   return (
-    <div className="flex min-h-svh flex-col bg-gradient-to-b from-accent/40 to-background">
-      <header className="flex h-16 shrink-0 items-center justify-between px-4 sm:px-6">
-        <BrandMark size={32} />
+    <div className="relative flex min-h-svh flex-col bg-gradient-to-b from-accent/40 to-background">
+      <div className="absolute top-4 left-4">
+        <BrandMark size={40} />
+      </div>
+      <div className="absolute top-4 right-4">
         <Button variant="ghost" size="sm" asChild>
           <Link to="/login">Sign in</Link>
         </Button>
-      </header>
+      </div>
 
-      <div className="flex justify-center gap-2 pb-2 pt-2">
+      <div className="flex justify-center gap-2 pb-2 pt-16">
         {STEPS.map((s, i) => (
           <span
             key={s}
@@ -87,9 +89,7 @@ export default function SignupSurveyPage() {
           {step === "intent" && (
             <IntentStep answers={answers} onPick={pickIntent} />
           )}
-          {step === "details" && (
-            <DetailsStep answers={answers} set={update} />
-          )}
+          {step === "details" && <DetailsStep answers={answers} set={update} />}
           {step === "reveal" &&
             (isOrgIntent(answers.intent) ? (
               <WaitlistStep answers={answers} />

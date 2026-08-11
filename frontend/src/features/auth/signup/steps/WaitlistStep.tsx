@@ -34,9 +34,9 @@ export function WaitlistStep({
   if (submitted) {
     return (
       <div className="flex flex-col items-center gap-5 text-center">
-        <span className="flex size-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm">
+        <div className="flex size-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm">
           <Check className="size-7" strokeWidth={3} />
-        </span>
+        </div>
         <div className="flex flex-col gap-1.5">
           <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
             You're on the list

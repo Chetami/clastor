@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState, type FormEvent } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { CircleAlert, ArrowLeft } from "lucide-react";
+import { CircleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,7 +11,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -33,12 +32,9 @@ function scorePassword(pw: string): number {
   let score = 0;
   if (pw.length >= 8) score++;
   if (pw.length >= 12) score++;
-  const variety = [
-    /[a-z]/,
-    /[A-Z]/,
-    /[0-9]/,
-    /[^a-zA-Z0-9]/,
-  ].filter((r) => r.test(pw)).length;
+  const variety = [/[a-z]/, /[A-Z]/, /[0-9]/, /[^a-zA-Z0-9]/].filter((r) =>
+    r.test(pw),
+  ).length;
   if (variety >= 2) score++;
   if (variety >= 3) score++;
   return Math.max(1, Math.min(score, 4));
@@ -94,10 +90,17 @@ export default function SignUpPage() {
   const errorMessage = validationError || register.error?.message;
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-muted/50 to-background p-4">
+    <div className="relative flex min-h-screen items-center justify-center bg-gradient-to-b from-muted/50 to-background p-4">
+      <div className="absolute top-4 left-4">
+        <BrandMark size={40} />
+      </div>
+      <div className="absolute top-4 right-4">
+        <Button variant="ghost" size="sm" asChild>
+          <Link to="/login">Sign in</Link>
+        </Button>
+      </div>
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="items-center text-center">
-          <BrandMark className="mb-2" />
           <CardTitle className="text-2xl">Create account</CardTitle>
           <CardDescription>
             Enter your information to get started
@@ -241,25 +244,6 @@ export default function SignUpPage() {
             </form>
           </div>
         </CardContent>
-
-        <CardFooter className="flex flex-col items-center gap-3">
-          <p className="text-sm text-muted-foreground">
-            Already have an account?{" "}
-            <Link
-              to="/login"
-              className="font-medium text-primary hover:underline"
-            >
-              Sign in
-            </Link>
-          </p>
-          <Link
-            to="/signup"
-            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
-          >
-            <ArrowLeft className="size-3" />
-            Back to survey
-          </Link>
-        </CardFooter>
       </Card>
     </div>
   );

@@ -10,7 +10,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -41,14 +40,19 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-muted/50 to-background p-4">
+    <div className="relative flex min-h-screen items-center justify-center bg-gradient-to-b from-muted/50 to-background p-4">
+      <div className="absolute top-4 left-4">
+        <BrandMark size={40} />
+      </div>
+      <div className="absolute top-4 right-4">
+        <Button variant="ghost" size="sm" asChild>
+          <Link to="/signup">Sign up</Link>
+        </Button>
+      </div>
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="items-center text-center">
-          <BrandMark className="mb-2" />
           <CardTitle className="text-2xl">Welcome back</CardTitle>
-          <CardDescription>
-            Sign in to your account to continue
-          </CardDescription>
+          <CardDescription>Sign in to your account to continue</CardDescription>
         </CardHeader>
 
         <CardContent>
@@ -112,24 +116,16 @@ export default function LoginPage() {
                 />
               </div>
 
-              <Button type="submit" disabled={login.isPending} className="w-full">
+              <Button
+                type="submit"
+                disabled={login.isPending}
+                className="w-full"
+              >
                 {login.isPending ? "Signing in..." : "Sign in"}
               </Button>
             </form>
           </div>
         </CardContent>
-
-        <CardFooter className="flex justify-center">
-          <p className="text-sm text-muted-foreground">
-            Don't have an account?{" "}
-            <Link
-              to="/signup"
-              className="font-medium text-primary hover:underline"
-            >
-              Sign up
-            </Link>
-          </p>
-        </CardFooter>
       </Card>
     </div>
   );
