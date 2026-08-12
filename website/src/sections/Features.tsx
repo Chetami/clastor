@@ -172,19 +172,20 @@ function MiniCalendar() {
     day: string;
     date: string;
     subj: string;
+    student: string;
     time: string;
     next?: boolean;
     moved?: boolean;
   }[] = [
-    { day: "Mon", date: "13", subj: "Physics", time: "4:00" },
-    { day: "Tue", date: "14", subj: "English", time: "5:00" },
-    { day: "Wed", date: "15", subj: "Maths", time: "5:30", next: true },
-    { day: "Thu", date: "16", subj: "Physics", time: "4:00" },
-    { day: "Fri", date: "17", subj: "Chem", time: "3:30", moved: true },
+    { day: "Mon", date: "13", subj: "Physics", student: "Liam C.", time: "4:00" },
+    { day: "Tue", date: "14", subj: "English", student: "Sara R.", time: "5:00" },
+    { day: "Wed", date: "15", subj: "Maths", student: "Noah S.", time: "5:30", next: true },
+    { day: "Thu", date: "16", subj: "Physics", student: "Liam C.", time: "4:00" },
+    { day: "Fri", date: "17", subj: "Chem", student: "Maya K.", time: "3:30", moved: true },
   ];
 
   return (
-    <div className="w-full max-w-[360px]">
+    <div className="w-full max-w-[420px]">
       <div className="mb-2 flex items-center justify-between">
         <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-muted-foreground">
           This week
@@ -199,7 +200,7 @@ function MiniCalendar() {
           <div
             key={d.day}
             className={
-              "flex min-w-0 items-stretch gap-1.5 rounded-lg border-[1.5px] px-1.5 py-1.5 " +
+              "flex min-w-0 flex-col rounded-lg border-[1.5px] px-2 py-1.5 " +
               (d.next
                 ? "-rotate-2 border-foreground bg-brand text-foreground shadow-sketch"
                 : d.moved
@@ -207,20 +208,26 @@ function MiniCalendar() {
                   : "border-foreground bg-card text-foreground")
             }
           >
-            <div className="flex flex-col justify-center border-r-[1.5px] border-foreground/20 pr-1.5">
-              <b className="font-mono text-[10px] font-semibold leading-none">
+            {/* Compact date strip — calendar context, not the focus. */}
+            <div className="flex items-baseline justify-center gap-1 border-b-[1.5px] border-foreground/15 pb-1">
+              <b className="font-mono text-[11px] font-semibold leading-none">
                 {d.date}
               </b>
               <span className="font-mono text-[8px] uppercase tracking-wide opacity-60">
                 {d.day}
               </span>
             </div>
-            <div className="flex min-w-0 flex-1 flex-col justify-center text-center">
-              <b className="block truncate text-[12px] font-semibold leading-tight">
-                {d.subj}
-              </b>
-              <span className="block font-mono text-[10px] uppercase tracking-wide opacity-90">
+            {/* Lesson detail — time leads (scannable), subject + student follow. */}
+            <div className="flex flex-1 flex-col items-center justify-center gap-0.5 pt-1.5 text-center">
+              <b className="font-mono text-[13px] font-bold leading-none tracking-tight">
                 {d.time}
+                <span className="ml-0.5 text-[9px] font-semibold opacity-60">pm</span>
+              </b>
+              <span className="block w-full truncate text-[11px] font-semibold leading-tight">
+                {d.subj}
+              </span>
+              <span className="block w-full truncate text-[9px] leading-tight opacity-70">
+                {d.student}
               </span>
             </div>
           </div>

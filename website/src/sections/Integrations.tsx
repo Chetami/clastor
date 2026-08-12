@@ -16,7 +16,7 @@ const INTEGRATIONS: Integration[] = [
   {
     Icon: GoogleCalendarIcon,
     name: "Google Calendar",
-    description: "Two-way sync — every lesson lands on your calendar.",
+    description: "Two-way sync — all lessons land on your calendar.",
   },
   {
     Icon: GoogleMeetIcon,
@@ -60,7 +60,7 @@ export function Integrations() {
               <Icon className="h-12 w-12" />
               <div>
                 <h3 className="font-display text-2xl leading-tight">{name}</h3>
-                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
                   {description}
                 </p>
               </div>
