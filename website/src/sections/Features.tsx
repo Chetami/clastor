@@ -261,7 +261,7 @@ function MiniInvoice() {
   return (
     <div className="w-full max-w-[210px]">
       <div className="mb-2 flex items-center justify-between">
-        <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-muted-foreground">
+        <span className="font-mono text-[12px] uppercase tracking-[0.08em] text-muted-foreground">
           Inv #1042
         </span>
         <span className="inline-flex -rotate-3 items-center gap-1 rounded-full border-[2px] border-success bg-[hsl(143_54%_89%)] px-2 py-0.5 font-mono text-[9px] font-medium uppercase text-[hsl(143_54%_28%)]">
@@ -269,7 +269,7 @@ function MiniInvoice() {
           Paid
         </span>
       </div>
-      <div className="space-y-1.5 border-t-2 border-dashed border-border pt-2 text-xs text-muted-foreground">
+      <div className="space-y-1.5 border-t-2 border-dashed border-border pt-2 text-sm text-muted-foreground">
         <div className="flex justify-between">
           <span>Lessons × 4</span>
           <b className="text-foreground">$180</b>
@@ -280,7 +280,7 @@ function MiniInvoice() {
         </div>
       </div>
       <div className="mt-2 flex items-baseline justify-between border-t-2 border-border pt-2">
-        <span className="font-mono text-[9px] uppercase tracking-[0.08em] text-muted-foreground">
+        <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
           Total
         </span>
         <b className="font-display text-2xl text-foreground">$192</b>
@@ -303,7 +303,7 @@ function MiniRoster() {
         {students.map((s) => (
           <span
             key={s.initials}
-            className={`flex h-9 w-9 items-center justify-center rounded-full border-[2px] border-foreground ${s.tone} font-mono text-[10px] font-medium text-foreground`}
+            className={`flex h-9 w-9 items-center justify-center rounded-full border-[2px] border-foreground ${s.tone} font-mono text-[12px] font-medium text-foreground`}
           >
             {s.initials}
           </span>
