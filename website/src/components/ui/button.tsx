@@ -5,16 +5,16 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full text-sm font-semibold ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full text-base font-normal ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/30 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
         default:
           "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm",
         brand:
-          "bg-brand text-brand-foreground hover:bg-brand-hover shadow-[0_1px_2px_rgba(0,0,0,0.05),0_8px_24px_-6px_hsl(var(--brand)/0.5)] hover:shadow-[0_1px_2px_rgba(0,0,0,0.05),0_12px_32px_-6px_hsl(var(--brand)/0.6)] hover:-translate-y-0.5",
+          "border-[2.5px] border-foreground bg-brand text-foreground shadow-sketch hover:bg-brand-hover hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-sketch-lg active:translate-x-0 active:translate-y-0 active:shadow-sketch",
         outline:
-          "border border-border bg-card hover:bg-secondary hover:text-secondary-foreground",
+          "border-[2.5px] border-foreground bg-card text-foreground shadow-sketch hover:bg-secondary hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-sketch-lg active:translate-x-0 active:translate-y-0 active:shadow-sketch",
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-secondary/70",
         ghost: "hover:bg-secondary hover:text-secondary-foreground",
@@ -22,9 +22,9 @@ const buttonVariants = cva(
       },
       size: {
         default: "h-11 px-6 py-2",
-        sm: "h-9 rounded-full px-4",
-        lg: "h-12 rounded-full px-8 text-base",
-        xl: "h-14 rounded-full px-9 text-base",
+        sm: "h-9 rounded-full px-4 text-sm",
+        lg: "h-12 rounded-full px-8 text-lg",
+        xl: "h-14 rounded-full px-9 text-lg",
         icon: "h-10 w-10",
       },
     },

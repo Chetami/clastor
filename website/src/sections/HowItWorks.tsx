@@ -1,13 +1,12 @@
-import { UserPlus, CalendarCheck, Wallet, type LucideIcon } from "lucide-react";
+import { UserPlus, CalendarCheck, Wallet, ArrowRight, type LucideIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { useReveal } from "@/hooks/useReveal";
 import { APP_URL } from "@/lib/site";
-import { ArrowRight } from "lucide-react";
 
 interface Step {
   icon: LucideIcon;
-  step: string;
+  num: string;
   title: string;
   description: string;
 }
@@ -15,26 +14,28 @@ interface Step {
 const STEPS: Step[] = [
   {
     icon: UserPlus,
-    step: "01",
+    num: "1",
     title: "Add your students",
     description:
-      "Add each student once — contact details, subject, rate, and timezone. Everything else just knows about them.",
+      "Import contacts or start fresh. Add billing rates, subjects, and guardian details once — they're reused everywhere.",
   },
   {
     icon: CalendarCheck,
-    step: "02",
+    num: "2",
     title: "Schedule & track",
     description:
-      "Book one-off or recurring lessons. The calendar invite and reminder go out automatically, and progress is logged as you go.",
+      "Block out the week. Recurring lessons, reminders, and calendar sync happen automatically — mark attendance in a tap.",
   },
   {
     icon: Wallet,
-    step: "03",
+    num: "3",
     title: "Invoice & get paid",
     description:
-      "At month's end, turn unpaid lessons into a polished invoice in a click. Students pay online — money lands in your account.",
+      "Turn tracked lessons into a branded invoice in one click. Payment links and gentle reminders do the chasing for you.",
   },
 ];
+
+const ROTATIONS = ["", "rotate-step-2", "rotate-step-3"];
 
 export function HowItWorks() {
   const ref = useReveal<HTMLDivElement>();
@@ -42,36 +43,30 @@ export function HowItWorks() {
   return (
     <section
       id="how-it-works"
-      className="scroll-mt-20 border-y border-border bg-secondary/40 py-24 sm:py-32"
+      className="scroll-mt-20 px-5 pt-0 py-24 sm:px-6 sm:py-28 lg:px-8"
     >
-      <div ref={ref} className="mx-auto max-w-6xl px-5 sm:px-6 lg:px-8">
-        <div className="reveal mx-auto max-w-2xl text-center">
+      <div ref={ref} className="mx-auto max-w-[1180px]">
+        <div className="reveal mb-12 max-w-[660px] sm:mb-14">
           <p className="eyebrow">How it works</p>
-          <h2 className="mt-4 text-balance font-display text-4xl leading-[1.1] tracking-tighter text-foreground sm:text-5xl">
-            Up and running in{" "}
-            <span className="display-accent">three steps.</span>
+          <h2 className="mt-3.5 font-display text-[clamp(1.875rem,4.6vw,3.125rem)] leading-[1.12]">
+            Three steps from setup to paid.
           </h2>
-          <p className="mt-5 text-pretty text-lg leading-relaxed text-muted-foreground">
-            No setup marathon. You'll be scheduling your first lesson within
-            minutes — Clastor is built to be simple.
+          <p className="mt-3.5 max-w-[54ch] text-[clamp(1rem,1.6vw,1.1875rem)] text-muted-foreground">
+            You can be running in an afternoon. Most tutors send their first
+            Clastor invoice the same day they sign up.
           </p>
         </div>
 
-        <div className="relative mt-16">
-          {/* Connecting line (desktop) */}
-          <div
-            className="absolute left-0 right-0 top-7 hidden h-px bg-gradient-to-r from-transparent via-border to-transparent md:block"
-            aria-hidden="true"
-          />
-
-          <ol className="relative grid gap-10 md:grid-cols-3 md:gap-8">
-            {STEPS.map((step, i) => (
-              <StepItem key={step.step} step={step} index={i} />
-            ))}
-          </ol>
+        <div className="grid gap-5 md:grid-cols-3 md:gap-9">
+          {STEPS.map((step, i) => (
+            <StepCard key={step.num} step={step} index={i} rotate={ROTATIONS[i]} />
+          ))}
         </div>
 
-        <div className="reveal mt-16 text-center" style={{ ["--reveal-delay" as string]: "120ms" }}>
+        <div
+          className="reveal mt-14 text-center"
+          style={{ ["--reveal-delay" as string]: "120ms" }}
+        >
           <Button asChild variant="brand" size="lg">
             <a href={APP_URL}>
               Start scheduling in minutes
@@ -84,27 +79,29 @@ export function HowItWorks() {
   );
 }
 
-function StepItem({ step, index }: { step: Step; index: number }) {
+function StepCard({
+  step,
+  index,
+  rotate,
+}: {
+  step: Step;
+  index: number;
+  rotate: string;
+}) {
   const Icon = step.icon;
   return (
-    <li
-      className="reveal relative"
+    <article
+      className={`reveal doodle-card flex flex-col gap-3.5 rounded-3xl p-7 ${rotate}`}
       style={{ ["--reveal-delay" as string]: `${index * 100}ms` }}
     >
-      <div className="flex flex-col items-start">
-        <div className="relative z-10 flex h-14 w-14 items-center justify-center rounded-2xl border border-border bg-card shadow-sm">
-          <Icon className="h-6 w-6 text-brand" />
-          <span className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-brand text-[11px] font-semibold text-brand-foreground">
-            {step.step}
-          </span>
-        </div>
-        <h3 className="mt-5 font-display text-xl tracking-tight text-foreground">
-          {step.title}
-        </h3>
-        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-          {step.description}
-        </p>
-      </div>
-    </li>
+      <span className="flex h-11 w-11 items-center justify-center rounded-full border-[2.5px] border-foreground bg-brand font-display text-lg text-foreground shadow-sketch">
+        {step.num}
+      </span>
+      <Icon className="h-7 w-7 text-brand" strokeWidth={2.2} />
+      <h3 className="mb-0.5 mt-0.5 font-display text-2xl">{step.title}</h3>
+      <p className="text-base leading-relaxed text-muted-foreground">
+        {step.description}
+      </p>
+    </article>
   );
 }

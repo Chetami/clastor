@@ -6,7 +6,7 @@ export default {
     extend: {
       fontFamily: {
         sans: [
-          "Plus Jakarta Sans",
+          "Delius",
           "ui-sans-serif",
           "system-ui",
           "-apple-system",
@@ -17,10 +17,18 @@ export default {
           "sans-serif",
         ],
         display: [
-          "Instrument Serif",
+          "Delius Swash Caps",
+          "Delius",
           "Georgia",
           "ui-serif",
           "serif",
+        ],
+        mono: [
+          "JetBrains Mono",
+          "SF Mono",
+          "ui-monospace",
+          "Menlo",
+          "monospace",
         ],
       },
       letterSpacing: {
@@ -31,6 +39,10 @@ export default {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+      },
+      boxShadow: {
+        sketch: "3px 3px 0 hsl(var(--foreground))",
+        "sketch-lg": "5px 5px 0 hsl(var(--foreground))",
       },
       colors: {
         background: "hsl(var(--background))",

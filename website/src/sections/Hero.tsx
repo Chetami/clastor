@@ -1,211 +1,225 @@
-import { ArrowRight, CalendarDays, Check, ReceiptText, Sparkles } from "lucide-react";
+import { ArrowRight, Check } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { APP_URL } from "@/lib/site";
 
 export function Hero() {
   return (
-    <section id="top" className="bg-paper relative overflow-hidden pt-32 sm:pt-40">
-      {/* Warm depth: faint grid + soft brand glow. */}
-      <div className="bg-grid pointer-events-none absolute inset-0 opacity-70 [mask-image:radial-gradient(ellipse_at_top,black,transparent_70%)]" />
-      <div
-        className="pointer-events-none absolute left-1/2 top-[-12%] h-[480px] w-[760px] -translate-x-1/2 rounded-full opacity-[0.14] blur-3xl"
-        style={{
-          background:
-            "radial-gradient(closest-side, hsl(var(--brand)), transparent)",
-        }}
-      />
+    <section id="top" className="relative overflow-hidden px-5 pt-28 pb-7 sm:px-6 sm:pt-36 lg:px-8">
+      <div className="mx-auto grid max-w-[1040px] gap-10 text-center sm:gap-14">
+        <div className="flex flex-col items-center">
+          <span className="eyebrow">Tutor management, made friendly</span>
 
-      <div className="relative mx-auto max-w-6xl px-5 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-3xl text-center">
-          <div
-            className="animate-fade-in brand-chip"
-            style={{ animationDelay: "0ms" }}
-          >
-            <Sparkles className="h-3.5 w-3.5" />
-            The business of tutoring, handled
-          </div>
-
-          <h1 className="mt-7 text-balance font-display text-5xl leading-[1.02] tracking-tightest text-foreground sm:text-6xl md:text-7xl lg:text-[5.25rem]">
-            <span
-              className="inline-block animate-fade-up"
-              style={{ animationDelay: "80ms" }}
-            >
-              Teach more.
-            </span>{" "}
-            <span
-              className="inline-block animate-fade-up"
-              style={{ animationDelay: "180ms" }}
-            >
-              <span className="display-accent">Admin</span> less.
-            </span>
+          <h1 className="mt-5 font-display text-[clamp(2.875rem,8vw,5.375rem)] leading-[1.12]">
+            Teach more.
+            <br />
+            <span className="display-accent">Admin less.</span>
+            <Scribble />
           </h1>
 
-          <p
-            className="mx-auto mt-7 max-w-xl animate-fade-up text-pretty text-lg leading-relaxed text-muted-foreground sm:text-xl"
-            style={{ animationDelay: "300ms" }}
-          >
-            Clastor runs the business side of tutoring — scheduling,
-            reminders, invoicing, and payments, all connected. You get your
-            time back.
+          <p className="mt-6 max-w-[52ch] text-[clamp(1.0625rem,1.8vw,1.25rem)] leading-relaxed text-muted-foreground">
+            Clastor connects scheduling, reminders, and invoicing in one
+            friendly place — so the business side of tutoring runs itself, and
+            you look every bit the professional you are.
           </p>
 
-          <div
-            className="mt-9 flex animate-fade-up flex-col items-center justify-center gap-3 sm:flex-row"
-            style={{ animationDelay: "420ms" }}
-          >
-            <Button asChild variant="brand" size="xl" className="w-full sm:w-auto">
-              <a href={APP_URL}>
-                Start free
+          <div className="mt-7 flex flex-wrap justify-center gap-4">
+            <Button asChild variant="brand" size="xl">
+              <a href={APP_URL}>Start free</a>
+            </Button>
+            <Button asChild variant="outline" size="xl">
+              <a href="#how-it-works">
+                See how it works
                 <ArrowRight className="h-4 w-4" />
               </a>
             </Button>
-            <Button
-              asChild
-              variant="outline"
-              size="xl"
-              className="w-full sm:w-auto"
-            >
-              <a href="#how-it-works">See how it works</a>
-            </Button>
           </div>
 
-          <p
-            className="mt-5 animate-fade-up text-sm text-muted-foreground"
-            style={{ animationDelay: "540ms" }}
-          >
-            No credit card required · Syncs with your Google Calendar
+          <p className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
+            <Check className="h-3.5 w-3.5 text-success" />
+            Free for your first 10 students. No card required.
           </p>
         </div>
 
-        <HeroPreview />
+        <HeroMockup />
       </div>
     </section>
   );
 }
 
-/** A stylized, abstract product preview built from UI primitives — no mockups. */
-function HeroPreview() {
+/** Hand-drawn underline scribble beneath the headline accent. */
+function Scribble() {
   return (
-    <div
-      className="relative mx-auto mt-16 max-w-4xl animate-scale-in"
-      style={{ animationDelay: "600ms" }}
+    <svg
+      className="mx-auto -mt-1 block w-[min(420px,80%)] overflow-visible"
+      viewBox="0 0 320 24"
+      fill="none"
+      preserveAspectRatio="none"
+      aria-hidden="true"
     >
-      <div className="rounded-2xl border border-border bg-card p-2 shadow-2xl shadow-foreground/10 ring-1 ring-border/40">
-        <div className="overflow-hidden rounded-xl border border-border bg-background">
-          {/* Window bar */}
-          <div className="flex items-center gap-2 border-b border-border bg-secondary/60 px-4 py-3">
-            <span className="h-2.5 w-2.5 rounded-full bg-foreground/15" />
-            <span className="h-2.5 w-2.5 rounded-full bg-foreground/15" />
-            <span className="h-2.5 w-2.5 rounded-full bg-foreground/15" />
-            <div className="ml-3 flex items-center gap-2 text-xs font-medium text-muted-foreground">
-              <CalendarDays className="h-3.5 w-3.5" />
-              Your week · automatically organized
-            </div>
+      <path
+        d="M6 15 C 40 4, 70 4, 110 12 S 200 20, 250 10 S 312 6, 314 14"
+        stroke="hsl(var(--brand))"
+        strokeWidth="5"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+/** Product mockup — a weekly schedule grid beside an invoice panel. */
+function HeroMockup() {
+  return (
+    <div className="w-full">
+      <div className="doodle-card overflow-hidden rounded-3xl shadow-sketch-lg">
+        {/* Window bar */}
+        <div className="flex items-center justify-between border-b-2 border-dashed border-border bg-secondary px-5 py-3">
+          <div className="flex items-center gap-3">
+            <span className="flex gap-1.5">
+              <i className="h-3 w-3 rounded-full border-[1.5px] border-foreground bg-destructive" />
+              <i className="h-3 w-3 rounded-full border-[1.5px] border-foreground bg-[hsl(43_96%_56%)]" />
+              <i className="h-3 w-3 rounded-full border-[1.5px] border-foreground bg-success" />
+            </span>
+            <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
+              Week of Mar 18
+            </span>
           </div>
-
-          {/* Body */}
-          <div className="grid gap-4 p-5 sm:grid-cols-5">
-            {/* Schedule */}
-            <div className="sm:col-span-3">
-              <div className="mb-3 flex items-center justify-between">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  This week
-                </p>
-                <span className="rounded-full bg-brand-soft px-2 py-0.5 text-xs font-medium text-brand">
-                  18 lessons
-                </span>
-              </div>
-              <div className="space-y-2">
-                <ScheduleRow
-                  time="Mon · 4:00 PM"
-                  title="Specialist Maths · Aisha K."
-                  tone="brand"
-                />
-                <ScheduleRow time="Tue · 6:30 PM" title="Physics · Liam R." />
-                <ScheduleRow time="Wed · 5:00 PM" title="11+ Prep · Sara M." />
-                <ScheduleRow time="Thu · 4:00 PM" title="Mathematical Methods · Aisha K." />
-              </div>
-            </div>
-
-            {/* Side: invoice + payment */}
-            <div className="space-y-3 sm:col-span-2">
-              <div className="rounded-lg border border-border bg-card p-3">
-                <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
-                  <ReceiptText className="h-3.5 w-3.5" />
-                  Invoice #1042
-                </div>
-                <p className="mt-1.5 text-sm font-medium text-foreground">
-                  $320.00
-                </p>
-                <div className="mt-2 flex items-center gap-1.5 text-xs font-medium text-brand">
-                  <Check className="h-3.5 w-3.5" />
-                  Sent · awaiting payment
-                </div>
-              </div>
-
-              <div className="rounded-lg border border-brand/20 bg-brand-soft p-3">
-                <div className="flex items-center gap-2">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand text-brand-foreground">
-                    <Check className="h-3.5 w-3.5" />
-                  </span>
-                  <div>
-                    <p className="text-sm font-medium text-foreground">
-                      Payment received
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      $280.00 · Liam R.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded-lg border border-border bg-secondary/50 p-3">
-                <p className="text-xs font-medium text-muted-foreground">
-                  Reminder sent
-                </p>
-                <p className="mt-0.5 text-sm text-foreground">
-                  Thursday 4:00 PM · confirmed
-                </p>
-              </div>
-            </div>
-          </div>
+          <span className="text-sm text-muted-foreground">Maya R. · Tutor</span>
         </div>
-      </div>
 
-      {/* Floating accent chip — subtle, respects reduced motion via CSS */}
-      <div className="animate-float absolute -right-3 -top-4 hidden rounded-xl border border-border bg-card px-3 py-2 text-xs font-medium shadow-lg sm:block">
-        <span className="flex items-center gap-1.5 text-foreground">
-          <span className="h-2 w-2 rounded-full bg-brand" />
-          Everything connected
-        </span>
+        {/* Body: schedule + invoice */}
+        <div className="grid md:grid-cols-[1fr_244px]">
+          {/* Schedule */}
+          <div className="border-b-2 border-dashed border-border p-5 md:border-b-0 md:border-r-2">
+            <div className="mb-4 flex items-baseline justify-between">
+              <h4 className="font-display text-2xl">This week</h4>
+              <span className="font-mono text-xs tracking-[0.04em] text-muted-foreground">
+                4 lessons · 2 invoices
+              </span>
+            </div>
+
+            <div className="grid grid-cols-[46px_repeat(4,1fr)] border-t-2 border-border">
+              <ColHead />
+              <ColHead>Mon</ColHead>
+              <ColHead>Wed</ColHead>
+              <ColHead>Thu</ColHead>
+              <ColHead>Fri</ColHead>
+
+              <TimeCell>16:00</TimeCell>
+              <Cell>
+                <Lesson name="Liam · Physics" meta="60 min" />
+              </Cell>
+              <Cell />
+              <Cell>
+                <Lesson name="Maya C. · Algebra" meta="45 min · next" highlight />
+              </Cell>
+              <Cell />
+
+              <TimeCell>17:30</TimeCell>
+              <Cell />
+              <Cell>
+                <Lesson name="Sara · Spanish" meta="60 min" />
+              </Cell>
+              <Cell />
+              <Cell>
+                <Lesson name="Noah · Chemistry" meta="45 min" />
+              </Cell>
+            </div>
+          </div>
+
+          {/* Invoice panel */}
+          <aside className="flex flex-col bg-card p-5">
+            <div className="mb-3.5 flex items-center justify-between">
+              <h4 className="font-display text-lg">Invoice #1042</h4>
+              <span className="doodle-pill border-success bg-[hsl(143_54%_89%)] text-[hsl(143_54%_28%)]">
+                <Check className="h-2.5 w-2.5" />
+                Paid
+              </span>
+            </div>
+
+            <div className="mb-3.5 text-sm text-muted-foreground">
+              <b className="block text-base text-foreground">Maya Chen</b>
+              Algebra · Biweekly
+            </div>
+
+            <div className="flex flex-col gap-2.5 border-t-2 border-dashed border-border pt-3">
+              <InvLine label="Lesson × 4" value="$180.00" />
+              <InvLine label="Materials fee" value="$12.00" />
+              <InvLine label="Processing" value="$0.00" />
+            </div>
+
+            <div className="mt-3.5 flex items-baseline justify-between border-t-2 border-border pt-3">
+              <span className="font-mono text-xs uppercase tracking-[0.06em] text-muted-foreground">
+                Total
+              </span>
+              <b className="font-display text-4xl text-foreground">$192.00</b>
+            </div>
+
+            <div className="mt-auto flex items-center gap-1.5 pt-3.5 text-xs text-muted-foreground">
+              <Check className="h-3.5 w-3.5 shrink-0 text-success" />
+              Paid Mar 20 · Auto-sent reminder
+            </div>
+          </aside>
+        </div>
       </div>
     </div>
   );
 }
 
-function ScheduleRow({
-  time,
-  title,
-  tone = "default",
+function ColHead({ children }: { children?: React.ReactNode }) {
+  return (
+    <div className="border-b-2 border-border px-1.5 py-2.5 text-left font-mono text-[11px] uppercase tracking-[0.04em] text-muted-foreground">
+      {children}
+    </div>
+  );
+}
+
+function TimeCell({ children }: { children?: React.ReactNode }) {
+  return (
+    <div className="border-b-2 border-dashed border-border border-r-2 py-1.5 text-[10px] text-muted-foreground font-mono">
+      {children}
+    </div>
+  );
+}
+
+function Cell({ children }: { children?: React.ReactNode }) {
+  return (
+    <div className="min-h-[46px] border-b-2 border-dashed border-border border-r-2 p-1.5 last:border-r-0">
+      {children}
+    </div>
+  );
+}
+
+function Lesson({
+  name,
+  meta,
+  highlight = false,
 }: {
-  time: string;
-  title: string;
-  tone?: "default" | "brand";
+  name: string;
+  meta: string;
+  highlight?: boolean;
 }) {
   return (
-    <div className="flex items-center gap-3 rounded-lg border border-border bg-card p-2.5">
-      <span
-        className={
-          tone === "brand"
-            ? "h-8 w-1 rounded-full bg-brand"
-            : "h-8 w-1 rounded-full bg-foreground/15"
-        }
-      />
-      <div className="min-w-0">
-        <p className="truncate text-sm font-medium text-foreground">{title}</p>
-        <p className="text-xs text-muted-foreground">{time}</p>
-      </div>
+    <div
+      className={
+        highlight
+          ? "my-0.5 rotate-[-1deg] rounded-[10px] border-[1.5px] border-foreground bg-brand px-2 py-1.5 text-[11.5px] leading-tight"
+          : "my-0.5 rounded-[10px] border-[1.5px] border-border bg-secondary px-2 py-1.5 text-[11.5px] leading-tight text-muted-foreground"
+      }
+    >
+      <b className={"block text-[11.5px] " + (highlight ? "text-foreground" : "text-foreground")}>
+        {name}
+      </b>
+      <span className={highlight ? "text-foreground" : "text-muted-foreground"}>{meta}</span>
+    </div>
+  );
+}
+
+function InvLine({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex justify-between text-sm text-muted-foreground">
+      <span>{label}</span>
+      <b className="text-foreground">{value}</b>
     </div>
   );
 }

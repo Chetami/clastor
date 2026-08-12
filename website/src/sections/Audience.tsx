@@ -1,109 +1,97 @@
-import { ArrowRight, Check, Building2, User } from "lucide-react";
+import { ArrowRight, Check } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { useReveal } from "@/hooks/useReveal";
 import { APP_URL } from "@/lib/site";
 
 const SOLO_POINTS = [
-  "Everything one tutor needs — no bloat",
-  "From your first student to a full schedule",
-  "Look professional with branded invoices & profile",
+  "Unlimited lessons, reminders & calendar sync",
+  "Branded invoices with your name & logo",
+  "Public booking profile for new students",
+  "Stripe payments, no awkward chasing",
 ];
 
 const TEAM_POINTS = [
-  "Individual logins with a shared student view",
-  "Shared branding across every tutor",
-  "One source of truth for the whole team",
+  "Shared calendar with per-tutor filters",
+  "Split or pooled invoicing for partners",
+  "One student record across tutors",
+  "Role-based access for assistants",
 ];
 
 export function Audience() {
   const ref = useReveal<HTMLDivElement>();
 
   return (
-    <section id="for-teams" className="scroll-mt-20 py-24 sm:py-32">
-      <div ref={ref} className="mx-auto max-w-6xl px-5 sm:px-6 lg:px-8">
-        <div className="reveal mx-auto max-w-2xl text-center">
-          <p className="eyebrow">For tutors & teams</p>
-          <h2 className="mt-4 text-balance font-display text-4xl leading-[1.1] tracking-tighter text-foreground sm:text-5xl">
-            Built for the individual.{" "}
-            <span className="display-accent">Scales to a team.</span>
+    <section id="for-teams" className="scroll-mt-20 px-5 pt-0 py-24 sm:px-6 sm:py-28 lg:px-8">
+      <div ref={ref} className="mx-auto max-w-[1180px]">
+        <div className="reveal mb-12 max-w-[660px] sm:mb-14">
+          <p className="eyebrow">For tutors &amp; teams</p>
+          <h2 className="mt-3.5 font-display text-[clamp(1.875rem,4.6vw,3.125rem)] leading-[1.12]">
+            Built for one. Grows into a few.
           </h2>
-          <p className="mt-5 text-pretty text-lg leading-relaxed text-muted-foreground">
-            Most tutoring software is built for big agencies. Clastor starts
-            with what a solo tutor actually needs — then grows with you.
+          <p className="mt-3.5 max-w-[54ch] text-[clamp(1rem,1.6vw,1.1875rem)] text-muted-foreground">
+            Clastor starts with the solo tutor in mind. When you bring on a
+            colleague, the team layer is already there.
           </p>
         </div>
 
-        <div className="mt-14 grid gap-5 lg:grid-cols-2">
+        <div className="grid gap-5 lg:grid-cols-[1.15fr_1fr]">
           {/* Solo tutors — primary */}
-          <div
-            className="reveal relative overflow-hidden rounded-2xl border-2 border-brand bg-gradient-to-br from-brand-soft to-card p-8"
+          <article
+            className="reveal rotate-audience doodle-card relative flex flex-col rounded-3xl bg-secondary p-8 shadow-sketch-lg sm:p-9"
             style={{ ["--reveal-delay" as string]: "0ms" }}
           >
-            <span className="absolute right-6 top-6 rounded-full bg-brand px-3 py-1 text-xs font-semibold text-brand-foreground">
+            <span className="absolute -top-4 left-8 -rotate-3 rounded-full border-[2.5px] border-foreground bg-brand px-3.5 py-1.5 font-display text-sm text-foreground shadow-sketch">
               Most popular
             </span>
-            <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand text-brand-foreground">
-              <User className="h-5 w-5" />
-            </span>
-            <h3 className="mt-5 font-display text-2xl tracking-tight text-foreground">
-              For independent tutors
+            <span className="eyebrow">Independent tutors</span>
+            <h3 className="mb-1 mt-2.5 font-display text-[clamp(1.375rem,2.4vw,1.625rem)]">
+              Run your tutoring like a business.
             </h3>
-            <p className="mt-2.5 text-sm leading-relaxed text-muted-foreground">
-              Run your tutoring business from one calm place. Schedule,
-              invoice, and get paid — without juggling four apps.
+            <p className="mb-5 text-base text-muted-foreground">
+              For 5–40 students · Free to start
             </p>
-            <ul className="mt-6 space-y-3">
+            <ul className="mb-6 flex flex-1 flex-col gap-3">
               {SOLO_POINTS.map((point) => (
-                <li key={point} className="flex items-start gap-3">
-                  <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand text-brand-foreground">
-                    <Check className="h-3 w-3" />
-                  </span>
-                  <span className="text-sm text-foreground">{point}</span>
+                <li key={point} className="flex items-start gap-3 text-base text-foreground">
+                  <Check className="mt-1 h-4 w-4 shrink-0 text-[hsl(143_54%_28%)]" strokeWidth={2.5} />
+                  {point}
                 </li>
               ))}
             </ul>
-            <Button asChild variant="brand" className="mt-7 w-full sm:w-auto">
-              <a href={APP_URL}>
-                Start free
-                <ArrowRight className="h-4 w-4" />
-              </a>
+            <Button asChild variant="brand" className="self-start">
+              <a href={APP_URL}>Start free</a>
             </Button>
-          </div>
+          </article>
 
           {/* Teams — secondary */}
-          <div
-            className="reveal rounded-2xl border border-border bg-card p-8"
+          <article
+            className="reveal doodle-card flex flex-col rounded-3xl p-8 sm:p-9"
             style={{ ["--reveal-delay" as string]: "100ms" }}
           >
-            <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-secondary text-foreground">
-              <Building2 className="h-5 w-5" />
-            </span>
-            <h3 className="mt-5 font-display text-2xl tracking-tight text-foreground">
-              For small tutoring teams
+            <span className="eyebrow">Small tutoring teams</span>
+            <h3 className="mb-1 mt-2.5 font-display text-[clamp(1.375rem,2.4vw,1.625rem)]">
+              Bring on a colleague, cleanly.
             </h3>
-            <p className="mt-2.5 text-sm leading-relaxed text-muted-foreground">
-              Two to five tutors sharing students or branding? Clastor gives
-              everyone individual logins and a shared view — without the
-              enterprise price tag.
+            <p className="mb-5 text-base text-muted-foreground">
+              Shared schedule · Per-tutor view
             </p>
-            <ul className="mt-6 space-y-3">
+            <ul className="mb-6 flex flex-1 flex-col gap-3">
               {TEAM_POINTS.map((point) => (
-                <li key={point} className="flex items-start gap-3">
-                  <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-border bg-secondary text-foreground">
-                    <Check className="h-3 w-3" />
-                  </span>
-                  <span className="text-sm text-foreground">{point}</span>
+                <li key={point} className="flex items-start gap-3 text-base text-foreground">
+                  <Check className="mt-1 h-4 w-4 shrink-0 text-[hsl(143_54%_28%)]" strokeWidth={2.5} />
+                  {point}
                 </li>
               ))}
             </ul>
-            <Button asChild variant="outline" className="mt-7 w-full sm:w-auto">
-              <a href={APP_URL}>
-                Explore team setup
-                <ArrowRight className="h-4 w-4" />
-              </a>
-            </Button>
-          </div>
+            <a
+              href={APP_URL}
+              className="link-arrow inline-flex items-center gap-1.5 self-start border-b-2 border-[hsl(25_100%_80%)] pb-0.5 text-lg text-brand transition-colors hover:border-brand"
+            >
+              Explore team plans
+              <ArrowRight className="h-4 w-4" />
+            </a>
+          </article>
         </div>
       </div>
     </section>

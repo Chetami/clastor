@@ -1,56 +1,40 @@
-import { ArrowRight } from "lucide-react";
-
-import { Button } from "@/components/ui/button";
 import { useReveal } from "@/hooks/useReveal";
+import { Button } from "@/components/ui/button";
 import { APP_URL } from "@/lib/site";
 
 export function FinalCTA() {
   const ref = useReveal<HTMLDivElement>();
 
   return (
-    <section className="px-5 py-20 sm:px-6 sm:py-28 lg:px-8">
-      <div ref={ref} className="mx-auto max-w-5xl">
-        <div className="reveal relative overflow-hidden rounded-3xl bg-primary px-6 py-20 text-center sm:px-12">
-          {/* Dramatic emerald glow on dark */}
-          <div
-            className="pointer-events-none absolute inset-0 opacity-60"
-            style={{
-              background:
-                "radial-gradient(ellipse at top, hsl(var(--brand) / 0.5), transparent 60%)",
-            }}
+    <section className="px-5 pt-0 py-24 sm:px-6 sm:py-28 lg:px-8">
+      <div ref={ref} className="mx-auto max-w-[1180px]">
+        <div className="reveal relative overflow-hidden rounded-3xl border-[3px] border-foreground bg-secondary px-6 py-16 text-center shadow-sketch-lg sm:px-12 sm:py-21">
+          {/* Decorative doodle circles */}
+          <span
+            className="pointer-events-none absolute right-[6%] top-6 h-[70px] w-[70px] rounded-full border-[2.5px] border-foreground bg-brand opacity-85"
             aria-hidden="true"
           />
-          <div className="bg-grid pointer-events-none absolute inset-0 opacity-[0.06]" aria-hidden="true" />
+          <span
+            className="pointer-events-none absolute bottom-6 left-[7%] h-[46px] w-[46px] rounded-full border-[2.5px] border-foreground bg-[hsl(143_54%_89%)]"
+            aria-hidden="true"
+          />
 
           <div className="relative mx-auto max-w-2xl">
-            <h2 className="text-balance font-display text-4xl leading-[1.08] tracking-tighter text-background sm:text-5xl md:text-6xl">
-              Spend more time teaching,{" "}
-              <span className="font-display italic text-brand-soft">
-                less time managing.
-              </span>
+            <h2 className="font-display text-[clamp(2rem,5.2vw,3.5rem)] leading-[1.1]">
+              Teach more. <span className="display-accent">Admin less.</span>
             </h2>
-            <p className="mx-auto mt-6 max-w-xl text-pretty text-lg leading-relaxed text-background/70">
-              Clastor handles the scheduling, reminders, and invoicing —
-              connected, automatically. Start free today.
+            <p className="mx-auto mt-4 max-w-[50ch] text-[clamp(1rem,1.6vw,1.1875rem)] text-muted-foreground">
+              Start free for your first 10 students. Set up in an afternoon,
+              send your first branded invoice today.
             </p>
 
-            <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
+            <div className="mt-7">
               <Button asChild variant="brand" size="xl">
-                <a href={APP_URL}>
-                  Start free
-                  <ArrowRight className="h-4 w-4" />
-                </a>
-              </Button>
-              <Button
-                asChild
-                size="xl"
-                className="border border-background/20 bg-background/5 text-background hover:bg-background/10"
-              >
-                <a href="#how-it-works">See how it works</a>
+                <a href={APP_URL}>Start free</a>
               </Button>
             </div>
-            <p className="mt-5 text-sm text-background/50">
-              No credit card required · Get started in minutes
+            <p className="mt-4 text-sm text-muted-foreground">
+              No card required · Cancel anytime
             </p>
           </div>
         </div>

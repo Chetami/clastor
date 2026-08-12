@@ -3,58 +3,62 @@
 @tailwind utilities;
 
 /*
-  Clastor — "Editorial Warmth" design system.
+  Clastor — "Doodle" design system.
 
-  Aesthetic direction: premium, editorial, human. A warm paper-cream base
-  replaces cold white; Instrument Serif carries display moments (evoking
-  books and learning); Plus Jakarta Sans keeps the body modern and readable.
-  Emerald threads through as the brand colour (growth, earnings, calm,
-  education). The result feels like a crafted tool an educator is proud to
-  use — not generic SaaS.
+  Aesthetic direction: playful, hand-drawn, human. A warm buttery-yellow base
+  with hand-drawn 2.5px outlines and hard offset "sketch" shadows. Delius
+  Swash Caps carries display moments; Delius keeps the body friendly and
+  readable; JetBrains Mono labels add a precise, notebook-like accent.
+  Vibrant orange threads through as the brand colour (energy, warmth,
+  momentum). Slight rotations and dashed dividers give a scrapbook feel.
 
-  Brand attributes: organized, calm, reliable, modern, professional, human.
+  Brand attributes: friendly, approachable, organized, modern, human.
 */
 @layer base {
   :root {
-    /* Warm paper background — not cold white. */
-    --background: 40 33% 97%;
-    --foreground: 30 14% 9%;
+    /* Warm buttery-yellow background. */
+    --background: 49 100% 92%;
+    --foreground: 251 38% 15%;
 
     --card: 0 0% 100%;
-    --card-foreground: 30 14% 9%;
+    --card-foreground: 251 38% 15%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 30 14% 9%;
+    --popover-foreground: 251 38% 15%;
 
-    --primary: 30 14% 9%;
-    --primary-foreground: 40 33% 97%;
+    --primary: 251 38% 15%;
+    --primary-foreground: 49 100% 92%;
 
-    --secondary: 36 23% 92%;
-    --secondary-foreground: 30 14% 9%;
+    /* Surface-warm yellow — used for accents, sidebars, rotated cards. */
+    --secondary: 50 100% 81%;
+    --secondary-foreground: 251 38% 15%;
 
-    --muted: 36 20% 93%;
-    --muted-foreground: 30 6% 40%;
+    --muted: 48 53% 89%;
+    --muted-foreground: 254 14% 50%;
 
-    --accent: 36 23% 92%;
-    --accent-foreground: 30 14% 9%;
+    --accent: 48 41% 83%;
+    --accent-foreground: 251 38% 15%;
 
-    /* Brand — emerald. Growth, earnings, calm, education. */
-    --brand: 162 95% 24%;
-    --brand-foreground: 0 0% 100%;
-    --brand-soft: 152 56% 95%;
-    --brand-hover: 162 80% 28%;
+    /* Brand — vibrant orange. Energy, warmth, momentum. */
+    --brand: 25 100% 50%;
+    --brand-foreground: 251 38% 15%;
+    --brand-soft: 50 100% 81%;
+    --brand-hover: 25 100% 44%;
 
-    /* Warm amber for micro-accents (used sparingly). */
-    --warm: 32 92% 50%;
+    /* Warm yellow micro-accent. */
+    --warm: 50 100% 81%;
+
+    /* Success green for check marks / paid states. */
+    --success: 143 54% 39%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 36 18% 87%;
-    --input: 36 18% 87%;
-    --ring: 162 95% 24%;
+    --border: 48 41% 83%;
+    --input: 48 41% 83%;
+    --ring: 25 100% 50%;
 
-    --radius: 0.75rem;
+    --radius: 1rem;
   }
 
   * {
@@ -69,47 +73,92 @@
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
+    font-size: 17px;
+    line-height: 1.65;
   }
 
   ::selection {
-    @apply bg-brand/20 text-foreground;
+    @apply bg-brand/25 text-foreground;
   }
 
   h1, h2, h3, h4, h5, h6 {
     @apply font-display;
+    font-weight: 400;
+    line-height: 1.18;
+    letter-spacing: 0;
   }
 }
 
 @layer components {
-  /* Eyebrow / section label */
+  /* Eyebrow / section label — mono, uppercase, with a small orange line. */
   .eyebrow {
-    @apply inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.18em] text-brand;
+    @apply inline-flex items-center gap-2 font-mono text-xs font-medium uppercase;
+    letter-spacing: 0.1em;
+    color: hsl(254 24% 34%);
+  }
+  .eyebrow::before {
+    content: "";
+    @apply inline-block h-0.5 w-[22px] rounded-sm bg-brand;
   }
 
-  /* Soft brand chip */
-  .brand-chip {
-    @apply inline-flex items-center gap-2 rounded-full border border-brand/20 bg-brand-soft px-3.5 py-1.5 text-sm font-medium text-brand;
+  /* Doodle card — hand-drawn outline + sketch shadow. */
+  .doodle-card {
+    @apply rounded-3xl border-[2.5px] border-foreground bg-card;
+    box-shadow: 3px 3px 0 hsl(var(--foreground));
   }
 
-  /* Display italic accent — for editorial emphasis in headings. */
+  /* Doodle pill — for badges / status tags. */
+  .doodle-pill {
+    @apply inline-flex items-center gap-1.5 rounded-full border-[2px] border-foreground px-3 py-1 font-mono text-[10px] font-medium uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  /* Brand accent word in headings — orange, no italic (swash font is enough). */
   .display-accent {
-    @apply font-display italic font-normal text-brand;
+    @apply font-display text-brand;
   }
 }
 
 /* Staggered entrance animation, toggled by the IntersectionObserver hook. */
 .reveal {
   opacity: 0;
-  transform: translateY(20px);
+  transform: translateY(18px);
   transition:
-    opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
-    transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+    opacity 0.6s cubic-bezier(0.2, 0, 0, 1),
+    transform 0.6s cubic-bezier(0.2, 0, 0, 1);
   transition-delay: var(--reveal-delay, 0ms);
   will-change: opacity, transform;
 }
 .reveal.is-visible {
   opacity: 1;
   transform: none;
+}
+
+/* Preserve intentional rotations on cards after reveal completes. */
+.reveal.is-visible.rotate-tiny-neg {
+  transform: rotate(-1.2deg);
+}
+.reveal.is-visible.rotate-tiny-pos {
+  transform: rotate(1.2deg);
+}
+.reveal.is-visible.rotate-step-2 {
+  transform: rotate(0.6deg);
+}
+.reveal.is-visible.rotate-step-3 {
+  transform: rotate(-0.6deg);
+}
+.reveal.is-visible.rotate-audience {
+  transform: rotate(-0.8deg);
+}
+
+@media (max-width: 760px) {
+  .reveal.is-visible.rotate-tiny-neg,
+  .reveal.is-visible.rotate-tiny-pos,
+  .reveal.is-visible.rotate-step-2,
+  .reveal.is-visible.rotate-step-3,
+  .reveal.is-visible.rotate-audience {
+    transform: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -130,20 +179,7 @@
   }
 }
 
-/* Faint dotted grid texture for depth — calm, not flashy. */
-.bg-grid {
-  background-image: radial-gradient(
-    circle at 1px 1px,
-    hsl(var(--foreground) / 0.06) 1px,
-    transparent 0
-  );
-  background-size: 28px 28px;
-}
-
-/* Subtle paper grain via layered radial gradients for warmth. */
-.bg-paper {
-  background-color: hsl(var(--background));
-  background-image:
-    radial-gradient(at 15% 0%, hsl(var(--brand) / 0.05) 0px, transparent 50%),
-    radial-gradient(at 85% 100%, hsl(32 92% 50% / 0.04) 0px, transparent 50%);
+/* Dashed divider helper. */
+.doodle-dashed {
+  border-style: dashed;
 }

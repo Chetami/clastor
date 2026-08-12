@@ -5,7 +5,6 @@ import { SocialProof } from "@/sections/SocialProof";
 import { Features } from "@/sections/Features";
 import { HowItWorks } from "@/sections/HowItWorks";
 import { Audience } from "@/sections/Audience";
-import { WhyClastor } from "@/sections/WhyClastor";
 import { Testimonials } from "@/sections/Testimonials";
 import { FAQ } from "@/sections/FAQ";
 import { FinalCTA } from "@/sections/FinalCTA";
@@ -21,7 +20,6 @@ function Landing() {
       <Features />
       <HowItWorks />
       <Audience />
-      <WhyClastor />
       <Testimonials />
       <FAQ />
       <FinalCTA />
@@ -32,7 +30,7 @@ function Landing() {
 export default function App() {
   return (
     <BrowserRouter>
-      <div className="bg-paper min-h-screen">
+      <div className="min-h-screen bg-background">
         <Navbar />
         <main>
           <Routes>

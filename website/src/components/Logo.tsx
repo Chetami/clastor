@@ -1,29 +1,50 @@
 import { cn } from "@/lib/utils";
 
 /**
- * Clastor wordmark with an abstract mark.
- * The mark is three organized bars of varying height — a calm nod to
- * schedules, growth, and order. Deliberately not a graduation cap.
+ * Clastor wordmark with a hand-drawn "doodle" mark.
+ * A rounded square with notebook-style lines and an orange dot accent —
+ * a friendly nod to lists, schedules, and the things you tick off.
  */
 export function LogoMark({ className }: { className?: string }) {
   return (
     <span
       className={cn(
-        "inline-flex h-9 w-9 items-center justify-center rounded-xl bg-brand text-brand-foreground",
+        "inline-flex h-9 w-9 items-center justify-center",
         className,
       )}
       aria-hidden="true"
     >
       <svg
-        width="20"
-        height="20"
+        width="32"
+        height="32"
         viewBox="0 0 32 32"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
       >
-        <rect x="7" y="16" width="4" height="9" rx="2" fill="currentColor" />
-        <rect x="14" y="11" width="4" height="14" rx="2" fill="currentColor" />
-        <rect x="21" y="6" width="4" height="19" rx="2" fill="currentColor" />
+        <rect
+          x="2.5"
+          y="2.5"
+          width="27"
+          height="27"
+          rx="8"
+          fill="hsl(var(--card))"
+          stroke="hsl(var(--foreground))"
+          strokeWidth="2.5"
+        />
+        <path
+          d="M9 11h14M9 16h9M9 21h11"
+          stroke="hsl(var(--foreground))"
+          strokeWidth="2.2"
+          strokeLinecap="round"
+        />
+        <circle
+          cx="22"
+          cy="21"
+          r="3.2"
+          fill="hsl(var(--brand))"
+          stroke="hsl(var(--foreground))"
+          strokeWidth="2"
+        />
       </svg>
     </span>
   );
