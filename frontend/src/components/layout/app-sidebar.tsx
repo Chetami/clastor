@@ -61,9 +61,9 @@ export function AppSidebar() {
         <SidebarHeader>
           <SidebarMenu>
             <SidebarMenuItem>
-                <SidebarMenuButton size="lg" asChild>
-                  <Link to="/dashboard">
-                    <Logo size={32} className="shrink-0" />
+              <SidebarMenuButton size="lg" asChild>
+                <Link to="/dashboard">
+                  <Logo size={32} className="shrink-0" />
                   <div className="grid flex-1 text-left text-sm leading-tight">
                     <span className="truncate font-semibold">Clastor</span>
                     <span className="truncate text-xs text-muted-foreground">

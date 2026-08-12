@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { LogoMark } from "@/components/ui/logo";
 
 type BrandMarkProps = {
   className?: string;
@@ -11,12 +12,7 @@ type BrandMarkProps = {
 export function BrandMark({ className, size = 40, showName = true }: BrandMarkProps) {
   return (
     <div className={cn("flex items-center gap-2.5", className)}>
-      <img
-        src="/logo.png"
-        alt="Clastor"
-        className="rounded-lg shadow-sm"
-        style={{ width: size, height: size }}
-      />
+      <LogoMark size={size} />
       {showName && <span className="text-xl font-semibold tracking-tight">Clastor</span>}
     </div>
   );
