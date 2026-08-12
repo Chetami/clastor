@@ -124,7 +124,8 @@ export function NextLesson({ lesson, studentName, studentEmail }: Props) {
               {lessonTimeRange(lesson)}
             </p>
             <p className="text-sm font-medium">
-              {studentName} · {lesson.subject}
+              {studentName}
+              {lesson.subject ? ` · ${lesson.subject}` : ""}
             </p>
           </Link>
 

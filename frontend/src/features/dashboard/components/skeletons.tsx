@@ -88,7 +88,7 @@ export function UpcomingLessonsSkeleton({ fill }: { fill?: boolean }) {
 
 export function TodoLessonsSkeleton() {
   return (
-    <CardShell>
+    <CardShell className="flex-1">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 p-6 pb-2">
         <div className="flex items-center gap-2">
           <Skeleton className="h-4 w-4 rounded" />

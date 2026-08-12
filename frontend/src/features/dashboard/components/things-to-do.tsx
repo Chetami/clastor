@@ -78,7 +78,7 @@ export function ThingsToDo({
 
   return (
     <>
-      <Card data-tour="things-to-do" className="flex flex-col">
+      <Card data-tour="things-to-do" className="flex flex-1 flex-col">
         <CardHeader className="flex flex-row items-center justify-between space-y-0">
           <div className="flex items-center gap-2">
             <ListTodo className="h-4 w-4 text-muted-foreground" />
@@ -92,7 +92,7 @@ export function ThingsToDo({
         </CardHeader>
         <CardContent className="flex-1">
           {!hasAny ? (
-            <div className="flex flex-col items-center gap-2 py-8 text-center">
+            <div className="flex h-full flex-col items-center justify-center gap-2 text-center">
               <CheckCircle2 className="h-8 w-8 text-emerald-500" />
               <p className="text-sm text-muted-foreground">All caught up!</p>
             </div>
