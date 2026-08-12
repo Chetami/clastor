@@ -1,4 +1,5 @@
 import { Coffee, FileCheck2, CalendarHeart } from "lucide-react";
+
 import type { LucideIcon } from "lucide-react";
 
 import { Asterisk, Star } from "@/components/Doodles";
@@ -25,7 +26,7 @@ const OUTCOMES: Outcome[] = [
     icon: Coffee,
     title: "Your evenings back",
     description:
-      "Reminders, calendar invites, and invoice emails go out on their own. The hour you used to spend on admin becomes time off — or another lesson.",
+      "Reminders, calendar invites, and invoice emails go out on their own. The hour you used to spend on admin turns into time off, or just one more lesson.",
     rotate: "rotate-tiny-neg",
   },
   {
@@ -40,7 +41,7 @@ const OUTCOMES: Outcome[] = [
     icon: CalendarHeart,
     title: "One source of truth",
     description:
-      "Schedule, students, and billing in one place — so you always know who's paid, what's next, and how the month is really going.",
+      "Schedule, students, and billing all in one place, so you always know who's paid, what's next, and how the month is really going.",
     rotate: "rotate-tiny-pos",
   },
 ];
@@ -71,22 +72,16 @@ export function Testimonials() {
   );
 }
 
-function OutcomeCard({
-  outcome,
-  index,
-}: {
-  outcome: Outcome;
-  index: number;
-}) {
+function OutcomeCard({ outcome, index }: { outcome: Outcome; index: number }) {
   const Icon = outcome.icon;
   return (
     <article
-      className={`reveal doodle-card flex flex-col gap-4 rounded-3xl p-7 ${outcome.rotate} ${
+      className={`reveal doodle-card relative flex flex-col gap-4 rounded-3xl p-7 ${outcome.rotate} ${
         outcome.warm ? "bg-secondary" : ""
       }`}
       style={{ ["--reveal-delay" as string]: `${index * 100}ms` }}
     >
-      <span className="flex h-11 w-11 items-center justify-center rounded-full border-[2.5px] border-foreground bg-brand text-foreground shadow-sketch">
+      <span className="absolute right-4 top-4 flex h-11 w-11 items-center justify-center rounded-full border-[2.5px] border-foreground bg-brand text-foreground shadow-sketch">
         <Icon className="h-5 w-5" strokeWidth={2.2} />
       </span>
       <h3 className="font-display text-2xl">{outcome.title}</h3>
