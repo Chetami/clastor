@@ -1,6 +1,6 @@
 import { useReveal } from "@/hooks/useReveal";
 import { Button } from "@/components/ui/button";
-import { Scribble } from "@/components/Doodles";
+import { Heart, Scribble } from "@/components/Doodles";
 import { APP_URL } from "@/lib/site";
 
 export function FinalCTA() {
@@ -40,7 +40,8 @@ export function FinalCTA() {
                 <a href={APP_URL}>Request beta access</a>
               </Button>
             </div>
-            <p className="mt-4 text-sm text-muted-foreground">
+            <p className="mt-4 flex items-center justify-center gap-1.5 text-sm text-muted-foreground">
+              <Heart className="h-4 w-4 text-[hsl(280_60%_60%)]" />
               Limited spots · No card needed
             </p>
           </div>
