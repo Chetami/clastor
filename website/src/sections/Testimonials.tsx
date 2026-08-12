@@ -53,7 +53,7 @@ export function Testimonials() {
     <section className="relative scroll-mt-20 overflow-hidden px-5 py-12 sm:px-6 sm:py-14 lg:px-8">
       {/* Hand-drawn accents scattered in the margins. */}
       <Star className="pointer-events-none absolute right-[6%] top-[10%] hidden h-8 w-8 rotate-12 text-brand/45 animate-float sm:block" />
-      <Asterisk className="pointer-events-none absolute left-[5%] top-[58%] hidden h-7 w-7 rotate-6 text-[hsl(168_60%_55%)]/50 sm:block" />
+      <Asterisk className="pointer-events-none absolute left-[5%] top-[58%] hidden h-7 w-7 rotate-6 text-brand/45 sm:block" />
       <div ref={ref} className="mx-auto max-w-[1180px]">
         <div className="reveal mb-12 max-w-[660px] sm:mb-14">
           <p className="eyebrow">What changes</p>

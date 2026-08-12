@@ -18,7 +18,7 @@ export function Features() {
     >
       {/* Hand-drawn sparkle accents scattered in the margins. */}
       <Sparkle className="pointer-events-none absolute right-[5%] top-[7%] hidden h-8 w-8 rotate-12 text-brand/25 sm:block" />
-      <Sparkle className="pointer-events-none absolute left-[4%] bottom-[9%] hidden h-6 w-6 -rotate-6 text-[hsl(48_92%_60%)]/40 sm:block" />
+      <Sparkle className="pointer-events-none absolute left-[4%] bottom-[9%] hidden h-6 w-6 -rotate-6 text-warm sm:block" />
 
       <div ref={ref} className="mx-auto max-w-[1180px]">
         <div className="reveal mb-12 max-w-[660px] sm:mb-14">

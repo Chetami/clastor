@@ -31,7 +31,7 @@ export function Audience() {
     >
       {/* Hand-drawn accents scattered in the margins. */}
       <Star className="pointer-events-none absolute right-[6%] top-[13%] hidden h-7 w-7 rotate-6 text-brand/45 sm:block" />
-      <Sparkle className="pointer-events-none absolute left-[4%] bottom-[12%] hidden h-7 w-7 -rotate-12 text-[hsl(48_92%_60%)]/55 sm:block" />
+      <Sparkle className="pointer-events-none absolute left-[4%] bottom-[12%] hidden h-7 w-7 -rotate-12 text-warm sm:block" />
       <div ref={ref} className="mx-auto max-w-[1180px]">
         <div className="reveal mb-12 max-w-[660px] sm:mb-14">
           <p className="eyebrow">For tutors &amp; teams</p>
