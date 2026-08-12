@@ -111,10 +111,12 @@ function StepCard({
       className={`reveal doodle-card flex flex-col gap-3.5 rounded-3xl p-7 ${rotate}`}
       style={{ ["--reveal-delay" as string]: `${index * 100}ms` }}
     >
-      <span className="flex h-11 w-11 items-center justify-center rounded-full border-[2.5px] border-foreground bg-brand font-display text-lg text-foreground shadow-sketch">
-        {step.num}
-      </span>
-      <Icon className="h-7 w-7 text-brand" strokeWidth={2.2} />
+      <div className="flex items-start justify-between">
+        <span className="flex h-11 w-11 items-center justify-center rounded-full border-[2.5px] border-foreground bg-brand font-display text-lg text-foreground shadow-sketch">
+          {step.num}
+        </span>
+        <Icon className="h-7 w-7 text-brand" strokeWidth={2.2} />
+      </div>
       <h3 className="mb-0.5 mt-0.5 font-display text-2xl">{step.title}</h3>
       <p className="text-base leading-relaxed text-muted-foreground">
         {step.description}

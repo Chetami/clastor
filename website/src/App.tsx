@@ -39,8 +39,8 @@ function Landing() {
     <>
       <Hero />
       <SocialProof />
-      <Features />
       <HowItWorks />
+      <Features />
       <Audience />
       <Testimonials />
       <FAQ />
