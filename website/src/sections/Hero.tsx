@@ -27,7 +27,7 @@ export function Hero() {
 
           <p className="mt-6 max-w-[52ch] text-[clamp(1.0625rem,1.8vw,1.25rem)] leading-relaxed text-muted-foreground">
             Clastor automates your scheduling, reminders, and invoicing — so you
-            can focus on tutoring while looking completely professional.
+            never have to chase a payment again.
           </p>
 
           <div className="mt-7 flex flex-wrap justify-center gap-4">

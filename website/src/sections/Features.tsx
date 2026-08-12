@@ -59,7 +59,7 @@ export function Features() {
           <FeatureCard
             icon={CreditCard}
             title="Payments"
-            description="Branded invoices and one-tap payment links — get paid without the awkward follow-up."
+            description="Branded invoices and one-tap payment links. No more chasing parents for unpaid lessons."
             index={1}
           >
             <MiniInvoice />
@@ -123,9 +123,9 @@ function FeatureCard({
 }) {
   return (
     <article
-      className={`reveal doodle-card flex min-h-[200px] flex-col rounded-3xl p-7 transition-transform duration-300 hover:-translate-x-[3px] hover:-translate-y-[3px] hover:shadow-sketch-lg ${
+      className={`reveal doodle-card flex min-h-[200px] flex-col rounded-3xl transition-transform duration-300 hover:-translate-x-[3px] hover:-translate-y-[3px] hover:shadow-sketch-lg ${
         side ? "lg:flex-row lg:items-center lg:gap-10" : ""
-      } ${wide ? "lg:p-9" : ""} ${className}`}
+      } ${wide ? "p-7 lg:p-6" : side ? "p-6" : "p-7"} ${className}`}
       style={{ ["--reveal-delay" as string]: `${index * 80}ms` }}
     >
       <div className={side ? "lg:flex-1" : ""}>
@@ -139,7 +139,11 @@ function FeatureCard({
         >
           {title}
         </h3>
-        <p className="max-w-[44ch] text-base leading-relaxed text-muted-foreground">
+        <p
+          className={`max-w-[44ch] text-base text-muted-foreground ${
+            side ? "leading-normal" : "leading-relaxed"
+          }`}
+        >
           {description}
         </p>
       </div>
@@ -185,14 +189,34 @@ function FeatureBig({
 /** Hand-drawn mini-calendar visual with day dots + legend. */
 function MiniCalendar() {
   const days = [
-    { n: "", lbl: "M" }, { n: "", lbl: "T" }, { n: "", lbl: "W" },
-    { n: "", lbl: "T" }, { n: "", lbl: "F" }, { n: "", lbl: "S" }, { n: "", lbl: "S" },
-    { n: "" }, { n: "3", has: true }, { n: "" }, { n: "5", has: true, acc: true },
-    { n: "" }, { n: "7", has: true }, { n: "" },
-    { n: "" }, { n: "" }, { n: "10", has: true }, { n: "" }, { n: "" },
-    { n: "12", has: true }, { n: "" },
-    { n: "" }, { n: "17", has: true, acc: true }, { n: "" }, { n: "19", has: true },
-    { n: "" }, { n: "" }, { n: "" },
+    { n: "", lbl: "M" },
+    { n: "", lbl: "T" },
+    { n: "", lbl: "W" },
+    { n: "", lbl: "T" },
+    { n: "", lbl: "F" },
+    { n: "", lbl: "S" },
+    { n: "", lbl: "S" },
+    { n: "" },
+    { n: "3", has: true },
+    { n: "" },
+    { n: "5", has: true, acc: true },
+    { n: "" },
+    { n: "7", has: true },
+    { n: "" },
+    { n: "" },
+    { n: "" },
+    { n: "10", has: true },
+    { n: "" },
+    { n: "" },
+    { n: "12", has: true },
+    { n: "" },
+    { n: "" },
+    { n: "17", has: true, acc: true },
+    { n: "" },
+    { n: "19", has: true },
+    { n: "" },
+    { n: "" },
+    { n: "" },
   ];
 
   return (
@@ -296,7 +320,7 @@ function MiniRoster() {
 /** Auto-reminder chat bubbles — outgoing + parent reply. */
 function MiniMessages() {
   return (
-    <div className="flex w-full max-w-[280px] flex-col gap-2">
+    <div className="flex w-full max-w-[220px] flex-col gap-2">
       <div className="max-w-[80%] self-start rounded-2xl rounded-bl-md border-[1.5px] border-foreground bg-secondary px-3 py-2 text-xs">
         <b className="mb-0.5 block font-mono text-[9px] uppercase tracking-wide text-muted-foreground">
           Reminder · auto
