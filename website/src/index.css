@@ -5,43 +5,47 @@
 /*
   Clastor — "Doodle" design system.
 
-  Aesthetic direction: playful, hand-drawn, human. A warm buttery-yellow base
-  with hand-drawn 2.5px outlines and hard offset "sketch" shadows. Delius
-  Swash Caps carries display moments; Delius keeps the body friendly and
-  readable; JetBrains Mono labels add a precise, notebook-like accent.
-  Vibrant orange threads through as the brand colour (energy, warmth,
-  momentum). Slight rotations and dashed dividers give a scrapbook feel.
+  Aesthetic direction: playful, hand-drawn, human. A warm off-white base with
+  hand-drawn 2.5px outlines and hard offset "sketch" shadows. Delius Swash Caps
+  carries display moments; Delius keeps the body friendly and readable; JetBrains
+  Mono labels add a precise, notebook-like accent. Vibrant orange threads through
+  as the brand colour (energy, warmth, momentum). Slight rotations and dashed
+  dividers give a scrapbook feel.
+
+  The palette shares its warm neutrals + brand orange with the app's "Clastor"
+  theme, so the site and the product read as one — but the site stays bolder
+  (sketch shadows, hand-drawn type, saturated yellow accents).
 
   Brand attributes: friendly, approachable, organized, modern, human.
 */
 @layer base {
   :root {
-    /* Warm buttery-yellow background. */
-    --background: 49 100% 92%;
-    --foreground: 251 38% 15%;
+    /* Warm off-white background — aligns with the app's light surfaces. */
+    --background: 40 60% 97%;
+    --foreground: 26 28% 13%;
 
     --card: 0 0% 100%;
-    --card-foreground: 251 38% 15%;
+    --card-foreground: 26 28% 13%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 251 38% 15%;
+    --popover-foreground: 26 28% 13%;
 
-    --primary: 251 38% 15%;
-    --primary-foreground: 49 100% 92%;
+    --primary: 26 28% 13%;
+    --primary-foreground: 40 60% 97%;
 
     /* Surface-warm yellow — used for accents, sidebars, rotated cards. */
-    --secondary: 50 100% 81%;
-    --secondary-foreground: 251 38% 15%;
+    --secondary: 48 92% 82%;
+    --secondary-foreground: 26 28% 13%;
 
-    --muted: 48 53% 89%;
-    --muted-foreground: 254 14% 50%;
+    --muted: 42 40% 95%;
+    --muted-foreground: 28 14% 45%;
 
-    --accent: 48 41% 83%;
-    --accent-foreground: 251 38% 15%;
+    --accent: 42 45% 92%;
+    --accent-foreground: 26 28% 13%;
 
     /* Brand — vibrant orange. Energy, warmth, momentum. */
     --brand: 25 100% 50%;
-    --brand-foreground: 251 38% 15%;
+    --brand-foreground: 26 28% 13%;
     --brand-soft: 50 100% 81%;
     --brand-hover: 25 100% 44%;
 
@@ -54,8 +58,8 @@
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 48 41% 83%;
-    --input: 48 41% 83%;
+    --border: 40 30% 89%;
+    --input: 40 30% 89%;
     --ring: 25 100% 50%;
 
     --radius: 1rem;
@@ -94,7 +98,7 @@
   .eyebrow {
     @apply inline-flex items-center gap-2 font-mono text-xs font-medium uppercase;
     letter-spacing: 0.1em;
-    color: hsl(254 24% 34%);
+    color: hsl(26 28% 30%);
   }
   .eyebrow::before {
     content: "";

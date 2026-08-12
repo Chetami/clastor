@@ -5,7 +5,10 @@ import { APP_URL } from "@/lib/site";
 
 export function Hero() {
   return (
-    <section id="top" className="relative overflow-hidden px-5 pt-28 pb-7 sm:px-6 sm:pt-36 lg:px-8">
+    <section
+      id="top"
+      className="relative overflow-hidden px-5 pt-28 pb-7 sm:px-6 sm:pt-36 lg:px-8"
+    >
       <div className="mx-auto grid max-w-[1040px] gap-10 text-center sm:gap-14">
         <div className="flex flex-col items-center">
           <span className="eyebrow">Tutor management, made friendly</span>
@@ -18,9 +21,8 @@ export function Hero() {
           </h1>
 
           <p className="mt-6 max-w-[52ch] text-[clamp(1.0625rem,1.8vw,1.25rem)] leading-relaxed text-muted-foreground">
-            Clastor connects scheduling, reminders, and invoicing in one
-            friendly place — so the business side of tutoring runs itself, and
-            you look every bit the professional you are.
+            Clastor automates your scheduling, reminders, and invoicing — so you
+            can focus on tutoring while looking completely professional.
           </p>
 
           <div className="mt-7 flex flex-wrap justify-center gap-4">
@@ -111,7 +113,11 @@ function HeroMockup() {
               </Cell>
               <Cell />
               <Cell>
-                <Lesson name="Maya C. · Algebra" meta="45 min · next" highlight />
+                <Lesson
+                  name="Maya C. · Algebra"
+                  meta="45 min · next"
+                  highlight
+                />
               </Cell>
               <Cell />
 
@@ -207,10 +213,17 @@ function Lesson({
           : "my-0.5 rounded-[10px] border-[1.5px] border-border bg-secondary px-2 py-1.5 text-[11.5px] leading-tight text-muted-foreground"
       }
     >
-      <b className={"block text-[11.5px] " + (highlight ? "text-foreground" : "text-foreground")}>
+      <b
+        className={
+          "block text-[11.5px] " +
+          (highlight ? "text-foreground" : "text-foreground")
+        }
+      >
         {name}
       </b>
-      <span className={highlight ? "text-foreground" : "text-muted-foreground"}>{meta}</span>
+      <span className={highlight ? "text-foreground" : "text-muted-foreground"}>
+        {meta}
+      </span>
     </div>
   );
 }

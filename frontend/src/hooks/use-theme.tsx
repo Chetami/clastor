@@ -10,7 +10,7 @@ import {
 } from "react";
 
 export type Appearance = "light" | "dark";
-export type ColorScheme = "amber" | "emerald" | "rose";
+export type ColorScheme = "clastor" | "amber" | "emerald" | "rose";
 
 export const COLOR_SCHEMES: {
   value: ColorScheme;
@@ -22,6 +22,13 @@ export const COLOR_SCHEMES: {
   /** Dark-mode primary swatch, used for preview chips. */
   darkSwatch: string;
 }[] = [
+  {
+    value: "clastor",
+    label: "Clastor",
+    base: "oklch(0.55 0.02 60)",
+    swatch: "oklch(0.60 0.20 42)",
+    darkSwatch: "oklch(0.70 0.17 45)",
+  },
   {
     value: "amber",
     label: "Amber",
@@ -47,11 +54,12 @@ export const COLOR_SCHEMES: {
 
 const APPEARANCE_KEY = "theme";
 const COLOR_SCHEME_KEY = "color-scheme";
-const DEFAULT_COLOR_SCHEME: ColorScheme = "amber";
+const DEFAULT_COLOR_SCHEME: ColorScheme = "clastor";
 
-/** CSS class applied to <html> for each scheme (amber needs none — falls through to :root). */
+/** CSS class applied to <html> for each scheme (clastor needs none — falls through to :root). */
 const COLOR_SCHEME_CLASSES: Record<ColorScheme, string> = {
-  amber: "",
+  clastor: "",
+  amber: "theme-amber",
   emerald: "theme-emerald",
   rose: "theme-rose",
 };

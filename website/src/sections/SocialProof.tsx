@@ -1,4 +1,9 @@
 import { useReveal } from "@/hooks/useReveal";
+import {
+  GoogleCalendarIcon,
+  GoogleMeetIcon,
+  StripeIcon,
+} from "@/components/BrandIcons";
 
 const STATS = [
   { value: "~4 hrs", label: "saved on admin each week" },
@@ -6,7 +11,11 @@ const STATS = [
   { value: "3 days", label: "typical time from invoice to paid" },
 ];
 
-const INTEGRATIONS = ["Google Calendar", "Google Meet", "Stripe"];
+const INTEGRATIONS = [
+  { Icon: GoogleCalendarIcon },
+  { Icon: GoogleMeetIcon },
+  { Icon: StripeIcon },
+];
 
 export function SocialProof() {
   const ref = useReveal<HTMLDivElement>();
@@ -32,9 +41,9 @@ export function SocialProof() {
             <span className="font-mono text-[11px] uppercase tracking-[0.08em]">
               Works with
             </span>
-            {INTEGRATIONS.map((name, i) => (
-              <span key={name} className="flex items-center gap-3">
-                <strong className="font-semibold text-foreground">{name}</strong>
+            {INTEGRATIONS.map(({ Icon }, i) => (
+              <span key={i} className="flex items-center gap-3">
+                <Icon className="h-[18px] w-[18px]" />
                 {i < INTEGRATIONS.length - 1 && (
                   <span className="text-border">·</span>
                 )}

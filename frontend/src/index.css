@@ -158,10 +158,85 @@
 }
 
 @layer base {
-  /* ── Amber (default) ─────────────────────────────────────
-     Zinc base colour + Amber primary. Cool-gray neutrals
-     with a warm amber primary. :root = light, .dark = dark. */
+  /* ── Clastor (default) ───────────────────────────────────
+     Warm sand neutrals + a vivid orange primary. The neutrals
+     carry a subtle warm tint (friendlier than cold zinc) while
+     the primary is the same brand orange that runs through the
+     marketing site, so the app and the site read as one product.
+     :root = light, .dark = dark. */
   :root {
+    --background: oklch(1 0 0);
+    --foreground: oklch(0.18 0.012 60);
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.18 0.012 60);
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0.18 0.012 60);
+    --primary: oklch(0.60 0.20 42);
+    --primary-foreground: oklch(0.99 0.01 80);
+    --secondary: oklch(0.97 0.012 70);
+    --secondary-foreground: oklch(0.26 0.018 58);
+    --muted: oklch(0.97 0.012 70);
+    --muted-foreground: oklch(0.55 0.02 60);
+    --accent: oklch(0.96 0.018 70);
+    --accent-foreground: oklch(0.26 0.018 58);
+    --destructive: oklch(0.577 0.245 27.325);
+    --border: oklch(0.92 0.014 68);
+    --input: oklch(0.92 0.014 68);
+    --ring: oklch(0.60 0.20 42);
+    --radius: 0.625rem;
+    --sidebar: oklch(0.985 0.006 70);
+    --sidebar-foreground: oklch(0.18 0.012 60);
+    --sidebar-primary: oklch(0.60 0.20 42);
+    --sidebar-primary-foreground: oklch(0.99 0.01 80);
+    --sidebar-accent: oklch(0.96 0.018 70);
+    --sidebar-accent-foreground: oklch(0.26 0.018 58);
+    --sidebar-border: oklch(0.92 0.014 68);
+    --sidebar-ring: oklch(0.60 0.20 42);
+    --chart-1: oklch(0.86 0.12 80);
+    --chart-2: oklch(0.76 0.16 62);
+    --chart-3: oklch(0.66 0.19 50);
+    --chart-4: oklch(0.60 0.20 42);
+    --chart-5: oklch(0.48 0.15 35);
+  }
+
+  .dark {
+    --background: oklch(0.17 0.01 55);
+    --foreground: oklch(0.96 0.005 70);
+    --card: oklch(0.21 0.013 55);
+    --card-foreground: oklch(0.96 0.005 70);
+    --popover: oklch(0.21 0.013 55);
+    --popover-foreground: oklch(0.96 0.005 70);
+    --primary: oklch(0.70 0.17 45);
+    --primary-foreground: oklch(0.20 0.02 55);
+    --secondary: oklch(0.27 0.013 55);
+    --secondary-foreground: oklch(0.96 0.005 70);
+    --muted: oklch(0.27 0.013 55);
+    --muted-foreground: oklch(0.70 0.015 60);
+    --accent: oklch(0.30 0.016 55);
+    --accent-foreground: oklch(0.96 0.005 70);
+    --destructive: oklch(0.704 0.191 22.216);
+    --border: oklch(1 0 0 / 10%);
+    --input: oklch(1 0 0 / 15%);
+    --ring: oklch(0.70 0.17 45);
+    --sidebar: oklch(0.21 0.013 55);
+    --sidebar-foreground: oklch(0.96 0.005 70);
+    --sidebar-primary: oklch(0.70 0.17 45);
+    --sidebar-primary-foreground: oklch(0.20 0.02 55);
+    --sidebar-accent: oklch(0.30 0.016 55);
+    --sidebar-accent-foreground: oklch(0.96 0.005 70);
+    --sidebar-border: oklch(1 0 0 / 10%);
+    --sidebar-ring: oklch(0.70 0.17 45);
+    --chart-1: oklch(0.86 0.12 80);
+    --chart-2: oklch(0.76 0.16 62);
+    --chart-3: oklch(0.66 0.19 50);
+    --chart-4: oklch(0.60 0.20 42);
+    --chart-5: oklch(0.48 0.15 35);
+  }
+
+  /* ── Amber ───────────────────────────────────────────────
+     Zinc base colour + Amber primary. Cool-gray neutrals
+     with a warm amber primary. Opt-in via .theme-amber. */
+  .theme-amber {
     --background: oklch(1 0 0);
     --foreground: oklch(0.141 0.005 285.823);
     --card: oklch(1 0 0);
@@ -196,7 +271,7 @@
     --chart-5: oklch(0.473 0.137 46.201);
   }
 
-  .dark {
+  .dark.theme-amber {
     --background: oklch(0.141 0.005 285.823);
     --foreground: oklch(0.985 0 0);
     --card: oklch(0.21 0.006 285.885);
@@ -388,9 +463,15 @@
 @layer base {
   /* Calendar "today" cell — a soft tint of each scheme's primary hue. */
   :root {
-    --calendar-today: hsl(38 50% 93%);
+    --calendar-today: hsl(35 60% 95%);
   }
   .dark {
+    --calendar-today: hsl(33 30% 11%);
+  }
+  .theme-amber {
+    --calendar-today: hsl(38 50% 93%);
+  }
+  .dark.theme-amber {
     --calendar-today: hsl(35 24% 10%);
   }
   .theme-emerald {

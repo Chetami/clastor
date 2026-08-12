@@ -24,9 +24,21 @@ export function RevealStep({
       : "Everything a solo tutor needs — scheduling, invoicing, and reminders, all automated.";
 
   const breakdown = [
-    { icon: CalendarClock, label: "Scheduling", minutes: estimate.breakdown.scheduling },
-    { icon: FileText, label: "Invoicing", minutes: estimate.breakdown.invoicing },
-    { icon: BellRing, label: "Reminders", minutes: estimate.breakdown.reminders },
+    {
+      icon: CalendarClock,
+      label: "Scheduling",
+      minutes: estimate.breakdown.scheduling,
+    },
+    {
+      icon: FileText,
+      label: "Invoicing",
+      minutes: estimate.breakdown.invoicing,
+    },
+    {
+      icon: BellRing,
+      label: "Reminders",
+      minutes: estimate.breakdown.reminders,
+    },
   ];
 
   return (
@@ -84,7 +96,7 @@ export function RevealStep({
         className="w-full max-w-md text-base"
         onClick={onCreate}
       >
-        Create your free account
+        Create your account
         <ArrowRight className="size-4" />
       </Button>
       <p className="text-xs text-muted-foreground">
