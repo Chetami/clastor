@@ -4,7 +4,7 @@ import { StickyNote } from "lucide-react";
 import type { UseMutationResult } from "@tanstack/react-query";
 import type { LessonResponse, UpdateLessonRequest } from "@examify-tms/interfaces";
 import { useLessonNotes } from "./use-lesson-notes";
-import { NotesStatus } from "./ui";
+import { SaveStatus } from "./ui";
 
 type UpdateLessonMutation = UseMutationResult<
   LessonResponse,
@@ -44,7 +44,7 @@ export function LessonNotesCard({
             <StickyNote className="h-4 w-4" />
             Notes
           </span>
-          <NotesStatus dirty={notesDirty} saving={notesSaving} />
+          <SaveStatus dirty={notesDirty} saving={notesSaving} />
         </CardTitle>
       </CardHeader>
       <CardContent>

@@ -1,4 +1,4 @@
-import { useRef, useLayoutEffect } from "react";
+import { forwardRef, useLayoutEffect, useRef } from "react";
 import { Check, Loader2 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -20,8 +20,8 @@ export function DetailRow({ icon, label, value }: DetailRowProps) {
   );
 }
 
-/** Saved / Saving… / Edited status chip for the notes card header. */
-export function NotesStatus({
+/** Saved / Saving… / Edited status chip (shared by notes & checklist headers). */
+export function SaveStatus({
   dirty,
   saving,
 }: {
@@ -50,32 +50,44 @@ export function NotesStatus({
 interface AutoGrowTextareaProps {
   value: string;
   onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
-  onBlur: () => void;
+  onBlur?: () => void;
+  onKeyDown?: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
+  placeholder?: string;
   className?: string;
 }
 
-/** A textarea that grows to fit its content (used by checklist items). */
-export function AutoGrowTextarea({
-  value,
-  onChange,
-  onBlur,
-  className,
-}: AutoGrowTextareaProps) {
-  const ref = useRef<HTMLTextAreaElement>(null);
+/**
+ * A textarea that grows to fit its content (used by checklist items). Forwards
+ * its ref so parents can manage focus across renders.
+ */
+export const AutoGrowTextarea = forwardRef<
+  HTMLTextAreaElement,
+  AutoGrowTextareaProps
+>(function AutoGrowTextarea(
+  { value, onChange, onBlur, onKeyDown, placeholder, className },
+  ref,
+) {
+  const innerRef = useRef<HTMLTextAreaElement>(null);
   useLayoutEffect(() => {
-    const el = ref.current;
+    const el = innerRef.current;
     if (!el) return;
     el.style.height = "auto";
     el.style.height = `${el.scrollHeight}px`;
   }, [value]);
   return (
     <Textarea
-      ref={ref}
+      ref={(node) => {
+        innerRef.current = node;
+        if (typeof ref === "function") ref(node);
+        else if (ref) ref.current = node;
+      }}
       value={value}
       onChange={onChange}
       onBlur={onBlur}
+      onKeyDown={onKeyDown}
+      placeholder={placeholder}
       rows={1}
       className={className}
     />
   );
-}
+});

@@ -92,7 +92,7 @@ export function LessonHeader({
 
   return (
     <Card className="overflow-hidden">
-      <CardContent className="pt-6">
+      <CardContent>
         <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0 space-y-1.5">
             <div className="flex flex-wrap items-center gap-2">
@@ -121,8 +121,9 @@ export function LessonHeader({
               </span>
               <span className="inline-flex items-center gap-1.5">
                 <Clock className="h-3.5 w-3.5" />
-                {formatLessonTime(lesson.startDateTime)}–{formatLessonTime(end.toISOString())}{" "}
-                ({lesson.durationMinutes} min)
+                {formatLessonTime(lesson.startDateTime)}–
+                {formatLessonTime(end.toISOString())} ({lesson.durationMinutes}{" "}
+                min)
               </span>
               {existingMeet ? (
                 <a
@@ -177,7 +178,11 @@ export function LessonHeader({
           <div className="flex flex-wrap items-center gap-2 lg:justify-end">
             {existingMeet && (
               <Button asChild variant="secondary" size="sm">
-                <a href={existingMeet} target="_blank" rel="noopener noreferrer">
+                <a
+                  href={existingMeet}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
                   <Video className="h-4 w-4" />
                   Join Meet
                 </a>
