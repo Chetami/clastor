@@ -1,6 +1,7 @@
 import { ArrowRight, Check } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { SoloTutorIllustration } from "@/components/SoloTutorIllustration";
 import { useReveal } from "@/hooks/useReveal";
 import { APP_URL } from "@/lib/site";
 
@@ -44,8 +45,15 @@ export function Audience() {
             <span className="absolute -top-4 left-8 -rotate-3 rounded-full border-[2.5px] border-foreground bg-brand px-3.5 py-1.5 font-display text-sm text-foreground shadow-sketch">
               Most popular
             </span>
+            {/* happy_tutor mascot, clipped to the card's rounded bounds.
+                Position it precisely in SoloTutorIllustration.tsx
+                (POSITION config). Heading below keeps right-padding so text
+                wraps clear of it. */}
+            <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-3xl">
+              <SoloTutorIllustration />
+            </div>
             <span className="eyebrow">Independent tutors</span>
-            <h3 className="mb-1 mt-2.5 font-display text-[clamp(1.375rem,2.4vw,1.625rem)]">
+            <h3 className="mb-1 mt-2.5 pr-28 font-display text-[clamp(1.375rem,2.4vw,1.625rem)] sm:pr-36 lg:pr-44">
               Run your tutoring like a business.
             </h3>
             <p className="mb-5 text-base text-muted-foreground">

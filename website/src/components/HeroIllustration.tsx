@@ -40,7 +40,7 @@ const POSITION = {
 export function HeroIllustration() {
   return (
     <img
-      src="/illustration.png"
+      src="/hero_tutor.png"
       alt="A tutor teaching a student at a desk"
       width={1024}
       height={1024}
