@@ -51,6 +51,50 @@ export function Arrow({ className }: DoodleProps) {
   );
 }
 
+/**
+ * Hand-drawn arch that sweeps UP and OVER, dropping back down with a
+ * downward arrowhead on the right. Absolute-position it above two
+ * side-by-side elements to imply "flow from the left one into the right one".
+ */
+export function ArchOver({ className }: DoodleProps) {
+  return (
+    <svg
+      viewBox="0 0 130 66"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={6}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M8 58 C 32 8, 96 8, 118 54 M118 54 L108 44 M118 54 L124 44" />
+    </svg>
+  );
+}
+
+/**
+ * Mirror of {@link ArchOver}: sweeps DOWN and UNDER, rising back up with an
+ * upward arrowhead on the right. Absolute-position it below two
+ * side-by-side elements.
+ */
+export function ArchUnder({ className }: DoodleProps) {
+  return (
+    <svg
+      viewBox="0 0 130 66"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={6}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M8 8 C 32 58, 96 58, 118 12 M118 12 L108 22 M118 12 L124 22" />
+    </svg>
+  );
+}
+
 /** Four-point sparkle. Filled with `currentColor` — the classic accent burst. */
 export function Sparkle({ className }: DoodleProps) {
   return (
