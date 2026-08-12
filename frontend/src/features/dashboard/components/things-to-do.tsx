@@ -1,13 +1,29 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import {
+  addMilliseconds,
+  differenceInMilliseconds,
+} from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CheckCircle2, ListTodo, Loader2, Square } from "lucide-react";
+import {
+  CheckCircle2,
+  Clock,
+  FileText,
+  ListTodo,
+  Loader2,
+  Send,
+  Square,
+} from "lucide-react";
 import { toast } from "sonner";
 import type { LessonResponse, AttendanceStatus } from "@examify-tms/interfaces";
+import {
+  INVOICE_RESEND_COOLDOWN_MS,
+  formatMsRemaining,
+} from "@examify-tms/shared";
 import { useMarkLessonDone } from "../api";
 import {
   lessonTimeRange,
@@ -15,11 +31,34 @@ import {
   type LessonChecklistItem,
 } from "../lib";
 import { MarkAttendanceDialog } from "@/components/mark-attendance-dialog";
+import { SendInvoiceDialog } from "@/components/send-invoice-dialog";
+import { EmailGuard } from "@/components/email-guard";
 import type { InvoiceLessonEdits } from "@/features/payments/api";
+import { formatCurrency, formatDate } from "@/features/payments/invoice-utils";
 import { ATTENDANCE_LABELS } from "@/features/schedule/lesson-utils";
+import { useNow } from "@/lib/use-now";
+
+/** A flattened overdue invoice line-item row (one invoice × one lesson). */
+export interface OverdueRow {
+  key: string;
+  invoiceId: string;
+  customerName: string;
+  /** Resolved billing email for the invoice's student (may be null). */
+  billingEmail: string | null;
+  description: string;
+  amount: number;
+  currency: string;
+  dueDate: string;
+  /** ISO time the invoice was last emailed, or null if never sent. */
+  sentAt: string | null;
+}
 
 type Props = {
   attendanceLessons: LessonResponse[];
+  invoiceLessons: LessonResponse[];
+  invoiceLoading: boolean;
+  overdueRows: OverdueRow[];
+  overdueLoading: boolean;
   checklistItems: LessonChecklistItem[];
   studentNames: Record<string, string>;
   studentSubjectOptions: Record<string, string[]>;
@@ -29,24 +68,50 @@ type Props = {
     sendInvoice: boolean,
     edits?: InvoiceLessonEdits,
   ) => Promise<void>;
+  onInvoice: (lesson: LessonResponse) => void;
+  /** Navigate to an invoice's detail page (overdue row click). */
+  onOpenInvoice: (invoiceId: string) => void;
 };
 
 export function ThingsToDo({
   attendanceLessons,
+  invoiceLessons,
+  invoiceLoading,
+  overdueRows,
+  overdueLoading,
   checklistItems,
   studentNames,
   studentSubjectOptions,
   onConfirm,
+  onInvoice,
+  onOpenInvoice,
 }: Props) {
   const markDone = useMarkLessonDone();
   const [openDialogLessonId, setOpenDialogLessonId] = useState<string | null>(
     null,
   );
+  // Remind flow reuses SendInvoiceDialog; the dialog's own send mutation lives
+  // inside it, so we only track which invoice id (if any) is open.
+  const [remindInvoiceId, setRemindInvoiceId] = useState<string | null>(null);
 
-  const attendanceCount = attendanceLessons.length;
-  const checklistCount = checklistItems.length;
-  const hasAny = attendanceCount > 0 || checklistCount > 0;
-  const defaultTab = attendanceCount > 0 ? "attendance" : "lesson-todos";
+  const counts = {
+    attendance: attendanceLessons.length,
+    invoice: invoiceLessons.length,
+    overdue: overdueRows.length,
+    tasks: checklistItems.length,
+  };
+  const invoicingTotal = counts.invoice + counts.overdue;
+  const total = counts.attendance + invoicingTotal + counts.tasks;
+  const hasAny = total > 0;
+
+  // Default to the first non-empty tab so the panel never opens on an empty
+  // list while work is pending elsewhere.
+  const defaultTab =
+    counts.attendance > 0
+      ? "attendance"
+      : invoicingTotal > 0
+        ? "invoicing"
+        : "tasks";
 
   const handleConfirm = async (
     lessonId: string,
@@ -84,11 +149,7 @@ export function ThingsToDo({
             <ListTodo className="h-4 w-4 text-muted-foreground" />
             <CardTitle className="text-base">Things to do</CardTitle>
           </div>
-          {hasAny && (
-            <Badge variant="secondary">
-              {attendanceCount + checklistCount}
-            </Badge>
-          )}
+          {hasAny && <Badge variant="secondary">{total}</Badge>}
         </CardHeader>
         <CardContent className="flex-1">
           {!hasAny ? (
@@ -98,22 +159,18 @@ export function ThingsToDo({
             </div>
           ) : (
             <Tabs defaultValue={defaultTab}>
-              <TabsList className="w-full">
+              <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="attendance">
                   Attendance
-                  {attendanceCount > 0 && (
-                    <span className="rounded-full bg-muted-foreground/15 px-1.5 text-xs tabular-nums">
-                      {attendanceCount}
-                    </span>
-                  )}
+                  <CountBadge count={counts.attendance} />
                 </TabsTrigger>
-                <TabsTrigger value="lesson-todos">
-                  Lesson todos
-                  {checklistCount > 0 && (
-                    <span className="rounded-full bg-muted-foreground/15 px-1.5 text-xs tabular-nums">
-                      {checklistCount}
-                    </span>
-                  )}
+                <TabsTrigger value="invoicing">
+                  Invoicing
+                  <CountBadge count={invoicingTotal} />
+                </TabsTrigger>
+                <TabsTrigger value="tasks">
+                  Tasks
+                  <CountBadge count={counts.tasks} />
                 </TabsTrigger>
               </TabsList>
 
@@ -127,7 +184,20 @@ export function ThingsToDo({
                 />
               </TabsContent>
 
-              <TabsContent value="lesson-todos" className="mt-2">
+              <TabsContent value="invoicing" className="mt-2">
+                <InvoicingTab
+                  invoiceLessons={invoiceLessons}
+                  invoiceLoading={invoiceLoading}
+                  overdueRows={overdueRows}
+                  overdueLoading={overdueLoading}
+                  studentNames={studentNames}
+                  onInvoice={onInvoice}
+                  onOpenInvoice={onOpenInvoice}
+                  onRemind={(id) => setRemindInvoiceId(id)}
+                />
+              </TabsContent>
+
+              <TabsContent value="tasks" className="mt-2">
                 <ChecklistList
                   items={checklistItems}
                   studentNames={studentNames}
@@ -153,7 +223,41 @@ export function ThingsToDo({
           isPending={markDone.isPending}
         />
       )}
+
+      <SendInvoiceDialog
+        invoiceId={remindInvoiceId}
+        onClose={() => setRemindInvoiceId(null)}
+      />
     </>
+  );
+}
+
+function CountBadge({ count }: { count: number }) {
+  if (count === 0) return null;
+  return (
+    <span className="rounded-full bg-muted-foreground/15 px-1.5 text-xs tabular-nums">
+      {count}
+    </span>
+  );
+}
+
+const EMPTY_HINT: Record<string, string> = {
+  attendance: "No lessons awaiting attendance.",
+  tasks: "No pending lesson todos.",
+};
+
+function EmptyRow({ hint }: { hint: string }) {
+  return (
+    <p className="py-6 text-center text-sm text-muted-foreground">{hint}</p>
+  );
+}
+
+function LoadingRow() {
+  return (
+    <div className="flex items-center justify-center gap-2 py-6 text-muted-foreground">
+      <Loader2 className="size-4 animate-spin" />
+      <span className="text-sm">Loading…</span>
+    </div>
   );
 }
 
@@ -171,11 +275,7 @@ function AttendanceList({
   markDoneId?: string;
 }) {
   if (lessons.length === 0) {
-    return (
-      <p className="py-6 text-center text-sm text-muted-foreground">
-        No lessons awaiting attendance.
-      </p>
-    );
+    return <EmptyRow hint={EMPTY_HINT.attendance} />;
   }
   return (
     <ScrollArea className="h-[220px] pr-3">
@@ -195,8 +295,8 @@ function AttendanceList({
                   {name}
                 </Link>
                 <p className="truncate text-xs text-muted-foreground">
-                  {l.subject} · {relativeDayLabel(l.startDateTime)} ·{" "}
-                  {lessonTimeRange(l)}
+                  {(l.subject ?? "Lesson")} · {relativeDayLabel(l.startDateTime)}{" "}
+                  · {lessonTimeRange(l)}
                 </p>
               </div>
               <Button
@@ -221,6 +321,213 @@ function AttendanceList({
   );
 }
 
+function InvoicingTab({
+  invoiceLessons,
+  invoiceLoading,
+  overdueRows,
+  overdueLoading,
+  studentNames,
+  onInvoice,
+  onOpenInvoice,
+  onRemind,
+}: {
+  invoiceLessons: LessonResponse[];
+  invoiceLoading: boolean;
+  overdueRows: OverdueRow[];
+  overdueLoading: boolean;
+  studentNames: Record<string, string>;
+  onInvoice: (lesson: LessonResponse) => void;
+  onOpenInvoice: (invoiceId: string) => void;
+  onRemind: (invoiceId: string) => void;
+}) {
+  // Tick once a minute so the resend-cooldown countdowns stay fresh. Only
+  // mounts while the Invoicing tab is active, so it doesn't run elsewhere.
+  const now = useNow(60_000);
+  const anyLoading = invoiceLoading || overdueLoading;
+  const anyItems = invoiceLessons.length > 0 || overdueRows.length > 0;
+
+  if (anyLoading && !anyItems) return <LoadingRow />;
+  if (!anyItems) {
+    return <EmptyRow hint="Nothing to invoice or chase right now." />;
+  }
+
+  return (
+    <ScrollArea className="h-[220px] pr-3">
+      <div className="space-y-4">
+        <section>
+          <SectionHeader label="To invoice" count={invoiceLessons.length} />
+          {invoiceLoading ? (
+            <SectionHint text="Loading…" />
+          ) : invoiceLessons.length === 0 ? (
+            <SectionHint text="Nothing to invoice." />
+          ) : (
+            <ul className="space-y-2">
+              {invoiceLessons.map((lesson) => (
+                <InvoiceItem
+                  key={lesson.id}
+                  lesson={lesson}
+                  name={studentNames[lesson.studentId] ?? "Unknown student"}
+                  onInvoice={onInvoice}
+                />
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <section>
+          <SectionHeader label="Overdue" count={overdueRows.length} />
+          {overdueLoading ? (
+            <SectionHint text="Loading…" />
+          ) : overdueRows.length === 0 ? (
+            <SectionHint text="No overdue invoices." />
+          ) : (
+            <ul className="space-y-2">
+              {overdueRows.map((row) => (
+                <OverdueItem
+                  key={row.key}
+                  row={row}
+                  now={now}
+                  onRowClick={() => onOpenInvoice(row.invoiceId)}
+                  onRemind={() => onRemind(row.invoiceId)}
+                />
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
+    </ScrollArea>
+  );
+}
+
+function SectionHeader({ label, count }: { label: string; count: number }) {
+  return (
+    <div className="mb-1.5 flex items-center gap-1.5 px-1">
+      <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        {label}
+      </h4>
+      {count > 0 && (
+        <span className="rounded-full bg-muted-foreground/15 px-1.5 text-xs tabular-nums text-muted-foreground">
+          {count}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function SectionHint({ text }: { text: string }) {
+  return <p className="px-1 py-1 text-xs text-muted-foreground">{text}</p>;
+}
+
+function InvoiceItem({
+  lesson,
+  name,
+  onInvoice,
+}: {
+  lesson: LessonResponse;
+  name: string;
+  onInvoice: (lesson: LessonResponse) => void;
+}) {
+  return (
+    <li className="flex items-center justify-between gap-3 rounded-lg border p-3">
+      <div className="min-w-0 space-y-0.5">
+        <Link
+          to={`/lessons/${lesson.id}`}
+          className="block truncate text-sm font-medium hover:underline"
+        >
+          {name}
+        </Link>
+        <p className="truncate text-xs text-muted-foreground">
+          {(lesson.subject ?? "Lesson")} ·{" "}
+          {relativeDayLabel(lesson.startDateTime)} · {lessonTimeRange(lesson)}
+        </p>
+      </div>
+      <Button
+        size="sm"
+        variant="outline"
+        className="shrink-0"
+        onClick={() => onInvoice(lesson)}
+      >
+        <FileText className="size-3" />
+        Invoice
+      </Button>
+    </li>
+  );
+}
+
+interface OverdueItemProps {
+  row: OverdueRow;
+  now: number;
+  onRowClick: () => void;
+  onRemind: () => void;
+}
+
+/**
+ * An overdue invoice line-item row with a cooldown-aware "Remind" button.
+ * Exported so the EmailGuard-on-Remind behaviour is unit-tested.
+ */
+export function OverdueItem({
+  row,
+  now,
+  onRowClick,
+  onRemind,
+}: OverdueItemProps) {
+  // The instant the cooldown lifts (last sent + 24h), or null if never sent.
+  const availableAt = row.sentAt
+    ? addMilliseconds(new Date(row.sentAt), INVOICE_RESEND_COOLDOWN_MS)
+    : null;
+  const remaining = availableAt
+    ? differenceInMilliseconds(availableAt, now)
+    : 0;
+  const onCooldown = remaining > 0;
+
+  return (
+    <li className="flex items-center justify-between gap-3 rounded-lg border p-3">
+      <button
+        type="button"
+        onClick={onRowClick}
+        aria-label={`${row.customerName} — ${row.description}. ${formatCurrency(row.amount, row.currency)} due ${formatDate(row.dueDate)}. Open invoice.`}
+        className="min-w-0 flex-1 space-y-0.5 text-left"
+      >
+        <p className="truncate text-sm font-medium hover:underline">
+          {row.customerName}
+        </p>
+        <p className="truncate text-xs text-muted-foreground">
+          {row.description}
+        </p>
+        <p className="text-xs">
+          <span className="font-medium">
+            {formatCurrency(row.amount, row.currency)}
+          </span>
+          <span className="ml-1.5 text-rose-600 dark:text-rose-400">
+            Due {formatDate(row.dueDate)}
+          </span>
+        </p>
+      </button>
+      <EmailGuard hasEmail={!!row.billingEmail?.trim()}>
+        <Button
+          size="sm"
+          variant="outline"
+          className="shrink-0"
+          disabled={onCooldown}
+          title={
+            onCooldown
+              ? `Last reminder sent ${formatDate(row.sentAt!)}`
+              : "Send a reminder email"
+          }
+          onClick={onRemind}
+        >
+          {onCooldown ? (
+            <Clock className="size-3" />
+          ) : (
+            <Send className="size-3" />
+          )}
+          {onCooldown ? formatMsRemaining(remaining) : "Remind"}
+        </Button>
+      </EmailGuard>
+    </li>
+  );
+}
+
 function ChecklistList({
   items,
   studentNames,
@@ -229,11 +536,7 @@ function ChecklistList({
   studentNames: Record<string, string>;
 }) {
   if (items.length === 0) {
-    return (
-      <p className="py-6 text-center text-sm text-muted-foreground">
-        No pending lesson todos.
-      </p>
-    );
+    return <EmptyRow hint={EMPTY_HINT.tasks} />;
   }
   return (
     <ScrollArea className="h-[220px] pr-3">

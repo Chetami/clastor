@@ -5,7 +5,7 @@
  */
 export const featureFlags = {
   publicProfile: false, // <-- off for now
-  templates: false, // <-- off for now
+  templates: true,
   sentEmails: false, // <-- off for now (UI + GET endpoints only; outbound sends still logged)
 } as const;
 

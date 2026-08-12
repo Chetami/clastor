@@ -24,7 +24,7 @@ export interface AttendanceConfirmResult {
 /**
  * The single canonical "mark attendance → apply edits → optionally create an
  * invoice to review+send" flow. Previously copy-pasted (near-verbatim) across
- * ActionableLessons, LessonRow, and EventPopover.
+ * LessonRow and EventPopover.
  *
  * On a successful invoice it sets `sendInvoiceId` so the caller can render a
  * {@link SendInvoiceDialog}. Toasts mirror the original per-surface copy.

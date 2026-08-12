@@ -8,7 +8,7 @@ import type { RequestHandler } from "express";
 // interfaces/src/featureFlags.ts (which the frontend reads at runtime).
 const backendFeatureFlags: Record<FeatureFlagKey, boolean> = {
   publicProfile: false,
-  templates: false,
+  templates: true,
   sentEmails: false,
 };
 

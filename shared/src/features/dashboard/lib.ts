@@ -199,10 +199,13 @@ export function timeUntil(iso: string, now = Date.now()): string {
 /**
  * Past, non-cancelled lessons whose attendance is still unrecorded — the
  * "things to do". Sorted most-recent first so freshly-finished lessons surface.
+ *
+ * Returns every match; callers render in a scrollable container, so capping
+ * here would silently hide unmarked lessons.
  */
 export function todoLessons(
   lessons: LessonResponse[],
-  limit = 8,
+  limit = Infinity,
 ): LessonResponse[] {
   const now = Date.now();
   return lessons
@@ -224,10 +227,12 @@ export function todoLessons(
  * into a single dashboard list. Returns only incomplete todos from
  * non-cancelled lessons, sorted by lesson start time ascending so the soonest
  * (and overdue) prep surfaces first.
+ *
+ * Returns every match; callers render in a scrollable container.
  */
 export function lessonChecklistTodos(
   lessons: LessonResponse[],
-  limit = 12,
+  limit = Infinity,
 ): LessonChecklistItem[] {
   const items: LessonChecklistItem[] = [];
   for (const lesson of lessons) {

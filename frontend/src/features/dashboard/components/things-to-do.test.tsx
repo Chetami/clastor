@@ -3,14 +3,13 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import {
-  OverdueActionRow,
+  OverdueItem,
   type OverdueRow,
-} from "@/features/lessons/actionable/components";
+} from "@/features/dashboard/components/things-to-do";
 
 const baseRow: OverdueRow = {
   key: "inv_1:lesson_1",
   invoiceId: "inv_1",
-  invoiceNumber: "INV-001",
   customerName: "Ada Lovelace",
   billingEmail: "ada@example.com",
   description: "Mathematics — 1hr",
@@ -24,10 +23,9 @@ function renderRow(overrides: Partial<OverdueRow> = {}) {
   const onRemind = vi.fn();
   render(
     <TooltipProvider>
-      <OverdueActionRow
+      <OverdueItem
         row={{ ...baseRow, ...overrides }}
         now={Date.now()}
-        sending={false}
         onRowClick={vi.fn()}
         onRemind={onRemind}
       />
@@ -36,7 +34,7 @@ function renderRow(overrides: Partial<OverdueRow> = {}) {
   return { onRemind };
 }
 
-describe("OverdueActionRow — email guard on Remind", () => {
+describe("OverdueItem — email guard on Remind", () => {
   it("enables the Remind button when the invoice has a billing email", async () => {
     const { onRemind } = renderRow({ billingEmail: "ada@example.com" });
     const button = screen.getByRole("button", { name: /remind/i });

@@ -1,7 +1,6 @@
 import { Link } from "react-router-dom";
 import { Bell, ChevronRight, CreditCard } from "lucide-react";
 
-import { CurrencySelect } from "@/components/account/CurrencySelect";
 import { ReminderLeadTimeSelect } from "@/components/account/ReminderLeadTimeSelect";
 import { TimezoneSelect } from "@/components/account/TimezoneSelect";
 import { Button } from "@/components/ui/button";
@@ -22,23 +21,6 @@ export default function Settings() {
   return (
     <div className="flex flex-col gap-6">
       <SubjectsCard />
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Currency</CardTitle>
-          <CardDescription>
-            The currency you charge in. Used across your dashboard, invoices,
-            emails and public profile.{" "}
-            <span className="text-orange-600 dark:text-orange-500">
-              Please note: while you can update this display preference,
-              automated billing is currently only supported in AUD.{" "}
-            </span>{" "}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <CurrencySelect className="w-full sm:w-72" />
-        </CardContent>
-      </Card>
 
       <Card>
         <CardHeader>

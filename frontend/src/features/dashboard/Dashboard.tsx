@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { compareAsc } from "date-fns";
 import { useAuth } from "@/hooks/use-auth";
 import { useListLessons } from "@/features/schedule/api";
 import { toast } from "sonner";
@@ -9,8 +10,12 @@ import type {
   UpdateLessonRequest,
 } from "@examify-tms/interfaces";
 import { useDashboardSummary, useUpdateLessonDetails } from "./api";
-import { useInvoiceLesson } from "@/features/payments/api";
-import type { InvoiceLessonEdits } from "@/features/payments/api";
+import {
+  useInvoiceLesson,
+  useListInvoices,
+  type InvoiceLessonEdits,
+} from "@/features/payments/api";
+import { partitionInvoiceableLessons } from "@/features/payments/invoice-utils";
 import { SendInvoiceDialog } from "@/components/send-invoice-dialog";
 import { useStudentLookups } from "@/lib/use-student-lookups";
 import { EMAIL_SEND_CONTEXTS, shouldSkipReview } from "@examify-tms/shared";
@@ -20,7 +25,7 @@ import { HoursChart } from "./components/hours-chart";
 import { IncomeChart } from "./components/income-chart";
 import { NextLesson } from "./components/next-lesson";
 import { CurrentLesson } from "./components/current-lesson";
-import { ThingsToDo } from "./components/things-to-do";
+import { ThingsToDo, type OverdueRow } from "./components/things-to-do";
 // import { QuickActions } from "./components/quick-actions";
 import {
   StatCardsSkeleton,
@@ -45,6 +50,14 @@ export default function Dashboard() {
   const { data: summary, isLoading: summaryLoading } =
     useDashboardSummary(period);
   const { data: lessons = [], isLoading: lessonsLoading } = useListLessons();
+  // Targeted queries for the action centre: billable-but-uninvoiced lessons
+  // and overdue invoices. React Query dedupes these with any other surface
+  // (Create Invoice, Payments) that issues the same request.
+  const { data: unpaidLessons = [], isLoading: invoiceLoading } = useListLessons(
+    { unpaid: true },
+  );
+  const { data: overdueInvoices = [], isLoading: overdueLoading } =
+    useListInvoices({ status: "overdue" });
   const {
     names: studentNames,
     byId: studentMap,
@@ -58,6 +71,32 @@ export default function Dashboard() {
   const todos = useMemo(() => todoLessons(lessons), [lessons]);
   const checklist = useMemo(() => lessonChecklistTodos(lessons), [lessons]);
   const upcoming = useMemo(() => nextLesson(lessons), [lessons]);
+  // Billable, completed but uninvoiced lessons — derived from the shared
+  // partitioner so the eligibility rules match the Create Invoice page.
+  const invoiceLessons = useMemo(
+    () => partitionInvoiceableLessons(unpaidLessons).completed.chargeable,
+    [unpaidLessons],
+  );
+  const overdueRows = useMemo<OverdueRow[]>(() => {
+    const rows: OverdueRow[] = [];
+    for (const inv of overdueInvoices) {
+      for (const li of inv.lineItems) {
+        rows.push({
+          key: `${inv.id}:${li.lessonId}`,
+          invoiceId: inv.id,
+          customerName: inv.customerName,
+          billingEmail: inv.billingEmail ?? null,
+          description: li.description,
+          amount: li.amount,
+          currency: inv.currency,
+          dueDate: inv.dueDate,
+          sentAt: inv.sentAt ?? null,
+        });
+      }
+    }
+    rows.sort((a, b) => compareAsc(new Date(a.dueDate), new Date(b.dueDate)));
+    return rows;
+  }, [overdueInvoices]);
   const expectedIncome = useMemo(
     () => expectedIncomeFromLessons(lessons, studentMap, period),
     [lessons, studentMap, period],
@@ -215,10 +254,20 @@ export default function Dashboard() {
           ) : (
             <ThingsToDo
               attendanceLessons={todos}
+              invoiceLessons={invoiceLessons}
+              invoiceLoading={invoiceLoading}
+              overdueRows={overdueRows}
+              overdueLoading={overdueLoading}
               checklistItems={checklist}
               studentNames={studentNames}
               studentSubjectOptions={studentSubjectOptions}
               onConfirm={handleTodoConfirm}
+              onInvoice={(lesson) =>
+                navigate(
+                  `/payments/new?student=${lesson.studentId}&lesson=${lesson.id}`,
+                )
+              }
+              onOpenInvoice={(id) => navigate(`/payments/${id}`)}
             />
           )}
         </div>
