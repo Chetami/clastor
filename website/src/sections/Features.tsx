@@ -1,4 +1,4 @@
-import { Check } from "lucide-react";
+import { Check, Repeat } from "lucide-react";
 
 import { Sparkle } from "@/components/Doodles";
 import { useReveal } from "@/hooks/useReveal";
@@ -166,68 +166,75 @@ function FeatureBig({
   );
 }
 
-/** Hand-drawn mini-calendar visual with day dots + legend. */
+/** Weekly schedule visual — lessons as time-blocks with recurrence + auto-reschedule. */
 function MiniCalendar() {
-  const days = [
-    { n: "", lbl: "M" },
-    { n: "", lbl: "T" },
-    { n: "", lbl: "W" },
-    { n: "", lbl: "T" },
-    { n: "", lbl: "F" },
-    { n: "", lbl: "S" },
-    { n: "", lbl: "S" },
-    { n: "" },
-    { n: "3", has: true },
-    { n: "" },
-    { n: "5", has: true, acc: true },
-    { n: "" },
-    { n: "7", has: true },
-    { n: "" },
-    { n: "" },
-    { n: "" },
-    { n: "10", has: true },
-    { n: "" },
-    { n: "" },
-    { n: "12", has: true },
-    { n: "" },
-    { n: "" },
-    { n: "17", has: true, acc: true },
-    { n: "" },
-    { n: "19", has: true },
-    { n: "" },
-    { n: "" },
-    { n: "" },
+  const week: {
+    day: string;
+    date: string;
+    subj: string;
+    time: string;
+    next?: boolean;
+    moved?: boolean;
+  }[] = [
+    { day: "Mon", date: "13", subj: "Physics", time: "4:00" },
+    { day: "Tue", date: "14", subj: "English", time: "5:00" },
+    { day: "Wed", date: "15", subj: "Maths", time: "5:30", next: true },
+    { day: "Thu", date: "16", subj: "Physics", time: "4:00" },
+    { day: "Fri", date: "17", subj: "Chem", time: "3:30", moved: true },
   ];
 
   return (
-    <div className="flex flex-wrap items-end gap-4">
-      <div className="grid max-w-[300px] grid-cols-7 gap-1.5">
-        {days.map((d, i) => (
-          <span
-            key={i}
+    <div className="w-full max-w-[360px]">
+      <div className="mb-2 flex items-center justify-between">
+        <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-muted-foreground">
+          This week
+        </span>
+        <span className="inline-flex items-center gap-1 border-[1.5px] border-foreground bg-card px-2 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-wide text-foreground">
+          <Repeat className="h-2.5 w-2.5" strokeWidth={2.5} /> Weekly
+        </span>
+      </div>
+
+      <div className="grid grid-cols-5 gap-1.5">
+        {week.map((d) => (
+          <div
+            key={d.day}
             className={
-              "flex aspect-square items-center justify-center rounded-[10px] border-[1.5px] font-mono text-xs " +
-              (d.lbl
-                ? "border-transparent text-xs text-muted-foreground"
-                : d.acc
-                  ? "rotate-[-3deg] border-foreground bg-brand text-foreground"
-                  : d.has
-                    ? "border-foreground bg-card text-foreground"
-                    : "border-border bg-card text-muted-foreground")
+              "flex min-w-0 items-stretch gap-1.5 rounded-lg border-[1.5px] px-1.5 py-1.5 " +
+              (d.next
+                ? "-rotate-2 border-foreground bg-brand text-foreground shadow-sketch"
+                : d.moved
+                  ? "border-dashed border-foreground bg-card text-foreground"
+                  : "border-foreground bg-card text-foreground")
             }
           >
-            {d.lbl || d.n}
-          </span>
+            <div className="flex flex-col justify-center border-r-[1.5px] border-foreground/20 pr-1.5">
+              <b className="font-mono text-[10px] font-semibold leading-none">
+                {d.date}
+              </b>
+              <span className="font-mono text-[8px] uppercase tracking-wide opacity-60">
+                {d.day}
+              </span>
+            </div>
+            <div className="flex min-w-0 flex-1 flex-col justify-center text-center">
+              <b className="block truncate text-[12px] font-semibold leading-tight">
+                {d.subj}
+              </b>
+              <span className="block font-mono text-[10px] uppercase tracking-wide opacity-90">
+                {d.time}
+              </span>
+            </div>
+          </div>
         ))}
       </div>
-      <div className="flex flex-col gap-2 pb-1.5 text-sm text-muted-foreground">
-        <span className="flex items-center gap-2">
-          <span className="inline-block h-3 w-3 rounded border-[1.5px] border-foreground bg-card" />
-          Lesson
+
+      <div className="mt-2 flex items-center gap-3 text-[11px] text-muted-foreground">
+        <span className="flex items-center gap-1.5">
+          <span className="inline-block h-2.5 w-2.5 border-[1.5px] border-foreground bg-brand" />
+          Next
         </span>
-        <span className="flex items-center gap-2">
-          <span className="inline-block h-3 w-3 rounded border-[1.5px] border-foreground bg-brand" />
-          Invoice sent
+        <span className="flex items-center gap-1.5">
+          <span className="inline-block h-2.5 w-2.5 border-[1.5px] border-dashed border-foreground bg-card" />
+          Rescheduled
         </span>
       </div>
     </div>
