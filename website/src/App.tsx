@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { Navbar } from "@/sections/Navbar";
 import { Hero } from "@/sections/Hero";
-import { SocialProof } from "@/sections/SocialProof";
+import { Integrations } from "@/sections/Integrations";
 import { Features } from "@/sections/Features";
 import { HowItWorks } from "@/sections/HowItWorks";
 import { Audience } from "@/sections/Audience";
@@ -38,7 +38,7 @@ function Landing() {
   return (
     <>
       <Hero />
-      <SocialProof />
+      <Integrations />
       <HowItWorks />
       <Features />
       <Audience />

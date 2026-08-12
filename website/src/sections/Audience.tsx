@@ -2,6 +2,7 @@ import { ArrowRight, Check } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { SoloTutorIllustration } from "@/components/SoloTutorIllustration";
+import { TeamTutorIllustration } from "@/components/TeamTutorIllustration";
 import { useReveal } from "@/hooks/useReveal";
 import { APP_URL } from "@/lib/site";
 
@@ -74,11 +75,18 @@ export function Audience() {
 
           {/* Teams — secondary */}
           <article
-            className="reveal doodle-card flex flex-col rounded-3xl p-8 sm:p-9"
+            className="reveal doodle-card relative flex flex-col rounded-3xl p-8 sm:p-9"
             style={{ ["--reveal-delay" as string]: "100ms" }}
           >
+            {/* group_tutors mascot, clipped to the card's rounded bounds.
+                Position it precisely in TeamTutorIllustration.tsx
+                (POSITION config). Heading below keeps right-padding so text
+                wraps clear of it. */}
+            <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-3xl">
+              <TeamTutorIllustration />
+            </div>
             <span className="eyebrow">Small tutoring teams</span>
-            <h3 className="mb-1 mt-2.5 font-display text-[clamp(1.375rem,2.4vw,1.625rem)]">
+            <h3 className="mb-1 mt-2.5 pr-28 font-display text-[clamp(1.375rem,2.4vw,1.625rem)] sm:pr-36 lg:pr-44">
               Bring on a colleague, cleanly.
             </h3>
             <p className="mb-5 text-base text-muted-foreground">

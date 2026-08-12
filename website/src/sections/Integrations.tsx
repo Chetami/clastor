@@ -30,7 +30,7 @@ const INTEGRATIONS: Integration[] = [
   },
 ];
 
-export function SocialProof() {
+export function Integrations() {
   const ref = useReveal<HTMLDivElement>();
 
   return (
