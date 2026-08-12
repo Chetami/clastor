@@ -78,6 +78,7 @@ export function ActionableLessons() {
           invoiceId: inv.id,
           invoiceNumber: inv.invoiceNumber,
           customerName: inv.customerName,
+          billingEmail: inv.billingEmail ?? null,
           description: li.description,
           amount: li.amount,
           currency: inv.currency,

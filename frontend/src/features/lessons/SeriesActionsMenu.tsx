@@ -25,6 +25,7 @@ import {
   previewNotifyLessonSeriesRequest,
 } from "@/features/schedule/api";
 import { EmailComposeDialog } from "@/components/email-compose-dialog";
+import { useStudentLookups } from "@/lib/use-student-lookups";
 import { STUDENT_NOTIFY_COOLDOWN_MS } from "@examify-tms/shared";
 import { queryClient } from "@/lib/query-client";
 import type { LessonResponse } from "@examify-tms/interfaces";
@@ -49,6 +50,7 @@ type ConfirmType = "cancel";
  */
 export function SeriesActionsMenu({ seriesId, upcoming }: SeriesActionsMenuProps) {
   const navigate = useNavigate();
+  const { byId: studentById } = useStudentLookups();
   const cancelSeries = useCancelLessonSeries();
   const [confirm, setConfirm] = useState<ConfirmType | null>(null);
   const [notifyOpen, setNotifyOpen] = useState(false);
@@ -123,7 +125,11 @@ export function SeriesActionsMenu({ seriesId, upcoming }: SeriesActionsMenuProps
   const notifyOnCooldown = nextAllowedAt
     ? Date.now() < nextAllowedAt.getTime()
     : false;
-  const notifyDisabled = upcomingCount === 0 || notifyOnCooldown;
+  const studentEmail = upcoming[0]
+    ? (studentById[upcoming[0].studentId]?.email ?? null)
+    : null;
+  const notifyDisabled =
+    upcomingCount === 0 || notifyOnCooldown || !studentEmail?.trim();
 
   return (
     <>
@@ -155,14 +161,16 @@ export function SeriesActionsMenu({ seriesId, upcoming }: SeriesActionsMenuProps
             onClick={() => setNotifyOpen(true)}
             disabled={notifyDisabled}
             title={
-              notifyOnCooldown && nextAllowedAt
-                ? `Already notified — can resend after ${nextAllowedAt.toLocaleString(
-                    "en-US",
-                    { dateStyle: "medium", timeStyle: "short" },
-                  )}`
-                : upcomingCount === 0
-                  ? "No upcoming lessons to notify about"
-                  : undefined
+              !studentEmail?.trim()
+                ? "This student needs an email before you can send."
+                : notifyOnCooldown && nextAllowedAt
+                  ? `Already notified — can resend after ${nextAllowedAt.toLocaleString(
+                      "en-US",
+                      { dateStyle: "medium", timeStyle: "short" },
+                    )}`
+                  : upcomingCount === 0
+                    ? "No upcoming lessons to notify about"
+                    : undefined
             }
           >
             <Mail className="mr-2 h-4 w-4" />

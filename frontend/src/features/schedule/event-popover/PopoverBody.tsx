@@ -22,11 +22,14 @@ import {
   Video,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { EmailGuard } from "@/components/email-guard";
 import type { Badge } from "./helpers";
 
 export interface PopoverBodyProps {
   subject: string | null | undefined;
   studentName: string;
+  /** Student's contact email. When absent the Notify button is disabled. */
+  studentEmail?: string | null;
   startIso: string;
   endIso: string;
   durationMinutes: number;
@@ -62,6 +65,7 @@ export interface PopoverBodyProps {
 export function PopoverBody({
   subject,
   studentName,
+  studentEmail,
   startIso,
   endIso,
   durationMinutes,
@@ -221,21 +225,23 @@ export function PopoverBody({
                   <CalendarClock className="h-3.5 w-3.5" />
                   Reschedule
                 </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="flex-1 gap-1"
-                  onClick={onNotify}
-                  disabled={notifyPending || cooldownActive}
-                  title="Send a reminder email to the student"
-                >
-                  {notifyPending ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Mail className="h-3.5 w-3.5" />
-                  )}
-                  Notify
-                </Button>
+                <EmailGuard hasEmail={!!studentEmail?.trim()}>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="flex-1 gap-1"
+                    onClick={onNotify}
+                    disabled={notifyPending || cooldownActive}
+                    title="Send a reminder email to the student"
+                  >
+                    {notifyPending ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Mail className="h-3.5 w-3.5" />
+                    )}
+                    Notify
+                  </Button>
+                </EmailGuard>
                 <Button
                   size="sm"
                   variant="outline"

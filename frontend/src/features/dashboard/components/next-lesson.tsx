@@ -18,15 +18,18 @@ import {
   previewNotifyStudentRequest,
 } from "@/features/schedule/api";
 import { EmailComposeDialog } from "@/components/email-compose-dialog";
+import { EmailGuard } from "@/components/email-guard";
 import { lessonTimeRange, relativeDayLabel, timeUntil } from "../lib";
 import { STUDENT_NOTIFY_COOLDOWN_MS } from "@examify-tms/shared";
 
 type Props = {
   lesson: LessonResponse | undefined;
   studentName: string;
+  /** Student's contact email. When absent the Notify button is disabled. */
+  studentEmail?: string | null;
 };
 
-export function NextLesson({ lesson, studentName }: Props) {
+export function NextLesson({ lesson, studentName, studentEmail }: Props) {
   // Re-render every 30s so the countdown stays fresh.
   const [, setTick] = useState(0);
   useEffect(() => {
@@ -154,21 +157,23 @@ export function NextLesson({ lesson, studentName }: Props) {
 
         {/* Notify the student — cooldown mirrors the lesson detail page. */}
         <div className="mt-3 flex flex-wrap items-center gap-2 border-t pt-3">
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-1.5"
-            onClick={() => setNotifyOpen(true)}
-            disabled={cooldownActive}
-            title={
-              cooldownActive && nextAllowedAt
-                ? `Already notified — can resend after ${nextAllowedAt.toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}`
-                : "Send a reminder email to the student"
-            }
-          >
-            <Mail className="h-4 w-4" />
-            {notifiedAt ? "Notify again" : "Notify student"}
-          </Button>
+          <EmailGuard hasEmail={!!studentEmail?.trim()}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => setNotifyOpen(true)}
+              disabled={cooldownActive}
+              title={
+                cooldownActive && nextAllowedAt
+                  ? `Already notified — can resend after ${nextAllowedAt.toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}`
+                  : "Send a reminder email to the student"
+              }
+            >
+              <Mail className="h-4 w-4" />
+              {notifiedAt ? "Notify again" : "Notify student"}
+            </Button>
+          </EmailGuard>
           {notifiedAt && (
             <span className="text-xs text-muted-foreground">
               Last notified{" "}

@@ -167,6 +167,7 @@ export default function EventDetail() {
       <LessonHeader
         lesson={lesson}
         studentName={studentName}
+        studentEmail={student?.email ?? null}
         googleConnected={googleConnected}
         onNotify={openNotifyDialog}
         onReschedule={() => setRescheduleOpen(true)}

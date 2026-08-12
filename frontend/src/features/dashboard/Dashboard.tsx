@@ -101,7 +101,9 @@ export default function Dashboard() {
     // background. The attendance-marking surface is registered as a
     // background-send exception, and the user can also disable review globally
     // via Settings → Review emails before sending.
+    const hasBillingEmail = !!student.billingEmail?.trim();
     if (
+      hasBillingEmail &&
       shouldSkipReview(
         EMAIL_SEND_CONTEXTS.ATTENDANCE_MARKING.key,
         user?.emailReviewSettings ?? null,
@@ -132,7 +134,9 @@ export default function Dashboard() {
     }
 
     // Review: create the invoice (unsent) and open the compose dialog so the
-    // tutor can edit/preview the email before sending.
+    // tutor can edit/preview the email before sending. Also used when the
+    // student has no billing email — the invoice is created unsent and the
+    // compose dialog's send button stays disabled until an email is added.
     const createdInvoice = await invoiceLesson.mutateAsync({
       lesson: effective,
       rateType: student.rateType,
@@ -140,7 +144,13 @@ export default function Dashboard() {
       skipSend: true,
     });
 
-    toast.success(`Invoice created for ${name} — review before sending.`);
+    if (!hasBillingEmail) {
+      toast.message(
+        `Invoice created for ${name} — add an email to send it.`,
+      );
+    } else {
+      toast.success(`Invoice created for ${name} — review before sending.`);
+    }
     setSendInvoiceId(createdInvoice.id);
   };
 
@@ -191,6 +201,9 @@ export default function Dashboard() {
               lesson={upcoming}
               studentName={
                 upcoming ? (studentNames[upcoming.studentId] ?? "Student") : ""
+              }
+              studentEmail={
+                upcoming ? (studentMap[upcoming.studentId]?.email ?? null) : null
               }
             />
           )}

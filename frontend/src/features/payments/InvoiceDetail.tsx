@@ -21,6 +21,7 @@ import {
 import { InvoiceTimeline } from "./InvoiceTimeline";
 import { EmailHistory } from "@/features/emails/EmailHistory";
 import { SendInvoiceDialog } from "@/components/send-invoice-dialog";
+import { EmailGuard } from "@/components/email-guard";
 import { formatCurrency } from "./invoice-utils";
 import { InvoiceDetailsCard, InvoiceLineItemsTable } from "./detail/components";
 
@@ -226,10 +227,12 @@ export default function InvoiceDetail() {
                 </div>
               </div>
               {canSend && (
-                <Button className="w-full" onClick={() => setSendOpen(true)}>
-                  <Send className="h-4 w-4 mr-2" />
-                  {hasBeenSent ? "Resend invoice" : "Send invoice"}
-                </Button>
+                <EmailGuard hasEmail={!!invoice.billingEmail?.trim()}>
+                  <Button className="w-full" onClick={() => setSendOpen(true)}>
+                    <Send className="h-4 w-4 mr-2" />
+                    {hasBeenSent ? "Resend invoice" : "Send invoice"}
+                  </Button>
+                </EmailGuard>
               )}
             </CardContent>
           </Card>

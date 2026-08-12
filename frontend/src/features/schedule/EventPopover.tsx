@@ -55,6 +55,7 @@ export function EventPopover({
   const updateLesson = useUpdateLesson(lessonId ?? "");
   const {
     names: studentNames,
+    byId: studentById,
     subjectOptions,
     confirm,
     attendancePending,
@@ -191,6 +192,7 @@ export function EventPopover({
               <PopoverBody
                 subject={lesson.subject}
                 studentName={studentName}
+                studentEmail={studentById[lesson.studentId]?.email ?? null}
                 startIso={lesson.startDateTime}
                 endIso={endDate.toISOString()}
                 durationMinutes={lesson.durationMinutes}

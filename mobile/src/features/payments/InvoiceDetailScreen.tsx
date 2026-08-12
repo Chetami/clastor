@@ -259,14 +259,21 @@ export default function InvoiceDetailScreen() {
         {/* Actions */}
         <View style={styles.actions}>
           {canSend ? (
-            <ActionButton
-              label={hasBeenSent ? "Resend invoice" : "Send invoice"}
-              icon="paper-plane-outline"
-              loading={sendInvoice.isPending}
-              disabled={busy}
-              onPress={handleSend}
-              variant="primary"
-            />
+            <>
+              <ActionButton
+                label={hasBeenSent ? "Resend invoice" : "Send invoice"}
+                icon="paper-plane-outline"
+                loading={sendInvoice.isPending}
+                disabled={busy || !invoice.billingEmail}
+                onPress={handleSend}
+                variant="primary"
+              />
+              {!invoice.billingEmail ? (
+                <Text style={styles.actionHint}>
+                  This student needs an email before you can send.
+                </Text>
+              ) : null}
+            </>
           ) : null}
           {canMarkPaid ? (
             <ActionButton
@@ -515,4 +522,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   actionText: { fontSize: 15, fontWeight: "600" },
+  actionHint: {
+    fontSize: 12,
+    textAlign: "center",
+    color: colors.danger,
+  },
 });

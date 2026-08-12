@@ -182,7 +182,12 @@ export function InvoiceRow({
             {inv.status === "draft" ? (
               <>
                 <DropdownMenuItem
-                  disabled={sendDisabled}
+                  disabled={sendDisabled || !inv.billingEmail?.trim()}
+                  title={
+                    !inv.billingEmail?.trim()
+                      ? "This student needs an email before you can send."
+                      : undefined
+                  }
                   onSelect={() => onSend(inv.id)}
                 >
                   Send invoice

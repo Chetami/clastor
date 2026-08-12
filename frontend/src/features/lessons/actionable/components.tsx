@@ -6,6 +6,7 @@ import {
 import { Clock, Loader2, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { EmailGuard } from "@/components/email-guard";
 import {
   INVOICE_RESEND_COOLDOWN_MS,
   formatMsRemaining,
@@ -23,6 +24,8 @@ export interface OverdueRow {
   invoiceId: string;
   invoiceNumber: string;
   customerName: string;
+  /** Resolved billing email for the invoice's student (may be null). */
+  billingEmail: string | null;
   description: string;
   amount: number;
   currency: string;
@@ -179,30 +182,32 @@ export function OverdueActionRow({
           Due {formatDate(row.dueDate)}
         </span>
       </div>
-      <Button
-        size="sm"
-        variant="outline"
-        className="h-7 w-24 shrink-0 gap-1.5 px-2.5 text-xs"
-        disabled={sending || onCooldown}
-        title={
-          onCooldown
-            ? `Last reminder sent ${formatDate(row.sentAt!)}`
-            : "Send a reminder email"
-        }
-        onClick={(e) => {
-          e.stopPropagation();
-          onRemind();
-        }}
-      >
-        {sending ? (
-          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-        ) : onCooldown ? (
-          <Clock className="h-3.5 w-3.5" />
-        ) : (
-          <Send className="h-3.5 w-3.5" />
-        )}
-        {onCooldown ? formatMsRemaining(remaining) : "Remind"}
-      </Button>
+      <EmailGuard hasEmail={!!row.billingEmail?.trim()}>
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-7 w-24 shrink-0 gap-1.5 px-2.5 text-xs"
+          disabled={sending || onCooldown}
+          title={
+            onCooldown
+              ? `Last reminder sent ${formatDate(row.sentAt!)}`
+              : "Send a reminder email"
+          }
+          onClick={(e) => {
+            e.stopPropagation();
+            onRemind();
+          }}
+        >
+          {sending ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : onCooldown ? (
+            <Clock className="h-3.5 w-3.5" />
+          ) : (
+            <Send className="h-3.5 w-3.5" />
+          )}
+          {onCooldown ? formatMsRemaining(remaining) : "Remind"}
+        </Button>
+      </EmailGuard>
     </li>
   );
 }

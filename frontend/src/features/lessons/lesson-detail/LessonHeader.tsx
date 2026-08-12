@@ -16,6 +16,7 @@ import { STUDENT_NOTIFY_COOLDOWN_MS } from "@examify-tms/shared";
 import type { LessonResponse } from "@examify-tms/interfaces";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { EmailGuard } from "@/components/email-guard";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,6 +37,8 @@ import { lessonBadge } from "@/features/lessons/lesson-display";
 interface LessonHeaderProps {
   lesson: LessonResponse;
   studentName: string;
+  /** Student's contact email. When absent the Notify button is disabled. */
+  studentEmail?: string | null;
   googleConnected: boolean | null;
   onNotify: () => void;
   onReschedule: () => void;
@@ -54,6 +57,7 @@ interface LessonHeaderProps {
 export function LessonHeader({
   lesson,
   studentName,
+  studentEmail,
   googleConnected,
   onNotify,
   onReschedule,
@@ -179,23 +183,25 @@ export function LessonHeader({
             )}
             {canManage && (
               <>
-                <Button
-                  size="sm"
-                  onClick={onNotify}
-                  disabled={cooldownActive}
-                  title={
-                    cooldownActive && nextAllowedAt
-                      ? `Already notified — resend in ${cooldownRemaining}`
-                      : "Send a reminder email to the student"
-                  }
-                >
-                  {notifyPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Mail className="h-4 w-4" />
-                  )}
-                  {notifiedAt ? "Notify again" : "Notify student"}
-                </Button>
+                <EmailGuard hasEmail={!!studentEmail?.trim()}>
+                  <Button
+                    size="sm"
+                    onClick={onNotify}
+                    disabled={cooldownActive}
+                    title={
+                      cooldownActive && nextAllowedAt
+                        ? `Already notified — resend in ${cooldownRemaining}`
+                        : "Send a reminder email to the student"
+                    }
+                  >
+                    {notifyPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Mail className="h-4 w-4" />
+                    )}
+                    {notifiedAt ? "Notify again" : "Notify student"}
+                  </Button>
+                </EmailGuard>
                 <Button
                   variant="outline"
                   size="sm"

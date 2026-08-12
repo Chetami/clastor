@@ -222,7 +222,12 @@ export function EmailComposeDialog({
             type="button"
             variant={destructive ? "destructive" : "default"}
             onClick={handleSend}
-            disabled={sending || initialLoading}
+            disabled={sending || initialLoading || to.length === 0}
+            title={
+              to.length === 0
+                ? "This student has no email address to send to."
+                : undefined
+            }
           >
             {sending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {sending ? "Sending…" : sendLabel}

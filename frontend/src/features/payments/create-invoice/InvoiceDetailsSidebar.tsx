@@ -1,6 +1,7 @@
 import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { EmailGuard } from "@/components/email-guard";
 import {
   Input,
   Label,
@@ -60,6 +61,7 @@ export function InvoiceDetailsSidebar({
 }: InvoiceDetailsSidebarProps) {
   const disabled =
     createPending || sendPending || !hasLineItems || !hasStudent;
+  const hasSendEmail = !!(billingEmail.trim() || resolvedBillingEmail.trim());
 
   return (
     <>
@@ -147,14 +149,16 @@ export function InvoiceDetailsSidebar({
             </span>
           </div>
           <div className="flex flex-col gap-2 pt-2">
-            <Button onClick={() => onSubmit("open", true)} disabled={disabled}>
-              <Check className="h-4 w-4" />
-              {sendPending
-                ? "Sending..."
-                : createPending
-                  ? "Creating..."
-                  : "Create & Send"}
-            </Button>
+            <EmailGuard hasEmail={hasSendEmail}>
+              <Button onClick={() => onSubmit("open", true)} disabled={disabled}>
+                <Check className="h-4 w-4" />
+                {sendPending
+                  ? "Sending..."
+                  : createPending
+                    ? "Creating..."
+                    : "Create & Send"}
+              </Button>
+            </EmailGuard>
             <Button
               variant="outline"
               onClick={() => onSubmit("open", false)}
