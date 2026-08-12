@@ -1,6 +1,8 @@
 import { ArrowRight, Check } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Scribble, Sparkle } from "@/components/Doodles";
+import { HeroIllustration } from "@/components/HeroIllustration";
 import { APP_URL } from "@/lib/site";
 
 export function Hero() {
@@ -9,6 +11,9 @@ export function Hero() {
       id="top"
       className="relative overflow-hidden px-5 pt-28 pb-7 sm:px-6 sm:pt-36 lg:px-8"
     >
+      {/* Hand-drawn sparkle accents around the headline + mockup. */}
+      <Sparkle className="pointer-events-none absolute right-[7%] top-[16%] hidden h-9 w-9 rotate-12 text-brand/70 animate-float sm:block" />
+      <Sparkle className="pointer-events-none absolute left-[6%] top-[58%] hidden h-7 w-7 -rotate-6 text-[hsl(48_92%_60%)] animate-float sm:block" />
       <div className="mx-auto grid max-w-[1040px] gap-10 text-center sm:gap-14">
         <div className="flex flex-col items-center">
           <span className="eyebrow">Tutor management, made friendly</span>
@@ -17,7 +22,7 @@ export function Hero() {
             Teach more.
             <br />
             <span className="display-accent">Admin less.</span>
-            <Scribble />
+            <Scribble className="mx-auto -mt-1 block w-[min(420px,80%)] text-brand" />
           </h1>
 
           <p className="mt-6 max-w-[52ch] text-[clamp(1.0625rem,1.8vw,1.25rem)] leading-relaxed text-muted-foreground">
@@ -43,29 +48,12 @@ export function Hero() {
           </p>
         </div>
 
-        <HeroMockup />
+        <div className="relative">
+          <HeroMockup />
+          <HeroIllustration />
+        </div>
       </div>
     </section>
-  );
-}
-
-/** Hand-drawn underline scribble beneath the headline accent. */
-function Scribble() {
-  return (
-    <svg
-      className="mx-auto -mt-1 block w-[min(420px,80%)] overflow-visible"
-      viewBox="0 0 320 24"
-      fill="none"
-      preserveAspectRatio="none"
-      aria-hidden="true"
-    >
-      <path
-        d="M6 15 C 40 4, 70 4, 110 12 S 200 20, 250 10 S 312 6, 314 14"
-        stroke="hsl(var(--brand))"
-        strokeWidth="5"
-        strokeLinecap="round"
-      />
-    </svg>
   );
 }
 
@@ -78,9 +66,9 @@ function HeroMockup() {
         <div className="flex items-center justify-between border-b-2 border-dashed border-border bg-secondary px-5 py-3">
           <div className="flex items-center gap-3">
             <span className="flex gap-1.5">
-              <i className="h-3 w-3 rounded-full border-[1.5px] border-foreground bg-destructive" />
-              <i className="h-3 w-3 rounded-full border-[1.5px] border-foreground bg-[hsl(43_96%_56%)]" />
-              <i className="h-3 w-3 rounded-full border-[1.5px] border-foreground bg-success" />
+              <span className="h-3 w-3 rounded-full border-[1.5px] border-foreground bg-destructive" />
+              <span className="h-3 w-3 rounded-full border-[1.5px] border-foreground bg-[hsl(43_96%_56%)]" />
+              <span className="h-3 w-3 rounded-full border-[1.5px] border-foreground bg-success" />
             </span>
             <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
               Week of Mar 18
@@ -213,14 +201,7 @@ function Lesson({
           : "my-0.5 rounded-[10px] border-[1.5px] border-border bg-secondary px-2 py-1.5 text-[11.5px] leading-tight text-muted-foreground"
       }
     >
-      <b
-        className={
-          "block text-[11.5px] " +
-          (highlight ? "text-foreground" : "text-foreground")
-        }
-      >
-        {name}
-      </b>
+      <b className="block text-[11.5px] text-foreground">{name}</b>
       <span className={highlight ? "text-foreground" : "text-muted-foreground"}>
         {meta}
       </span>

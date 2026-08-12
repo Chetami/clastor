@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Logo } from "@/components/Logo";
-import { APP_URL, NAV_LINKS } from "@/lib/site";
+import { NAV_LINKS } from "@/lib/site";
 
 export function Footer() {
   const year = new Date().getFullYear();
@@ -20,18 +20,12 @@ export function Footer() {
 
           <FooterCol
             title="Product"
-            links={[
-              ...NAV_LINKS,
-              { label: "Pricing", href: APP_URL },
-            ]}
+            links={[...NAV_LINKS]}
           />
           <FooterCol
             title="Company"
             links={[
-              { label: "About", href: APP_URL },
-              { label: "Contact", href: APP_URL },
-              { label: "Blog", href: APP_URL },
-              { label: "Careers", href: APP_URL },
+              { label: "Contact", href: "/contact" },
             ]}
           />
           <FooterCol
@@ -40,7 +34,6 @@ export function Footer() {
               { label: "Help & FAQ", href: "/#faq" },
               { label: "Privacy", href: "/privacy" },
               { label: "Terms", href: "/terms" },
-              { label: "Status", href: APP_URL },
             ]}
           />
         </div>
@@ -68,7 +61,7 @@ function FooterCol({
       </h3>
       <ul className="flex flex-col gap-2.5">
         {links.map((link) => {
-          const isInternal = link.href.startsWith("/privacy") || link.href.startsWith("/terms");
+          const isInternal = link.href.startsWith("/") && !link.href.includes("#");
           return (
             <li key={link.label}>
               {isInternal ? (

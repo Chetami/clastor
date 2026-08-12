@@ -22,7 +22,7 @@ export function Audience() {
   const ref = useReveal<HTMLDivElement>();
 
   return (
-    <section id="for-teams" className="scroll-mt-20 px-5 pt-0 py-24 sm:px-6 sm:py-28 lg:px-8">
+    <section id="for-teams" className="scroll-mt-20 px-5 py-24 sm:px-6 sm:py-28 lg:px-8">
       <div ref={ref} className="mx-auto max-w-[1180px]">
         <div className="reveal mb-12 max-w-[660px] sm:mb-14">
           <p className="eyebrow">For tutors &amp; teams</p>
@@ -85,10 +85,10 @@ export function Audience() {
               ))}
             </ul>
             <a
-              href={APP_URL}
+              href="mailto:info@xamify.com.au"
               className="link-arrow inline-flex items-center gap-1.5 self-start border-b-2 border-[hsl(25_100%_80%)] pb-0.5 text-lg text-brand transition-colors hover:border-brand"
             >
-              Explore team plans
+              Talk to us about teams
               <ArrowRight className="h-4 w-4" />
             </a>
           </article>

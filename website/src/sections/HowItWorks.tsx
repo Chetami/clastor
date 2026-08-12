@@ -1,6 +1,7 @@
 import { UserPlus, CalendarCheck, Wallet, ArrowRight, type LucideIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Arrow } from "@/components/Doodles";
 import { useReveal } from "@/hooks/useReveal";
 import { APP_URL } from "@/lib/site";
 
@@ -43,7 +44,7 @@ export function HowItWorks() {
   return (
     <section
       id="how-it-works"
-      className="scroll-mt-20 px-5 pt-0 py-24 sm:px-6 sm:py-28 lg:px-8"
+      className="scroll-mt-20 px-5 py-24 sm:px-6 sm:py-28 lg:px-8"
     >
       <div ref={ref} className="mx-auto max-w-[1180px]">
         <div className="reveal mb-12 max-w-[660px] sm:mb-14">
@@ -57,10 +58,15 @@ export function HowItWorks() {
           </p>
         </div>
 
-        <div className="grid gap-5 md:grid-cols-3 md:gap-9">
-          {STEPS.map((step, i) => (
-            <StepCard key={step.num} step={step} index={i} rotate={ROTATIONS[i]} />
-          ))}
+        <div className="relative">
+          <div className="grid gap-5 md:grid-cols-3 md:gap-9">
+            {STEPS.map((step, i) => (
+              <StepCard key={step.num} step={step} index={i} rotate={ROTATIONS[i]} />
+            ))}
+          </div>
+          {/* Hand-drawn flow arrows between steps (desktop only). */}
+          <Arrow className="pointer-events-none absolute left-1/3 top-1/2 hidden h-6 w-9 -translate-x-1/2 -translate-y-1/2 text-brand/70 md:block" />
+          <Arrow className="pointer-events-none absolute left-2/3 top-1/2 hidden h-6 w-9 -translate-x-1/2 -translate-y-1/2 text-brand/70 md:block" />
         </div>
 
         <div

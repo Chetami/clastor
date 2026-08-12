@@ -1,14 +1,15 @@
 import { useReveal } from "@/hooks/useReveal";
 import { Button } from "@/components/ui/button";
+import { Scribble } from "@/components/Doodles";
 import { APP_URL } from "@/lib/site";
 
 export function FinalCTA() {
   const ref = useReveal<HTMLDivElement>();
 
   return (
-    <section className="px-5 pt-0 py-24 sm:px-6 sm:py-28 lg:px-8">
+    <section className="px-5 py-24 sm:px-6 sm:py-28 lg:px-8">
       <div ref={ref} className="mx-auto max-w-[1180px]">
-        <div className="reveal relative overflow-hidden rounded-3xl border-[3px] border-foreground bg-secondary px-6 py-16 text-center shadow-sketch-lg sm:px-12 sm:py-21">
+        <div className="reveal relative overflow-hidden rounded-3xl border-[3px] border-foreground bg-secondary px-6 py-16 text-center shadow-sketch-lg sm:px-12 sm:py-20">
           {/* Decorative doodle circles */}
           <span
             className="pointer-events-none absolute right-[6%] top-6 h-[70px] w-[70px] rounded-full border-[2.5px] border-foreground bg-brand opacity-85"
@@ -21,11 +22,17 @@ export function FinalCTA() {
 
           <div className="relative mx-auto max-w-2xl">
             <h2 className="font-display text-[clamp(2rem,5.2vw,3.5rem)] leading-[1.1]">
-              Teach more. <span className="display-accent">Admin less.</span>
+              Get your{" "}
+              <span className="display-accent relative inline-block">
+                evenings
+                <Scribble className="absolute -bottom-2 left-0 h-2.5 w-full text-brand" />
+              </span>{" "}
+              back.
             </h2>
             <p className="mx-auto mt-4 max-w-[50ch] text-[clamp(1rem,1.6vw,1.1875rem)] text-muted-foreground">
-              Start free for your first 10 students. Set up in an afternoon,
-              send your first branded invoice today.
+              Set up in an afternoon and send your first branded invoice today.
+              The reminders, calendar sync, and chasing happen on their own from
+              here on out.
             </p>
 
             <div className="mt-7">

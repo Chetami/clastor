@@ -1,5 +1,3 @@
-import { useEffect } from "react";
-
 /**
  * Terms of Service page.
  *
@@ -8,22 +6,20 @@ import { useEffect } from "react";
  * by a qualified professional before reliance — this is a starting point.
  */
 export default function TermsPage() {
-  // Mirrors the Next.js `metadata.title` export for this route.
-  useEffect(() => {
-    document.title = "Terms of Service - Clastor";
-  }, []);
-
   return (
     <div className="container mx-auto px-4 py-20">
       <article className="mx-auto max-w-4xl">
         <div className="mb-12">
-          <h1 className="mb-4 text-5xl font-bold">Terms of Service</h1>
+          <p className="eyebrow">Legal</p>
+          <h1 className="mb-4 mt-4 font-display text-[clamp(2.25rem,6vw,3.5rem)] leading-tight">
+            Terms of Service
+          </h1>
           <p className="text-lg text-muted-foreground">
             Last Updated: 26 June 2026
           </p>
         </div>
 
-        <div className="prose prose-lg max-w-none space-y-8">
+        <div className="max-w-none space-y-8">
           <section>
             <p className="leading-relaxed text-muted-foreground">
               Welcome to Clastor. These Terms of Service (&quot;Terms&quot;)
@@ -46,7 +42,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="mb-4 text-3xl font-bold">1. The Services</h2>
+            <h2 className="mb-4 text-3xl">1. The Services</h2>
             <p className="leading-relaxed text-muted-foreground">
               Clastor is a tutor management platform that helps independent
               tutors and tutoring businesses manage the administrative side of
@@ -64,7 +60,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="mb-4 text-3xl font-bold">2. Accounts &amp; Eligibility</h2>
+            <h2 className="mb-4 text-3xl">2. Accounts &amp; Eligibility</h2>
             <ul className="list-disc space-y-2 pl-6 text-muted-foreground">
               <li>
                 You must be at least 18 years of age (or the age of legal
@@ -89,7 +85,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="mb-4 text-3xl font-bold">
+            <h2 className="mb-4 text-3xl">
               3. Plans, Fees &amp; Billing
             </h2>
             <ul className="list-disc space-y-2 pl-6 text-muted-foreground">
@@ -123,7 +119,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="mb-4 text-3xl font-bold">4. Acceptable Use</h2>
+            <h2 className="mb-4 text-3xl">4. Acceptable Use</h2>
             <p className="mb-4 leading-relaxed text-muted-foreground">
               You agree not to, and not to allow any third party to:
             </p>
@@ -159,7 +155,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="mb-4 text-3xl font-bold">
+            <h2 className="mb-4 text-3xl">
               5. Your Content &amp; Data Ownership
             </h2>
             <p className="leading-relaxed text-muted-foreground">
@@ -189,7 +185,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="mb-4 text-3xl font-bold">
+            <h2 className="mb-4 text-3xl">
               6. Clastor&apos;s Intellectual Property
             </h2>
             <p className="leading-relaxed text-muted-foreground">
@@ -205,7 +201,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="mb-4 text-3xl font-bold">7. Third-Party Services</h2>
+            <h2 className="mb-4 text-3xl">7. Third-Party Services</h2>
             <p className="leading-relaxed text-muted-foreground">
               The Services integrate with third-party tools and services such as
               Google Calendar, Stripe, and cloud infrastructure providers. Your
@@ -217,7 +213,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="mb-4 text-3xl font-bold">8. Disclaimers</h2>
+            <h2 className="mb-4 text-3xl">8. Disclaimers</h2>
             <p className="leading-relaxed text-muted-foreground">
               The Services are provided on an &quot;as is&quot; and
               &quot;as available&quot; basis. To the maximum extent permitted by
@@ -231,7 +227,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="mb-4 text-3xl font-bold">
+            <h2 className="mb-4 text-3xl">
               9. Limitation of Liability
             </h2>
             <p className="leading-relaxed text-muted-foreground">
@@ -248,7 +244,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="mb-4 text-3xl font-bold">10. Indemnification</h2>
+            <h2 className="mb-4 text-3xl">10. Indemnification</h2>
             <p className="leading-relaxed text-muted-foreground">
               You agree to indemnify and hold Clastor harmless from and against
               any claims, damages, losses, and expenses (including reasonable
@@ -259,7 +255,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="mb-4 text-3xl font-bold">
+            <h2 className="mb-4 text-3xl">
               11. Suspension &amp; Termination
             </h2>
             <p className="leading-relaxed text-muted-foreground">
@@ -274,7 +270,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="mb-4 text-3xl font-bold">
+            <h2 className="mb-4 text-3xl">
               12. Changes to These Terms
             </h2>
             <p className="leading-relaxed text-muted-foreground">
@@ -288,7 +284,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="mb-4 text-3xl font-bold">13. Governing Law</h2>
+            <h2 className="mb-4 text-3xl">13. Governing Law</h2>
             <p className="leading-relaxed text-muted-foreground">
               These Terms are governed by and construed in accordance with the
               laws of Australia, without regard to its conflict of laws
@@ -299,7 +295,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="mb-4 text-3xl font-bold">14. How to Contact Us</h2>
+            <h2 className="mb-4 text-3xl">14. How to Contact Us</h2>
             <p className="mb-4 leading-relaxed text-muted-foreground">
               If you have any questions, concerns, or notices regarding these
               Terms or the Services, please contact us:

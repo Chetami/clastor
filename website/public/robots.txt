@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://clastor.com.au/sitemap.xml

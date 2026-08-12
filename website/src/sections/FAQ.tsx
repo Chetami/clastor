@@ -50,7 +50,7 @@ export function FAQ() {
   const ref = useReveal<HTMLDivElement>();
 
   return (
-    <section id="faq" className="scroll-mt-20 px-5 pt-0 py-24 sm:px-6 sm:py-28 lg:px-8">
+    <section id="faq" className="scroll-mt-20 px-5 py-24 sm:px-6 sm:py-28 lg:px-8">
       <div ref={ref} className="mx-auto max-w-[1180px]">
         <div className="grid items-start gap-7 lg:grid-cols-[1fr_2fr] lg:gap-16">
           {/* Sidebar heading */}
@@ -62,12 +62,12 @@ export function FAQ() {
             <p className="mt-3.5 max-w-[30ch] text-base text-muted-foreground">
               Still wondering something?{" "}
               <a
-                href="#top"
+                href="mailto:info@xamify.com.au"
                 className="border-b-2 border-[hsl(25_100%_80%)] text-brand hover:border-brand"
               >
-                Talk to a real tutor
+                Email us
               </a>{" "}
-              who uses Clastor.
+              — we read every message.
             </p>
           </div>
 

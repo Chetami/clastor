@@ -1,40 +1,45 @@
-import { Star } from "lucide-react";
+import { Coffee, FileCheck2, CalendarHeart } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 import { useReveal } from "@/hooks/useReveal";
 
-interface Testimonial {
-  quote: string;
-  name: string;
-  role: string;
-  initials: string;
+/**
+ * Outcomes section.
+ *
+ * Replaces fabricated testimonials. Real, attributed testimonials from early
+ * users should be added here once available (see MARKETING.md §12.4). Until
+ * then we reinforce concrete outcomes the product delivers — without
+ * impersonating real people.
+ */
+interface Outcome {
+  icon: LucideIcon;
+  title: string;
+  description: string;
   rotate: string;
   warm?: boolean;
 }
 
-const TESTIMONIALS: Testimonial[] = [
+const OUTCOMES: Outcome[] = [
   {
-    quote:
-      "I used to spend Sunday nights rebuilding invoices in a spreadsheet. Now a lesson ends and the invoice is already on its way. My weekends are mine again.",
-    name: "Priya R.",
-    role: "Maths tutor · 22 students",
-    initials: "PR",
+    icon: Coffee,
+    title: "Your evenings back",
+    description:
+      "Reminders, calendar invites, and invoice emails go out on their own. The hour you used to spend on admin becomes time off — or another lesson.",
     rotate: "rotate-tiny-neg",
   },
   {
-    quote:
-      "Parents compliment the invoices now. It looks like a real business, not a side gig. That alone made it worth switching.",
-    name: "James M.",
-    role: "Physics & chemistry · 14 students",
-    initials: "JM",
+    icon: FileCheck2,
+    title: "A business that looks the part",
+    description:
+      "Branded invoices, polished emails, and a public profile make a solo operation feel established to every student and parent.",
     rotate: "",
     warm: true,
   },
   {
-    quote:
-      "My partner and I share the calendar without stepping on each other. The reminders mean no one forgets a lesson anymore.",
-    name: "Sofia K.",
-    role: "Language tutor · team of 2",
-    initials: "SK",
+    icon: CalendarHeart,
+    title: "One source of truth",
+    description:
+      "Schedule, students, and billing in one place — so you always know who's paid, what's next, and how the month is really going.",
     rotate: "rotate-tiny-pos",
   },
 ];
@@ -43,18 +48,18 @@ export function Testimonials() {
   const ref = useReveal<HTMLDivElement>();
 
   return (
-    <section className="scroll-mt-20 px-5 pt-0 py-24 sm:px-6 sm:py-28 lg:px-8">
+    <section className="scroll-mt-20 px-5 py-24 sm:px-6 sm:py-28 lg:px-8">
       <div ref={ref} className="mx-auto max-w-[1180px]">
         <div className="reveal mb-12 max-w-[660px] sm:mb-14">
-          <p className="eyebrow">From working tutors</p>
+          <p className="eyebrow">What changes</p>
           <h2 className="mt-3.5 font-display text-[clamp(1.875rem,4.6vw,3.125rem)] leading-[1.12]">
             Less spreadsheets. More teaching.
           </h2>
         </div>
 
         <div className="grid gap-5 md:grid-cols-3">
-          {TESTIMONIALS.map((t, i) => (
-            <QuoteCard key={i} testimonial={t} index={i} />
+          {OUTCOMES.map((o, i) => (
+            <OutcomeCard key={o.title} outcome={o} index={i} />
           ))}
         </div>
       </div>
@@ -62,40 +67,28 @@ export function Testimonials() {
   );
 }
 
-function QuoteCard({
-  testimonial,
+function OutcomeCard({
+  outcome,
   index,
 }: {
-  testimonial: Testimonial;
+  outcome: Outcome;
   index: number;
 }) {
+  const Icon = outcome.icon;
   return (
-    <figure
-      className={`reveal doodle-card flex flex-col gap-4 rounded-3xl p-7 ${testimonial.rotate} ${
-        testimonial.warm ? "bg-secondary" : ""
+    <article
+      className={`reveal doodle-card flex flex-col gap-4 rounded-3xl p-7 ${outcome.rotate} ${
+        outcome.warm ? "bg-secondary" : ""
       }`}
       style={{ ["--reveal-delay" as string]: `${index * 100}ms` }}
     >
-      <div className="flex gap-0.5 text-brand" aria-label="5 out of 5 stars">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <Star key={i} className="h-4 w-4 fill-brand" aria-hidden="true" />
-        ))}
-      </div>
-
-      <blockquote className="flex-1 text-lg leading-relaxed text-foreground">
-        <span className="text-brand">&ldquo;</span>
-        {testimonial.quote}
-      </blockquote>
-
-      <figcaption className="flex items-center gap-3 border-t-2 border-dashed border-border pt-1.5">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-[2.5px] border-foreground bg-brand font-display text-base text-foreground">
-          {testimonial.initials}
-        </span>
-        <span>
-          <b className="block text-base text-foreground">{testimonial.name}</b>
-          <span className="text-sm text-muted-foreground">{testimonial.role}</span>
-        </span>
-      </figcaption>
-    </figure>
+      <span className="flex h-11 w-11 items-center justify-center rounded-full border-[2.5px] border-foreground bg-brand text-foreground shadow-sketch">
+        <Icon className="h-5 w-5" strokeWidth={2.2} />
+      </span>
+      <h3 className="font-display text-2xl">{outcome.title}</h3>
+      <p className="text-base leading-relaxed text-muted-foreground">
+        {outcome.description}
+      </p>
+    </article>
   );
 }

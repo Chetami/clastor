@@ -157,11 +157,11 @@ function MiniCalendar() {
       </div>
       <div className="flex flex-col gap-2 pb-1.5 text-sm text-muted-foreground">
         <span className="flex items-center gap-2">
-          <i className="mr-0 inline-block h-3 w-3 rounded border-[1.5px] border-foreground bg-card" />
+          <span className="inline-block h-3 w-3 rounded border-[1.5px] border-foreground bg-card" />
           Lesson
         </span>
         <span className="flex items-center gap-2">
-          <i className="mr-0 inline-block h-3 w-3 rounded border-[1.5px] border-foreground bg-brand" />
+          <span className="inline-block h-3 w-3 rounded border-[1.5px] border-foreground bg-brand" />
           Invoice sent
         </span>
       </div>

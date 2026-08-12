@@ -1,29 +1,25 @@
-import { useEffect } from "react";
-
 /**
  * Privacy Policy page.
  *
- * Clastor Vite SPA. The legal wording, branding, contact details and regulator
- * references are preserved verbatim — Clastor is a product of Clastor
- * (Clastor.com.au), which is the data controller this policy describes.
+ * Clastor Vite SPA. Clastor is a product of Clastor (Clastor.com.au), which is
+ * the data controller this policy describes. The legal wording should be
+ * reviewed by a qualified professional before reliance.
  */
 export default function PrivacyPage() {
-  // Mirrors the Next.js `metadata.title` export for this route.
-  useEffect(() => {
-    document.title = "Privacy Policy - Clastor";
-  }, []);
-
   return (
     <div className="container mx-auto px-4 py-20">
       <article className="mx-auto max-w-4xl">
         <div className="mb-12">
-          <h1 className="mb-4 text-5xl font-bold">Privacy Policy</h1>
+          <p className="eyebrow">Legal</p>
+          <h1 className="mb-4 mt-4 font-display text-[clamp(2.25rem,6vw,3.5rem)] leading-tight">
+            Privacy Policy
+          </h1>
           <p className="text-lg text-muted-foreground">
-            Last Updated: 18 April 2026
+            Last Updated: 12 August 2026
           </p>
         </div>
 
-        <div className="prose prose-lg max-w-none space-y-8">
+        <div className="max-w-none space-y-8">
           <section>
             <p className="leading-relaxed text-muted-foreground">
               Your privacy is important to us and so is being transparent about
@@ -48,7 +44,7 @@ export default function PrivacyPage() {
           </section>
 
           <section>
-            <h2 className="mb-4 text-3xl font-bold">
+            <h2 className="mb-4 text-3xl">
               What is personal information?
             </h2>
             <p className="leading-relaxed text-muted-foreground">
@@ -58,16 +54,17 @@ export default function PrivacyPage() {
             <p className="leading-relaxed text-muted-foreground">
               This policy covers how we treat your information, including your
               personal information, that you provide when you access or use our
-              services. Our services include Clastor, an AI-powered exam creation
-              and grading platform for schools and teachers. We are not
-              responsible for and our services don&apos;t extend to the services
-              of any company we don&apos;t own or control, or people that we
-              don&apos;t manage.
+              services. Our services include Clastor, a tutor management
+              platform that helps independent tutors and small tutoring teams
+              manage scheduling, student records, communications, invoicing,
+              and payments. We are not responsible for and our services
+              don&apos;t extend to the services of any company we don&apos;t
+              own or control, or people that we don&apos;t manage.
             </p>
           </section>
 
           <section>
-            <h2 className="mb-4 text-3xl font-bold">
+            <h2 className="mb-4 text-3xl">
               Types of information we collect
             </h2>
             <p className="mb-4 leading-relaxed text-muted-foreground">
@@ -76,17 +73,37 @@ export default function PrivacyPage() {
               is not limited to:
             </p>
             <ul className="list-disc space-y-2 pl-6 text-muted-foreground">
-              <li>Identifying information such as name;</li>
-              <li>Contact information such as email address and phone number;</li>
               <li>
-                Professional information including qualifications and teaching
-                curriculum;
+                Account information such as your name and email address;
               </li>
-              <li>Institution or school information;</li>
-              <li>Exam content and questions you create;</li>
-              <li>Student performance data (if applicable);</li>
+              <li>
+                Professional information including your subjects, rates, and
+                qualifications (as you add them to your public profile);
+              </li>
+              <li>
+                Student and guardian contact details that you add to your
+                account (for example, name, email, phone number, and timezone);
+              </li>
+              <li>
+                Scheduling information, including lesson times, attendance
+                records, and lesson notes;
+              </li>
+              <li>
+                Billing information, including invoice details, payment status,
+                and transaction history;
+              </li>
+              <li>
+                Information retrieved through integrations you connect, such as
+                Google Calendar and Google Meet; and
+              </li>
               <li>Usage data and analytics.</li>
             </ul>
+            <p className="mt-4 leading-relaxed text-muted-foreground">
+              We do not collect or store full payment card numbers. Card
+              information entered by your students or their guardians is handled
+              directly by our payment processor, Stripe, and is governed by
+              Stripe&apos;s privacy policy.
+            </p>
             <p className="mt-4 leading-relaxed text-muted-foreground">
               Any sensitive information you provide to us may be relevant to
               providing you with our services, and you acknowledge that we will
@@ -98,38 +115,41 @@ export default function PrivacyPage() {
             </p>
             <div className="border-l-4 border-primary bg-primary/10 p-4 my-6">
               <p className="text-sm font-medium">
-                Data Ownership: For users accessing our Services through a
-                school, institution, or paid subscription, all data you provide
-                or upload to our platform remains your property. We act solely
-                as a processor of this information to provide you with our
-                services.
+                Data Ownership: You own the student records, lesson notes,
+                invoices, and other content you add to Clastor. We process that
+                information solely to provide and run the Services for you.
               </p>
             </div>
           </section>
 
           <section>
-            <h2 className="mb-4 text-3xl font-bold">
+            <h2 className="mb-4 text-3xl">
               Cloud-based Data Storage and Management
             </h2>
             <p className="mb-4 leading-relaxed text-muted-foreground">
-              We use secure cloud-based data storage solutions for managing
-              files uploaded by users to our services. These documents are
-              stored on secure cloud infrastructure which helps us organise data
-              in a structured manner. Access to these documents is restricted to
-              ensure that users can only access their own uploaded data.
+              We use secure cloud-based data storage for managing the
+              information you add to Clastor. This data is stored on secure
+              cloud infrastructure which helps us organise it in a structured
+              manner. Access to your data is restricted so that only you (and,
+              for team accounts, the colleagues you invite) can access it.
             </p>
             <p className="leading-relaxed text-muted-foreground">
-              Users have the capability to delete their data safely and
-              completely. Our systems are designed to ensure data fetching is
-              conducted securely, which enhances data retrieval processes and
-              security. The AI systems involved in managing these documents
-              process only the contents within the files necessary to provide
-              our services.
+              Users can delete their data and their account at any time. Our
+              systems process only the information necessary to provide the
+              Services to you.
             </p>
+            <div className="border-l-4 border-primary bg-primary/10 p-4 my-6">
+              <p className="text-sm font-medium">
+                <strong>No AI Training on Your Data:</strong> We do not use your
+                content, your students&apos; details, or any data you add to
+                Clastor to train artificial intelligence models, nor for any
+                purpose not directly related to delivering the Services to you.
+              </p>
+            </div>
           </section>
 
           <section>
-            <h2 className="mb-4 text-3xl font-bold">
+            <h2 className="mb-4 text-3xl">
               Ways of collecting information
             </h2>
             <p className="mb-4 leading-relaxed text-muted-foreground">
@@ -138,11 +158,10 @@ export default function PrivacyPage() {
             </p>
             <ul className="list-disc space-y-2 pl-6 text-muted-foreground">
               <li>Access or use our Website;</li>
-              <li>Subscribe to, purchase or use our Services;</li>
+              <li>Create an account, or subscribe to or use our Services;</li>
               <li>
-                Use our Services as an authorised user (for example, as an
-                employee of one of our customers who provided you with access to
-                our services);
+                Use our Services as an invited team member (for example, as a
+                colleague invited by a tutor who holds the account);
               </li>
               <li>
                 Sign up to receive marketing material including exclusive
@@ -160,14 +179,15 @@ export default function PrivacyPage() {
               <li>Apply to work with us or are engaged by us.</li>
             </ul>
             <p className="mt-4 leading-relaxed text-muted-foreground">
-              We may collect personal information about you which may be
-              provided to us by a teacher or staff member working at a
-              particular school to which we provide our Services.
+              We may also receive limited information from third-party services
+              you choose to connect (such as Google, when you enable Calendar
+              sync) or from a colleague who invites you to a shared Clastor
+              workspace.
             </p>
           </section>
 
           <section>
-            <h2 className="mb-4 text-3xl font-bold">
+            <h2 className="mb-4 text-3xl">
               How do we use cookies and analytics?
             </h2>
             <p className="mb-4 leading-relaxed text-muted-foreground">
@@ -207,7 +227,7 @@ export default function PrivacyPage() {
           </section>
 
           <section>
-            <h2 className="mb-4 text-3xl font-bold">
+            <h2 className="mb-4 text-3xl">
               How we use and disclose information
             </h2>
             <p className="mb-4 leading-relaxed text-muted-foreground">
@@ -223,11 +243,15 @@ export default function PrivacyPage() {
               </li>
               <li>To verify your identity when you access our Services;</li>
               <li>
+                To send scheduling reminders, calendar invites, invoice emails,
+                and other communications through the Services on your behalf;
+              </li>
+              <li>
                 To communicate with you regarding our Services and to address any
                 updates, issues or complaints;
               </li>
               <li>
-                To consider you for a job at Clastor (whether as an employee or
+                To consider you for a role at Clastor (whether as an employee or
                 contractor) or other relationships with us;
               </li>
               <li>
@@ -239,21 +263,10 @@ export default function PrivacyPage() {
                 lawful manner.
               </li>
             </ul>
-            <div className="border-l-4 border-primary bg-primary/10 p-4 my-6">
-              <p className="text-sm font-medium">
-                <strong>No Training on Your Data:</strong> For schools,
-                institutions, and paid subscribers, we do not use your data for
-                any purposes beyond what is necessary to provide you with our
-                platform and services. We do not train any artificial
-                intelligence models on institutional or paid-subscriber data,
-                nor do we use it for any purposes not directly related to your
-                use of our Services.
-              </p>
-            </div>
           </section>
 
           <section>
-            <h2 className="mb-4 text-3xl font-bold">
+            <h2 className="mb-4 text-3xl">
               Who do we disclose personal information to?
             </h2>
             <p className="mb-4 leading-relaxed text-muted-foreground">
@@ -271,8 +284,13 @@ export default function PrivacyPage() {
                 Our employees, contractors and third party service providers who
                 assist us in performing our functions and activities;
               </li>
-              <li>Payment systems operators and financial institutions;</li>
+              <li>Payment systems operators (such as Stripe) and financial institutions;</li>
               <li>Cloud service providers and data storage providers;</li>
+              <li>
+                Integration providers you connect (such as Google, for Calendar
+                and Meet), only to the extent needed to provide the feature you
+                enabled;
+              </li>
               <li>
                 Telecommunications providers and IT support services providers;
               </li>
@@ -292,7 +310,7 @@ export default function PrivacyPage() {
           </section>
 
           <section>
-            <h2 className="mb-4 text-3xl font-bold">Data Security Practices</h2>
+            <h2 className="mb-4 text-3xl">Data Security Practices</h2>
             <p className="mb-4 leading-relaxed text-muted-foreground">
               We implement industry-standard security measures to protect your
               personal information:
@@ -303,8 +321,13 @@ export default function PrivacyPage() {
                 rest to protect your sensitive data;
               </li>
               <li>
+                <strong>Authentication:</strong> Accounts are protected by
+                secure authentication and session management;
+              </li>
+              <li>
                 <strong>Access Controls:</strong> We maintain strict access
-                controls and authentication systems;
+                controls so that only you (and teammates you invite) can access
+                your data;
               </li>
               <li>
                 <strong>Regular Audits:</strong> We conduct regular security
@@ -329,22 +352,22 @@ export default function PrivacyPage() {
           </section>
 
           <section>
-            <h2 className="mb-4 text-3xl font-bold">
+            <h2 className="mb-4 text-3xl">
               How long do we keep your personal information?
             </h2>
             <p className="leading-relaxed text-muted-foreground">
               We will keep your personal information only for as long as
               necessary to provide you with our Services, unless a longer
               retention period is required by law or specified in our retention
-              policy. When you request deletion of your data, we ensure it is
-              deleted completely from our systems, except where retention is
+              policy. When you request deletion of your data or your account, we
+              ensure it is deleted from our systems, except where retention is
               necessary to comply with legal obligations, resolve disputes, or
               maintain security.
             </p>
           </section>
 
           <section>
-            <h2 className="mb-4 text-3xl font-bold">
+            <h2 className="mb-4 text-3xl">
               Your rights in relation to information
             </h2>
             <p className="mb-4 leading-relaxed text-muted-foreground">
@@ -391,31 +414,19 @@ export default function PrivacyPage() {
           </section>
 
           <section>
-            <h2 className="mb-4 text-3xl font-bold">
-              Data Ownership and AI Training
-            </h2>
-            <div className="border-l-4 border-primary bg-primary/10 p-4 my-6">
-              <p className="mb-4 text-sm font-medium">
-                <strong>
-                  Institutional and Paid-Subscriber Data:
-                </strong>
-              </p>
-              <p className="text-sm">
-                Any school, educational institution, or organisation holding a
-                paid subscription with Clastor retains full and exclusive
-                ownership over all data submitted by or on behalf of that
-                organisation and its students. This includes all exam content,
-                student work, assessment data, and any other content uploaded or
-                generated through the use of our Services. We will not use
-                institutional or paid-subscriber data — including their
-                students&apos; data — for model training, product development, or
-                any purpose beyond delivering the Services to that organisation.
-              </p>
-            </div>
+            <h2 className="mb-4 text-3xl">Your responsibilities</h2>
+            <p className="leading-relaxed text-muted-foreground">
+              When you add information about your students or their guardians to
+              Clastor, you are responsible for making sure you have the right to
+              share that information with us for the purpose of providing the
+              Services. This may include obtaining consent from those
+              individuals and complying with the privacy laws that apply to you
+              and your tutoring business.
+            </p>
           </section>
 
           <section>
-            <h2 className="mb-4 text-3xl font-bold">
+            <h2 className="mb-4 text-3xl">
               Compliance and Best Practices
             </h2>
             <p className="mb-4 leading-relaxed text-muted-foreground">
@@ -450,7 +461,7 @@ export default function PrivacyPage() {
           </section>
 
           <section>
-            <h2 className="mb-4 text-3xl font-bold">
+            <h2 className="mb-4 text-3xl">
               How can you complain about a privacy issue?
             </h2>
             <p className="mb-4 leading-relaxed text-muted-foreground">
@@ -523,7 +534,7 @@ export default function PrivacyPage() {
           </section>
 
           <section>
-            <h2 className="mb-4 text-3xl font-bold">How to contact us</h2>
+            <h2 className="mb-4 text-3xl">How to contact us</h2>
             <p className="mb-4 leading-relaxed text-muted-foreground">
               If you have a query, concern or complaint about the manner in
               which your personal information has been collected or handled by us
@@ -549,7 +560,7 @@ export default function PrivacyPage() {
           </section>
 
           <section>
-            <h2 className="mb-4 text-3xl font-bold">International Data Transfers</h2>
+            <h2 className="mb-4 text-3xl">International Data Transfers</h2>
             <p className="leading-relaxed text-muted-foreground">
               We store personal information in secure data centers. Where we
               transfer personal information internationally, we take appropriate
@@ -562,7 +573,7 @@ export default function PrivacyPage() {
           </section>
 
           <section>
-            <h2 className="mb-4 text-3xl font-bold">
+            <h2 className="mb-4 text-3xl">
               Changes to this Privacy Policy
             </h2>
             <p className="leading-relaxed text-muted-foreground">
