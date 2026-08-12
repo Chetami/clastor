@@ -6,7 +6,7 @@ import { Integrations } from "@/sections/Integrations";
 import { Features } from "@/sections/Features";
 import { HowItWorks } from "@/sections/HowItWorks";
 import { Audience } from "@/sections/Audience";
-import { Testimonials } from "@/sections/Testimonials";
+import { Outcomes } from "@/sections/Outcomes";
 import { FAQ } from "@/sections/FAQ";
 import { FinalCTA } from "@/sections/FinalCTA";
 import { Footer } from "@/sections/Footer";
@@ -42,7 +42,7 @@ function Landing() {
       <HowItWorks />
       <Features />
       <Audience />
-      <Testimonials />
+      <Outcomes />
       <FAQ />
       <FinalCTA />
     </>

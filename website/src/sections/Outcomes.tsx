@@ -46,7 +46,7 @@ const OUTCOMES: Outcome[] = [
   },
 ];
 
-export function Testimonials() {
+export function Outcomes() {
   const ref = useReveal<HTMLDivElement>();
 
   return (
