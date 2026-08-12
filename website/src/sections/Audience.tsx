@@ -23,7 +23,7 @@ export function Audience() {
   const ref = useReveal<HTMLDivElement>();
 
   return (
-    <section id="for-teams" className="scroll-mt-20 px-5 py-24 sm:px-6 sm:py-28 lg:px-8">
+    <section id="for-teams" className="scroll-mt-20 px-5 py-12 sm:px-6 sm:py-14 lg:px-8">
       <div ref={ref} className="mx-auto max-w-[1180px]">
         <div className="reveal mb-12 max-w-[660px] sm:mb-14">
           <p className="eyebrow">For tutors &amp; teams</p>

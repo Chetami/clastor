@@ -67,7 +67,7 @@ export function SocialProof() {
           ))}
         </ul>
 
-        <p className="reveal mt-6 flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground">
+        <p className="reveal mt-6 flex items-center justify-center gap-1.5 text-center text-sm text-muted-foreground">
           <Sparkle className="h-3.5 w-3.5 shrink-0 text-brand" />
           <span>
             We&apos;re actively adding more.{" "}
