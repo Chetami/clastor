@@ -50,7 +50,7 @@ export function HowItWorks() {
   return (
     <section
       id="how-it-works"
-      className="scroll-mt-20 px-5 py-12 sm:px-6 sm:py-14 lg:px-8"
+      className="scroll-mt-20 px-5 pt-6 pb-6 sm:px-6 sm:pt-8 sm:pb-8 lg:px-8"
     >
       <div ref={ref} className="mx-auto max-w-[1180px]">
         <div className="reveal mb-12 max-w-[660px] sm:mb-14">

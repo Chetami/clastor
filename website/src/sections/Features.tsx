@@ -14,7 +14,7 @@ export function Features() {
   return (
     <section
       id="features"
-      className="relative scroll-mt-20 overflow-hidden px-5 py-12 sm:px-6 sm:py-14 lg:px-8"
+      className="relative scroll-mt-20 overflow-hidden px-5 pt-6 pb-12 sm:px-6 sm:pt-8 sm:pb-14 lg:px-8"
     >
       {/* Hand-drawn sparkle accents scattered in the margins. */}
       <Sparkle className="pointer-events-none absolute right-[5%] top-[7%] hidden h-8 w-8 rotate-12 text-brand/25 sm:block" />

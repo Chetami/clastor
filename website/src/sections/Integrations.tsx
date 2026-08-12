@@ -36,7 +36,7 @@ export function Integrations() {
   return (
     <section
       id="integrations"
-      className="relative scroll-mt-20 overflow-hidden px-5 py-16 sm:px-6 sm:py-20 lg:px-8"
+      className="relative scroll-mt-20 overflow-hidden px-5 pt-16 pb-8 sm:px-6 sm:pt-20 sm:pb-10 lg:px-8"
     >
       {/* Hand-drawn accent in the margin. */}
       <Star className="pointer-events-none absolute left-[5%] top-[6%] hidden h-7 w-7 rotate-6 text-[hsl(48_92%_60%)]/50 sm:block" />
