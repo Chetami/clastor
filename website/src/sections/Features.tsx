@@ -41,7 +41,7 @@ export function Features() {
           {/* Scheduling — large hero feature */}
           <FeatureBig
             title="Scheduling that writes itself."
-            description="Drop lessons onto the week, set a recurrence, and Clastor handles the rest — calendar sync, conflicts, and reminders sent automatically."
+            description="Drop lessons onto the week, set a recurrence, and Clastor handles the rest — calendar sync, meeting links, conflicts, and reminders sent automatically."
             index={0}
           >
             <MiniCalendar />

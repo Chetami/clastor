@@ -25,7 +25,10 @@ export function Audience() {
   const ref = useReveal<HTMLDivElement>();
 
   return (
-    <section id="for-teams" className="relative scroll-mt-20 overflow-hidden px-5 py-12 sm:px-6 sm:py-14 lg:px-8">
+    <section
+      id="for-teams"
+      className="relative scroll-mt-20 overflow-hidden px-5 py-12 sm:px-6 sm:py-14 lg:px-8"
+    >
       {/* Hand-drawn accents scattered in the margins. */}
       <Star className="pointer-events-none absolute right-[6%] top-[13%] hidden h-7 w-7 rotate-6 text-[hsl(280_60%_60%)]/45 sm:block" />
       <Sparkle className="pointer-events-none absolute left-[4%] bottom-[12%] hidden h-7 w-7 -rotate-12 text-[hsl(48_92%_60%)]/55 sm:block" />
@@ -33,11 +36,14 @@ export function Audience() {
         <div className="reveal mb-12 max-w-[660px] sm:mb-14">
           <p className="eyebrow">For tutors &amp; teams</p>
           <h2 className="mt-3.5 font-display text-[clamp(1.875rem,4.6vw,3.125rem)] leading-[1.12]">
-            Built for one. Grows into a few.
+            Built for solo tutors. Ready when you grow.
           </h2>
           <p className="mt-3.5 max-w-[54ch] text-[clamp(1rem,1.6vw,1.1875rem)] text-muted-foreground">
-            Clastor starts with the solo tutor in mind. When you bring on a
-            colleague, the team layer is already there.
+            Clastor is designed for the independent tutor.{" "}
+          </p>
+          <p className="mt-0 max-w-[54ch] text-[clamp(1rem,1.6vw,1.1875rem)] text-muted-foreground">
+            Running a tutoring organisation? The team layer is ready and
+            waiting.
           </p>
         </div>
 
@@ -66,8 +72,14 @@ export function Audience() {
             </p>
             <ul className="mb-6 flex flex-1 flex-col gap-3">
               {SOLO_POINTS.map((point) => (
-                <li key={point} className="flex items-start gap-3 text-base text-foreground">
-                  <Check className="mt-1 h-4 w-4 shrink-0 text-[hsl(143_54%_28%)]" strokeWidth={2.5} />
+                <li
+                  key={point}
+                  className="flex items-start gap-3 text-base text-foreground"
+                >
+                  <Check
+                    className="mt-1 h-4 w-4 shrink-0 text-[hsl(143_54%_28%)]"
+                    strokeWidth={2.5}
+                  />
                   {point}
                 </li>
               ))}
@@ -98,8 +110,14 @@ export function Audience() {
             </p>
             <ul className="mb-6 flex flex-1 flex-col gap-3">
               {TEAM_POINTS.map((point) => (
-                <li key={point} className="flex items-start gap-3 text-base text-foreground">
-                  <Check className="mt-1 h-4 w-4 shrink-0 text-[hsl(143_54%_28%)]" strokeWidth={2.5} />
+                <li
+                  key={point}
+                  className="flex items-start gap-3 text-base text-foreground"
+                >
+                  <Check
+                    className="mt-1 h-4 w-4 shrink-0 text-[hsl(143_54%_28%)]"
+                    strokeWidth={2.5}
+                  />
                   {point}
                 </li>
               ))}
