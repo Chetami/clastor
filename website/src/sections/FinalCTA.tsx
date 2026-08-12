@@ -7,7 +7,7 @@ export function FinalCTA() {
   const ref = useReveal<HTMLDivElement>();
 
   return (
-    <section className="px-5 py-24 sm:px-6 sm:py-28 lg:px-8">
+    <section className="px-5 py-4 sm:px-6 sm:py-6 lg:px-8">
       <div ref={ref} className="mx-auto max-w-[1180px]">
         <div className="reveal relative overflow-hidden rounded-3xl border-[3px] border-foreground bg-secondary px-6 py-16 text-center shadow-sketch-lg sm:px-12 sm:py-20">
           {/* Decorative doodle circles */}

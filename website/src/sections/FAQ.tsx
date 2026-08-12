@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import { Asterisk, Sparkle } from "@/components/Doodles";
+import { Sparkle } from "@/components/Doodles";
 import { useReveal } from "@/hooks/useReveal";
 import { cn } from "@/lib/utils";
 
@@ -51,10 +51,12 @@ export function FAQ() {
   const ref = useReveal<HTMLDivElement>();
 
   return (
-    <section id="faq" className="relative scroll-mt-20 overflow-hidden px-5 py-24 sm:px-6 sm:py-28 lg:px-8">
+    <section
+      id="faq"
+      className="relative scroll-mt-20 overflow-hidden px-5 py-16 sm:px-6 sm:py-20 lg:px-8"
+    >
       {/* Hand-drawn accents scattered in the margins. */}
       <Sparkle className="pointer-events-none absolute right-[7%] top-[12%] hidden h-8 w-8 rotate-12 text-brand/25 sm:block" />
-      <Asterisk className="pointer-events-none absolute right-[4%] bottom-[14%] hidden h-6 w-6 rotate-12 text-[hsl(168_60%_55%)]/45 sm:block" />
       <div ref={ref} className="mx-auto max-w-[1180px]">
         <div className="grid items-start gap-7 lg:grid-cols-[1fr_2fr] lg:gap-16">
           {/* Sidebar heading */}
@@ -95,7 +97,7 @@ function FAQItem({ faq }: { faq: QA }) {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between gap-5 py-5 text-left font-display text-[clamp(1.125rem,1.9vw,1.3125rem)] leading-snug text-foreground transition-colors hover:text-brand"
+        className="flex w-full items-center justify-between gap-5 py-5 text-left text-lg leading-relaxed text-foreground transition-colors hover:text-brand"
         aria-expanded={open}
       >
         {faq.question}
