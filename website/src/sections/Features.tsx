@@ -33,9 +33,9 @@ export function Features() {
         </div>
 
         {/* Bento grid — an asymmetric layout that avoids a cookie-cutter
-            feature wall. Scheduling anchors as a 2-row hero on the left;
-            Payments & Students sit beside it, Comms spans wide beneath
-            them, and Insights closes as a full-width finale. Every card
+            feature wall. Scheduling anchors the top-left with Insights
+            stacked directly beneath it; Payments & Students sit beside
+            Scheduling, and Comms spans wide beside Insights. Every card
             sizes to its content so nothing stretches or leaves gaps. */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {/* Scheduling — large hero feature */}
@@ -65,27 +65,25 @@ export function Features() {
             <MiniRoster />
           </FeatureCard>
 
+          {/* Insights — beneath Scheduling */}
+          <FeatureCard
+            title="Insights"
+            description="See hours taught, revenue, and outstanding balances at a glance. Know your business without a spreadsheet."
+            index={3}
+            className="sm:col-span-2 lg:col-span-2"
+          >
+            <MiniChart />
+          </FeatureCard>
+
           {/* Communications — wide, text beside visual */}
           <FeatureCard
             title="Communications"
             description="Reminders go out on schedule. Cancellations reshuffle automatically. Parents stay in the loop, gently."
-            index={3}
+            index={4}
             className="sm:col-span-2 lg:col-span-2"
             side
           >
             <MiniMessages />
-          </FeatureCard>
-
-          {/* Insights — full-width finale */}
-          <FeatureCard
-            title="Insights"
-            description="See hours taught, revenue, and outstanding balances at a glance. Know your business without a spreadsheet."
-            index={4}
-            className="sm:col-span-2 lg:col-span-4"
-            side
-            wide
-          >
-            <MiniChart />
           </FeatureCard>
         </div>
       </div>
@@ -152,7 +150,7 @@ function FeatureBig({
 }: Feature & { index: number; children?: React.ReactNode }) {
   return (
     <article
-      className="reveal doodle-card relative flex flex-col overflow-hidden rounded-3xl bg-secondary p-8 sm:col-span-2 lg:row-span-2"
+      className="reveal doodle-card relative flex flex-col overflow-hidden rounded-3xl bg-secondary p-8 sm:col-span-2"
       style={{ ["--reveal-delay" as string]: `${index * 80}ms` }}
     >
       <h3 className="mb-2.5 font-display text-[clamp(1.625rem,3vw,2rem)]">
@@ -185,7 +183,7 @@ function MiniCalendar() {
   ];
 
   return (
-    <div className="w-full max-w-[420px]">
+    <div className="mx-auto w-full max-w-[420px]">
       <div className="mb-2 flex items-center justify-between">
         <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-muted-foreground">
           This week
@@ -343,7 +341,7 @@ function MiniChart() {
     { day: "Sat", h: 20 },
   ];
   return (
-    <div className="flex w-full max-w-[340px] flex-col gap-3">
+    <div className="mx-auto flex w-full max-w-[340px] flex-col gap-3">
       <div className="flex items-end justify-between gap-2">
         {bars.map((b) => (
           <div

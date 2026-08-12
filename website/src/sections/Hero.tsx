@@ -16,7 +16,7 @@ export function Hero() {
       <Sparkle className="pointer-events-none absolute left-[6%] top-[58%] hidden h-7 w-7 -rotate-6 text-[hsl(48_92%_60%)] animate-float sm:block" />
       <div className="mx-auto grid max-w-[1040px] gap-10 text-center sm:gap-14">
         <div className="flex flex-col items-center">
-          <span className="eyebrow">Individual tutors in mind</span>
+          <span className="eyebrow">Private beta · now open</span>
 
           <h1 className="mt-5 font-display text-[clamp(2.875rem,8vw,5.375rem)] leading-[1.12]">
             Teach more.
@@ -26,13 +26,14 @@ export function Hero() {
           </h1>
 
           <p className="mt-6 max-w-[52ch] text-[clamp(1.0625rem,1.8vw,1.25rem)] leading-relaxed text-muted-foreground">
-            Clastor automates your scheduling, reminders, and invoicing — so you
-            never have to chase a payment again.
+            Clastor is in early access, and we're building it with a small group
+            of tutors. Join the beta, use it with your real students, and tell us
+            what's broken — scheduling, reminders, invoicing, all of it.
           </p>
 
           <div className="mt-7 flex flex-wrap justify-center gap-4">
             <Button asChild variant="brand" size="xl">
-              <a href={APP_URL}>Start free</a>
+              <a href={APP_URL}>Join the beta</a>
             </Button>
             <Button asChild variant="outline" size="xl">
               <a href="#how-it-works">
@@ -44,7 +45,7 @@ export function Hero() {
 
           <p className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
             <Check className="h-3.5 w-3.5 text-success" />
-            Free for your first 10 students. No card required.
+            Free during beta. No card needed — we just want your honest feedback.
           </p>
         </div>
 

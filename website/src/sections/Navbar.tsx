@@ -61,7 +61,7 @@ export function Navbar() {
             Sign in
           </a>
           <Button asChild variant="brand" size="sm">
-            <a href={APP_URL}>Start free</a>
+            <a href={APP_URL}>Join the beta</a>
           </Button>
         </div>
 
@@ -97,7 +97,7 @@ export function Navbar() {
             onClick={() => setOpen(false)}
             className="mt-4 text-lg text-brand"
           >
-            Start free →
+            Join the beta →
           </a>
         </div>
       </div>
