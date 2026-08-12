@@ -24,7 +24,7 @@ const STEPS: Step[] = [
     num: "1",
     title: "Add your students",
     description:
-      "Import contacts or start fresh. Add billing rates, subjects, and guardian details once — they're reused everywhere.",
+      "Import contacts or start fresh. Add billing rates, subjects, and guardian details once. They're automatically used everywhere.",
   },
   {
     icon: CalendarCheck,
