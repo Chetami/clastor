@@ -1,5 +1,5 @@
 import { useReveal } from "@/hooks/useReveal";
-import { Sparkle } from "@/components/Doodles";
+import { Sparkle, Star } from "@/components/Doodles";
 import {
   GoogleCalendarIcon,
   GoogleMeetIcon,
@@ -36,8 +36,10 @@ export function Integrations() {
   return (
     <section
       id="integrations"
-      className="scroll-mt-20 px-5 py-16 sm:px-6 sm:py-20 lg:px-8"
+      className="relative scroll-mt-20 overflow-hidden px-5 py-16 sm:px-6 sm:py-20 lg:px-8"
     >
+      {/* Hand-drawn accent in the margin. */}
+      <Star className="pointer-events-none absolute left-[5%] top-[22%] hidden h-7 w-7 rotate-6 text-[hsl(48_92%_60%)]/50 sm:block" />
       <div ref={ref} className="mx-auto max-w-[1180px]">
         <div className="reveal mb-9 max-w-[660px]">
           <p className="eyebrow">Integrations</p>

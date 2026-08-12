@@ -319,12 +319,18 @@ function MiniMessages() {
         </b>
         Liam's Physics lesson — tomorrow 4pm
       </div>
+      <div className="max-w-[80%] self-start rounded-2xl rounded-bl-md border-[1.5px] border-dashed border-foreground bg-secondary px-3 py-2 text-xs font-semibold text-foreground">
+        <b className="mb-0.5 block font-mono text-[9px] font-bold uppercase tracking-wide text-foreground">
+          Rescheduled · auto
+        </b>
+        Noah's Maths moved to Fri 3:30pm
+      </div>
       <div className="max-w-[80%] self-end rounded-2xl rounded-br-md border-[1.5px] border-foreground bg-brand px-3 py-2 text-xs font-bold text-foreground">
         Thanks! We'll be there.
       </div>
       <span className="flex items-center gap-1.5 self-start font-mono text-[10px] uppercase tracking-[0.08em] text-foreground">
         <Check className="h-3 w-3 text-success" strokeWidth={2.5} />
-        Sent · 2 reminders this week
+        Sent · 2 notices this week
       </span>
     </div>
   );

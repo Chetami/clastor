@@ -1,6 +1,7 @@
 import { ArrowRight, Check } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Sparkle, Squiggle } from "@/components/Doodles";
 import { SoloTutorIllustration } from "@/components/SoloTutorIllustration";
 import { TeamTutorIllustration } from "@/components/TeamTutorIllustration";
 import { useReveal } from "@/hooks/useReveal";
@@ -24,7 +25,10 @@ export function Audience() {
   const ref = useReveal<HTMLDivElement>();
 
   return (
-    <section id="for-teams" className="scroll-mt-20 px-5 py-12 sm:px-6 sm:py-14 lg:px-8">
+    <section id="for-teams" className="relative scroll-mt-20 overflow-hidden px-5 py-12 sm:px-6 sm:py-14 lg:px-8">
+      {/* Hand-drawn accents scattered in the margins. */}
+      <Squiggle className="pointer-events-none absolute right-[6%] top-[13%] hidden h-5 w-28 rotate-3 text-[hsl(280_60%_60%)]/40 sm:block" />
+      <Sparkle className="pointer-events-none absolute left-[4%] bottom-[12%] hidden h-7 w-7 -rotate-12 text-[hsl(48_92%_60%)]/55 sm:block" />
       <div ref={ref} className="mx-auto max-w-[1180px]">
         <div className="reveal mb-12 max-w-[660px] sm:mb-14">
           <p className="eyebrow">For tutors &amp; teams</p>
