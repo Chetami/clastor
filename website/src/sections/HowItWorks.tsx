@@ -56,11 +56,11 @@ export function HowItWorks() {
         <div className="reveal mb-12 max-w-[660px] sm:mb-14">
           <p className="eyebrow">How it works</p>
           <h2 className="mt-3.5 font-display text-[clamp(1.875rem,4.6vw,3.125rem)] leading-[1.12]">
-            Three steps from setup to paid.
+            3 steps from setup to paid.
           </h2>
           <p className="mt-3.5 max-w-[54ch] text-[clamp(1rem,1.6vw,1.1875rem)] text-muted-foreground">
-            You can be running in an afternoon. Most tutors send their first
-            Clastor invoice the same day they sign up.
+            Clastor is so simple you’ll be sending invoices and getting paid on
+            day one.
           </p>
         </div>
 

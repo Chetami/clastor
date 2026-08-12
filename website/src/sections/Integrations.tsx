@@ -34,7 +34,10 @@ export function Integrations() {
   const ref = useReveal<HTMLDivElement>();
 
   return (
-    <section id="integrations" className="scroll-mt-20 px-5 py-16 sm:px-6 sm:py-20 lg:px-8">
+    <section
+      id="integrations"
+      className="scroll-mt-20 px-5 py-16 sm:px-6 sm:py-20 lg:px-8"
+    >
       <div ref={ref} className="mx-auto max-w-[1180px]">
         <div className="reveal mb-9 max-w-[660px]">
           <p className="eyebrow">Integrations</p>
@@ -56,9 +59,7 @@ export function Integrations() {
             >
               <Icon className="h-12 w-12" />
               <div>
-                <h3 className="font-display text-2xl leading-tight">
-                  {name}
-                </h3>
+                <h3 className="font-display text-2xl leading-tight">{name}</h3>
                 <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
                   {description}
                 </p>
