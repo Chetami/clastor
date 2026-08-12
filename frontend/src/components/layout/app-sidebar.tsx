@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { Logo } from "@/components/ui/logo";
+import { BrandMark } from "@/features/auth/BrandMark";
 
 import {
   Sidebar,
@@ -63,13 +63,7 @@ export function AppSidebar() {
             <SidebarMenuItem>
               <SidebarMenuButton size="lg" asChild>
                 <Link to="/dashboard">
-                  <Logo size={32} className="shrink-0" />
-                  <div className="grid flex-1 text-left text-sm leading-tight">
-                    <span className="truncate font-semibold">Clastor</span>
-                    <span className="truncate text-xs text-muted-foreground">
-                      Tutor Management
-                    </span>
-                  </div>
+                  <BrandMark size={32} subtitle="Tutor Management" />
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>

@@ -7,13 +7,23 @@ type BrandMarkProps = {
   size?: number;
   /** Whether to show the app name text */
   showName?: boolean;
+  /** Optional subtitle rendered under the name (e.g. "Tutor Management"). */
+  subtitle?: string;
 };
 
-export function BrandMark({ className, size = 40, showName = true }: BrandMarkProps) {
+export function BrandMark({ className, size = 40, showName = true, subtitle }: BrandMarkProps) {
   return (
     <div className={cn("flex items-center gap-2.5", className)}>
       <LogoMark size={size} />
-      {showName && <span className="text-xl font-semibold tracking-tight">Clastor</span>}
+      {showName &&
+        (subtitle ? (
+          <div className="grid min-w-0 flex-1 text-left leading-tight">
+            <span className="font-display text-base tracking-tight">Clastor</span>
+            <span className="truncate text-xs text-muted-foreground">{subtitle}</span>
+          </div>
+        ) : (
+          <span className="font-display text-xl tracking-tight">Clastor</span>
+        ))}
     </div>
   );
 }
