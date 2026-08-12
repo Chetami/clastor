@@ -1,18 +1,9 @@
-import {
-  BarChart3,
-  Bell,
-  CalendarClock,
-  Check,
-  CreditCard,
-  Users,
-  type LucideIcon,
-} from "lucide-react";
+import { Check } from "lucide-react";
 
 import { Sparkle } from "@/components/Doodles";
 import { useReveal } from "@/hooks/useReveal";
 
 interface Feature {
-  icon: LucideIcon;
   title: string;
   description: string;
 }
@@ -49,7 +40,6 @@ export function Features() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {/* Scheduling — large hero feature */}
           <FeatureBig
-            icon={CalendarClock}
             title="Scheduling that writes itself."
             description="Drop lessons onto the week, set a recurrence, and Clastor handles the rest — calendar sync, conflicts, and reminders sent automatically."
             index={0}
@@ -59,7 +49,6 @@ export function Features() {
 
           {/* Payments */}
           <FeatureCard
-            icon={CreditCard}
             title="Payments"
             description="Branded invoices and one-tap payment links. No more chasing parents for unpaid lessons."
             index={1}
@@ -69,7 +58,6 @@ export function Features() {
 
           {/* Students */}
           <FeatureCard
-            icon={Users}
             title="Students"
             description="One record per learner — history, notes, and billing together. Nothing slips through."
             index={2}
@@ -79,7 +67,6 @@ export function Features() {
 
           {/* Communications — wide, text beside visual */}
           <FeatureCard
-            icon={Bell}
             title="Communications"
             description="Reminders go out on schedule. Cancellations reshuffle automatically. Parents stay in the loop, gently."
             index={3}
@@ -91,7 +78,6 @@ export function Features() {
 
           {/* Insights — full-width finale */}
           <FeatureCard
-            icon={BarChart3}
             title="Insights"
             description="See hours taught, revenue, and outstanding balances at a glance. Know your business without a spreadsheet."
             index={4}
@@ -108,7 +94,6 @@ export function Features() {
 }
 
 function FeatureCard({
-  icon: Icon,
   title,
   description,
   index,
@@ -125,15 +110,12 @@ function FeatureCard({
 }) {
   return (
     <article
-      className={`reveal doodle-card flex min-h-[200px] flex-col rounded-3xl transition-transform duration-300 hover:-translate-x-[3px] hover:-translate-y-[3px] hover:shadow-sketch-lg ${
+      className={`reveal doodle-card flex min-h-[200px] flex-col rounded-3xl ${
         side ? "lg:flex-row lg:items-center lg:gap-10" : ""
       } ${wide ? "p-7 lg:p-6" : side ? "p-6" : "p-7"} ${className}`}
       style={{ ["--reveal-delay" as string]: `${index * 80}ms` }}
     >
       <div className={side ? "lg:flex-1" : ""}>
-        <span className="mb-4 flex h-11 w-11 items-center justify-center rounded-full border-[2.5px] border-foreground bg-brand text-foreground shadow-sketch">
-          <Icon className="h-5 w-5" strokeWidth={2.2} />
-        </span>
         <h3
           className={`mb-2 font-display ${
             wide ? "text-[clamp(1.5rem,2.6vw,2rem)]" : "text-2xl"
@@ -163,7 +145,6 @@ function FeatureCard({
 }
 
 function FeatureBig({
-  icon: Icon,
   title,
   description,
   index,
@@ -174,9 +155,6 @@ function FeatureBig({
       className="reveal doodle-card relative flex flex-col overflow-hidden rounded-3xl bg-secondary p-8 sm:col-span-2 lg:row-span-2"
       style={{ ["--reveal-delay" as string]: `${index * 80}ms` }}
     >
-      <span className="mb-4 flex h-12 w-12 items-center justify-center rounded-full border-[2.5px] border-foreground bg-brand text-foreground shadow-sketch">
-        <Icon className="h-6 w-6" strokeWidth={2.2} />
-      </span>
       <h3 className="mb-2.5 font-display text-[clamp(1.625rem,3vw,2rem)]">
         {title}
       </h3>
@@ -323,16 +301,16 @@ function MiniRoster() {
 function MiniMessages() {
   return (
     <div className="flex w-full max-w-[220px] flex-col gap-2">
-      <div className="max-w-[80%] self-start rounded-2xl rounded-bl-md border-[1.5px] border-foreground bg-secondary px-3 py-2 text-xs">
-        <b className="mb-0.5 block font-mono text-[9px] uppercase tracking-wide text-muted-foreground">
+      <div className="max-w-[80%] self-start rounded-2xl rounded-bl-md border-[1.5px] border-foreground bg-secondary px-3 py-2 text-xs font-semibold text-foreground">
+        <b className="mb-0.5 block font-mono text-[9px] font-bold uppercase tracking-wide text-foreground">
           Reminder · auto
         </b>
         Liam's Physics lesson — tomorrow 4pm
       </div>
-      <div className="max-w-[80%] self-end rounded-2xl rounded-br-md border-[1.5px] border-foreground bg-brand px-3 py-2 text-xs">
+      <div className="max-w-[80%] self-end rounded-2xl rounded-br-md border-[1.5px] border-foreground bg-brand px-3 py-2 text-xs font-bold text-foreground">
         Thanks! We'll be there.
       </div>
-      <span className="flex items-center gap-1.5 self-start font-mono text-[10px] uppercase tracking-[0.08em] text-muted-foreground">
+      <span className="flex items-center gap-1.5 self-start font-mono text-[10px] uppercase tracking-[0.08em] text-foreground">
         <Check className="h-3 w-3 text-success" strokeWidth={2.5} />
         Sent · 2 reminders this week
       </span>
