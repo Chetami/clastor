@@ -18,7 +18,7 @@ const FAQS: QA[] = [
   {
     question: "Is my students' data safe?",
     answer:
-      "Data is encrypted in transit and at rest, stored in the EU, and never sold. You can export everything as a spreadsheet at any time, and delete your account along with all records whenever you choose.",
+      "Data is encrypted in transit and at rest, and never sold. You can export everything as a spreadsheet at any time, and delete your account along with all records whenever you choose.",
   },
   {
     question: "I'm not very tech-savvy — is it hard to set up?",
@@ -28,7 +28,7 @@ const FAQS: QA[] = [
   {
     question: "I only have a few students. Is it worth it?",
     answer:
-      "Clastor is free for your first 10 students. If you teach fewer than that, the reminders, branded invoices, and calendar sync still save you an evening a week — and they make you look established to new families.",
+      "Clastor is in beta right now, which means pricing is generous and your feedback genuinely shapes what we build next. If you're willing to give it a go and tell us what's working (and what isn't), we promise to make it worth your while.",
   },
   {
     question: "How do payments work? Do I need Stripe?",
@@ -38,12 +38,12 @@ const FAQS: QA[] = [
   {
     question: "Can I use it with my tutoring team?",
     answer:
-      "Yes. Invite a colleague to a shared workspace, keep one student record across tutors, and choose split or pooled invoicing. Per-tutor filters keep everyone's schedule legible at a glance.",
+      "We're working on organisation support so teams of tutors can share a workspace. It's not ready yet, but if that's what you need, we'd love to hear from you so we can prioritise it.",
   },
   {
     question: "Will my invoices look professional?",
     answer:
-      "That's the point. Each invoice carries your name, subject, and logo on a clean template — the same one whether it's your first student or your fortieth. Parents regularly comment on how polished it looks.",
+      "That's the point. Each invoice carries your name, subject, and logo on a clean template, whether it's your first student or your fortieth.",
   },
 ];
 
