@@ -42,9 +42,9 @@ export function Integrations() {
         <div className="reveal mb-9 max-w-[660px]">
           <p className="eyebrow">Integrations</p>
           <h2 className="mt-3.5 font-display text-[clamp(1.75rem,4vw,2.625rem)] leading-[1.12]">
-            Works with the tools you already use.
+            Plugs into your existing workflow
           </h2>
-          <p className="mt-3.5 max-w-[52ch] text-sm leading-relaxed text-muted-foreground">
+          <p className="mt-3.5 max-w-[54ch] text-[clamp(1rem,1.6vw,1.1875rem)] text-muted-foreground">
             No ripping and replacing your calendar or your bank. Clastor sits
             alongside the apps you trust.
           </p>

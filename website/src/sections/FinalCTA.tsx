@@ -37,11 +37,11 @@ export function FinalCTA() {
 
             <div className="mt-7">
               <Button asChild variant="brand" size="xl">
-                <a href={APP_URL}>Start free</a>
+                <a href={APP_URL}>Request beta access</a>
               </Button>
             </div>
             <p className="mt-4 text-sm text-muted-foreground">
-              No card required · Cancel anytime
+              Limited spots · No card needed
             </p>
           </div>
         </div>

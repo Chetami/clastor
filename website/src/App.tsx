@@ -71,7 +71,7 @@ function NotFound() {
           href={APP_URL}
           className="inline-flex h-12 items-center rounded-full border-[2.5px] border-foreground bg-brand px-8 text-lg shadow-sketch transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-sketch-lg"
         >
-          Start free
+          Join the beta
         </a>
       </div>
     </section>

@@ -58,7 +58,7 @@ export function Audience() {
               Run your tutoring like a business.
             </h3>
             <p className="mb-5 text-base text-muted-foreground">
-              For 5–40 students · Free to start
+              For 5–40 students · Beta open
             </p>
             <ul className="mb-6 flex flex-1 flex-col gap-3">
               {SOLO_POINTS.map((point) => (
@@ -69,7 +69,7 @@ export function Audience() {
               ))}
             </ul>
             <Button asChild variant="brand" className="self-start">
-              <a href={APP_URL}>Start free</a>
+              <a href={APP_URL}>Try the beta</a>
             </Button>
           </article>
 
