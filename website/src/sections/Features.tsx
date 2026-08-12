@@ -42,9 +42,11 @@ export function Features() {
         </div>
 
         {/* Bento grid — an asymmetric layout that avoids a cookie-cutter
-            feature wall. Scheduling anchors as a 2×2 hero; the rest fall
-            into narrow + wide cells around it, with a full-width finale. */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:auto-rows-fr">
+            feature wall. Scheduling anchors as a 2-row hero on the left;
+            Payments & Students sit beside it, Comms spans wide beneath
+            them, and Insights closes as a full-width finale. Every card
+            sizes to its content so nothing stretches or leaves gaps. */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {/* Scheduling — large hero feature */}
           <FeatureBig
             icon={CalendarClock}
