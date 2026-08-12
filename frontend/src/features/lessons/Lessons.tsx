@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   CalendarClock,
   ChevronRight,
@@ -54,8 +54,16 @@ export default function Lessons() {
     return map;
   }, [students]);
 
+  const go = (lesson: (typeof lessons)[number]) =>
+    navigate(
+      lesson.seriesId
+        ? `/lessons/series/${lesson.seriesId}`
+        : `/lessons/${lesson.id}`,
+    );
+
   return (
     <div className="space-y-6">
+      <h1 className="sr-only">Lessons</h1>
       <ActionableLessons />
 
       {isLoading && (
@@ -65,10 +73,13 @@ export default function Lessons() {
       )}
 
       {error && (
-        <div className="flex items-center justify-center py-12">
+        <div className="flex flex-col items-center justify-center gap-3 py-12">
           <p className="text-sm text-destructive">
             Failed to load lessons. Please try again.
           </p>
+          <Button variant="outline" size="sm" onClick={() => infinite.refetch()}>
+            Retry
+          </Button>
         </div>
       )}
 
@@ -88,11 +99,14 @@ export default function Lessons() {
           </CardHeader>
           <CardContent>
             {lessons.length === 0 ? (
-              <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
+              <div className="flex flex-col items-center justify-center gap-3 py-12 text-center">
                 <CalendarClock className="h-8 w-8 text-muted-foreground" />
                 <p className="text-sm text-muted-foreground">
                   No lessons here yet. Schedule one from the calendar.
                 </p>
+                <Button asChild variant="outline" size="sm">
+                  <Link to="/schedule">Open calendar</Link>
+                </Button>
               </div>
             ) : (
               <>
@@ -105,14 +119,17 @@ export default function Lessons() {
                     return (
                       <li
                         key={lesson.id}
-                        className="group flex cursor-pointer items-center justify-between gap-4 px-6 py-3 transition-colors hover:bg-accent/40"
-                        onClick={() =>
-                          navigate(
-                            lesson.seriesId
-                              ? `/lessons/series/${lesson.seriesId}`
-                              : `/lessons/${lesson.id}`,
-                          )
-                        }
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`${name}${lesson.subject ? ` — ${lesson.subject}` : ""}. ${formatLessonDate(lesson.startDateTime)} at ${formatLessonTime(lesson.startDateTime)}. Open lesson.`}
+                        className="group flex cursor-pointer items-center justify-between gap-4 rounded-sm px-6 py-3 outline-none transition-colors hover:bg-accent/40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+                        onClick={() => go(lesson)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            go(lesson);
+                          }
+                        }}
                       >
                         <div className="flex min-w-0 flex-1 items-center gap-3">
                           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-medium text-primary">
@@ -167,8 +184,9 @@ export default function Lessons() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="opacity-0 transition-opacity group-hover:opacity-100"
                             tabIndex={-1}
+                            aria-hidden
+                            className="pointer-events-none opacity-0 transition-opacity group-hover:opacity-100"
                           >
                             <ChevronRight className="h-4 w-4" />
                           </Button>

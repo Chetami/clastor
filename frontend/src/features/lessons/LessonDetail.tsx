@@ -122,17 +122,12 @@ export default function EventDetail() {
     }
   }
 
-  async function handleCancel() {
+  function handleCancel() {
     if (!lesson) return;
-    if (lesson.acceptanceStatus === "accepted" || lesson.seriesId) {
-      setCancelOpen(true);
-      return;
-    }
-    try {
-      await cancelLesson.mutateAsync();
-    } catch (err) {
-      setPickerError(err instanceof Error ? err.message : "Failed to cancel lesson");
-    }
+    // Always confirm before cancelling — even one-off pending lessons — to
+    // avoid a destructive one-click action. The dialog owns the cancel flow
+    // (notify checkbox, series scope, email review).
+    setCancelOpen(true);
   }
 
   async function handleResync() {

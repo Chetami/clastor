@@ -41,9 +41,13 @@ export function useLessonChecklist(
   const saveTodos = useCallback(
     async (nextTodos: LessonTodo[]) => {
       if (!eventId) return;
+      const previous = todosRef.current;
       try {
         await updateLesson.mutateAsync({ todos: nextTodos });
       } catch {
+        // Roll back the optimistic update so the UI matches the server.
+        setTodos(previous);
+        todosRef.current = previous;
         toast.error("Failed to save todos");
       }
     },

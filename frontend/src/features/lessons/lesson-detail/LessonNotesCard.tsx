@@ -55,11 +55,12 @@ export function LessonNotesCard({
           onKeyDown={handleNotesKeyDown}
           rows={6}
           placeholder="Prep notes, topics to cover, follow-ups…"
+          aria-label="Lesson notes"
           className="resize-none"
         />
         {!notesDraft && (
           <p className="mt-2 text-xs text-muted-foreground">
-            Saved automatically as you type.{" "}
+            Saved when you click away.{" "}
             <span className="hidden sm:inline">
               Press <kbd className="rounded border px-1">⌘</kbd>+
               <kbd className="rounded border px-1">Enter</kbd> to save,{" "}

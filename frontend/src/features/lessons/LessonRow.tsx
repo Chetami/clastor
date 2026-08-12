@@ -19,6 +19,7 @@ import {
   isToday,
   lessonBadge,
 } from "@/features/lessons/lesson-display";
+import { isLessonFinished } from "@/features/schedule/lesson-utils";
 import { lessonIssues, ACCEPTANCE_TONE } from "./lesson-series-utils";
 
 export interface LessonRowProps {
@@ -68,7 +69,7 @@ export function LessonRow({ lesson }: LessonRowProps) {
   } = useMarkAttendanceAndInvoice();
 
   const cancelled = !!lesson.isCancelled;
-  const isFinished = end.getTime() < Date.now();
+  const isFinished = isLessonFinished(lesson);
   const dimmed = cancelled || isFinished;
   const destructiveDisabled = cancelled || isFinished;
 

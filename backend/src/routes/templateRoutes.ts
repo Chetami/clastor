@@ -12,6 +12,7 @@ import {
   getInvoiceEmailPreview,
 } from "../controllers/templateController";
 import { authenticateJWT, requireRole } from "../middleware/auth";
+import { requireFeature } from "../middleware/featureFlags";
 
 const router = Router();
 
@@ -20,7 +21,7 @@ const router = Router();
  * templates against fixed sample data so tutors can see exactly what an
  * invoice, reminder, or Meet invite will look like. Tutors + admins only.
  */
-router.use(authenticateJWT, requireRole("tutor", "system_admin"));
+router.use(requireFeature("templates"), authenticateJWT, requireRole("tutor", "system_admin"));
 
 router.get("/", listAllTemplates);
 router.get("/invoice/preview", getInvoicePreview);

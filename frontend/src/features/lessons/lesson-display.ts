@@ -72,18 +72,6 @@ export function lessonBadge(lesson: LessonResponse): LessonBadge {
       tone: "bg-rose-500/15 text-rose-600 dark:text-rose-400",
     };
   }
-  if (lesson.attendanceStatus === "tutor_cancelled") {
-    return {
-      label: "Tutor cancelled",
-      tone: "bg-rose-500/15 text-rose-600 dark:text-rose-400",
-    };
-  }
-  if (lesson.attendanceStatus === "tutor_cancelled_makeup_issued") {
-    return {
-      label: "Tutor cancelled — credited",
-      tone: "bg-amber-500/15 text-amber-600 dark:text-amber-400",
-    };
-  }
   return {
     label: ATTENDANCE_LABELS[lesson.attendanceStatus],
     tone: attendanceTone(lesson.attendanceStatus),

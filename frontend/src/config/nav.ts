@@ -29,8 +29,8 @@ const allNavItems: NavItem[] = [
   { title: "Schedule", href: "/schedule", icon: CalendarDays, roles: ["tutor"] },
   { title: "Lessons", href: "/lessons", icon: BookOpen, roles: ["tutor"] },
   { title: "Payments", href: "/payments", icon: CreditCard, roles: ["tutor"] },
-  { title: "Sent Emails", href: "/sent-emails", icon: Mail, roles: ["tutor"] },
-  { title: "Templates", href: "/templates", icon: LayoutTemplate, roles: ["tutor"] },
+  { title: "Sent Emails", href: "/sent-emails", icon: Mail, feature: "sentEmails", roles: ["tutor"] },
+  { title: "Templates", href: "/templates", icon: LayoutTemplate, feature: "templates", roles: ["tutor"] },
   {
     title: "Public Profile",
     href: "/profile",

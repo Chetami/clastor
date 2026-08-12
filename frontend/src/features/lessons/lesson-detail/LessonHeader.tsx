@@ -24,6 +24,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { useNow } from "@/lib/use-now";
 import {
   ACCEPTANCE_LABELS,
   isLessonFinished,
@@ -75,17 +76,18 @@ export function LessonHeader({
   const canManage = !lesson.isCancelled && !lessonFinished;
   const showOverflow = canManage || (!lesson.isCancelled && googleConnected);
 
+  // Keep the cooldown countdown ticking while the page is open.
+  const now = useNow();
+
   const notifiedAt = lesson.lastStudentNotifiedAt
     ? new Date(lesson.lastStudentNotifiedAt)
     : null;
   const nextAllowedAt = notifiedAt
     ? new Date(notifiedAt.getTime() + STUDENT_NOTIFY_COOLDOWN_MS)
     : null;
-  const cooldownActive = nextAllowedAt
-    ? Date.now() < nextAllowedAt.getTime()
-    : false;
+  const cooldownActive = nextAllowedAt ? now < nextAllowedAt.getTime() : false;
   const cooldownRemaining = cooldownActive
-    ? formatMsRemaining(nextAllowedAt!.getTime() - Date.now())
+    ? formatMsRemaining(nextAllowedAt!.getTime() - now)
     : "";
 
   return (

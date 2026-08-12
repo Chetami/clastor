@@ -91,8 +91,17 @@ export function LessonActionRow({
 }: LessonActionRowProps) {
   return (
     <li
-      className="group flex cursor-pointer items-center justify-between gap-3 px-6 py-2.5 transition-colors hover:bg-accent/40"
+      role="button"
+      tabIndex={0}
+      aria-label={`${name}${subject ? ` — ${subject}` : ""}. ${formatLessonDate(startDateTime)} at ${formatLessonTime(startDateTime)}. Open lesson.`}
+      className="group flex cursor-pointer items-center justify-between gap-3 rounded-sm px-6 py-2.5 outline-none transition-colors hover:bg-accent/40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
       onClick={onRowClick}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onRowClick();
+        }
+      }}
     >
       <div className="flex min-w-0 flex-1 items-center gap-2.5">
         <div
@@ -157,9 +166,17 @@ export function OverdueActionRow({
 
   return (
     <li
-      key={row.key}
-      className="group flex cursor-pointer items-center justify-between gap-3 px-6 py-2.5 transition-colors hover:bg-accent/40"
+      role="button"
+      tabIndex={0}
+      aria-label={`${row.customerName} — ${row.description}. ${formatCurrency(row.amount, row.currency)} due ${formatDate(row.dueDate)}. Open invoice.`}
+      className="group flex cursor-pointer items-center justify-between gap-3 rounded-sm px-6 py-2.5 outline-none transition-colors hover:bg-accent/40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
       onClick={onRowClick}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onRowClick();
+        }
+      }}
     >
       <div className="flex min-w-0 flex-1 items-center gap-2.5">
         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-rose-500/10 text-xs font-medium text-rose-600 dark:text-rose-400">

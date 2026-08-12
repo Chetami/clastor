@@ -19,6 +19,7 @@ import {
   ATTENDANCE_OPTIONS,
   formatMsRemaining,
 } from "@/features/schedule/lesson-utils";
+import { useNow } from "@/lib/use-now";
 
 interface LessonOutcomeProps {
   lesson: LessonResponse;
@@ -43,17 +44,18 @@ export function LessonOutcome({
   onAttendanceChange,
   onResync,
 }: LessonOutcomeProps) {
+  // Keep the cooldown countdown ticking while the page is open.
+  const now = useNow();
+
   const notifiedAt = lesson.lastStudentNotifiedAt
     ? new Date(lesson.lastStudentNotifiedAt)
     : null;
   const nextAllowedAt = notifiedAt
     ? new Date(notifiedAt.getTime() + STUDENT_NOTIFY_COOLDOWN_MS)
     : null;
-  const cooldownActive = nextAllowedAt
-    ? Date.now() < nextAllowedAt.getTime()
-    : false;
+  const cooldownActive = nextAllowedAt ? now < nextAllowedAt.getTime() : false;
   const cooldownRemaining = cooldownActive
-    ? formatMsRemaining(nextAllowedAt!.getTime() - Date.now())
+    ? formatMsRemaining(nextAllowedAt!.getTime() - now)
     : "";
 
   return (
@@ -72,7 +74,7 @@ export function LessonOutcome({
           <Select
             value={lesson.attendanceStatus}
             onValueChange={(v) => onAttendanceChange(v as AttendanceStatus)}
-            disabled={recordAttendancePending}
+            disabled={recordAttendancePending || lesson.isCancelled}
           >
             <SelectTrigger className="w-full">
               <SelectValue />

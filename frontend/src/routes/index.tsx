@@ -75,8 +75,12 @@ export const router = createBrowserRouter([
                     { path: "lessons/series/:seriesId", element: <LessonSeriesDetail /> },
                     { path: "lessons/:eventId", element: <EventDetail /> },
                     { path: "schedule", element: <Schedule /> },
-                    { path: "templates", element: <Templates /> },
-                    { path: "sent-emails", element: <SentEmails /> },
+                    ...(isFeatureEnabled("templates")
+                      ? [{ path: "templates" as const, element: <Templates /> }]
+                      : []),
+                    ...(isFeatureEnabled("sentEmails")
+                      ? [{ path: "sent-emails" as const, element: <SentEmails /> }]
+                      : []),
                     { path: "settings", element: <Settings /> },
                     {
                       path: "settings/payments",

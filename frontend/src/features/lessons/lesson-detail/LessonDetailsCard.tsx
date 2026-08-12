@@ -34,6 +34,10 @@ type UpdateLessonMutation = UseMutationResult<
   UpdateLessonRequest
 >;
 
+// Radix Select treats value="" as the placeholder sentinel, so use a stable
+// non-empty sentinel to represent "no subject".
+const NO_SUBJECT = "__none__";
+
 interface LessonDetailsCardProps {
   lesson: LessonResponse;
   studentName: string;
@@ -69,7 +73,8 @@ export function LessonDetailsCard({
   async function handleSubjectChange(value: string) {
     setSubjectError(null);
     try {
-      await updateLesson.mutateAsync({ subject: value || null });
+      const resolved = value === NO_SUBJECT ? null : value;
+      await updateLesson.mutateAsync({ subject: resolved });
     } catch (err) {
       setSubjectError(
         err instanceof Error ? err.message : "Failed to update subject",
@@ -143,7 +148,7 @@ export function LessonDetailsCard({
           <div className="min-w-0 space-y-1">
             <p className="text-xs text-muted-foreground">Subject</p>
             <Select
-              value={subject ?? ""}
+              value={subject ?? NO_SUBJECT}
               onValueChange={handleSubjectChange}
               disabled={updateLesson.isPending}
             >
@@ -157,7 +162,7 @@ export function LessonDetailsCard({
                 />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">No subject</SelectItem>
+                <SelectItem value={NO_SUBJECT}>No subject</SelectItem>
                 {subjectOptions.map((s) => (
                   <SelectItem key={s.id} value={s.name}>
                     {s.name}

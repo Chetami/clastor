@@ -109,6 +109,7 @@ export function LessonChecklist({
               if (e.key === "Enter") handleAddTodo();
             }}
             placeholder="Add a task…"
+            aria-label="Add a task"
             className="min-w-0 flex-1 border-none bg-transparent text-sm outline-none placeholder:text-muted-foreground"
           />
           <Button

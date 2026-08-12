@@ -46,7 +46,7 @@ export function LessonSeriesCalendar({ lessons }: LessonSeriesCalendarProps) {
   }, [lessons]);
 
   return (
-    <Card className="flex min-h-0 flex-1 flex-col overflow-hidden">
+    <Card className="flex min-h-0 flex-1 flex-col overflow-hidden py-0 gap-0">
       <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border px-6 py-3.5">
         <div className="flex items-center gap-2">
           <CalendarDays className="h-4 w-4 text-muted-foreground" />
@@ -58,7 +58,10 @@ export function LessonSeriesCalendar({ lessons }: LessonSeriesCalendarProps) {
           {monthGroups.length} {monthGroups.length === 1 ? "month" : "months"}
         </span>
       </div>
-      <CardContent ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto p-0">
+      <CardContent
+        ref={scrollRef}
+        className="min-h-0 flex-1 overflow-y-auto p-0"
+      >
         {monthGroups.map((group) => (
           <section key={group.key}>
             <div className="sticky top-0 z-10 bg-muted/60 px-4 py-2 backdrop-blur-sm">
