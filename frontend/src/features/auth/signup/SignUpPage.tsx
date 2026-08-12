@@ -17,27 +17,39 @@ import {
 import { useRegister } from "@/features/auth/api";
 import { GoogleSignInButton } from "@/features/auth/GoogleSignInButton";
 import { BrandMark } from "@/features/auth/BrandMark";
+import { LEGAL_URLS } from "@/config";
+import { track } from "@/lib/analytics";
 import { loadSurvey, clearSurvey } from "./survey-storage";
 import type { SignupSurvey } from "@examify-tms/interfaces";
 
+/**
+ * Strength levels indexed 0..4. Index 0 is the "too short" state shown when a
+ * password exists but is below the create-account minimum (6 chars); 1..4 are
+ * real strength bands. The scoring below is aligned with the submit gate so
+ * the meter never contradicts the enforced minimum.
+ */
 const STRENGTH_LEVELS = [
+  { label: "Too short", bar: "bg-red-500", text: "text-red-500" },
   { label: "Weak", bar: "bg-red-500", text: "text-red-500" },
   { label: "Fair", bar: "bg-orange-500", text: "text-orange-500" },
   { label: "Good", bar: "bg-amber-500", text: "text-amber-600" },
   { label: "Strong", bar: "bg-emerald-500", text: "text-emerald-600" },
 ];
 
+const PASSWORD_MIN = 6;
+
+/** Returns -1 (empty), 0 (below min), or 1..4 (strength). */
 function scorePassword(pw: string): number {
-  if (!pw) return 0;
-  let score = 0;
-  if (pw.length >= 8) score++;
-  if (pw.length >= 12) score++;
+  if (!pw) return -1;
+  if (pw.length < PASSWORD_MIN) return 0;
+  let score = 1;
+  if (pw.length >= 10) score++;
+  if (pw.length >= 14) score++;
   const variety = [/[a-z]/, /[A-Z]/, /[0-9]/, /[^a-zA-Z0-9]/].filter((r) =>
     r.test(pw),
   ).length;
-  if (variety >= 2) score++;
   if (variety >= 3) score++;
-  return Math.max(1, Math.min(score, 4));
+  return Math.min(score, 4);
 }
 
 export default function SignUpPage() {
@@ -57,22 +69,26 @@ export default function SignUpPage() {
   const surveyRef = useRef<SignupSurvey | null>(loadSurvey());
 
   const strength = useMemo(() => scorePassword(password), [password]);
-  const strengthLevel = password ? STRENGTH_LEVELS[strength - 1] : null;
+  const strengthLevel = strength >= 0 ? STRENGTH_LEVELS[strength] : null;
+  const strengthBars = strength <= 0 ? 1 : strength;
+  const passwordsMismatch =
+    confirmPassword.length > 0 && password !== confirmPassword;
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setValidationError("");
 
-    if (password !== confirmPassword) {
+    if (passwordsMismatch) {
       setValidationError("Passwords do not match");
       return;
     }
 
-    if (password.length < 6) {
-      setValidationError("Password must be at least 6 characters");
+    if (password.length < PASSWORD_MIN) {
+      setValidationError(`Password must be at least ${PASSWORD_MIN} characters`);
       return;
     }
 
+    track("signup_submit", { method: "email" });
     try {
       const data = await register.mutateAsync({
         name,
@@ -80,6 +96,7 @@ export default function SignUpPage() {
         password,
         signupSurvey: surveyRef.current,
       });
+      track("signup_success", { method: "email" });
       clearSurvey();
       navigate(data.user.onboardingComplete ? "/dashboard" : "/onboarding");
     } catch {
@@ -109,10 +126,42 @@ export default function SignUpPage() {
 
         <CardContent>
           <div className="space-y-4">
+            <div className="flex items-start gap-2">
+              <Checkbox
+                id="terms"
+                checked={agreed}
+                onCheckedChange={(checked) => setAgreed(checked === true)}
+                className="mt-0.5"
+              />
+              <Label htmlFor="terms" className="text-xs leading-relaxed">
+                I agree to the{" "}
+                <a
+                  href={LEGAL_URLS.terms}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-primary hover:underline"
+                >
+                  Terms of Service
+                </a>{" "}
+                and{" "}
+                <a
+                  href={LEGAL_URLS.privacy}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-primary hover:underline"
+                >
+                  Privacy Policy
+                </a>
+                .
+              </Label>
+            </div>
+
             <GoogleSignInButton
               label="Sign up with Google"
               signupSurvey={surveyRef.current}
+              disabled={!agreed}
               onSuccess={(data) => {
+                track("signup_success", { method: "google" });
                 clearSurvey();
                 navigate(
                   data.user.onboardingComplete ? "/dashboard" : "/onboarding",
@@ -180,7 +229,7 @@ export default function SignUpPage() {
                         <div
                           key={level.label}
                           className={`h-1.5 flex-1 rounded-full transition-colors ${
-                            i < strength ? strengthLevel.bar : "bg-muted"
+                            i < strengthBars ? strengthLevel.bar : "bg-muted"
                           }`}
                         />
                       ))}
@@ -202,41 +251,18 @@ export default function SignUpPage() {
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
                 />
-              </div>
-
-              <div className="flex items-start gap-2">
-                <Checkbox
-                  id="terms"
-                  checked={agreed}
-                  onCheckedChange={(checked) => setAgreed(checked === true)}
-                  className="mt-0.5"
-                />
-                <Label htmlFor="terms" className="text-xs leading-relaxed">
-                  I agree to the{" "}
-                  <a
-                    href="https://clastor.xamify.com.au/terms"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-medium text-primary hover:underline"
-                  >
-                    Terms of Service
-                  </a>{" "}
-                  and{" "}
-                  <a
-                    href="https://clastor.xamify.com.au/privacy"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-medium text-primary hover:underline"
-                  >
-                    Privacy Policy
-                  </a>
-                  .
-                </Label>
+                {passwordsMismatch && (
+                  <p className="text-xs text-destructive">
+                    Passwords don&apos;t match
+                  </p>
+                )}
               </div>
 
               <Button
                 type="submit"
-                disabled={register.isPending || !agreed}
+                disabled={
+                  register.isPending || !agreed || passwordsMismatch
+                }
                 className="w-full"
               >
                 {register.isPending ? "Creating account..." : "Create account"}

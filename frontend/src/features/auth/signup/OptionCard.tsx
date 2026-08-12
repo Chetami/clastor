@@ -1,5 +1,4 @@
 import { Check, type LucideIcon } from "lucide-react";
-import { BrandMark } from "@/features/auth/BrandMark";
 
 export function OptionCard({
   selected,
@@ -9,7 +8,7 @@ export function OptionCard({
   onClick,
 }: {
   selected: boolean;
-  icon: LucideIcon | "brand-mark";
+  icon: LucideIcon;
   title: string;
   subtitle: string;
   onClick: () => void;
@@ -31,13 +30,9 @@ export function OptionCard({
             : "bg-muted text-muted-foreground group-hover:text-foreground"
         }`}
       >
-        {Icon === "brand-mark" ? (
-          <BrandMark size={48} />
-        ) : (
-          <span className="flex size-12 items-center justify-center">
-            <Icon className="size-6" />
-          </span>
-        )}
+        <span className="flex size-12 items-center justify-center">
+          <Icon className="size-6" />
+        </span>
       </span>
       <span className="flex flex-1 flex-col">
         <span className="text-base font-semibold leading-tight">{title}</span>

@@ -23,6 +23,8 @@ import { useSubjects } from "@/lib/subjects";
 import { useListStudents } from "@/features/students/api/use-list-students";
 import { useCreateLesson } from "@/features/schedule/api/use-create-lesson";
 import { DurationPicker } from "@/features/schedule/create-event/DurationPicker";
+import { track } from "@/lib/analytics";
+import { loadDrafts, saveDrafts, type LessonDraft } from "../draft-storage";
 
 const AUTO_ADVANCE_MS = 1200;
 
@@ -85,12 +87,28 @@ export const ScheduleLessonStep = forwardRef<
   // the step after a lesson already exists starts in a static (non-auto-
   // advancing) success view.
   const [created, setCreated] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
-  const [studentId, setStudentId] = useState("");
-  const [subjectId, setSubjectId] = useState("");
-  const [date, setDate] = useState(defaultDate());
-  const [startTime, setStartTime] = useState("16:00");
-  const [duration, setDuration] = useState(60);
+  const persisted = loadDrafts().lesson;
+
+  const [studentId, setStudentId] = useState(persisted?.studentId ?? "");
+  const [subjectId, setSubjectId] = useState(persisted?.subjectId ?? "");
+  const [date, setDate] = useState(persisted?.date ?? defaultDate());
+  const [startTime, setStartTime] = useState(persisted?.startTime ?? "16:00");
+  const [duration, setDuration] = useState(persisted?.duration ?? 60);
+
+  // Persist the draft so Back/forward doesn't lose it.
+  useEffect(() => {
+    const drafts = loadDrafts();
+    const lesson: LessonDraft = {
+      studentId,
+      subjectId,
+      date,
+      startTime,
+      duration,
+    };
+    saveDrafts({ ...drafts, lesson });
+  }, [studentId, subjectId, date, startTime, duration]);
 
   // Default-select the newest student once the list loads.
   useEffect(() => {
@@ -104,6 +122,27 @@ export const ScheduleLessonStep = forwardRef<
   const selectedStudent = students.find((s) => s.id === studentId);
   const subjectName = subjects.find((s) => s.id === subjectId)?.name ?? null;
 
+  // The student's own subjects (a subset of the tutor's catalogue).
+  const studentSubjects = useMemo(
+    () =>
+      selectedStudent
+        ? subjects.filter((s) => selectedStudent.subjectIds.includes(s.id))
+        : [],
+    [subjects, selectedStudent],
+  );
+
+  // If the student has exactly one subject, auto-select it so the inline
+  // copy can reference it without showing a picker.
+  useEffect(() => {
+    if (
+      selectedStudent &&
+      studentSubjects.length === 1 &&
+      subjectId !== studentSubjects[0].id
+    ) {
+      setSubjectId(studentSubjects[0].id);
+    }
+  }, [selectedStudent, studentSubjects, subjectId]);
+
   const showSuccess = created || hasLessons;
   const autoAdvance = created;
   const phase: ScheduleLessonPhase = showSuccess ? "success" : "form";
@@ -114,7 +153,7 @@ export const ScheduleLessonStep = forwardRef<
       autoAdvance,
       canSubmit: !!studentId,
       isPending: createLesson.isPending,
-      error: createLesson.error?.message ?? null,
+      error: validationError ?? createLesson.error?.message ?? null,
     });
   }, [
     phase,
@@ -122,6 +161,7 @@ export const ScheduleLessonStep = forwardRef<
     studentId,
     createLesson.isPending,
     createLesson.error,
+    validationError,
     onStateChange,
   ]);
 
@@ -145,6 +185,16 @@ export const ScheduleLessonStep = forwardRef<
     () => ({
       async submit() {
         if (!selectedStudent) return;
+        const startMs = new Date(`${date}T${startTime}:00`).getTime();
+        if (Number.isNaN(startMs)) {
+          setValidationError("Enter a valid date and time");
+          return;
+        }
+        if (startMs <= Date.now()) {
+          setValidationError("Pick a date and time in the future");
+          return;
+        }
+        setValidationError(null);
         const startDateTime = new Date(
           `${date}T${startTime}:00`,
         ).toISOString();
@@ -159,6 +209,7 @@ export const ScheduleLessonStep = forwardRef<
         };
         try {
           await createLesson.mutateAsync(payload);
+          track("onboarding_lesson_booked", { duration });
           setCreated(true);
         } catch {
           // surfaced via mutation state
@@ -242,51 +293,43 @@ export const ScheduleLessonStep = forwardRef<
   }
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1">
         <h2 className="flex items-center gap-2 text-lg font-semibold tracking-tight">
           <CalendarPlus className="size-4" />
           Schedule your first lesson
         </h2>
-        <p className="text-sm text-muted-foreground">
-          This is the moment Clastor clicks — get a lesson on the calendar and
-          watch your schedule come to life.
-        </p>
       </div>
 
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-1.5">
-          <Label>Student</Label>
-          <Select
-            value={studentId}
-            onValueChange={(v) => {
-              setStudentId(v);
-              const s = students.find((x) => x.id === v);
-              setSubjectId(s?.subjectIds[0] ?? "");
-            }}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select a student" />
-            </SelectTrigger>
-            <SelectContent>
-              {students.map((s) => (
-                <SelectItem key={s.id} value={s.id}>
-                  {s.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <p className="text-lg font-medium tracking-tight">
+            When are you seeing{" "}
+            <span className="text-primary">
+              {selectedStudent?.name ?? "your student"}
+            </span>
+            {studentSubjects.length === 1
+              ? ` for their `
+              : " "}
+            {studentSubjects.length === 1 && (
+              <span className="text-primary">
+                {studentSubjects[0].name}
+              </span>
+            )}
+            {studentSubjects.length === 1 ? ` lesson ` : ""}
+            next?
+          </p>
         </div>
 
-        {subjects.length > 0 && (
+        {studentSubjects.length > 1 && (
           <div className="flex flex-col gap-1.5">
-            <Label>Subject (optional)</Label>
+            <Label>What subject are you doing in this lesson?</Label>
             <Select value={subjectId} onValueChange={setSubjectId}>
               <SelectTrigger>
-                <SelectValue placeholder="No subject" />
+                <SelectValue placeholder="Select a subject" />
               </SelectTrigger>
               <SelectContent>
-                {subjects.map((s) => (
+                {studentSubjects.map((s) => (
                   <SelectItem key={s.id} value={s.id}>
                     {s.name}
                   </SelectItem>

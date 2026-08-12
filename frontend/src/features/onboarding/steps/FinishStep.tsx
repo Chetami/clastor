@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { Check, Mail } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -11,12 +11,18 @@ import { FOUNDERS } from "../founders";
  * second founders contact point. The wizard's "Finish" button (owned by the
  * page) marks onboarding complete and sends them to the dashboard.
  */
+const CONFETTI_KEY = "onboardingConfettiFired";
+
 export function FinishStep() {
-  // Fire the confetti cannons once when the finish step is reached.
-  const fired = useRef(false);
+  // Fire the confetti cannons once per browser session — Back→forward remounts
+  // this step, so without this guard it would fire again each time.
   useEffect(() => {
-    if (fired.current) return;
-    fired.current = true;
+    try {
+      if (sessionStorage.getItem(CONFETTI_KEY)) return;
+      sessionStorage.setItem(CONFETTI_KEY, "1");
+    } catch {
+      // ignore — fall through and still fire once this mount
+    }
     fireConfettiCannons();
   }, []);
 

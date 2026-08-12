@@ -29,3 +29,8 @@ export const API_URL = env.VITE_API_URL;
 
 export const TOKEN_KEY = "jwtToken";
 export const REFRESH_TOKEN_KEY = "refreshToken";
+
+export const LEGAL_URLS = {
+  terms: "https://clastor.xamify.com.au/terms",
+  privacy: "https://clastor.xamify.com.au/privacy",
+} as const;

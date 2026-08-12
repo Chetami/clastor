@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { joinWaitlistRequest, toSignupSurvey, type SurveyAnswers } from "@examify-tms/shared";
+import { track } from "@/lib/analytics";
 
 export function WaitlistStep({
   answers,
@@ -24,6 +25,7 @@ export function WaitlistStep({
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!email.trim()) return;
+    track("signup_waitlist_join", { intent: answers.intent });
     waitlist.mutate(email);
   }
 
@@ -49,11 +51,21 @@ export function WaitlistStep({
           </p>
         </div>
         <Button variant="outline" size="lg" className="w-full max-w-md" asChild>
-          <Link to="/login">
-            Back to sign in
+          <Link to="/">
+            Back to home
             <ArrowRight className="size-4" />
           </Link>
         </Button>
+        <p className="mx-auto max-w-sm text-xs leading-relaxed text-muted-foreground">
+          Rather not wait? You can still{" "}
+          <Link
+            to="/signup"
+            className="font-medium text-foreground underline-offset-2 hover:underline"
+          >
+            sign up as an individual tutor
+          </Link>{" "}
+          right now.
+        </p>
       </div>
     );
   }

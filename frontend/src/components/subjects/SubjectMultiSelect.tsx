@@ -10,17 +10,23 @@ interface SubjectMultiSelectProps {
   value: string[];
   onChange: (ids: string[]) => void;
   invalid?: boolean;
+  /** Show the inline "add a new subject" field. Defaults to true. */
+  allowCreate?: boolean;
+  /** Wrap chips in a bordered container. Defaults to true. */
+  bordered?: boolean;
 }
 
 /**
  * Tag picker for a student's subjects. Shows the tutor's catalogue as
- * toggleable chips and allows inline quick-create of a new subject (which is
- * added to the catalogue and selected in one step).
+ * toggleable chips and (optionally) allows inline quick-create of a new
+ * subject (which is added to the catalogue and selected in one step).
  */
 export function SubjectMultiSelect({
   value,
   onChange,
   invalid,
+  allowCreate = true,
+  bordered = true,
 }: SubjectMultiSelectProps) {
   const subjects = useSubjects();
   const updateSubjects = useUpdateSubjects();
@@ -48,13 +54,16 @@ export function SubjectMultiSelect({
     <div className="space-y-2">
       {subjects.length === 0 ? (
         <p className="text-xs text-muted-foreground">
-          You don't have any subjects yet. Add one below — it'll be saved to
-          your catalogue.
+          You don't have any subjects yet.
+          {allowCreate
+            ? " Add one below — it'll be saved to your catalogue."
+            : ""}
         </p>
       ) : (
         <div
           className={cn(
-            "flex flex-wrap gap-2 rounded-md border p-2",
+            "flex flex-wrap gap-2",
+            bordered && "rounded-md border p-2",
             invalid && "border-destructive",
           )}
         >
@@ -90,31 +99,33 @@ export function SubjectMultiSelect({
         </div>
       )}
 
-      <div className="flex gap-2">
-        <Input
-          value={newName}
-          onChange={(e) => setNewName(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              void addNew();
-            }
-          }}
-          placeholder="Add a new subject..."
-          className="flex-1"
-          disabled={updateSubjects.isPending}
-        />
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => void addNew()}
-          disabled={!newName.trim() || updateSubjects.isPending}
-        >
-          <Plus className="size-4" />
-          Add
-        </Button>
-      </div>
+      {allowCreate && (
+        <div className="flex gap-2">
+          <Input
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                void addNew();
+              }
+            }}
+            placeholder="Add a new subject..."
+            className="flex-1"
+            disabled={updateSubjects.isPending}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => void addNew()}
+            disabled={!newName.trim() || updateSubjects.isPending}
+          >
+            <Plus className="size-4" />
+            Add
+          </Button>
+        </div>
+      )}
       {invalid && <p className="text-xs text-destructive">Select at least one subject</p>}
     </div>
   );

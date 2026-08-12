@@ -6,12 +6,17 @@ import {
   useState,
 } from "react";
 import { UserPlus } from "lucide-react";
-import type { CreateStudentRequest } from "@examify-tms/interfaces";
+import type { CreateStudentRequest, RateType } from "@examify-tms/interfaces";
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NumberInput } from "@/components/ui/number-input";
 import { SubjectMultiSelect } from "@/components/subjects/SubjectMultiSelect";
+import { ToggleOption } from "@/features/students/StudentForm";
 import { useCreateStudent } from "@/features/students/api/use-create-student";
+import { useUserCurrency, getCurrencySymbol } from "@/lib/use-currency";
+import { track } from "@/lib/analytics";
+import { loadDrafts, saveDrafts, type StudentDraft } from "../draft-storage";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -41,26 +46,53 @@ type AddStudentStepProps = {
  * Slim "add your first student" form. Captures just enough to be useful
  * (name required; email optional) and creates a real student record via the
  * imperative submit handle — the parent wizard owns the footer "Add student"
- * action and gates it on a name. After a successful create it plays a
- * checkmark animation and auto-advances to the next step. If revisited after
- * a student already exists, it shows the confirmation statically (no
- * auto-advance) so the parent's Continue can move on.
+ * action and gates it on a name. The hourly rate is surfaced (rather than
+ * silently defaulted) because it drives invoicing; leaving it blank is fine
+ * and records $0, but the user has seen it. After a successful create it
+ * plays a checkmark animation and auto-advances to the next step. If
+ * revisited after a student already exists, it shows the confirmation
+ * statically (no auto-advance) so the parent's Continue can move on.
  */
 export const AddStudentStep = forwardRef<
   AddStudentStepHandle,
   AddStudentStepProps
 >(function AddStudentStep({ hasStudents, onAdvance, onStateChange }, ref) {
   const createStudent = useCreateStudent();
+  const currency = useUserCurrency();
+  const currencySymbol = getCurrencySymbol(currency);
+
+  const persisted = loadDrafts().student;
 
   // "success" is only reached via a real create in this session. Returning to
   // the step after a student already exists starts in a static (non-auto-
   // advancing) success view.
   const [created, setCreated] = useState(false);
 
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [subjectIds, setSubjectIds] = useState<string[]>([]);
+  const [name, setName] = useState(persisted?.name ?? "");
+  const [email, setEmail] = useState(persisted?.email ?? "");
+  const [subjectIds, setSubjectIds] = useState<string[]>(
+    persisted?.subjectIds ?? [],
+  );
+  const [expectedAmount, setExpectedAmount] = useState<number>(
+    persisted?.expectedAmount ?? 50,
+  );
+  const [rateType, setRateType] = useState<RateType>(
+    persisted?.rateType ?? "hourly",
+  );
   const [emailError, setEmailError] = useState<string | undefined>();
+
+  // Persist the draft whenever fields change so Back/forward doesn't lose it.
+  useEffect(() => {
+    const drafts = loadDrafts();
+    const student: StudentDraft = {
+      name,
+      email,
+      subjectIds,
+      expectedAmount,
+      rateType,
+    };
+    saveDrafts({ ...drafts, student });
+  }, [name, email, subjectIds, expectedAmount, rateType]);
 
   const showSuccess = created || hasStudents;
   const autoAdvance = created;
@@ -115,8 +147,8 @@ export const AddStudentStep = forwardRef<
           parentEmail: null,
           billingEmail: null,
           subjectIds,
-          expectedAmount: 0,
-          rateType: "hourly",
+          expectedAmount,
+          rateType,
           frequencyPerWeek: 0,
           status: "active",
           timezone: null,
@@ -124,13 +156,14 @@ export const AddStudentStep = forwardRef<
         };
         try {
           await createStudent.mutateAsync(payload);
+          track("onboarding_student_created", { expectedAmount });
           setCreated(true);
         } catch {
           // surfaced via mutation state
         }
       },
     }),
-    [name, email, subjectIds, createStudent],
+    [name, email, subjectIds, expectedAmount, rateType, createStudent],
   );
 
   if (showSuccess) {
@@ -161,7 +194,9 @@ export const AddStudentStep = forwardRef<
           />
         </svg>
         <div className="ob-success-text flex flex-col gap-1">
-          <h2 className="text-lg font-semibold tracking-tight">Student added</h2>
+          <h2 className="text-lg font-semibold tracking-tight">
+            Student added
+          </h2>
           <p className="mx-auto max-w-sm text-sm text-muted-foreground">
             {autoAdvance
               ? "Taking you to the next step\u2026"
@@ -209,14 +244,63 @@ export const AddStudentStep = forwardRef<
           {emailError && (
             <span className="text-xs text-destructive">{emailError}</span>
           )}
-          <p className="text-xs">
+          <p className="text-xs text-muted-foreground">
             Allows Clastor to send notifications on your behalf
           </p>
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <Label>Subjects (optional)</Label>
-          <SubjectMultiSelect value={subjectIds} onChange={setSubjectIds} />
+          <Label>
+            Subjects{" "}
+            <span className="text-xs font-normal text-muted-foreground">
+              (optional)
+            </span>
+          </Label>
+          <SubjectMultiSelect
+            value={subjectIds}
+            onChange={setSubjectIds}
+            allowCreate={false}
+            bordered={false}
+          />
+          <p className="text-xs text-muted-foreground">
+            Tap a subject to select it. You can change this later.
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <Label>
+            Rate{" "}
+            <span className="text-xs font-normal text-muted-foreground">
+              (optional)
+            </span>
+          </Label>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <div className="grid grid-cols-2 gap-2 sm:w-auto">
+              <ToggleOption
+                checked={rateType === "hourly"}
+                label="Per hour"
+                onSelect={() => setRateType("hourly")}
+              />
+              <ToggleOption
+                checked={rateType === "per_lesson"}
+                label="Per lesson"
+                onSelect={() => setRateType("per_lesson")}
+              />
+            </div>
+            <NumberInput
+              id="ob-student-rate"
+              min={0}
+              decimalScale={2}
+              prefix={currencySymbol}
+              placeholder={`${currencySymbol}0.00`}
+              value={expectedAmount}
+              onValueChange={(n) => setExpectedAmount(n || 0)}
+            />
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Used as the default when invoicing this student. You can change it
+            later.
+          </p>
         </div>
       </div>
     </div>

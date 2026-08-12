@@ -1,4 +1,4 @@
-import { Building2, Compass, Users } from "lucide-react";
+import { Building2, Compass, GraduationCap, type LucideIcon } from "lucide-react";
 import type {
   SurveyCurrentTool,
   SurveyIntent,
@@ -10,7 +10,7 @@ export type IntentOption = {
   value: SurveyIntent;
   title: string;
   subtitle: string;
-  icon: typeof Users | "brand-mark";
+  icon: LucideIcon;
 };
 
 export const INTENT_OPTIONS: IntentOption[] = [
@@ -18,7 +18,7 @@ export const INTENT_OPTIONS: IntentOption[] = [
     value: "independent_tutor",
     title: "I'm an independent tutor",
     subtitle: "Teaching my own students, one-on-one or in groups.",
-    icon: "brand-mark",
+    icon: GraduationCap,
   },
   {
     value: "small_business",

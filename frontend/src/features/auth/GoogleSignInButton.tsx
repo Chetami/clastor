@@ -36,6 +36,7 @@ type GoogleSignInButtonProps = {
   signupSurvey?: SignupSurvey;
   onSuccess?: (data: LoginResponse) => void;
   onError?: (error: unknown) => void;
+  disabled?: boolean;
 };
 
 export function GoogleSignInButton({
@@ -43,6 +44,7 @@ export function GoogleSignInButton({
   signupSurvey,
   onSuccess,
   onError,
+  disabled = false,
 }: GoogleSignInButtonProps) {
   const googleSignIn = useGoogleSignIn();
 
@@ -60,7 +62,7 @@ export function GoogleSignInButton({
       type="button"
       variant="outline"
       className="w-full"
-      disabled={googleSignIn.isPending}
+      disabled={disabled || googleSignIn.isPending}
       onClick={handleClick}
     >
       <GoogleIcon className="mr-2" />

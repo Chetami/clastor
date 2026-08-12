@@ -17,6 +17,7 @@ import {
   type SurveyAnswers,
   type SurveyIntent,
 } from "@examify-tms/shared";
+import { track } from "@/lib/analytics";
 
 export default function SignupSurveyPage() {
   const navigate = useNavigate();
@@ -39,14 +40,24 @@ export default function SignupSurveyPage() {
     (!isOrgIntent(answers.intent) || answers.tutorCountBucket !== null);
 
   function next() {
-    if (stepIndex < STEPS.length - 1) setStepIndex(stepIndex + 1);
+    if (stepIndex < STEPS.length - 1) {
+      track("signup_survey_advance", { to: STEPS[stepIndex + 1] });
+      setStepIndex(stepIndex + 1);
+    }
   }
 
   function back() {
-    if (stepIndex > 0) setStepIndex(stepIndex - 1);
+    if (stepIndex > 0) {
+      setStepIndex(stepIndex - 1);
+    }
   }
 
   function handleCreate() {
+    track("signup_survey_complete", {
+      intent: answers.intent,
+      studentCountBucket: answers.studentCountBucket,
+      tutoringFormat: answers.tutoringFormat,
+    });
     saveSurvey(toSignupSurvey(answers));
     navigate("/signup/account");
   }
@@ -98,16 +109,16 @@ export default function SignupSurveyPage() {
             ))}
         </div>
 
-        {step !== "reveal" && (
-          <div className="mt-8 flex items-center justify-between">
-            {stepIndex > 0 ? (
-              <Button variant="ghost" onClick={back}>
-                <ArrowLeft className="size-4" />
-                Back
-              </Button>
-            ) : (
-              <span />
-            )}
+        <div className="mt-8 flex items-center justify-between">
+          {stepIndex > 0 ? (
+            <Button variant="ghost" onClick={back}>
+              <ArrowLeft className="size-4" />
+              Back
+            </Button>
+          ) : (
+            <span />
+          )}
+          {step !== "reveal" && (
             <Button
               onClick={next}
               disabled={!canAdvance}
@@ -117,8 +128,8 @@ export default function SignupSurveyPage() {
               Continue
               <ArrowRight className="size-4" />
             </Button>
-          </div>
-        )}
+          )}
+        </div>
       </main>
 
       <footer className="flex shrink-0 items-center justify-center gap-1.5 pb-5 text-xs text-muted-foreground">

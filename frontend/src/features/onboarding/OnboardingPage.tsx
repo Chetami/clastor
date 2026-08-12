@@ -16,7 +16,10 @@ import { BrandMark } from "@/features/auth/BrandMark";
 import { useAuthStore } from "@/store/auth-store";
 import { useListStudents } from "@/features/students/api/use-list-students";
 import { useListLessons } from "@/features/schedule/api/use-list-lessons";
+import { useSubjects } from "@/lib/subjects";
+import { track } from "@/lib/analytics";
 import { useCompleteOnboarding } from "./api/use-complete-onboarding";
+import { clearDrafts } from "./draft-storage";
 import { WelcomeStep } from "./steps/WelcomeStep";
 import { SubjectsStep } from "./steps/SubjectsStep";
 import {
@@ -39,6 +42,7 @@ const STEPS = [
 const GOOGLE_STEP_INDEX = STEPS.findIndex((s) => s.key === "google");
 const STUDENT_STEP_INDEX = STEPS.findIndex((s) => s.key === "student");
 const LESSON_STEP_INDEX = STEPS.findIndex((s) => s.key === "lesson");
+const SUBJECTS_STEP_INDEX = STEPS.findIndex((s) => s.key === "subjects");
 
 const STEP_STORAGE_KEY = "onboardingStep";
 
@@ -61,6 +65,8 @@ export default function OnboardingPage() {
   const hasStudents = (studentsQuery.data?.length ?? 0) > 0;
   const lessonsQuery = useListLessons();
   const hasLessons = (lessonsQuery.data?.length ?? 0) > 0;
+  const subjects = useSubjects();
+  const hasSubjects = subjects.length > 0;
 
   const [step, setStep] = useState<number>(() => {
     // Returning from the Google consent flow comes back with a `google` param;
@@ -82,13 +88,29 @@ export default function OnboardingPage() {
     }
   }, [step]);
 
-  // If onboarding is already complete, there's nothing to do here.
-  // Onboarding is tutor-only — admins are bounced to the dashboard.
+  // Funnel: record each step the user lands on.
   useEffect(() => {
+    track("onboarding_step", { step: STEPS[step].key, index: step });
+  }, [step]);
+
+  // Onboarding is tutor-only. Admins never get the tutor-flavoured wizard, so
+  // if one lands here with an incomplete flag, mark them complete (they have
+  // no path to finish it otherwise) and bounce to the dashboard. Tutors who
+  // are already done also leave.
+  const adminCompletionStarted = useRef(false);
+  useEffect(() => {
+    if (user?.role === "system_admin") {
+      if (!user.onboardingComplete && !adminCompletionStarted.current) {
+        adminCompletionStarted.current = true;
+        complete.mutate();
+      }
+      navigate("/dashboard", { replace: true });
+      return;
+    }
     if (user?.role !== "tutor" || user?.onboardingComplete) {
       navigate("/dashboard", { replace: true });
     }
-  }, [user?.role, user?.onboardingComplete, navigate]);
+  }, [user?.role, user?.onboardingComplete, navigate, complete]);
 
   const isFirst = step === 0;
   const isLast = step === STEPS.length - 1;
@@ -150,14 +172,18 @@ export default function OnboardingPage() {
   function skipToDashboard() {
     // Leave the wizard without completing; the dashboard banner will nudge
     // them to come back. Step stays persisted so they resume in place.
+    track("onboarding_skip");
     navigate("/dashboard");
   }
 
   async function handleFinish() {
     try {
       await complete.mutateAsync();
+      track("onboarding_complete");
       try {
         sessionStorage.removeItem(STEP_STORAGE_KEY);
+        sessionStorage.removeItem("onboardingConfettiFired");
+        clearDrafts();
       } catch {
         // ignore
       }
@@ -266,7 +292,7 @@ export default function OnboardingPage() {
               Book lesson
             </Button>
           ) : (
-            <Button onClick={advance}>
+            <Button onClick={advance} disabled={!hasSubjects && step === SUBJECTS_STEP_INDEX}>
               {step === 0 ? "Get started" : "Continue"}
               <ArrowRight className="size-4" />
             </Button>
