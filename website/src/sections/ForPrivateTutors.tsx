@@ -42,10 +42,9 @@ export function ForPrivateTutors() {
             <span className="display-accent">tutoring centres.</span>
           </h2>
           <p className="mt-3.5 max-w-[56ch] text-[clamp(1rem,1.6vw,1.1875rem)] text-muted-foreground">
-            Most tutor software is built for agencies with staff, payroll, and
-            shift rotas. Clastor is built for the tutor with a roster of
-            students and a business to run on their own — online, in-person, or
-            a bit of both.
+            Tutor software is built for agencies first. Clastor is built for the
+            solo tutor running a roster of students — online, in-person, or a
+            bit of both.
           </p>
         </div>
 

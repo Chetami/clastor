@@ -24,8 +24,11 @@ export function Hero() {
           </h1>
 
           <p className="mt-6 max-w-[52ch] text-[clamp(1.0625rem,1.8vw,1.25rem)] leading-relaxed text-muted-foreground">
-            Clastor runs the business side of tutoring for private tutors —
-            scheduling, reminders, invoicing, payments. We're in early access,
+            Clastor runs the business side of tutoring for{" "}
+            <mark className="-mx-0.5 -mt-1 inline-block rotate-[-1deg] rounded-[5px] bg-brand-soft px-1.5 py-0.5 font-display text-foreground shadow-[1.5px_1.5px_0_0_hsl(var(--brand)/0.35)]">
+              private tutors
+            </mark>{" "}
+            — scheduling, reminders, invoicing, payments. We're in early access,
             building it with a handful of real tutors, and we'd love your honest
             feedback.
           </p>
