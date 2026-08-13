@@ -6,7 +6,8 @@ import { Integrations } from "@/sections/Integrations";
 import { Features } from "@/sections/Features";
 import { HowItWorks } from "@/sections/HowItWorks";
 import { Audience } from "@/sections/Audience";
-import { Outcomes } from "@/sections/Outcomes";
+import { ForPrivateTutors } from "@/sections/ForPrivateTutors";
+// import { Proof } from "@/sections/Proof";
 import { FAQ } from "@/sections/FAQ";
 import { FinalCTA } from "@/sections/FinalCTA";
 import { Footer } from "@/sections/Footer";
@@ -16,7 +17,7 @@ import TermsPage from "@/pages/Terms";
 import ContactPage from "@/pages/Contact";
 
 const TITLES: Record<string, string> = {
-  "/": "Clastor — Tutor management software for independent tutors",
+  "/": "Clastor — Tutor management software for private tutors",
   "/privacy": "Privacy Policy - Clastor",
   "/terms": "Terms of Service - Clastor",
   "/contact": "Contact Clastor",
@@ -40,9 +41,10 @@ function Landing() {
       <Hero />
       <Integrations />
       <HowItWorks />
+      <ForPrivateTutors />
       <Features />
       <Audience />
-      <Outcomes />
+      {/* <Proof /> */}
       <FAQ />
       <FinalCTA />
     </>

@@ -24,9 +24,10 @@ export function Hero() {
           </h1>
 
           <p className="mt-6 max-w-[52ch] text-[clamp(1.0625rem,1.8vw,1.25rem)] leading-relaxed text-muted-foreground">
-            Clastor is in early access, and we're building it with a small group
-            of tutors. Join the beta, use it with your real students, and tell
-            us what's broken — scheduling, reminders, invoicing, all of it.
+            Clastor runs the business side of tutoring for private tutors —
+            scheduling, reminders, invoicing, payments. We're in early access,
+            building it with a handful of real tutors, and we'd love your honest
+            feedback.
           </p>
 
           <div className="mt-7 flex flex-wrap justify-center gap-4">
