@@ -39,7 +39,7 @@ export function Footer() {
         </div>
 
         <div className="mt-11 flex flex-col items-start justify-between gap-3 border-t-2 border-dashed border-border pt-6 text-sm text-muted-foreground sm:flex-row sm:items-center">
-          <span>© {year} Clastor. Made for tutors, not agencies.</span>
+          <span>© {year} Clastor. Made for tutors.</span>
           <span>Works with Google Calendar · Meet · Stripe</span>
         </div>
       </div>

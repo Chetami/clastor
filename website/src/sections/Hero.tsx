@@ -16,9 +16,7 @@ export function Hero() {
       <Sparkle className="pointer-events-none absolute left-[6%] top-[58%] hidden h-7 w-7 -rotate-6 text-[hsl(48_92%_60%)] animate-float sm:block" />
       <div className="mx-auto grid max-w-[1040px] gap-10 text-center sm:gap-14">
         <div className="flex flex-col items-center">
-          <span className="eyebrow">Private beta · Individual Tutors</span>
-
-          <h1 className="mt-5 font-display text-[clamp(2.875rem,8vw,5.375rem)] leading-[1.12]">
+          <h1 className="font-display text-[clamp(2.875rem,8vw,5.375rem)] leading-[1.12]">
             Teach more.
             <br />
             <span className="display-accent">Admin less.</span>

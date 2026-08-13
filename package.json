@@ -13,7 +13,6 @@
   ],
   "scripts": {
     "install:all": "npm install",
-    "prepare": "husky",
     "dev:backend": "npm run dev --workspace=backend",
     "dev:frontend": "npm run dev --workspace=frontend",
     "dev:website": "npm run dev --workspace=website",
