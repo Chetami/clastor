@@ -52,10 +52,35 @@ export function ForPrivateTutors() {
         </div>
 
         <div className="grid gap-5 md:grid-cols-2">
+          {/* Not this — agency software */}
+          <article
+            className="reveal doodle-card doodle-dashed relative flex flex-col rounded-3xl bg-card p-8 opacity-80 sm:p-9"
+            style={{ ["--reveal-delay" as string]: "0ms" }}
+          >
+            <span className="eyebrow">Tutoring-centre software</span>
+            <h3 className="mb-5 mt-2.5 font-display text-[clamp(1.375rem,2.4vw,1.625rem)]">
+              Built for the company, not the tutor.
+            </h3>
+            <ul className="flex flex-1 flex-col gap-3">
+              {NOT_FOR.map((point) => (
+                <li
+                  key={point}
+                  className="flex items-start gap-3 text-base text-muted-foreground"
+                >
+                  <X
+                    className="mt-1 h-4 w-4 shrink-0 text-destructive"
+                    strokeWidth={2.5}
+                  />
+                  <span className="line-through">{point}</span>
+                </li>
+              ))}
+            </ul>
+          </article>
+
           {/* This — Clastor */}
           <article
             className="reveal rotate-audience doodle-card relative z-10 flex flex-col rounded-3xl border-brand bg-brand-soft p-8 shadow-[0_0_0_10px_hsl(var(--brand)/0.18),5px_5px_0_hsl(var(--foreground))] sm:p-9"
-            style={{ ["--reveal-delay" as string]: "0ms" }}
+            style={{ ["--reveal-delay" as string]: "100ms" }}
           >
             <span className="absolute -top-4 left-8 -rotate-3 rounded-full border-[2.5px] border-foreground bg-brand px-3.5 py-1.5 font-display text-sm text-foreground shadow-sketch">
               Built for private tutors
@@ -75,31 +100,6 @@ export function ForPrivateTutors() {
                     strokeWidth={2.5}
                   />
                   {point}
-                </li>
-              ))}
-            </ul>
-          </article>
-
-          {/* Not this — agency software */}
-          <article
-            className="reveal doodle-card doodle-dashed relative flex flex-col rounded-3xl bg-card p-8 opacity-80 sm:p-9"
-            style={{ ["--reveal-delay" as string]: "100ms" }}
-          >
-            <span className="eyebrow">Tutoring-centre software</span>
-            <h3 className="mb-5 mt-2.5 font-display text-[clamp(1.375rem,2.4vw,1.625rem)]">
-              Built for the company, not the tutor.
-            </h3>
-            <ul className="flex flex-1 flex-col gap-3">
-              {NOT_FOR.map((point) => (
-                <li
-                  key={point}
-                  className="flex items-start gap-3 text-base text-muted-foreground"
-                >
-                  <X
-                    className="mt-1 h-4 w-4 shrink-0 text-destructive"
-                    strokeWidth={2.5}
-                  />
-                  <span className="line-through">{point}</span>
                 </li>
               ))}
             </ul>

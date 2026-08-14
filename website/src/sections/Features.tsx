@@ -1,4 +1,4 @@
-import { Check, Repeat } from "lucide-react";
+import { Check, Repeat, Sparkles } from "lucide-react";
 
 import { Sparkle } from "@/components/Doodles";
 import { useReveal } from "@/hooks/useReveal";
@@ -150,11 +150,12 @@ function FeatureBig({
 }: Feature & { index: number; children?: React.ReactNode }) {
   return (
     <article
-      className="reveal doodle-card relative flex flex-col overflow-hidden rounded-3xl bg-secondary p-8 sm:col-span-2"
+      className="reveal doodle-card relative flex flex-col overflow-hidden rounded-3xl border-brand bg-card p-8 shadow-[0_0_0_10px_hsl(var(--brand)/0.18),5px_5px_0_hsl(var(--foreground))] sm:col-span-2"
       style={{ ["--reveal-delay" as string]: `${index * 80}ms` }}
     >
       <h3 className="mb-2.5 font-display text-[clamp(1.625rem,3vw,2rem)]">
-        {title}
+        {title}{" "}
+        <Sparkles className="inline-block h-[1.1em] w-[1.1em] translate-y-[-0.3em] translate-x-[0.9em] text-brand" />
       </h3>
       <p className="max-w-[40ch] text-lg leading-relaxed text-muted-foreground">
         {description}
@@ -175,11 +176,43 @@ function MiniCalendar() {
     next?: boolean;
     moved?: boolean;
   }[] = [
-    { day: "Mon", date: "13", subj: "Physics", student: "Liam C.", time: "4:00" },
-    { day: "Tue", date: "14", subj: "English", student: "Sara R.", time: "5:00" },
-    { day: "Wed", date: "15", subj: "Maths", student: "Noah S.", time: "5:30", next: true },
-    { day: "Thu", date: "16", subj: "Physics", student: "Liam C.", time: "4:00" },
-    { day: "Fri", date: "17", subj: "Chem", student: "Maya K.", time: "3:30", moved: true },
+    {
+      day: "Mon",
+      date: "13",
+      subj: "Physics",
+      student: "Liam C.",
+      time: "4:00",
+    },
+    {
+      day: "Tue",
+      date: "14",
+      subj: "English",
+      student: "Sara R.",
+      time: "5:00",
+    },
+    {
+      day: "Wed",
+      date: "15",
+      subj: "Maths",
+      student: "Noah S.",
+      time: "5:30",
+      next: true,
+    },
+    {
+      day: "Thu",
+      date: "16",
+      subj: "Physics",
+      student: "Liam C.",
+      time: "4:00",
+    },
+    {
+      day: "Fri",
+      date: "17",
+      subj: "Chem",
+      student: "Maya K.",
+      time: "3:30",
+      moved: true,
+    },
   ];
 
   return (
@@ -219,7 +252,9 @@ function MiniCalendar() {
             <div className="flex flex-1 flex-col items-center justify-center gap-0.5 pt-1.5 text-center">
               <b className="font-mono text-[13px] font-bold leading-none tracking-tight">
                 {d.time}
-                <span className="ml-0.5 text-[9px] font-semibold opacity-60">pm</span>
+                <span className="ml-0.5 text-[9px] font-semibold opacity-60">
+                  pm
+                </span>
               </b>
               <span className="block w-full truncate text-[11px] font-semibold leading-tight">
                 {d.subj}
