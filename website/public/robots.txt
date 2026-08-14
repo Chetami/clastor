@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://clastor.com.au/sitemap.xml
+Sitemap: https://clastor.xamify.com.au/sitemap.xml
