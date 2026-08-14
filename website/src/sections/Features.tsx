@@ -52,6 +52,7 @@ export function Features() {
             title="Payments"
             description="Branded invoices and one-tap payment links. No more chasing parents for unpaid lessons."
             index={1}
+            right
           >
             <MiniInvoice />
           </FeatureCard>
@@ -99,12 +100,14 @@ function FeatureCard({
   children,
   side = false,
   wide = false,
+  right = false,
 }: Feature & {
   index: number;
   className?: string;
   children?: React.ReactNode;
   side?: boolean;
   wide?: boolean;
+  right?: boolean;
 }) {
   return (
     <article
@@ -132,7 +135,11 @@ function FeatureCard({
       {children && (
         <div
           className={`mt-auto pt-6 ${
-            side ? "lg:mt-0 lg:shrink-0 lg:pt-0" : ""
+            side
+              ? "flex justify-end lg:mt-0 lg:block lg:shrink-0 lg:pt-0"
+              : right
+                ? "flex justify-end"
+                : ""
           }`}
         >
           {children}
@@ -175,6 +182,8 @@ function MiniCalendar() {
     time: string;
     next?: boolean;
     moved?: boolean;
+    /** Hidden on phones — 3 columns keeps the cards readable on small screens. */
+    smOnly?: boolean;
   }[] = [
     {
       day: "Mon",
@@ -189,6 +198,7 @@ function MiniCalendar() {
       subj: "English",
       student: "Sara R.",
       time: "5:00",
+      smOnly: true,
     },
     {
       day: "Wed",
@@ -204,6 +214,7 @@ function MiniCalendar() {
       subj: "Physics",
       student: "Liam C.",
       time: "4:00",
+      smOnly: true,
     },
     {
       day: "Fri",
@@ -226,12 +237,13 @@ function MiniCalendar() {
         </span>
       </div>
 
-      <div className="grid grid-cols-5 gap-1.5">
+      <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-5">
         {week.map((d) => (
           <div
             key={d.day}
             className={
-              "flex min-w-0 flex-col rounded-lg border-[1.5px] px-2 py-1.5 " +
+              (d.smOnly ? "hidden sm:flex " : "flex ") +
+              "min-w-0 flex-col rounded-lg border-[1.5px] px-2 py-1.5 " +
               (d.next
                 ? "-rotate-2 border-foreground bg-brand text-foreground shadow-sketch"
                 : d.moved

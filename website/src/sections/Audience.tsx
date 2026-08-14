@@ -64,7 +64,7 @@ export function Audience() {
               <SoloTutorIllustration />
             </div>
             <span className="eyebrow">Independent tutors</span>
-            <h3 className="mb-1 mt-2.5 pr-28 font-display text-[clamp(1.375rem,2.4vw,1.625rem)] sm:pr-36 lg:pr-44">
+            <h3 className="mb-1 mt-2.5 pr-16 font-display text-[clamp(1.375rem,2.4vw,1.625rem)] sm:pr-36 lg:pr-44">
               Run your tutoring like a business.
             </h3>
             <p className="mb-5 text-base text-muted-foreground">
@@ -102,7 +102,7 @@ export function Audience() {
               <TeamTutorIllustration />
             </div>
             <span className="eyebrow">Small tutoring teams</span>
-            <h3 className="mb-1 mt-2.5 pr-28 font-display text-[clamp(1.375rem,2.4vw,1.625rem)] sm:pr-36 lg:pr-44">
+            <h3 className="mb-1 mt-2.5 pr-16 font-display text-[clamp(1.375rem,2.4vw,1.625rem)] sm:pr-36 lg:pr-44">
               Bring on a colleague, cleanly.
             </h3>
             <p className="mb-5 text-base text-muted-foreground">

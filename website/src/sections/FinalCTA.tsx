@@ -12,11 +12,11 @@ export function FinalCTA() {
         <div className="reveal relative overflow-hidden rounded-3xl border-[3px] border-foreground bg-secondary px-6 py-16 text-center shadow-sketch-lg sm:px-12 sm:py-20">
           {/* Decorative doodle circles */}
           <span
-            className="pointer-events-none absolute right-[6%] top-6 h-[70px] w-[70px] rounded-full border-[2.5px] border-foreground bg-brand opacity-85"
+            className="pointer-events-none absolute right-[6%] top-6 hidden h-[70px] w-[70px] rounded-full border-[2.5px] border-foreground bg-brand opacity-85 sm:block"
             aria-hidden="true"
           />
           <span
-            className="pointer-events-none absolute bottom-6 left-[7%] h-[46px] w-[46px] rounded-full border-[2.5px] border-foreground bg-[hsl(143_54%_89%)]"
+            className="pointer-events-none absolute bottom-6 left-[7%] hidden h-[46px] w-[46px] rounded-full border-[2.5px] border-foreground bg-[hsl(143_54%_89%)] sm:block"
             aria-hidden="true"
           />
 

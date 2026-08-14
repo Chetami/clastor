@@ -45,8 +45,8 @@ export function Hero() {
             </Button>
           </div>
 
-          <p className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
-            <Check className="h-3.5 w-3.5 text-success" />
+          <p className="mx-auto mt-4 flex max-w-[36ch] items-start justify-center gap-2 text-sm text-muted-foreground">
+            <Check className="mt-1 h-3.5 w-3.5 shrink-0 text-success" />
             Free during beta. No card needed to get started.
           </p>
         </div>
@@ -91,7 +91,7 @@ function HeroMockup() {
               </span>
             </div>
 
-            <div className="grid grid-cols-[46px_repeat(4,1fr)] border-t-2 border-border">
+            <div className="grid grid-cols-[34px_repeat(4,1fr)] border-t-2 border-border sm:grid-cols-[46px_repeat(4,1fr)]">
               <ColHead />
               <ColHead>Mon</ColHead>
               <ColHead>Wed</ColHead>
@@ -165,7 +165,7 @@ function HeroMockup() {
 
 function ColHead({ children }: { children?: React.ReactNode }) {
   return (
-    <div className="border-b-2 border-border px-1.5 py-2.5 text-left font-mono text-[11px] uppercase tracking-[0.04em] text-muted-foreground">
+    <div className="border-b-2 border-border px-1 py-2.5 text-left font-mono text-[11px] uppercase tracking-[0.04em] text-muted-foreground sm:px-1.5">
       {children}
     </div>
   );
@@ -181,7 +181,7 @@ function TimeCell({ children }: { children?: React.ReactNode }) {
 
 function Cell({ children }: { children?: React.ReactNode }) {
   return (
-    <div className="min-h-[46px] border-b-2 border-dashed border-border border-r-2 p-1.5 last:border-r-0">
+    <div className="min-h-[46px] overflow-hidden border-b-2 border-dashed border-border border-r-2 p-1 last:border-r-0 sm:p-1.5">
       {children}
     </div>
   );
@@ -200,12 +200,18 @@ function Lesson({
     <div
       className={
         highlight
-          ? "my-0.5 rotate-[-1deg] rounded-[10px] border-[1.5px] border-foreground bg-brand px-2 py-1.5 text-[11.5px] leading-tight"
-          : "my-0.5 rounded-[10px] border-[1.5px] border-border bg-secondary px-2 py-1.5 text-[11.5px] leading-tight text-muted-foreground"
+          ? "my-0.5 rotate-[-1deg] rounded-[10px] border-[1.5px] border-foreground bg-brand px-1.5 py-1.5 text-[11.5px] leading-tight sm:px-2"
+          : "my-0.5 rounded-[10px] border-[1.5px] border-border bg-secondary px-1.5 py-1.5 text-[11.5px] leading-tight text-muted-foreground sm:px-2"
       }
     >
-      <b className="block text-[11.5px] text-foreground">{name}</b>
-      <span className={highlight ? "text-foreground" : "text-muted-foreground"}>
+      <b className="block truncate text-[11.5px] text-foreground">{name}</b>
+      <span
+        className={
+          highlight
+            ? "block truncate text-foreground"
+            : "block truncate text-muted-foreground"
+        }
+      >
         {meta}
       </span>
     </div>

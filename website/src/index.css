@@ -155,7 +155,8 @@
   transform: rotate(-0.8deg);
 }
 
-@media (max-width: 760px) {
+/* Aligned with Tailwind's `md` breakpoint (768px). */
+@media (max-width: 767.98px) {
   .reveal.is-visible.rotate-tiny-neg,
   .reveal.is-visible.rotate-tiny-pos,
   .reveal.is-visible.rotate-step-2,
