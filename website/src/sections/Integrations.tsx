@@ -56,7 +56,7 @@ export function Integrations() {
           {INTEGRATIONS.map(({ Icon, name, description }, i) => (
             <li
               key={name}
-              className="reveal doodle-card flex flex-col gap-3 rounded-3xl p-6 transition-transform duration-300 hover:-translate-x-[3px] hover:-translate-y-[3px] hover:shadow-sketch-lg"
+              className="reveal doodle-card flex flex-col gap-3 rounded-3xl p-6"
               style={{ ["--reveal-delay" as string]: `${i * 80}ms` }}
             >
               <Icon className="h-12 w-12" />
