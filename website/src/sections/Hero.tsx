@@ -47,8 +47,7 @@ export function Hero() {
 
           <p className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
             <Check className="h-3.5 w-3.5 text-success" />
-            Free during beta. No card needed — we just want your honest
-            feedback.
+            Free during beta. No card needed to get started.
           </p>
         </div>
 
