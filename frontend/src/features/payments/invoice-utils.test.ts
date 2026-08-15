@@ -9,6 +9,7 @@ import {
   formatCompactCurrency,
   formatDate,
   isOverdue,
+  lineItemsSubtotal,
   DEFAULT_INVOICE_DUE_DAYS,
   defaultInvoiceDueDate,
   defaultInvoiceDueDateInput,
@@ -111,15 +112,6 @@ describe("currency formatting", () => {
   });
 });
 
-describe("formatDate", () => {
-  it("renders the month and year regardless of timezone", () => {
-    // Noon UTC on June 20 is still June 20 in every timezone.
-    const out = formatDate("2026-06-20T12:00:00.000Z");
-    expect(out).toContain("Jun");
-    expect(out).toContain("2026");
-  });
-});
-
 describe("isOverdue", () => {
   it("is overdue when open/past-due, regardless of stored status spelling", () => {
     expect(isOverdue(invoice("open", PAST))).toBe(true);
@@ -149,9 +141,43 @@ describe("invoice due-date config (single source of truth)", () => {
   });
 
   it("renders the due date as YYYY-MM-DD for date inputs", () => {
+    // Local-time semantics: the default must be the user's calendar day 14
+    // days ahead (a UTC slice can be a day off for non-UTC users).
+    const now = new Date(2026, 0, 31, 23, 30); // Jan 31, 23:30 local
+    expect(defaultInvoiceDueDateInput(now)).toBe("2026-02-14");
+  });
+});
+
+describe("formatDate (date-only due dates)", () => {
+  it("renders the stored calendar day for UTC-midnight timestamps in any timezone", () => {
+    // Due dates are created from YYYY-MM-DD inputs and stored as UTC
+    // midnight — the rendered day must match what the tutor picked, not the
+    // local-time conversion of the instant.
+    const out = formatDate("2026-06-20T00:00:00.000Z");
+    expect(out).toBe("20 Jun 2026");
+  });
+
+  it("still converts real timestamps to local time", () => {
+    const out = formatDate("2026-06-20T12:00:00.000Z");
+    expect(out).toContain("Jun");
+    expect(out).toContain("2026");
+  });
+});
+
+describe("lineItemsSubtotal (backend parity)", () => {
+  it("rounds each line before summing", () => {
+    // 0.125 rounds to 0.13 per line → 0.26 total; rounding the raw sum
+    // (0.25) instead would give 0.25 and drift from the persisted subtotal.
     expect(
-      defaultInvoiceDueDateInput(new Date("2026-01-01T00:00:00.000Z")),
-    ).toBe("2026-01-15");
+      lineItemsSubtotal([
+        { unitAmount: 0.125, quantity: 1 },
+        { unitAmount: 0.125, quantity: 1 },
+      ]),
+    ).toBe(0.26);
+  });
+
+  it("returns 0 for an empty list", () => {
+    expect(lineItemsSubtotal([])).toBe(0);
   });
 });
 

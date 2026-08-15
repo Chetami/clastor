@@ -1,6 +1,7 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Check, DollarSign, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
@@ -19,10 +20,12 @@ import {
   TableRow,
 } from "@/components/ui";
 import { Textarea } from "@/components/ui/textarea";
+import { SendInvoiceDialog } from "@/components/send-invoice-dialog";
 import { useGetInvoice } from "./api/use-get-invoice";
 import { useUpdateInvoice } from "./api/use-update-invoice";
 import { useListStudents } from "@/features/students/api";
-import { formatCurrency } from "./invoice-utils";
+import { createInvoiceFormSchema, type CreateInvoiceFormData } from "./invoice-schema";
+import { formatCurrency, lineItemsSubtotal } from "./invoice-utils";
 
 interface LineItemDraft {
   lessonId: string;
@@ -53,6 +56,9 @@ export default function EditInvoice() {
     "cash" | "bank_transfer" | "stripe"
   >("bank_transfer");
   const [notes, setNotes] = useState("");
+  const [errors, setErrors] = useState<Partial<Record<string, string>>>({});
+  const [sendInvoiceId, setSendInvoiceId] = useState<string | null>(null);
+  const seededInvoiceId = useRef<string | null>(null);
 
   const selectedStudent = useMemo(
     () => students.find((s) => s.id === invoice?.studentId) ?? null,
@@ -71,26 +77,22 @@ export default function EditInvoice() {
     }));
   }, [invoice, lineItemAmounts]);
 
-  const subtotal = useMemo(
-    () =>
-      Math.round(
-        lineItems.reduce((sum, li) => sum + li.unitAmount * li.quantity, 0) *
-          100,
-      ) / 100,
-    [lineItems],
-  );
+  const subtotal = useMemo(() => lineItemsSubtotal(lineItems), [lineItems]);
 
+  // Seed the form once per invoice — not on every background refetch, which
+  // would silently discard in-progress edits.
   useEffect(() => {
-    if (invoice) {
-      setDueDate(new Date(invoice.dueDate).toISOString().slice(0, 10));
-      setPaymentMethod(invoice.paymentMethod ?? "bank_transfer");
-      setNotes(invoice.notes ?? "");
-      const amounts: Record<string, number> = {};
-      invoice.lineItems.forEach((li) => {
-        amounts[li.lessonId] = li.unitAmount;
-      });
-      setLineItemAmounts(amounts);
-    }
+    if (!invoice || seededInvoiceId.current === invoice.id) return;
+    seededInvoiceId.current = invoice.id;
+    setDueDate(new Date(invoice.dueDate).toISOString().slice(0, 10));
+    setPaymentMethod(invoice.paymentMethod ?? "bank_transfer");
+    setNotes(invoice.notes ?? "");
+    const amounts: Record<string, number> = {};
+    invoice.lineItems.forEach((li) => {
+      amounts[li.lessonId] = li.unitAmount;
+    });
+    setLineItemAmounts(amounts);
+    setErrors({});
   }, [invoice]);
 
   function updateAmount(lessonId: string, value: string) {
@@ -99,16 +101,53 @@ export default function EditInvoice() {
       ...prev,
       [lessonId]: Number.isNaN(num) ? 0 : num,
     }));
+    setErrors((prev) => ({ ...prev, lineItems: undefined }));
   }
 
-  async function handleSubmit(status: "draft" | "open") {
+  async function handleSubmit(status: "draft" | "open", sendEmail: boolean) {
     if (!invoice) return;
+
+    // Guard the date input before touching Date — a cleared field yields an
+    // Invalid Date whose toISOString() throws.
+    const dueDateMs = new Date(dueDate).getTime();
+    if (!dueDate || Number.isNaN(dueDateMs)) {
+      setErrors({ dueDate: "Due date is required" });
+      return;
+    }
+
+    // Reuse the create-form schema so edit gets the same validation as
+    // create (positive amounts, valid shape).
+    const values: CreateInvoiceFormData = {
+      studentId: invoice.studentId,
+      lineItems: lineItems.map((li) => ({
+        lessonId: li.lessonId,
+        description: li.description,
+        durationMinutes: li.durationMinutes,
+        rateType: li.rateType,
+        unitAmount: li.unitAmount,
+        quantity: li.quantity,
+      })),
+      dueDate: new Date(dueDateMs).toISOString(),
+      paymentMethod,
+      notes: notes.trim() || undefined,
+      status,
+    };
+    const result = createInvoiceFormSchema.safeParse(values);
+    if (!result.success) {
+      const fieldErrors: Record<string, string> = {};
+      for (const issue of result.error.issues) {
+        const key = String(issue.path[0] ?? "");
+        if (!fieldErrors[key]) fieldErrors[key] = issue.message;
+      }
+      setErrors(fieldErrors);
+      return;
+    }
 
     try {
       await updateInvoice.mutateAsync({
         id: invoice.id,
         data: {
-          lineItems: lineItems.map((li) => ({
+          lineItems: result.data.lineItems.map((li) => ({
             lessonId: li.lessonId,
             description: li.description,
             durationMinutes: li.durationMinutes,
@@ -116,15 +155,25 @@ export default function EditInvoice() {
             unitAmount: li.unitAmount,
             quantity: li.quantity,
           })),
-          dueDate: new Date(dueDate).toISOString(),
+          dueDate: result.data.dueDate,
           paymentMethod,
           notes: notes.trim() || null,
           status,
         },
       });
+      if (sendEmail) {
+        // Open the send flow so "Update & Send" actually sends — the
+        // previous behaviour silently finalized without emailing.
+        setSendInvoiceId(invoice.id);
+        return;
+      }
       navigate("/payments");
     } catch (error) {
-      console.error("Failed to update invoice:", error);
+      toast.error(
+        error instanceof Error && error.message
+          ? error.message
+          : "Failed to update invoice",
+      );
     }
   }
 
@@ -268,6 +317,11 @@ export default function EditInvoice() {
                   </div>
                 </div>
               </div>
+              {errors.lineItems && (
+                <p className="mt-2 text-xs text-destructive">
+                  {errors.lineItems}
+                </p>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -297,9 +351,16 @@ export default function EditInvoice() {
                 <Input
                   id="dueDate"
                   type="date"
+                  aria-invalid={!!errors.dueDate}
                   value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
+                  onChange={(e) => {
+                    setDueDate(e.target.value);
+                    setErrors((prev) => ({ ...prev, dueDate: undefined }));
+                  }}
                 />
+                {errors.dueDate && (
+                  <p className="text-xs text-destructive">{errors.dueDate}</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -351,7 +412,7 @@ export default function EditInvoice() {
               </div>
               <div className="flex flex-col gap-2 pt-2">
                 <Button
-                  onClick={() => handleSubmit("open")}
+                  onClick={() => handleSubmit("open", true)}
                   disabled={updateInvoice.isPending || lineItems.length === 0}
                 >
                   <Check className="h-4 w-4" />
@@ -359,7 +420,7 @@ export default function EditInvoice() {
                 </Button>
                 <Button
                   variant="outline"
-                  onClick={() => handleSubmit("draft")}
+                  onClick={() => handleSubmit("draft", false)}
                   disabled={updateInvoice.isPending || lineItems.length === 0}
                 >
                   Save as Draft
@@ -369,6 +430,12 @@ export default function EditInvoice() {
           </Card>
         </div>
       </div>
+
+      <SendInvoiceDialog
+        invoiceId={sendInvoiceId}
+        onClose={() => setSendInvoiceId(null)}
+        onSent={() => navigate("/payments")}
+      />
     </div>
   );
 }

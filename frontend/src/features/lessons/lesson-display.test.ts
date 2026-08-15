@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import type { LessonResponse } from "@examify-tms/interfaces";
-import { lessonBadge } from "./lesson-display";
+import { lessonBadge, lessonStatusBadge } from "./lesson-display";
 
 const PAST = "2020-01-01T12:00:00.000Z";
 const FUTURE = "2099-01-01T12:00:00.000Z";
@@ -13,6 +13,7 @@ function lesson(overrides: Partial<LessonResponse> = {}): LessonResponse {
     durationMinutes: 60,
     attendanceStatus: "unrecorded",
     isCancelled: false,
+    acceptanceStatus: "accepted",
     ...overrides,
   } as unknown as LessonResponse;
 }
@@ -88,5 +89,49 @@ describe("lessonBadge", () => {
       expect(badge.label).toBe("Absent — warned");
       expect(badge.tone).toContain("rose");
     });
+  });
+});
+
+describe("lessonStatusBadge (canonical surface mapping)", () => {
+  it("surfaces Pending for an upcoming lesson awaiting RSVP", () => {
+    const badge = lessonStatusBadge(
+      lesson({
+        startDateTime: FUTURE,
+        acceptanceStatus: "pending",
+      }),
+    );
+    expect(badge?.label).toBe("Pending");
+  });
+
+  it("surfaces Declined for an upcoming refused lesson", () => {
+    const badge = lessonStatusBadge(
+      lesson({
+        startDateTime: FUTURE,
+        acceptanceStatus: "declined",
+      }),
+    );
+    expect(badge?.label).toBe("Declined");
+  });
+
+  it("hides the badge for a confirmed upcoming lesson", () => {
+    const badge = lessonStatusBadge(
+      lesson({
+        startDateTime: FUTURE,
+        acceptanceStatus: "accepted",
+      }),
+    );
+    expect(badge).toBeNull();
+  });
+
+  it("keeps the attendance-driven label for past lessons", () => {
+    const badge = lessonStatusBadge(lesson({ attendanceStatus: "present" }));
+    expect(badge?.label).toBe("Present");
+  });
+
+  it("keeps Cancelled for cancelled lessons regardless of acceptance", () => {
+    const badge = lessonStatusBadge(
+      lesson({ isCancelled: true, acceptanceStatus: "pending" }),
+    );
+    expect(badge?.label).toBe("Cancelled");
   });
 });

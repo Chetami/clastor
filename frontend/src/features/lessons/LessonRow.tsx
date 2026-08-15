@@ -17,10 +17,10 @@ import { RescheduleDialog } from "@/features/schedule/RescheduleDialog";
 import {
   formatLessonTime,
   isToday,
-  lessonBadge,
+  lessonStatusBadge,
 } from "@/features/lessons/lesson-display";
 import { isLessonFinished } from "@/features/schedule/lesson-utils";
-import { lessonIssues, ACCEPTANCE_TONE } from "./lesson-series-utils";
+import { lessonIssues } from "./lesson-series-utils";
 
 export interface LessonRowProps {
   lesson: LessonResponse;
@@ -35,19 +35,10 @@ export function LessonRow({ lesson }: LessonRowProps) {
   const hasAttendanceIssue = issues.some((i) => i.kind === "attendance");
   const hasUnpaidIssue = issues.some((i) => i.kind === "unpaid");
 
-  // Derive the status badge. "Upcoming" is obvious from the date, so for
-  // future lessons we surface acceptance instead — only when pending or
-  // declined (accepted is the unremarkable default). Attendance-driven
-  // labels (Present, Absent, Cancelled, …) are kept for past lessons.
-  const baseBadge = lessonBadge(lesson);
-  const statusBadge =
-    baseBadge.label === "Upcoming"
-      ? lesson.acceptanceStatus === "pending"
-        ? { label: "Pending", tone: ACCEPTANCE_TONE.pending }
-        : lesson.acceptanceStatus === "declined"
-          ? { label: "Declined", tone: ACCEPTANCE_TONE.declined }
-          : null
-      : baseBadge;
+  // Derive the status badge — canonical mapping shared with the calendar
+  // popover and lessons list: upcoming lessons surface acceptance (Pending /
+  // Declined, nothing when accepted); past lessons keep the attendance label.
+  const statusBadge = lessonStatusBadge(lesson);
 
   const dayOfMonth = start.getDate();
   const weekdayShort = start

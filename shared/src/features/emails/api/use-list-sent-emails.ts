@@ -12,16 +12,11 @@ import { listSentEmailsRequest, type ListSentEmailsParams } from "./requests";
  *   recent list for system admins.
  */
 export function useListSentEmails(params: ListSentEmailsParams = {}) {
-  const scopeKey = params.lessonId
-    ? ["lesson", params.lessonId]
-    : params.invoiceId
-      ? ["invoice", params.invoiceId]
-      : params.studentId
-        ? ["student", params.studentId]
-        : ["all"];
-
   return useQuery({
-    queryKey: ["sent-emails", scopeKey],
+    // Key on the whole params object (consistent with ["lessons", params] /
+    // ["invoices", params]) — keying on just the first matching scope field
+    // would collide different filter combinations on one cache entry.
+    queryKey: ["sent-emails", params],
     queryFn: () => listSentEmailsRequest(params),
   });
 }

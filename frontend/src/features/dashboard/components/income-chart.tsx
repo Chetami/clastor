@@ -8,6 +8,7 @@ import {
   LabelList,
   ReferenceLine,
   type RenderableText,
+  type TooltipContentProps,
 } from "recharts";
 import {
   ChartContainer,
@@ -26,6 +27,7 @@ import {
   isDenseSeries,
   formatCurrencyWhole,
 } from "../lib";
+import { DashboardTooltip } from "./chart-tooltip";
 
 const chartConfig = {
   current: {
@@ -48,24 +50,13 @@ export function IncomeChart({ summary }: { summary: DashboardSummaryResponse }) 
   const todayLabel = todayBucketLabel(summary.incomeSeries);
   const showLabels = !isDenseSeries(summary.incomeSeries);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const renderTooltip = ({ active, payload }: any) => {
-    if (!active || !payload?.length) return null;
-    const cur = Number(payload.find((p: { dataKey?: string | number; value?: number | string }) => p.dataKey === "current")?.value ?? 0);
-    const prev = Number(payload.find((p: { dataKey?: string | number; value?: number | string }) => p.dataKey === "previous")?.value ?? 0);
-    const pct = total > 0 ? Math.round((cur / total) * 100) : 0;
-    return (
-      <div className="rounded-lg border bg-background px-2.5 py-1.5 text-xs shadow-xl">
-        <div className="mb-1 font-medium">{formatCurrencyWhole(cur, currency)}</div>
-        <div className="text-muted-foreground">{pct}% of period</div>
-        {prev > 0 && (
-          <div className="text-muted-foreground">
-            Last: {formatCurrencyWhole(prev, currency)}
-          </div>
-        )}
-      </div>
-    );
-  };
+  const renderTooltip = (props: TooltipContentProps) => (
+    <DashboardTooltip
+      {...props}
+      total={total}
+      format={(cur) => formatCurrencyWhole(cur, currency)}
+    />
+  );
 
   return (
     <Card className="flex flex-col">
@@ -137,7 +128,9 @@ export function IncomeChart({ summary }: { summary: DashboardSummaryResponse }) 
                   className="fill-muted-foreground"
                   fontSize={10}
                   formatter={(value: RenderableText) =>
-                    Number(value) > 0 ? `$${Math.round(Number(value))}` : ""
+                    Number(value) > 0
+                      ? formatCurrencyWhole(Number(value), currency)
+                      : ""
                   }
                 />
               )}

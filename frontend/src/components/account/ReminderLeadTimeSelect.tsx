@@ -1,3 +1,4 @@
+import { toast } from "sonner";
 import {
   Select,
   SelectContent,
@@ -29,8 +30,13 @@ export function ReminderLeadTimeSelect({ className }: { className?: string }) {
     try {
       const updated = await updateUserReminderLeadTimeRequest(leadTime);
       setUser(updated);
-    } catch {
-      // best-effort: leave the store as-is on failure
+    } catch (err) {
+      // The store keeps the previous value — tell the user it didn't save.
+      toast.error(
+        err instanceof Error && err.message
+          ? err.message
+          : "Couldn't save your reminder preference.",
+      );
     }
   }
 

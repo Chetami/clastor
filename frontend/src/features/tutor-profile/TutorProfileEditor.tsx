@@ -138,6 +138,9 @@ export default function TutorProfileEditor() {
   }
 
   function slugIsBlocked() {
+    // While a new check is in flight `slugCheck.data` still holds the
+    // previous slug's (likely "available") result — block on it too.
+    if (slugCheck.isFetching) return true;
     return Boolean(slugCheck.data && !slugCheck.data.available);
   }
 

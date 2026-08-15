@@ -32,6 +32,8 @@ export {
   isOverdue,
   buildLessonDescription,
   buildLessonLineItem,
+  lineItemsSubtotal,
+  roundLineAmount,
   isCancelledLesson,
   isPastLesson,
   isExcludedFromInvoicing,

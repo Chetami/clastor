@@ -1,6 +1,5 @@
 import type { LessonResponse } from "@examify-tms/interfaces";
-import { lessonBadge } from "@/features/lessons/lesson-display";
-import { ACCEPTANCE_TONE } from "@/features/lessons/lesson-series-utils";
+import { lessonStatusBadge as canonicalLessonStatusBadge } from "@/features/lessons/lesson-display";
 
 export interface Badge {
   label: string;
@@ -8,21 +7,10 @@ export interface Badge {
 }
 
 /**
- * App-wide status badge for a lesson. Matches the Lessons list / LessonRow:
- * upcoming lessons surface acceptance (Pending/Declined, or nothing when
- * accepted); past lessons show the attendance-driven label. Returns null when
- * there's nothing worth surfacing.
+ * App-wide status badge for a lesson — canonical implementation lives in
+ * `@/features/lessons/lesson-display` so every surface (list, series rows,
+ * popover) derives badges the same way. Re-exported here for convenience.
  */
 export function lessonStatusBadge(lesson: LessonResponse): Badge | null {
-  const base = lessonBadge(lesson);
-  if (base.label === "Upcoming") {
-    if (lesson.acceptanceStatus === "pending") {
-      return { label: "Pending", tone: ACCEPTANCE_TONE.pending };
-    }
-    if (lesson.acceptanceStatus === "declined") {
-      return { label: "Declined", tone: ACCEPTANCE_TONE.declined };
-    }
-    return null;
-  }
-  return base;
+  return canonicalLessonStatusBadge(lesson);
 }

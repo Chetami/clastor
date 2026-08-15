@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -10,14 +10,13 @@ import { Button } from "@/components/ui/button";
 import {
   useGetLesson,
   useRecordAttendance,
-  useCancelLesson,
   useNotifyStudent,
   useUpdateLesson,
   useResyncLesson,
   previewNotifyStudentRequest,
 } from "../schedule/api";
 import { EmailComposeDialog } from "@/components/email-compose-dialog";
-import { getGoogleConnectionStatus } from "../schedule/api/requests";
+import { useGoogleConnectionStatus } from "@/features/settings/api/use-google-connect";
 import { useListStudents } from "@/features/students/api";
 import { useSubjects } from "@/lib/subjects";
 import type { AttendanceStatus } from "@examify-tms/interfaces";
@@ -34,29 +33,23 @@ import { LessonOutcome } from "./lesson-detail/LessonOutcome";
  * here; each card (header / details / notes / checklist / outcome) and its
  * interactions are extracted into `./lesson-detail/` sub-components.
  */
-export default function EventDetail() {
+export default function LessonDetail() {
   const { eventId } = useParams<{ eventId: string }>();
   const navigate = useNavigate();
   const { data: lesson, isLoading } = useGetLesson(eventId);
   const { data: students = [] } = useListStudents();
   const subjects = useSubjects();
   const recordAttendance = useRecordAttendance(eventId!);
-  const cancelLesson = useCancelLesson(eventId!);
   const notifyStudent = useNotifyStudent(eventId!);
   const updateLesson = useUpdateLesson(eventId!);
   const resyncLesson = useResyncLesson(eventId!);
+  const googleStatus = useGoogleConnectionStatus();
+  const googleConnected = googleStatus.data?.connected ?? null;
 
   const [pickerError, setPickerError] = useState<string | null>(null);
   const [notifyOpen, setNotifyOpen] = useState(false);
-  const [googleConnected, setGoogleConnected] = useState<boolean | null>(null);
   const [rescheduleOpen, setRescheduleOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
-
-  useEffect(() => {
-    getGoogleConnectionStatus()
-      .then((s) => setGoogleConnected(s.connected))
-      .catch(() => setGoogleConnected(false));
-  }, []);
 
   if (isLoading) {
     return (
@@ -99,25 +92,21 @@ export default function EventDetail() {
   }
 
   async function handleNotify(message: string) {
-    try {
-      await notifyStudent.mutateAsync({ message: message || undefined });
-      toast.success("Reminder sent");
-      setNotifyOpen(false);
-    } catch {
-      setPickerError(
-        notifyStudent.error?.message ?? "Failed to notify student",
-      );
-      setNotifyOpen(false);
-    }
+    // On failure the rejection propagates to EmailComposeDialog, which shows
+    // the error and stays open for retry.
+    await notifyStudent.mutateAsync({ message: message || undefined });
+    toast.success("Reminder sent");
+    setNotifyOpen(false);
   }
 
   async function handleAttendanceChange(value: AttendanceStatus) {
     setPickerError(null);
     try {
       await recordAttendance.mutateAsync(value);
-    } catch {
+    } catch (err) {
+      // Read the caught error — the mutation result on this render is stale.
       setPickerError(
-        recordAttendance.error?.message ?? "Failed to record attendance",
+        err instanceof Error ? err.message : "Failed to record attendance",
       );
     }
   }
@@ -140,9 +129,11 @@ export default function EventDetail() {
             ? "Recovered on Google Calendar."
             : "Already up to date on Google Calendar.",
       );
-    } catch {
+    } catch (err) {
       toast.error(
-        resyncLesson.error?.message ?? "Failed to sync to Google Calendar",
+        err instanceof Error
+          ? err.message
+          : "Failed to sync to Google Calendar",
       );
     }
   }
@@ -169,7 +160,6 @@ export default function EventDetail() {
         onCancel={handleCancel}
         onResync={handleResync}
         notifyPending={notifyStudent.isPending}
-        cancelPending={cancelLesson.isPending}
         resyncPending={resyncLesson.isPending}
       />
 

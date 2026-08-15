@@ -19,7 +19,7 @@ export function CurrentLesson({ lesson, studentName }: Props) {
   const updateLesson = useUpdateLesson(lesson.id);
 
   const callLink = lesson.meetLink;
-  const isMeet = !!lesson.meetLink;
+  const isMeet = !!callLink?.includes("meet.google.com");
 
   const handleGenerate = async () => {
     try {
@@ -62,7 +62,9 @@ export function CurrentLesson({ lesson, studentName }: Props) {
               </span>
             </div>
             <p className="font-medium">
-              {studentName} · {lesson.subject}
+              {lesson.subject
+                ? `${studentName} · ${lesson.subject}`
+                : studentName}
             </p>
             <Link
               to={`/lessons/${lesson.id}`}

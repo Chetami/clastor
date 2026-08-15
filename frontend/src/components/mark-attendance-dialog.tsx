@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -33,6 +33,10 @@ type AttendanceOption = {
   value: AttendanceStatus;
   label: string;
 };
+
+// Radix Select treats value="" as the placeholder sentinel, so use a stable
+// non-empty sentinel to represent "no subject".
+const NO_SUBJECT = "__none__";
 
 const OPTIONS: AttendanceOption[] = [
   { value: "present", label: "Present" },
@@ -70,6 +74,21 @@ export function MarkAttendanceDialog({
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [subject, setSubject] = useState(lesson.subject ?? "");
   const [duration, setDuration] = useState(String(lesson.durationMinutes));
+
+  // Re-seed the form whenever the lesson changes. The dialog is a singleton
+  // on some surfaces (calendar popover), so without this the previous
+  // lesson's subject/duration would leak into — and be PATCHed onto — the
+  // next lesson. (Call sites that remount per lesson make this a no-op.)
+  const lastLessonId = useRef(lesson.id);
+  useEffect(() => {
+    if (lastLessonId.current === lesson.id) return;
+    lastLessonId.current = lesson.id;
+    setSelected(null);
+    setSendInvoice(false);
+    setDetailsOpen(false);
+    setSubject(lesson.subject ?? "");
+    setDuration(String(lesson.durationMinutes));
+  }, [lesson.id, lesson.subject, lesson.durationMinutes]);
 
   const subjectChanged = subject !== (lesson.subject ?? "");
   const durationNum = Number(duration);
@@ -174,7 +193,10 @@ export function MarkAttendanceDialog({
               <Label htmlFor="invoice-subject" className="text-xs">
                 Subject
               </Label>
-              <Select value={subject} onValueChange={setSubject}>
+              <Select
+                value={subject || NO_SUBJECT}
+                onValueChange={(v) => setSubject(v === NO_SUBJECT ? "" : v)}
+              >
                 <SelectTrigger id="invoice-subject" className="h-8">
                   <SelectValue
                     placeholder={
@@ -185,7 +207,7 @@ export function MarkAttendanceDialog({
                   />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No subject</SelectItem>
+                  <SelectItem value={NO_SUBJECT}>No subject</SelectItem>
                   {subjectChoices.map((name) => (
                     <SelectItem key={name} value={name}>
                       {name}

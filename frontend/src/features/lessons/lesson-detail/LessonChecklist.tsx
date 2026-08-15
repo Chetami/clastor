@@ -41,6 +41,7 @@ export function LessonChecklist({
     todosDone,
     todosTotal,
     todosSaving,
+    todosDirty,
     focusId,
     clearFocus,
     newTodoText,
@@ -82,7 +83,7 @@ export function LessonChecklist({
                 Clear done
               </Button>
             )}
-            <SaveStatus dirty={false} saving={todosSaving} />
+            <SaveStatus dirty={todosDirty} saving={todosSaving} />
           </span>
         </CardTitle>
       </CardHeader>

@@ -10,6 +10,8 @@ export interface StudentLookups {
   byId: Record<string, StudentResponse>;
   /** studentId → list of that student's subject names (from the catalogue) */
   subjectOptions: Record<string, string[]>;
+  /** True while the students query is still loading. */
+  isLoading: boolean;
 }
 
 /**
@@ -19,7 +21,7 @@ export interface StudentLookups {
  * caller, so this is cheap to call from multiple components.
  */
 export function useStudentLookups(): StudentLookups {
-  const { data: students = [] } = useListStudents();
+  const { data: students = [], isPending } = useListStudents();
   const subjects = useSubjects();
 
   return useMemo<StudentLookups>(() => {
@@ -33,6 +35,6 @@ export function useStudentLookups(): StudentLookups {
         .map((id) => subjects.find((sub) => sub.id === id)?.name)
         .filter((n): n is string => !!n);
     }
-    return { names, byId, subjectOptions };
-  }, [students, subjects]);
+    return { names, byId, subjectOptions, isLoading: isPending };
+  }, [students, subjects, isPending]);
 }

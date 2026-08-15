@@ -181,6 +181,32 @@ describe("eventFormSchema — recurring", () => {
     });
     expect(res.success).toBe(false);
   });
+
+  it("rejects duplicate day+time slots", () => {
+    const res = parse({
+      ...recurringBase(),
+      slots: [
+        { dayOfWeek: "monday", timeOfDay: "09:00" },
+        { dayOfWeek: "monday", timeOfDay: "09:00" },
+      ],
+    });
+    expect(res.success).toBe(false);
+    if (!res.success) {
+      expect(res.error.issues.some((i) => i.path[0] === "slots")).toBe(true);
+    }
+  });
+
+  it("allows the same day at different times, and the same time on different days", () => {
+    const res = parse({
+      ...recurringBase(),
+      slots: [
+        { dayOfWeek: "monday", timeOfDay: "09:00" },
+        { dayOfWeek: "monday", timeOfDay: "10:00" },
+        { dayOfWeek: "wednesday", timeOfDay: "09:00" },
+      ],
+    });
+    expect(res.success).toBe(true);
+  });
 });
 
 describe("toCreateLessonRequest", () => {

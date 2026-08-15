@@ -34,6 +34,7 @@ import {
   formatHours,
   deltaPercent,
   previousPeriodLabel,
+  currentPeriodLabel,
 } from "@/features/dashboard/lib";
 import { getInitials } from "@examify-tms/shared";
 import { useAdminOverview } from "./api";
@@ -225,7 +226,12 @@ export default function AdminDashboard() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0">
             <CardTitle className="text-base">Top tutors</CardTitle>
-            <span className="text-xs text-muted-foreground">by income · {prevLabel.toLowerCase()}</span>
+            {/* The leaderboard aggregates the CURRENT period (the adjacent
+                stat tiles use the explicit previous* fields) — label it
+                accordingly, not with the previous-period label. */}
+            <span className="text-xs text-muted-foreground">
+              by income · {currentPeriodLabel(period).toLowerCase()}
+            </span>
           </CardHeader>
           <CardContent>
             {overviewLoading || !overview ? (

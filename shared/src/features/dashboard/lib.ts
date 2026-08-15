@@ -308,12 +308,27 @@ export function peak(values: number[]): number {
   return values.length ? Math.max(...values) : 0;
 }
 
-/** The axis label of the bucket containing today (for the "today" marker). */
+/**
+ * The axis label of the bucket containing today (for the "today" marker).
+ * Buckets are built server-side on UTC calendar days, so compare UTC days —
+ * a local-day comparison puts the marker one bar off for users outside UTC.
+ */
 export function todayBucketLabel(
   series: DashboardSeriesPoint[],
 ): string | null {
-  const today = new Date();
-  const found = series.find((p) => isSameDay(new Date(p.date), today));
+  const now = new Date();
+  const todayUtcMs = Date.UTC(
+    now.getUTCFullYear(),
+    now.getUTCMonth(),
+    now.getUTCDate(),
+  );
+  const found = series.find((p) => {
+    const d = new Date(p.date);
+    return (
+      Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) ===
+      todayUtcMs
+    );
+  });
   return found?.label ?? null;
 }
 

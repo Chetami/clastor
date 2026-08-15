@@ -28,6 +28,10 @@ import {
 } from "@/components/ui/select";
 import type { StudentFormData } from "./student-schema";
 import {
+  formToCreateRequest,
+  formToUpdateRequest,
+} from "./student-schema";
+import {
   useCreateStudent,
   useListStudents,
   useUpdateStudent,
@@ -71,7 +75,7 @@ export default function Students() {
   const { data: students = [], isLoading, error } = useListStudents();
   const subjectMap = useSubjectMap();
   const subjects = useSubjects();
-  const studentIds = students.map((s) => s.id);
+  const studentIds = useMemo(() => students.map((s) => s.id), [students]);
   const debtQueries = useStudentsDebts(studentIds);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("active");
   const [search, setSearch] = useState("");
@@ -137,65 +141,31 @@ export default function Students() {
 
   async function handleAdd(values: StudentFormData) {
     try {
-      const billingEmail =
-        values.billingEmailMode === "auto"
-          ? undefined
-          : values.billingEmail?.trim() || undefined;
-
-      await createStudent.mutateAsync({
-        name: values.name,
-        email: values.email || null,
-        phone: values.phone?.trim() || undefined,
-        parentEmail: values.parentEmail?.trim() || undefined,
-        billingEmail,
-        subjectIds: values.subjectIds,
-        expectedAmount: values.expectedAmount,
-        rateType: values.rateType,
-        frequencyPerWeek: values.frequencyPerWeek,
-        status: values.status,
-        timezone: values.timezoneEnabled
-          ? (values.timezone ?? undefined)
-          : undefined,
-        notes: values.notes?.trim() || undefined,
-      });
-
+      await createStudent.mutateAsync(formToCreateRequest(values));
       setAddOpen(false);
     } catch (error) {
-      console.error("Failed to create student:", error);
+      toast.error(
+        error instanceof Error && error.message
+          ? error.message
+          : "Failed to create student",
+      );
     }
   }
 
   async function handleEdit(values: StudentFormData) {
     if (!editing) return;
     try {
-      const billingEmail =
-        values.billingEmailMode === "auto"
-          ? null
-          : values.billingEmail?.trim() || null;
-
       await updateStudent.mutateAsync({
         id: editing.id,
-        data: {
-          name: values.name,
-          email: values.email || null,
-          phone: values.phone?.trim() || null,
-          parentEmail: values.parentEmail?.trim() || null,
-          billingEmail,
-          subjectIds: values.subjectIds,
-          expectedAmount: values.expectedAmount,
-          rateType: values.rateType,
-          frequencyPerWeek: values.frequencyPerWeek,
-          status: values.status,
-          timezone: values.timezoneEnabled
-            ? (values.timezone ?? null)
-            : null,
-          notes: values.notes?.trim() || null,
-        },
+        data: formToUpdateRequest(values),
       });
-
       setEditing(null);
     } catch (error) {
-      console.error("Failed to update student:", error);
+      toast.error(
+        error instanceof Error && error.message
+          ? error.message
+          : "Failed to update student",
+      );
     }
   }
 

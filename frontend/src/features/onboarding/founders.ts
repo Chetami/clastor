@@ -17,8 +17,8 @@ export type Founder = {
 };
 
 /**
- * TODO(founders): replace placeholders with real names, photos and contact
- * links. Photos live in `frontend/public/founders/`.
+ * Founders shown in onboarding. Photos live in `frontend/public/founders/`
+ * and fall back to initials when missing.
  */
 export const FOUNDERS: Founder[] = [
   {

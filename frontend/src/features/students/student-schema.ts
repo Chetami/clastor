@@ -5,6 +5,7 @@ export {
   studentStatusSchema,
   studentFormSchema,
   EMPTY_STUDENT_FORM,
+  formToCreateRequest,
   formToUpdateRequest,
   type StudentFormData,
 } from "@examify-tms/shared";

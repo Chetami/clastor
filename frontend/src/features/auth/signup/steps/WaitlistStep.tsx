@@ -24,9 +24,10 @@ export function WaitlistStep({
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!email.trim()) return;
+    const trimmed = email.trim();
+    if (!trimmed) return;
     track("signup_waitlist_join", { intent: answers.intent });
-    waitlist.mutate(email);
+    waitlist.mutate(trimmed);
   }
 
   useEffect(() => {

@@ -77,12 +77,17 @@ export function EmailComposeDialog({
   // one (e.g. the tutor typing fast).
   const seqRef = useRef(0);
   const initializedRef = useRef(false);
+  // The message the current preview was rendered for — lets the debounce
+  // effect skip the redundant re-fetch that prefiling the default message
+  // would otherwise trigger right after open.
+  const previewedMessageRef = useRef<string | null>(null);
 
   // Initial load on open: fetch with no message to obtain the rendered email
   // + the auto-generated default message, then prefill the editable field.
   useEffect(() => {
     if (!open) {
       initializedRef.current = false;
+      previewedMessageRef.current = null;
       return;
     }
     let cancelled = false;
@@ -95,6 +100,7 @@ export function EmailComposeDialog({
       setSubject(p.subject);
       setHtml(p.html);
       setMessage(p.defaultMessage);
+      previewedMessageRef.current = p.defaultMessage;
       initializedRef.current = true;
       setInitialLoading(false);
     }).catch((e) => {
@@ -110,6 +116,9 @@ export function EmailComposeDialog({
   // Debounced live refresh as the tutor edits the message.
   useEffect(() => {
     if (!open || !initializedRef.current) return;
+    // Skip when the message hasn't changed since the last render (e.g. the
+    // just-loaded default) — one wasted request per dialog open otherwise.
+    if (previewedMessageRef.current === message) return;
     setRefreshing(true);
     const seq = ++seqRef.current;
     const timer = setTimeout(() => {
@@ -118,6 +127,7 @@ export function EmailComposeDialog({
         setTo(p.to);
         setSubject(p.subject);
         setHtml(p.html);
+        previewedMessageRef.current = message;
         setRefreshing(false);
       }).catch(() => {
         // Editing errors are non-fatal; keep the last good preview.

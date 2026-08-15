@@ -33,8 +33,24 @@ export function formatCompactCurrency(
     : formatCurrency(amount, currency);
 }
 
+/**
+ * Timestamps that are exactly UTC midnight are date-only values (invoice due
+ * dates are created from `YYYY-MM-DD` inputs). Render the stored calendar
+ * day rather than converting to local time, which shifts the date by a day
+ * for users outside UTC.
+ */
+const DATE_ONLY_UTC_RE = /^\d{4}-\d{2}-\d{2}T00:00:00(?:\.000)?Z$/;
+
+function parseDateOnly(iso: string): Date {
+  const [y, m, d] = iso.slice(0, 10).split("-").map(Number);
+  return new Date(y!, m! - 1, d!);
+}
+
 export function formatDate(iso: string): string {
-  return formatDateFns(new Date(iso), "d MMM yyyy");
+  const date = DATE_ONLY_UTC_RE.test(iso)
+    ? parseDateOnly(iso)
+    : new Date(iso);
+  return formatDateFns(date, "d MMM yyyy");
 }
 
 export function formatDateTime(iso: string): string {
@@ -90,6 +106,26 @@ export function buildLessonLineItem(
     unitAmount: defaultUnitAmount(expectedAmount),
     quantity: defaultQuantity(rateType, lesson.durationMinutes),
   };
+}
+
+/**
+ * Round a single line total to 2 decimal places. Each line is rounded
+ * individually and then summed (matching the backend's subtotal math), so
+ * the client-displayed total always equals the persisted one.
+ */
+export function roundLineAmount(unitAmount: number, quantity: number): number {
+  return Math.round(unitAmount * quantity * 100) / 100;
+}
+
+/** Subtotal across line items, rounding each line first (backend parity). */
+export function lineItemsSubtotal(
+  items: ReadonlyArray<{ unitAmount: number; quantity: number }>,
+): number {
+  const sum = items.reduce(
+    (acc, li) => acc + roundLineAmount(li.unitAmount, li.quantity),
+    0,
+  );
+  return Math.round(sum * 100) / 100;
 }
 
 /* -------------------------------------------------------------------------- */

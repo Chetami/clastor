@@ -17,7 +17,7 @@ import {
   getInitials,
   formatLessonDate,
   formatLessonTime,
-  lessonBadge,
+  lessonStatusBadge,
 } from "@/features/lessons/lesson-display";
 
 type FilterTab = "upcoming" | "past" | "cancelled" | "all";
@@ -111,8 +111,11 @@ export default function Lessons() {
               <ul className="-mx-6 divide-y">
                 {lessons.map((lesson) => {
                   const name =
-                    studentNames[lesson.studentId] ?? "Unknown student";
-                  const badge = lessonBadge(lesson);
+                     studentNames[lesson.studentId] ?? "Unknown student";
+                   // Same canonical badge mapping as the series rows and the
+                   // calendar popover (Pending/Declined for unconfirmed
+                   // upcoming lessons instead of a generic "Upcoming").
+                   const badge = lessonStatusBadge(lesson);
                   const meet = lesson.meetLink;
                   const subject = lesson.subject ?? "Lesson";
                   return (
@@ -175,11 +178,13 @@ export default function Lessons() {
                             </a>
                           </Button>
                         )}
-                        <span
-                          className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${badge.tone}`}
-                        >
-                          {badge.label}
-                        </span>
+                        {badge && (
+                          <span
+                            className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${badge.tone}`}
+                          >
+                            {badge.label}
+                          </span>
+                        )}
                         <Button
                           variant="ghost"
                           size="icon"

@@ -24,9 +24,10 @@ interface InvoiceDetailsSidebarProps {
   subtotal: number;
   currency: string;
   createPending: boolean;
-  sendPending: boolean;
   hasLineItems: boolean;
   hasStudent: boolean;
+  /** Per-field validation messages (billingEmail / dueDate). */
+  fieldErrors?: { billingEmail?: string; dueDate?: string };
   onBillingEmailChange: (value: string) => void;
   onDueDateChange: (value: string) => void;
   onPaymentMethodChange: (
@@ -50,17 +51,16 @@ export function InvoiceDetailsSidebar({
   subtotal,
   currency,
   createPending,
-  sendPending,
   hasLineItems,
   hasStudent,
+  fieldErrors,
   onBillingEmailChange,
   onDueDateChange,
   onPaymentMethodChange,
   onNotesChange,
   onSubmit,
 }: InvoiceDetailsSidebarProps) {
-  const disabled =
-    createPending || sendPending || !hasLineItems || !hasStudent;
+  const disabled = createPending || !hasLineItems || !hasStudent;
   const hasSendEmail = !!(billingEmail.trim() || resolvedBillingEmail.trim());
 
   return (
@@ -75,14 +75,21 @@ export function InvoiceDetailsSidebar({
             <Input
               id="billingEmail"
               type="email"
+              aria-invalid={!!fieldErrors?.billingEmail}
               placeholder={resolvedBillingEmail}
               value={billingEmail}
               onChange={(e) => onBillingEmailChange(e.target.value)}
             />
-            <p className="text-xs text-muted-foreground">
-              Defaults to the student's billing email. Leave blank to use{" "}
-              {resolvedBillingEmail || "—"}.
-            </p>
+            {fieldErrors?.billingEmail ? (
+              <p className="text-xs text-destructive">
+                {fieldErrors.billingEmail}
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Defaults to the student's billing email. Leave blank to use{" "}
+                {resolvedBillingEmail || "—"}.
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -90,9 +97,13 @@ export function InvoiceDetailsSidebar({
             <Input
               id="dueDate"
               type="date"
+              aria-invalid={!!fieldErrors?.dueDate}
               value={dueDate}
               onChange={(e) => onDueDateChange(e.target.value)}
             />
+            {fieldErrors?.dueDate && (
+              <p className="text-xs text-destructive">{fieldErrors.dueDate}</p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -152,11 +163,7 @@ export function InvoiceDetailsSidebar({
             <EmailGuard hasEmail={hasSendEmail}>
               <Button onClick={() => onSubmit("open", true)} disabled={disabled}>
                 <Check className="h-4 w-4" />
-                {sendPending
-                  ? "Sending..."
-                  : createPending
-                    ? "Creating..."
-                    : "Create & Send"}
+                {createPending ? "Creating..." : "Create & Send"}
               </Button>
             </EmailGuard>
             <Button

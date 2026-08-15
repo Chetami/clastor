@@ -25,6 +25,9 @@ export function useLessonNotes(
   const [notesDraft, setNotesDraft] = useState("");
   const notesRef = useRef("");
   const lastSyncedId = useRef<string | null>(null);
+  // Latest draft captured while a save was in flight — flushed when the
+  // mutation settles so a blur during a pending save is never dropped.
+  const flushRef = useRef<string | null>(null);
 
   const serverNotes = lesson?.notes ?? "";
 
@@ -56,8 +59,21 @@ export function useLessonNotes(
   const notesSaving = notesDirty && updateLesson.isPending;
 
   function handleNotesBlur() {
-    if (notesDirty && !updateLesson.isPending) saveNotes(notesRef.current);
+    if (!notesDirty) return;
+    if (updateLesson.isPending) {
+      flushRef.current = notesRef.current;
+      return;
+    }
+    saveNotes(notesRef.current);
   }
+
+  // Flush the newest draft once the in-flight save settles.
+  useEffect(() => {
+    const pending = flushRef.current;
+    if (updateLesson.isPending || pending === null) return;
+    flushRef.current = null;
+    if (pending !== serverNotes) void saveNotes(pending);
+  }, [updateLesson.isPending, serverNotes, saveNotes]);
 
   function handleNotesKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {

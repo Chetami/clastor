@@ -54,21 +54,69 @@ export function useInvoiceLesson() {
 
       const created = await createInvoiceRequest(payload);
       if (!skipSend) {
-        await sendInvoiceRequest(created.id);
+        try {
+          await sendInvoiceRequest(created.id);
+        } catch (err) {
+          // Tag the send failure with the created invoice id so the caches
+          // can still be invalidated (see extractCreatedInvoiceId).
+          if (err instanceof Error) {
+            (err as Error & { createdInvoiceId?: string }).createdInvoiceId =
+              created.id;
+          }
+          throw err;
+        }
       }
       return created;
     },
     onSuccess: (response) => {
-      queryClient.invalidateQueries({ queryKey: ["invoices"] });
-      queryClient.invalidateQueries({ queryKey: ["invoices", response.id] });
-      queryClient.invalidateQueries({ queryKey: ["lessons"] });
-      queryClient.invalidateQueries({
-        queryKey: ["student-invoices", response.studentId],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["student-debt", response.studentId],
-      });
-      queryClient.invalidateQueries({ queryKey: ["sent-emails"] });
+      invalidateInvoiceLessonCaches(response);
+    },
+    // Invalidate even when the send step fails after creation — otherwise the
+    // just-created (but unsent) invoice is missing from every list until an
+    // unrelated refetch.
+    onError: (error, variables) => {
+      const createdId = extractCreatedInvoiceId(error);
+      if (createdId) {
+        invalidateInvoiceLessonCaches({
+          id: createdId,
+          studentId: variables.lesson.studentId,
+        } as InvoiceResponse);
+      } else {
+        // The create itself failed — lesson debt state may still have moved.
+        queryClient.invalidateQueries({ queryKey: ["lessons"] });
+      }
     },
   });
+}
+
+function invalidateInvoiceLessonCaches(response: InvoiceResponse) {
+  queryClient.invalidateQueries({ queryKey: ["invoices"] });
+  queryClient.invalidateQueries({ queryKey: ["invoices", response.id] });
+  queryClient.invalidateQueries({ queryKey: ["lessons"] });
+  queryClient.invalidateQueries({
+    queryKey: ["student-invoices", response.studentId],
+  });
+  queryClient.invalidateQueries({
+    queryKey: ["student-debt", response.studentId],
+  });
+  queryClient.invalidateQueries({ queryKey: ["sent-emails"] });
+}
+
+/**
+ * When create succeeds but send fails, the mutation rejects with the send
+ * error — the created invoice id is lost. Attach it to the error so the
+ * onError handler can still invalidate the right caches.
+ */
+const CREATED_INVOICE_ID = "createdInvoiceId";
+
+function extractCreatedInvoiceId(error: unknown): string | null {
+  if (
+    error &&
+    typeof error === "object" &&
+    CREATED_INVOICE_ID in error &&
+    typeof (error as Record<string, unknown>)[CREATED_INVOICE_ID] === "string"
+  ) {
+    return (error as Record<string, unknown>)[CREATED_INVOICE_ID] as string;
+  }
+  return null;
 }

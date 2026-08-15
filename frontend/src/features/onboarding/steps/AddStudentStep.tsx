@@ -61,23 +61,23 @@ export const AddStudentStep = forwardRef<
   const currency = useUserCurrency();
   const currencySymbol = getCurrencySymbol(currency);
 
-  const persisted = loadDrafts().student;
-
   // "success" is only reached via a real create in this session. Returning to
   // the step after a student already exists starts in a static (non-auto-
   // advancing) success view.
   const [created, setCreated] = useState(false);
 
-  const [name, setName] = useState(persisted?.name ?? "");
-  const [email, setEmail] = useState(persisted?.email ?? "");
+  // Seed from the persisted draft once, in the state initializers (reading
+  // sessionStorage in the render body would re-parse on every render).
+  const [name, setName] = useState(() => loadDrafts().student?.name ?? "");
+  const [email, setEmail] = useState(() => loadDrafts().student?.email ?? "");
   const [subjectIds, setSubjectIds] = useState<string[]>(
-    persisted?.subjectIds ?? [],
+    () => loadDrafts().student?.subjectIds ?? [],
   );
   const [expectedAmount, setExpectedAmount] = useState<number>(
-    persisted?.expectedAmount ?? 50,
+    () => loadDrafts().student?.expectedAmount ?? 50,
   );
   const [rateType, setRateType] = useState<RateType>(
-    persisted?.rateType ?? "hourly",
+    () => loadDrafts().student?.rateType ?? "hourly",
   );
   const [emailError, setEmailError] = useState<string | undefined>();
 

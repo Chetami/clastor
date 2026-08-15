@@ -59,7 +59,11 @@ export function EmailHistory({
   variant = "card",
   className,
 }: EmailHistoryProps) {
-  const { data, isLoading } = useListSentEmails({ lessonId, invoiceId, studentId });
+  const { data, isLoading, error } = useListSentEmails({
+    lessonId,
+    invoiceId,
+    studentId,
+  });
   const emails = data?.data ?? [];
   const [selected, setSelected] = useState<SentEmailResponse | null>(null);
 
@@ -77,6 +81,12 @@ export function EmailHistory({
             </div>
           ))}
         </div>
+      ) : error ? (
+        // Don't render the "No emails sent yet." success message for a
+        // failed fetch — this panel is the audit trail for "did it send?".
+        <p className="py-2 text-xs text-destructive">
+          Couldn't load email history.
+        </p>
       ) : emails.length === 0 ? (
         <p className="py-2 text-xs text-muted-foreground">
           No emails sent yet.

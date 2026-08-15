@@ -21,6 +21,15 @@ import { useSubjects } from "@/lib/subjects";
 import { track } from "@/lib/analytics";
 import { useCompleteOnboarding } from "./api/use-complete-onboarding";
 import { clearDrafts } from "./draft-storage";
+import {
+  STEPS,
+  STEP_KEYS,
+  STEP_STORAGE_KEY,
+  readStoredStep,
+  resolveStepIndex,
+  resolveInitialStep,
+  type StepKey,
+} from "./onboarding-steps";
 import { WelcomeStep } from "./steps/WelcomeStep";
 import { SubjectsStep } from "./steps/SubjectsStep";
 import {
@@ -30,53 +39,6 @@ import {
 import { ScheduleLessonStep, type ScheduleLessonStepHandle } from "./steps/ScheduleLessonStep";
 import { GoogleConnectStep } from "./steps/GoogleConnectStep";
 import { FinishStep } from "./steps/FinishStep";
-
-const STEPS = [
-  { key: "welcome", label: "Welcome" },
-  { key: "subjects", label: "Subjects" },
-  { key: "student", label: "First student" },
-  { key: "lesson", label: "First lesson" },
-  { key: "google", label: "Calendar" },
-  { key: "finish", label: "All set" },
-] as const;
-
-type StepKey = (typeof STEPS)[number]["key"];
-const STEP_KEYS: readonly StepKey[] = STEPS.map((s) => s.key);
-
-const STEP_STORAGE_KEY = "onboardingStep";
-
-function readStoredStep(): StepKey {
-  try {
-    const raw = sessionStorage.getItem(STEP_STORAGE_KEY);
-    if (raw == null) return "welcome";
-    if ((STEP_KEYS as readonly string[]).includes(raw)) return raw as StepKey;
-    // Legacy format: the step was persisted as a numeric index.
-    const n = Number(raw);
-    if (Number.isInteger(n) && n >= 0 && n < STEP_KEYS.length) {
-      return STEP_KEYS[n];
-    }
-    return "welcome";
-  } catch {
-    return "welcome";
-  }
-}
-
-/**
- * Resolve a (possibly removed) step key to an index in the visible step list.
- * When the current step was filtered out — e.g. the calendar step because the
- * tutor connected Google during signup — resume on the first surviving step
- * that came after it.
- */
-function resolveStepIndex(key: StepKey, steps: readonly StepKey[]): number {
-  const i = steps.indexOf(key);
-  if (i !== -1) return i;
-  const order = STEP_KEYS.indexOf(key);
-  for (let j = order + 1; j < STEP_KEYS.length; j++) {
-    const k = steps.indexOf(STEP_KEYS[j]);
-    if (k !== -1) return k;
-  }
-  return steps.length - 1;
-}
 
 export default function OnboardingPage() {
   const navigate = useNavigate();
@@ -101,17 +63,14 @@ export default function OnboardingPage() {
     [googleConnected],
   );
 
-  const [stepKey, setStepKey] = useState<StepKey>(() => {
-    // Returning from the Google consent flow comes back with a `google` param;
-    // resume on the calendar step so the success banner is visible there.
-    // (If they connected during signup the step is filtered out and
-    // resolveStepIndex lands them on the step that follows it.)
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      if (params.has("google")) return "google";
-    }
-    return readStoredStep();
-  });
+  const [stepKey, setStepKey] = useState<StepKey>(() =>
+    typeof window !== "undefined"
+      ? resolveInitialStep(
+          new URLSearchParams(window.location.search),
+          readStoredStep(),
+        )
+      : readStoredStep(),
+  );
 
   const stepIndex = resolveStepIndex(stepKey, steps);
   const activeKey = steps[stepIndex];
@@ -145,24 +104,13 @@ export default function OnboardingPage() {
     track("onboarding_step", { step: activeKey, index: stepIndex });
   }, [activeKey, stepIndex]);
 
-  // Onboarding is tutor-only. Admins never get the tutor-flavoured wizard, so
-  // if one lands here with an incomplete flag, mark them complete (they have
-  // no path to finish it otherwise) and bounce to the dashboard. Tutors who
-  // are already done also leave.
-  const adminCompletionStarted = useRef(false);
+  // Tutors who are already done leave. (Role guarding happens in
+  // TutorRoute — this page is only ever mounted for tutors.)
   useEffect(() => {
-    if (user?.role === "system_admin") {
-      if (!user.onboardingComplete && !adminCompletionStarted.current) {
-        adminCompletionStarted.current = true;
-        complete.mutate();
-      }
-      navigate("/dashboard", { replace: true });
-      return;
-    }
     if (user?.role !== "tutor" || user?.onboardingComplete) {
       navigate("/dashboard", { replace: true });
     }
-  }, [user?.role, user?.onboardingComplete, navigate, complete]);
+  }, [user?.role, user?.onboardingComplete, navigate]);
 
   const isFirst = stepIndex === 0;
   const isLast = stepIndex === steps.length - 1;

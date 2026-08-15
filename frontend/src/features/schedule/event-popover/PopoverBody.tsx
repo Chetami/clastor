@@ -5,6 +5,7 @@ import {
   formatLessonDate,
   formatLessonTime,
 } from "@examify-tms/shared";
+import { useNow } from "@/lib/use-now";
 import {
   ArrowRight,
   Ban,
@@ -42,7 +43,6 @@ export interface PopoverBodyProps {
   lessonFinished: boolean;
   notifiedAtIso: string | null | undefined;
   notifyPending: boolean;
-  cancelPending: boolean;
   attendancePending: boolean;
   needsAttendance: boolean;
   createInvoiceHref: string | null;
@@ -78,7 +78,6 @@ export function PopoverBody({
   lessonFinished,
   notifiedAtIso,
   notifyPending,
-  cancelPending,
   attendancePending,
   needsAttendance,
   createInvoiceHref,
@@ -93,16 +92,19 @@ export function PopoverBody({
   meetLoading,
 }: PopoverBodyProps) {
   const meetLink = lessonMeetLink ?? null;
+  // Tick with the clock so an expiring cooldown re-enables the Notify button
+  // while the popover is open (instead of freezing until an unrelated render).
+  const now = useNow(30_000);
   const notifiedAt = notifiedAtIso ? new Date(notifiedAtIso) : null;
   const nextAllowedAt = notifiedAt
     ? new Date(notifiedAt.getTime() + STUDENT_NOTIFY_COOLDOWN_MS)
     : null;
   const cooldownActive = nextAllowedAt
-    ? Date.now() < nextAllowedAt.getTime()
+    ? now < nextAllowedAt.getTime()
     : false;
   const cooldownRemaining =
     nextAllowedAt && cooldownActive
-      ? formatMsRemaining(nextAllowedAt.getTime() - Date.now())
+      ? formatMsRemaining(nextAllowedAt.getTime() - now)
       : null;
 
   const showActions = !isCancelled;
@@ -247,14 +249,9 @@ export function PopoverBody({
                   variant="outline"
                   className="flex-1 gap-1 text-destructive hover:text-destructive"
                   onClick={onCancel}
-                  disabled={cancelPending}
                   title="Cancel this occurrence"
                 >
-                  {cancelPending ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Ban className="h-3.5 w-3.5" />
-                  )}
+                  <Ban className="h-3.5 w-3.5" />
                   Cancel
                 </Button>
               </div>

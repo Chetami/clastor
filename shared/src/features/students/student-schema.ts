@@ -1,6 +1,9 @@
 import { z } from "zod";
 import { isPossiblePhoneNumber } from "react-phone-number-input";
-import type { UpdateStudentRequest } from "@examify-tms/interfaces";
+import type {
+  CreateStudentRequest,
+  UpdateStudentRequest,
+} from "@examify-tms/interfaces";
 // `rateTypeSchema` is shared with the payments module (identical enum); import
 // the canonical definition instead of redefining it here.
 import { rateTypeSchema } from "../payments/invoice-schema";
@@ -9,7 +12,9 @@ export const studentStatusSchema = z.enum(["active", "past"]);
 
 export const studentFormSchema = z
   .object({
-    name: z.string().min(1, "Name is required").trim(),
+    // trim before min so a whitespace-only name is rejected, not trimmed
+    // to "" after passing validation
+    name: z.string().trim().min(1, "Name is required"),
     email: z
       .string()
       .trim()
@@ -113,6 +118,29 @@ export const EMPTY_STUDENT_FORM: StudentFormData = {
   timezone: "",
   notes: "",
 };
+
+/** Map the validated form to a create-student request payload. */
+export function formToCreateRequest(
+  data: StudentFormData,
+): CreateStudentRequest {
+  return {
+    name: data.name,
+    email: data.email || null,
+    phone: data.phone || null,
+    parentEmail: data.parentEmail || null,
+    billingEmail:
+      data.billingEmailMode === "auto"
+        ? null
+        : (data.billingEmail?.trim() || null),
+    subjectIds: data.subjectIds,
+    expectedAmount: data.expectedAmount,
+    rateType: data.rateType,
+    frequencyPerWeek: data.frequencyPerWeek,
+    status: data.status,
+    timezone: data.timezoneEnabled ? (data.timezone || null) : null,
+    notes: data.notes || null,
+  };
+}
 
 export function formToUpdateRequest(data: StudentFormData): UpdateStudentRequest {
   return {

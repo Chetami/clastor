@@ -27,6 +27,21 @@ export const api = axios.create({
 // surfaces the backend's actual 401 message to the caller.
 export const SKIP_AUTH_REFRESH = "X-Skip-Auth-Refresh";
 
+/**
+ * Error thrown for failed API requests, carrying the HTTP status so callers
+ * can distinguish definitive failures (401/403/404…) from transient ones
+ * (network errors, 5xx) without string-matching messages.
+ */
+export class ApiRequestError extends Error {
+  readonly status?: number;
+
+  constructor(message: string, status?: number) {
+    super(message);
+    this.name = "ApiRequestError";
+    this.status = status;
+  }
+}
+
 api.interceptors.request.use((config) => {
   if (!config.baseURL) {
     config.baseURL = getApiBaseUrl();
@@ -103,7 +118,11 @@ api.interceptors.response.use(
         // Refresh failed (expired/revoked refresh token) — force re-login.
         useAuthStore.getState().clearAuth();
         notifySessionExpired();
-        return Promise.reject(new Error("Session expired. Please log in again."));
+        // Tagged as a 401 so boot logic can tell definitive auth failures
+        // apart from transient network/backend errors.
+        return Promise.reject(
+          new ApiRequestError("Session expired. Please log in again.", 401),
+        );
       }
     }
 
@@ -111,7 +130,9 @@ api.interceptors.response.use(
       const apiError: ApiError = error.response?.data ?? {
         message: "An unexpected error occurred",
       };
-      return Promise.reject(new Error(apiError.message));
+      return Promise.reject(
+        new ApiRequestError(apiError.message, error.response?.status),
+      );
     }
     return Promise.reject(error);
   },

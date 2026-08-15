@@ -13,6 +13,7 @@ import {
   Users,
 } from "lucide-react";
 import { formatPhoneNumberIntl } from "react-phone-number-input";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -66,19 +67,36 @@ export default function StudentDetail() {
 
   async function handleEdit(values: StudentFormData) {
     if (!student) return;
-    await updateStudent.mutateAsync({
-      id: student.id,
-      data: formToUpdateRequest(values),
-    });
-    setEditing(false);
+    try {
+      await updateStudent.mutateAsync({
+        id: student.id,
+        data: formToUpdateRequest(values),
+      });
+      setEditing(false);
+    } catch (error) {
+      toast.error(
+        error instanceof Error && error.message
+          ? error.message
+          : "Failed to update student",
+      );
+    }
   }
 
   async function handleSaveNotes(notes: string | null) {
     if (!student) return;
-    await updateStudent.mutateAsync({
-      id: student.id,
-      data: { notes },
-    });
+    try {
+      await updateStudent.mutateAsync({
+        id: student.id,
+        data: { notes },
+      });
+    } catch (error) {
+      toast.error(
+        error instanceof Error && error.message
+          ? error.message
+          : "Failed to save notes",
+      );
+      throw error;
+    }
   }
 
   if (isLoading) {

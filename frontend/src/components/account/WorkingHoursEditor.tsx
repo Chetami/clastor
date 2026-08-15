@@ -70,11 +70,29 @@ export function WorkingHoursEditor() {
 
   const dirty = isDirty(form, stored);
 
+  /**
+   * An enabled day must have a valid window that ends after it starts —
+   * the backend silently coerces inverted/equal windows to "day off", so
+   * without this check a save would succeed and quietly discard the input.
+   */
+  const invalidDays = WORKING_DAYS.filter(
+    (day) => {
+      const { enabled, start, end } = form[day];
+      return enabled && (!start || !end || end <= start);
+    },
+  );
+
   function updateDay(day: WorkingDay, patch: Partial<DayForm>) {
     setForm((prev) => ({ ...prev, [day]: { ...prev[day], ...patch } }));
   }
 
   async function handleSave() {
+    if (invalidDays.length > 0) {
+      toast.error(
+        `${WORKING_DAY_LABELS[invalidDays[0]]}: the end time must be after the start time.`,
+      );
+      return;
+    }
     // Build the WorkingHours object — disabled days become null.
     const next = {} as WorkingHours;
     let anyEnabled = false;
@@ -156,8 +174,18 @@ export function WorkingHoursEditor() {
         })}
       </div>
 
+      {invalidDays.length > 0 && (
+        <p className="text-xs text-destructive">
+          End time must be after the start time on:{" "}
+          {invalidDays.map((d) => WORKING_DAY_LABELS[d]).join(", ")}.
+        </p>
+      )}
+
       <div className="flex items-center gap-2">
-        <Button onClick={handleSave} disabled={saving || !dirty}>
+        <Button
+          onClick={handleSave}
+          disabled={saving || !dirty || invalidDays.length > 0}
+        >
           {saving ? <Loader2 className="size-4 animate-spin" /> : null}
           {saving ? "Saving…" : "Save working hours"}
         </Button>

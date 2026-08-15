@@ -88,7 +88,8 @@ export function StatCards({
 }: {
   summary: DashboardSummaryResponse;
   period: DashboardPeriod;
-  expectedIncome: number;
+  /** Null while student lookups are still loading (rate unknown). */
+  expectedIncome: number | null;
   plannedLessonCount: number;
 }) {
   const currency = useUserCurrency();
@@ -159,7 +160,11 @@ export function StatCards({
       <Tile
         icon={<Wallet className="h-4 w-4" />}
         label="Expected income"
-        value={formatCurrencyWhole(expectedIncome, currency)}
+        value={
+          expectedIncome === null
+            ? "—"
+            : formatCurrencyWhole(expectedIncome, currency)
+        }
       >
         {plannedLessonCount > 0 ? (
           <p>

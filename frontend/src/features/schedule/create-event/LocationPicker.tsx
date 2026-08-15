@@ -1,4 +1,4 @@
-import { Globe, MapPin, TriangleAlert, Video } from "lucide-react";
+import { Globe, MapPin, Video } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -34,7 +34,12 @@ export function LocationPicker({
         onValueChange={(v) => onModeChange(v as LocationMode)}
         className="flex-wrap justify-start gap-2"
       >
-        <ToggleGroupItem value="zoom" aria-label="Zoom">
+        <ToggleGroupItem
+          value="zoom"
+          aria-label="Zoom"
+          disabled
+          title="Zoom integration is not available yet"
+        >
           <Video className="mr-1.5 h-4 w-4" />
           Zoom
         </ToggleGroupItem>
@@ -51,12 +56,6 @@ export function LocationPicker({
           Other
         </ToggleGroupItem>
       </ToggleGroup>
-      {locationMode === "zoom" && (
-        <div className="flex items-start gap-2 rounded-md border border-amber-500/50 bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-400">
-          <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
-          <p className="font-medium">Zoom integration is not available yet.</p>
-        </div>
-      )}
       {locationMode === "other" && (
         <Input
           id="location"

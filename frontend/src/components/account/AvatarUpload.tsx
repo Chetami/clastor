@@ -39,7 +39,8 @@ export function AvatarUpload() {
     if (!file) return;
 
     // Optimistic local preview before the upload resolves.
-    setPreviewUrl(URL.createObjectURL(file));
+    const preview = URL.createObjectURL(file);
+    setPreviewUrl(preview);
     setError(null);
     setIsUploading(true);
 
@@ -51,6 +52,9 @@ export function AvatarUpload() {
       setError(err instanceof Error ? err.message : "Failed to upload image");
       setPreviewUrl(null);
     } finally {
+      // Release the blob URL — the preview is gone either way, and leaking
+      // one per upload attempt pins the file in memory.
+      URL.revokeObjectURL(preview);
       setIsUploading(false);
       // Reset so selecting the same file again still fires onChange.
       if (inputRef.current) {

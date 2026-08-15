@@ -152,8 +152,9 @@ export function NavUser({ user }: { user: UserInfo | null }) {
               )}
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
+            {/* onSelect (not onClick) so keyboard activation works too. */}
             <DropdownMenuItem
-              onClick={() => logout.mutate()}
+              onSelect={() => logout.mutate()}
               disabled={logout.isPending}
             >
               <LogOut />

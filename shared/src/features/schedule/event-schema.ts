@@ -113,6 +113,22 @@ export const eventFormSchema = z
           message: "Add at least one lesson time",
         });
       }
+      // Duplicate day+time rows are almost always an editing mistake and
+      // would double-book the student.
+      const seen = new Set<string>();
+      for (const slot of data.slots) {
+        const key = `${slot.dayOfWeek} ${slot.timeOfDay}`;
+        if (seen.has(key)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["slots"],
+            message:
+              "Each lesson time must be unique — two rows have the same day and time",
+          });
+          break;
+        }
+        seen.add(key);
+      }
       if (data.endsMode === "until") {
         if (!data.endDate || !dateRegex.test(data.endDate)) {
           ctx.addIssue({

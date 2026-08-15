@@ -63,6 +63,38 @@ function groupOf(type: SentEmailType): "lesson" | "invoice" {
   return type === "invoice" ? "invoice" : "lesson";
 }
 
+/**
+ * Sortable column header. Hoisted to module scope (not declared inside the
+ * page component) so React doesn't remount the header buttons on every
+ * render — e.g. every keystroke in the search box.
+ */
+function SortHeader({
+  field,
+  label,
+  active,
+  ascending,
+  onToggle,
+}: {
+  field: SortField;
+  label: string;
+  active: boolean;
+  ascending: boolean;
+  onToggle: (field: SortField) => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onToggle(field)}
+      className={`group inline-flex items-center gap-1 transition-colors hover:text-foreground ${
+        active ? "text-foreground" : ""
+      }`}
+    >
+      {label}
+      <SortIndicator active={active} ascending={ascending} />
+    </button>
+  );
+}
+
 export default function SentEmails() {
   const [typeFilter, setTypeFilter] = useState<TypeGroup>("all");
   const [studentFilter, setStudentFilter] = useState<StudentFilter>("all");
@@ -146,22 +178,6 @@ export default function SentEmails() {
       setSortField(field);
       setSortOrder(field === "sentAt" ? "desc" : "asc");
     }
-  }
-
-  function SortHeader({ field, label }: { field: SortField; label: string }) {
-    const active = sortField === field;
-    return (
-      <button
-        type="button"
-        onClick={() => toggleSort(field)}
-        className={`group inline-flex items-center gap-1 transition-colors hover:text-foreground ${
-          active ? "text-foreground" : ""
-        }`}
-      >
-        {label}
-        <SortIndicator active={active} ascending={sortOrder === "asc"} />
-      </button>
-    );
   }
 
   return (
@@ -253,16 +269,34 @@ export default function SentEmails() {
                   <TableHeader>
                     <TableRow className="bg-muted/30 hover:bg-muted/30">
                       <TableHead className="pl-4 w-[40%]">
-                        <SortHeader field="subject" label="Subject" />
+                        <SortHeader
+                          field="subject"
+                          label="Subject"
+                          active={sortField === "subject"}
+                          ascending={sortOrder === "asc"}
+                          onToggle={toggleSort}
+                        />
                       </TableHead>
                       <TableHead className="w-28">Type</TableHead>
                       <TableHead className="w-[18%]">Student</TableHead>
                       <TableHead className="hidden md:table-cell md:w-[22%]">
-                        <SortHeader field="to" label="Recipient" />
+                        <SortHeader
+                          field="to"
+                          label="Recipient"
+                          active={sortField === "to"}
+                          ascending={sortOrder === "asc"}
+                          onToggle={toggleSort}
+                        />
                       </TableHead>
                       <TableHead className="w-24">Status</TableHead>
                       <TableHead className="hidden lg:table-cell lg:w-40">
-                        <SortHeader field="sentAt" label="Sent" />
+                        <SortHeader
+                          field="sentAt"
+                          label="Sent"
+                          active={sortField === "sentAt"}
+                          ascending={sortOrder === "asc"}
+                          onToggle={toggleSort}
+                        />
                       </TableHead>
                     </TableRow>
                   </TableHeader>

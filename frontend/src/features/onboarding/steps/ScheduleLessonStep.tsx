@@ -89,13 +89,23 @@ export const ScheduleLessonStep = forwardRef<
   const [created, setCreated] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
 
-  const persisted = loadDrafts().lesson;
-
-  const [studentId, setStudentId] = useState(persisted?.studentId ?? "");
-  const [subjectId, setSubjectId] = useState(persisted?.subjectId ?? "");
-  const [date, setDate] = useState(persisted?.date ?? defaultDate());
-  const [startTime, setStartTime] = useState(persisted?.startTime ?? "16:00");
-  const [duration, setDuration] = useState(persisted?.duration ?? 60);
+  // Seed from the persisted draft once, in the state initializers (reading
+  // sessionStorage in the render body would re-parse on every render).
+  const [studentId, setStudentId] = useState(
+    () => loadDrafts().lesson?.studentId ?? "",
+  );
+  const [subjectId, setSubjectId] = useState(
+    () => loadDrafts().lesson?.subjectId ?? "",
+  );
+  const [date, setDate] = useState(
+    () => loadDrafts().lesson?.date ?? defaultDate(),
+  );
+  const [startTime, setStartTime] = useState(
+    () => loadDrafts().lesson?.startTime ?? "16:00",
+  );
+  const [duration, setDuration] = useState(
+    () => loadDrafts().lesson?.duration ?? 60,
+  );
 
   // Persist the draft so Back/forward doesn't lose it.
   useEffect(() => {

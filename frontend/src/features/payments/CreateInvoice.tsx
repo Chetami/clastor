@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
@@ -27,6 +28,7 @@ import {
   buildLessonLineItem,
   defaultInvoiceDueDateInput,
   formatCurrency,
+  lineItemsSubtotal,
   partitionInvoiceableLessons,
 } from "./invoice-utils";
 import { useUserCurrency } from "@/lib/use-currency";
@@ -74,7 +76,7 @@ export default function CreateInvoice() {
     useState<CreateInvoiceFormData["paymentMethod"]>("bank_transfer");
   const [notes, setNotes] = useState("");
   const [showUpcoming, setShowUpcoming] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [errors, setErrors] = useState<Partial<Record<string, string>>>({});
 
   const selectedStudent = useMemo(
     () => students.find((s) => s.id === studentId) ?? null,
@@ -134,14 +136,7 @@ export default function CreateInvoice() {
     lineItemQuantities,
   ]);
 
-  const subtotal = useMemo(
-    () =>
-      Math.round(
-        lineItems.reduce((sum, li) => sum + li.unitAmount * li.quantity, 0) *
-          100,
-      ) / 100,
-    [lineItems],
-  );
+  const subtotal = useMemo(() => lineItemsSubtotal(lineItems), [lineItems]);
 
   const resolvedBillingEmail =
     billingEmail || selectedStudent?.billingEmail || "";
@@ -172,6 +167,14 @@ export default function CreateInvoice() {
   }
 
   async function handleSubmit(status: "draft" | "open", sendEmail: boolean) {
+    // Guard the date input before touching Date — a cleared field yields an
+    // Invalid Date whose toISOString() throws.
+    const dueDateMs = new Date(dueDate).getTime();
+    if (!dueDate || Number.isNaN(dueDateMs)) {
+      setErrors({ dueDate: "Due date is required" });
+      return;
+    }
+
     const values: CreateInvoiceFormData = {
       studentId,
       lineItems: lineItems.map((li) => ({
@@ -183,7 +186,7 @@ export default function CreateInvoice() {
         quantity: li.quantity,
       })),
       billingEmail: billingEmail.trim() || undefined,
-      dueDate: new Date(dueDate).toISOString(),
+      dueDate: new Date(dueDateMs).toISOString(),
       paymentMethod,
       notes: notes.trim() || undefined,
       status,
@@ -217,7 +220,11 @@ export default function CreateInvoice() {
       }
       navigate("/payments");
     } catch (error) {
-      console.error("Failed to create invoice:", error);
+      toast.error(
+        error instanceof Error && error.message
+          ? error.message
+          : "Failed to create invoice",
+      );
     }
   }
 
@@ -257,6 +264,12 @@ export default function CreateInvoice() {
                     setSelectedLessonIds(new Set());
                     setLineItemAmounts({});
                     setLineItemQuantities({});
+                    // The billing email override (and notes) belong to the
+                    // previously selected student — carrying them over would
+                    // silently send this invoice to the wrong address.
+                    setBillingEmail("");
+                    setNotes("");
+                    setErrors({});
                   }}
                 >
                   <SelectTrigger>
@@ -451,11 +464,20 @@ export default function CreateInvoice() {
               subtotal={subtotal}
               currency={currency}
               createPending={createInvoice.isPending}
-              sendPending={false}
               hasLineItems={lineItems.length > 0}
               hasStudent={!!studentId}
-              onBillingEmailChange={setBillingEmail}
-              onDueDateChange={setDueDate}
+              fieldErrors={{
+                billingEmail: errors.billingEmail,
+                dueDate: errors.dueDate,
+              }}
+              onBillingEmailChange={(v) => {
+                setBillingEmail(v);
+                setErrors((prev) => ({ ...prev, billingEmail: undefined }));
+              }}
+              onDueDateChange={(v) => {
+                setDueDate(v);
+                setErrors((prev) => ({ ...prev, dueDate: undefined }));
+              }}
               onPaymentMethodChange={setPaymentMethod}
               onNotesChange={setNotes}
               onSubmit={handleSubmit}

@@ -64,6 +64,10 @@ const DAYS_ARR: DayOfWeek[] = [
   "saturday",
 ];
 
+// Radix Select treats value="" as the placeholder sentinel, so use a stable
+// non-empty sentinel to represent "no subject".
+const NO_SUBJECT = "__none__";
+
 interface CreateEventDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -359,7 +363,14 @@ export function CreateEventDialog({
 
         if (locationMode === "meet") {
           void attachMeetLink(lesson.id, result.data).then((link) => {
-            if (link) queryClient.invalidateQueries({ queryKey: ["lessons"] });
+            if (link) {
+              queryClient.invalidateQueries({ queryKey: ["lessons"] });
+            } else {
+              toast.warning("Couldn't generate the Google Meet link", {
+                description:
+                  "The lesson was created — generate the link from the lesson page.",
+              });
+            }
           });
         }
       } else {
@@ -381,7 +392,14 @@ export function CreateEventDialog({
 
         if (locationMode === "meet") {
           void pollSeriesMeetLink(created.seriesId).then((link) => {
-            if (link) queryClient.invalidateQueries({ queryKey: ["lessons"] });
+            if (link) {
+              queryClient.invalidateQueries({ queryKey: ["lessons"] });
+            } else {
+              toast.warning("Couldn't generate the Google Meet links", {
+                description:
+                  "The series was created — generate links from the series page.",
+              });
+            }
           });
         } else {
           toast.info("Syncing to Google Calendar…", {
@@ -450,8 +468,8 @@ export function CreateEventDialog({
                 </span>
               </Label>
               <Select
-                value={values.subject}
-                onValueChange={(v) => update("subject", v)}
+                value={values.subject || NO_SUBJECT}
+                onValueChange={(v) => update("subject", v === NO_SUBJECT ? "" : v)}
                 disabled={!selectedStudent}
               >
                 <SelectTrigger id="subject" aria-invalid={!!errors.subject}>
@@ -464,7 +482,7 @@ export function CreateEventDialog({
                   />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No subject</SelectItem>
+                  <SelectItem value={NO_SUBJECT}>No subject</SelectItem>
                   {studentSubjects.map((s) => (
                     <SelectItem key={s.id} value={s.name}>
                       {s.name}

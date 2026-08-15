@@ -41,7 +41,20 @@ export function PaymentResult({ variant }: PaymentResultProps) {
         </div>
 
         {isSuccess && (
-          <Button variant="outline" onClick={() => window.close()}>
+          // window.close() only works for script-opened windows; Stripe
+          // usually redirects the payer's own tab, so fall back to going
+          // back (or home when there's no history).
+          <Button
+            variant="outline"
+            onClick={() => {
+              if (window.opener) {
+                window.close();
+                return;
+              }
+              if (window.history.length > 1) window.history.back();
+              else window.location.href = "/";
+            }}
+          >
             Close
           </Button>
         )}

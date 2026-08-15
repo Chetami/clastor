@@ -9,6 +9,8 @@ import type {
   AttendanceStatus,
   UpdateLessonRequest,
 } from "@examify-tms/interfaces";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { useDashboardSummary, useUpdateLessonDetails } from "./api";
 import {
   useInvoiceLesson,
@@ -26,7 +28,6 @@ import { IncomeChart } from "./components/income-chart";
 import { NextLesson } from "./components/next-lesson";
 import { CurrentLesson } from "./components/current-lesson";
 import { ThingsToDo, type OverdueRow } from "./components/things-to-do";
-// import { QuickActions } from "./components/quick-actions";
 import {
   StatCardsSkeleton,
   NextLessonSkeleton,
@@ -47,9 +48,18 @@ export default function Dashboard() {
   const { user } = useAuth();
   const [period, setPeriod] = useState<DashboardPeriod>("week");
 
-  const { data: summary, isLoading: summaryLoading } =
-    useDashboardSummary(period);
-  const { data: lessons = [], isLoading: lessonsLoading } = useListLessons();
+  const {
+    data: summary,
+    isLoading: summaryLoading,
+    isError: summaryError,
+    refetch: refetchSummary,
+  } = useDashboardSummary(period);
+  const {
+    data: lessons = [],
+    isLoading: lessonsLoading,
+    isError: lessonsError,
+    refetch: refetchLessons,
+  } = useListLessons();
   // Targeted queries for the action centre: billable-but-uninvoiced lessons
   // and overdue invoices. React Query dedupes these with any other surface
   // (Create Invoice, Payments) that issues the same request.
@@ -62,6 +72,7 @@ export default function Dashboard() {
     names: studentNames,
     byId: studentMap,
     subjectOptions: studentSubjectOptions,
+    isLoading: studentsLoading,
   } = useStudentLookups();
   const invoiceLesson = useInvoiceLesson();
   const [sendInvoiceId, setSendInvoiceId] = useState<string | null>(null);
@@ -113,7 +124,10 @@ export default function Dashboard() {
     edits?: InvoiceLessonEdits,
   ) => {
     const lesson = lessons.find((l) => l.id === lessonId);
-    if (!lesson) return;
+    if (!lesson) {
+      toast.error("Lesson not found — it may have been removed.");
+      return;
+    }
 
     // Apply any lesson tweaks first — this happens whether or not an invoice
     // is sent, since the lesson itself should reflect what was actually done.
@@ -133,7 +147,14 @@ export default function Dashboard() {
     if (!shouldInvoice) return;
 
     const student = studentMap[effective.studentId];
-    if (!student) return;
+    if (!student) {
+      // Attendance was already recorded — tell the tutor the invoice step
+      // failed instead of silently skipping it.
+      toast.error(
+        "Couldn't create the invoice — the student record was not found.",
+      );
+      return;
+    }
     const name = studentNames[effective.studentId] ?? "Student";
 
     // Decide whether to review the email before sending or fire it off in the
@@ -217,13 +238,17 @@ export default function Dashboard() {
       )}
 
       {/* Stat tiles */}
-      {summaryLoading || !summary ? (
+      {summaryError ? (
+        <QueryErrorCard onRetry={() => refetchSummary()} what="statistics" />
+      ) : summaryLoading || !summary ? (
         <StatCardsSkeleton />
       ) : (
         <StatCards
           summary={summary}
           period={period}
-          expectedIncome={expectedIncome}
+          expectedIncome={
+            studentsLoading ? null : expectedIncome
+          }
           plannedLessonCount={plannedCount}
         />
       )}
@@ -233,7 +258,9 @@ export default function Dashboard() {
           Right: charts + things to do. */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <div className="flex min-h-0 flex-col gap-4">
-          {lessonsLoading ? (
+          {lessonsError ? (
+            <QueryErrorCard onRetry={() => refetchLessons()} what="lessons" />
+          ) : lessonsLoading ? (
             <NextLessonSkeleton />
           ) : (
             <NextLesson
@@ -246,10 +273,10 @@ export default function Dashboard() {
               }
             />
           )}
-          {/* dont need this anymore  */}
-          {/* <QuickActions /> */}
 
-          {lessonsLoading ? (
+          {lessonsError ? (
+            <QueryErrorCard onRetry={() => refetchLessons()} what="tasks" />
+          ) : lessonsLoading ? (
             <TodoLessonsSkeleton />
           ) : (
             <ThingsToDo
@@ -292,5 +319,25 @@ export default function Dashboard() {
         onSent={(id) => navigate(`/payments/${id}`)}
       />
     </div>
+  );
+}
+
+/** Small retry-able error card for failed dashboard queries. */
+function QueryErrorCard({
+  what,
+  onRetry,
+}: {
+  what: string;
+  onRetry: () => void;
+}) {
+  return (
+    <Card className="flex flex-col items-center justify-center gap-3 p-8 text-center">
+      <p className="text-sm text-destructive">
+        Couldn't load your {what}. Check your connection and try again.
+      </p>
+      <Button variant="outline" size="sm" onClick={onRetry}>
+        Retry
+      </Button>
+    </Card>
   );
 }

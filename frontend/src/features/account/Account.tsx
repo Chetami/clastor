@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -22,6 +22,12 @@ export default function Account() {
 
   const [name, setName] = useState(user?.name ?? "");
   const [isSaving, setIsSaving] = useState(false);
+
+  // Keep the field in sync when the store user changes externally (e.g. a
+  // token-refresh setUser) — same pattern as the other account forms.
+  useEffect(() => {
+    setName(user?.name ?? "");
+  }, [user?.name]);
 
   const trimmed = name.trim();
   const isUnchanged = trimmed === (user?.name ?? "");

@@ -93,6 +93,14 @@ export function ThingsToDo({
   // Remind flow reuses SendInvoiceDialog; the dialog's own send mutation lives
   // inside it, so we only track which invoice id (if any) is open.
   const [remindInvoiceId, setRemindInvoiceId] = useState<string | null>(null);
+  // Covers the full confirm chain (attendance + lesson edits + invoice
+  // creation), not just the attendance mutation — otherwise the Confirm
+  // button re-enables mid-chain and a second click double-invoices.
+  const [confirmPending, setConfirmPending] = useState(false);
+  // Once the user picks a tab it wins; until then the selection follows the
+  // first non-empty tab (Radix defaultValue alone would freeze the initial
+  // choice even when later-loading data makes it the wrong one).
+  const [tab, setTab] = useState<string | null>(null);
 
   const counts = {
     attendance: attendanceLessons.length,
@@ -122,6 +130,7 @@ export function ThingsToDo({
     const lesson = attendanceLessons.find((l) => l.id === lessonId);
     if (!lesson) return;
     const name = studentNames[lesson.studentId] ?? "Unknown student";
+    setConfirmPending(true);
     try {
       await markDone.mutateAsync({ id: lessonId, attendanceStatus });
       toast.success(
@@ -129,8 +138,14 @@ export function ThingsToDo({
       );
       await onConfirm(lessonId, attendanceStatus, sendInvoice, edits);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to mark lesson");
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : "Attendance recorded, but the follow-up step failed",
+      );
       throw err;
+    } finally {
+      setConfirmPending(false);
     }
   };
 
@@ -158,7 +173,7 @@ export function ThingsToDo({
               <p className="text-sm text-muted-foreground">All caught up!</p>
             </div>
           ) : (
-            <Tabs defaultValue={defaultTab}>
+            <Tabs value={tab ?? defaultTab} onValueChange={setTab}>
               <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="attendance">
                   Attendance
@@ -220,7 +235,7 @@ export function ThingsToDo({
             studentSubjectOptions[openDialogLesson.studentId] ?? []
           }
           onConfirm={handleConfirm}
-          isPending={markDone.isPending}
+          isPending={markDone.isPending || confirmPending}
         />
       )}
 

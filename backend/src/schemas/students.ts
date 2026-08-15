@@ -6,7 +6,7 @@ import { z } from "zod";
 import { rateTypeSchema, studentStatusSchema } from "./common";
 
 export const createStudentSchema = z.object({
-  name: z.string().min(1, "Name is required"),
+  name: z.string().trim().min(1, "Name is required"),
   email: z.string().email("Enter a valid email").nullish(),
   phone: z.string().nullish(),
   parentEmail: z.string().email("Enter a valid email").nullish(),
@@ -21,8 +21,9 @@ export const createStudentSchema = z.object({
 });
 
 export const updateStudentSchema = z.object({
-  name: z.string().min(1, "Name cannot be empty").optional(),
-  email: z.string().email("Enter a valid email").optional(),
+  name: z.string().trim().min(1, "Name cannot be empty").optional(),
+  // Matches the OpenAPI contract: `email: null` clears an existing email.
+  email: z.string().email("Enter a valid email").nullish(),
   phone: z.string().nullish(),
   parentEmail: z.string().email("Enter a valid email").nullish(),
   billingEmail: z.string().email("Enter a valid email").nullish(),

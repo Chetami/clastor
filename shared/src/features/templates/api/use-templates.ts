@@ -15,7 +15,10 @@ export function useTemplates() {
 
 /**
  * Preview an email-based template (lesson-reminder / meet-invite). Only
- * enabled when the selected template id is an email template.
+ * enabled when the selected template id is an email template. Previews are
+ * NOT cached forever (unlike the static template list): they render the
+ * tutor's live Settings (invoice details, review preferences), so they must
+ * refetch to reflect changes.
  */
 export function useEmailTemplatePreview(
   id: string | undefined,
@@ -28,19 +31,18 @@ export function useEmailTemplatePreview(
       return getEmailTemplatePreviewRequest(id);
     },
     enabled: enabled && !!id,
-    staleTime: Infinity,
   });
 }
 
 /**
  * Preview the invoice template as a PDF blob. Only enabled when the invoice
- * template is selected.
+ * template is selected. Reflects the tutor's invoice Settings, so it refetches
+ * on mount rather than being cached forever.
  */
 export function useInvoiceTemplatePreview(enabled: boolean) {
   return useQuery({
     queryKey: ["templates", "invoice", "preview"],
     queryFn: getInvoiceTemplatePreviewRequest,
     enabled,
-    staleTime: Infinity,
   });
 }

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import {
   ChevronLeft,
   ChevronRight,
@@ -113,6 +114,9 @@ export default function Payments() {
     ? pageQuery.isFetching
     : fullFetchQuery.isFetching;
   const error = usePagination ? pageQuery.error : fullFetchQuery.error;
+  const refetch = usePagination
+    ? pageQuery.refetch
+    : fullFetchQuery.refetch;
 
   const activePage = usePagination ? page : clientPage;
   const totalCount = usePagination
@@ -216,10 +220,13 @@ export default function Payments() {
               </p>
             </div>
           ) : error ? (
-            <div className="flex flex-1 items-center justify-center py-16">
+            <div className="flex flex-1 flex-col items-center justify-center gap-3 py-16">
               <p className="text-sm text-destructive">
                 Failed to load invoices. Please try again.
               </p>
+              <Button variant="outline" size="sm" onClick={() => refetch()}>
+                Retry
+              </Button>
             </div>
           ) : displayData.length === 0 ? (
             <div className="flex flex-1 flex-col items-center justify-center gap-2 py-16 text-center">
@@ -249,11 +256,38 @@ export default function Payments() {
                       onNavigate={(id) => navigate(`/payments/${id}`)}
                       onSend={(id) => setSendInvoiceId(id)}
                       onEdit={(id) => navigate(`/payments/${id}/edit`)}
-                      onMarkPaid={(id) => markPaid.mutate({ id })}
-                      onVoid={(id) => voidInvoice.mutate(id)}
+                      onMarkPaid={(id) =>
+                        markPaid.mutate(
+                          { id },
+                          {
+                            onError: (err) =>
+                              toast.error(
+                                err instanceof Error && err.message
+                                  ? err.message
+                                  : "Failed to mark invoice as paid",
+                              ),
+                          },
+                        )
+                      }
+                      onVoid={(id) =>
+                        voidInvoice.mutate(id, {
+                          onError: (err) =>
+                            toast.error(
+                              err instanceof Error && err.message
+                                ? err.message
+                                : "Failed to void invoice",
+                            ),
+                        })
+                      }
                       sendDisabled={false}
-                      markPaidDisabled={markPaid.isPending}
-                      voidDisabled={voidInvoice.isPending}
+                      markPaidDisabled={
+                        markPaid.isPending &&
+                        markPaid.variables?.id === inv.id
+                      }
+                      voidDisabled={
+                        voidInvoice.isPending &&
+                        voidInvoice.variables === inv.id
+                      }
                     />
                   ))}
                 </TableBody>

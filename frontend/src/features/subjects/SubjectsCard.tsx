@@ -62,7 +62,12 @@ export function SubjectsCard() {
     const cleaned = draft
       .map((s) => ({ ...s, name: s.name.trim() }))
       .filter((s) => s.name.length > 0);
-    await updateSubjects.mutateAsync(cleaned);
+    try {
+      await updateSubjects.mutateAsync(cleaned);
+    } catch {
+      // surfaced via updateSubjects.isError below — swallow the rejection
+      // so it doesn't become an unhandled promise error.
+    }
   }
 
   return (

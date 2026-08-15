@@ -17,7 +17,7 @@ export type { StorageAdapter } from "./config/storage-adapter";
 export { TOKEN_KEY, REFRESH_TOKEN_KEY } from "./config/tokens";
 
 // ---- API client & query client ----
-export { api } from "./lib/api";
+export { api, ApiRequestError } from "./lib/api";
 export { queryClient } from "./lib/query-client";
 
 // ---- Lib utils ----

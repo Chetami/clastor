@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { toast } from "sonner";
 import {
   ArrowLeft,
   Ban,
@@ -15,7 +16,6 @@ import {
   useGetInvoice,
   useMarkInvoicePaid,
   useVoidInvoice,
-  useUpdateInvoice,
   getInvoicePdfRequest,
 } from "./api";
 import { InvoiceTimeline } from "./InvoiceTimeline";
@@ -31,7 +31,6 @@ export default function InvoiceDetail() {
   const { data: invoice, isLoading, error } = useGetInvoice(invoiceId ?? "");
   const markPaid = useMarkInvoicePaid();
   const voidInvoice = useVoidInvoice();
-  const updateInvoice = useUpdateInvoice();
   const [actionError, setActionError] = useState<string | null>(null);
   const [sendOpen, setSendOpen] = useState(false);
 
@@ -59,12 +58,30 @@ export default function InvoiceDetail() {
 
   async function handleMarkPaid() {
     if (!invoice) return;
-    await markPaid.mutateAsync({ id: invoice.id });
+    try {
+      await markPaid.mutateAsync({ id: invoice.id });
+      toast.success("Invoice marked as paid");
+    } catch (err) {
+      toast.error(
+        err instanceof Error && err.message
+          ? err.message
+          : "Failed to mark invoice as paid",
+      );
+    }
   }
 
   async function handleVoid() {
     if (!invoice) return;
-    await voidInvoice.mutateAsync(invoice.id);
+    try {
+      await voidInvoice.mutateAsync(invoice.id);
+      toast.success("Invoice voided");
+    } catch (err) {
+      toast.error(
+        err instanceof Error && err.message
+          ? err.message
+          : "Failed to void invoice",
+      );
+    }
   }
 
   if (isLoading) {
@@ -131,7 +148,6 @@ export default function InvoiceDetail() {
             <Button
               variant="outline"
               size="sm"
-              disabled={updateInvoice.isPending}
               onClick={() => navigate(`/payments/${invoice.id}/edit`)}
             >
               <Edit className="h-4 w-4 mr-2" />

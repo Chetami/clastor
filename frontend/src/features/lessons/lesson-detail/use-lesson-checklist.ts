@@ -44,12 +44,18 @@ export function useLessonChecklist(
   const [focusId, setFocusId] = useState<string | null>(null);
   const todosRef = useRef<LessonTodo[]>([]);
   const lastSyncedId = useRef<string | null>(null);
+  // Snapshot of the last list the server accepted — used to skip no-op saves.
+  const savedTodosRef = useRef<LessonTodo[]>([]);
+  // Latest list captured while a save was in flight — flushed (serialized)
+  // when the mutation settles, so overlapping saves can't clobber each other.
+  const queuedTodosRef = useRef<LessonTodo[] | null>(null);
 
   useEffect(() => {
     if (!lesson) return;
     if (lastSyncedId.current === lesson.id) return;
     lastSyncedId.current = lesson.id;
     setTodos(lesson.todos ?? []);
+    savedTodosRef.current = lesson.todos ?? [];
   }, [lesson]);
 
   // Mirror todos into a ref synchronously (before paint / next event) so
@@ -58,13 +64,17 @@ export function useLessonChecklist(
     todosRef.current = todos;
   }, [todos]);
 
-  const saveTodos = useCallback(
+  const todosEqual = (a: LessonTodo[], b: LessonTodo[]) =>
+    JSON.stringify(a) === JSON.stringify(b);
+
+  const doSave = useCallback(
     async (nextTodos: LessonTodo[]) => {
       if (!eventId) return;
       const previous = todosRef.current;
       setSaving(true);
       try {
         await updateLesson.mutateAsync({ todos: nextTodos });
+        savedTodosRef.current = nextTodos;
       } catch {
         // Roll back the optimistic update so the UI matches the server.
         setTodos(previous);
@@ -76,6 +86,26 @@ export function useLessonChecklist(
     },
     [eventId, updateLesson],
   );
+
+  const saveTodos = useCallback(
+    (nextTodos: LessonTodo[]) => {
+      if (todosEqual(nextTodos, savedTodosRef.current)) return;
+      if (saving) {
+        queuedTodosRef.current = nextTodos;
+        return;
+      }
+      void doSave(nextTodos);
+    },
+    [saving, doSave],
+  );
+
+  // Flush the newest queued list once the in-flight save settles.
+  useEffect(() => {
+    const queued = queuedTodosRef.current;
+    if (saving || !queued) return;
+    queuedTodosRef.current = null;
+    saveTodos(queued);
+  }, [saving, saveTodos]);
 
   const commit = useCallback(
     (next: LessonTodo[]) => {
@@ -144,6 +174,8 @@ export function useLessonChecklist(
         commit(todosRef.current.filter((t) => t.id !== id));
         return;
       }
+      // Skip the network round-trip when nothing actually changed.
+      if (todosEqual(todosRef.current, savedTodosRef.current)) return;
       saveTodos(todosRef.current);
     },
     [commit, saveTodos],
@@ -162,8 +194,13 @@ export function useLessonChecklist(
         e.preventDefault();
         const list = todosRef.current;
         const idx = list.findIndex((t) => t.id === id);
-        commit(list.filter((t) => t.id !== id));
-        if (idx > 0) setFocusId(list[idx - 1]!.id);
+        const remaining = list.filter((t) => t.id !== id);
+        commit(remaining);
+        // Focus the previous item, or the new first item when deleting the
+        // top one (dropping focus entirely breaks keyboard flows).
+        setFocusId(
+          idx > 0 ? list[idx - 1]!.id : (remaining[0]?.id ?? null),
+        );
       } else if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
         e.preventDefault();
         e.currentTarget.blur();
@@ -175,12 +212,14 @@ export function useLessonChecklist(
   const clearFocus = useCallback(() => setFocusId(null), []);
 
   const todosDone = todos.filter((t) => t.done).length;
+  const todosDirty = !todosEqual(todos, savedTodosRef.current);
 
   return {
     todos,
     todosDone,
     todosTotal: todos.length,
     todosSaving: saving,
+    todosDirty,
     focusId,
     clearFocus,
     newTodoText,

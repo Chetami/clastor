@@ -55,7 +55,6 @@ export function ImportStudentsDialog({
         );
       }
     } catch (error) {
-      console.error("Failed to import students:", error);
       toast.error(
         error instanceof Error ? error.message : "Failed to import students.",
       );

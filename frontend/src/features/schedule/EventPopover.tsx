@@ -12,7 +12,6 @@ import { lessonIssues } from "@/features/lessons/lesson-series-utils";
 import { useMarkAttendanceAndInvoice } from "@/hooks/use-mark-attendance-and-invoice";
 import { SendInvoiceDialog } from "@/components/send-invoice-dialog";
 import {
-  useCancelLesson,
   useGetLesson,
   useNotifyStudent,
   useUpdateLesson,
@@ -50,7 +49,6 @@ export function EventPopover({
   anchor,
 }: EventPopoverProps) {
   const { data: lesson, isLoading } = useGetLesson(lessonId ?? undefined);
-  const cancelLesson = useCancelLesson(lessonId ?? "");
   const notifyStudent = useNotifyStudent(lessonId ?? "");
   const updateLesson = useUpdateLesson(lessonId ?? "");
   const {
@@ -101,21 +99,13 @@ export function EventPopover({
     toast.success("Reminder sent");
   }
 
-  async function handleCancel() {
-    if (!lessonId || !lesson) return;
+  function handleCancel() {
+    // Always open the confirmation dialog — even one-off pending lessons —
+    // to avoid a destructive one-click action. Matches LessonDetail. The
+    // dialog owns the cancel flow (notify checkbox, series scope, email
+    // review) and reports errors through `actionError`.
     setActionError(null);
-    if (lesson.acceptanceStatus === "accepted" || lesson.seriesId) {
-      setCancelOpen(true);
-      return;
-    }
-    try {
-      await cancelLesson.mutateAsync();
-      onOpenChange(false);
-    } catch (err) {
-      setActionError(
-        err instanceof Error ? err.message : "Failed to cancel lesson",
-      );
-    }
+    setCancelOpen(true);
   }
 
   async function handleGenerateMeet() {
@@ -205,7 +195,6 @@ export function EventPopover({
                 lessonFinished={isLessonFinished(lesson)}
                 notifiedAtIso={lesson.lastStudentNotifiedAt}
                 notifyPending={notifyStudent.isPending}
-                cancelPending={cancelLesson.isPending}
                 attendancePending={attendancePending}
                 needsAttendance={needsAttendance}
                 createInvoiceHref={createInvoiceHref}
@@ -255,6 +244,7 @@ export function EventPopover({
 
       {lesson && (
         <MarkAttendanceDialog
+          key={lesson.id}
           open={attendanceOpen}
           onOpenChange={setAttendanceOpen}
           lesson={lesson}

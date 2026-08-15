@@ -57,7 +57,6 @@ export interface SeriesHeaderProps {
   meetLink?: string | null;
   /** Generate (or regenerate) a shared Meet link for all upcoming lessons. */
   onGenerateMeet?: () => void;
-  meetDisabled?: boolean;
   meetPending?: boolean;
   /** Optional series-level actions (e.g. a "⋯" menu) rendered atop the controls. */
   actions?: React.ReactNode;
@@ -100,7 +99,6 @@ export function SeriesHeader({
   issueCount,
   meetLink,
   onGenerateMeet,
-  meetDisabled,
   meetPending,
   actions,
 }: SeriesHeaderProps) {
@@ -252,7 +250,7 @@ export function SeriesHeader({
                           variant="ghost"
                           size="sm"
                           className="flex-1"
-                          disabled={meetDisabled || meetPending}
+                          disabled={meetPending}
                           onClick={onGenerateMeet}
                         >
                           {meetPending ? "Regenerating…" : "Regenerate"}
@@ -264,7 +262,7 @@ export function SeriesHeader({
                       variant="outline"
                       size="sm"
                       className="gap-1.5"
-                      disabled={meetDisabled || meetPending}
+                      disabled={meetPending}
                       onClick={onGenerateMeet}
                     >
                       <Video className="h-4 w-4" />

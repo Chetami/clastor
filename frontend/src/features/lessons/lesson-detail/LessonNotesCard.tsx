@@ -58,16 +58,14 @@ export function LessonNotesCard({
           aria-label="Lesson notes"
           className="resize-none"
         />
-        {!notesDraft && (
-          <p className="mt-2 text-xs text-muted-foreground">
-            Saved when you click away.{" "}
-            <span className="hidden sm:inline">
-              Press <kbd className="rounded border px-1">⌘</kbd>+
-              <kbd className="rounded border px-1">Enter</kbd> to save,{" "}
-              <kbd className="rounded border px-1">Esc</kbd> to revert.
-            </span>
-          </p>
-        )}
+        <p className="mt-2 text-xs text-muted-foreground">
+          Saved when you click away.{" "}
+          <span className="hidden sm:inline">
+            Press <kbd className="rounded border px-1">⌘</kbd>+
+            <kbd className="rounded border px-1">Enter</kbd> to save,{" "}
+            <kbd className="rounded border px-1">Esc</kbd> to revert.
+          </span>
+        </p>
       </CardContent>
     </Card>
   );

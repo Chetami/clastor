@@ -12,6 +12,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { verifyRequest } from "@/features/auth/api";
+import { useAuthStore } from "@/store/auth-store";
 import {
   useGoogleConnectionStatus,
   useConnectGoogle,
@@ -76,6 +78,14 @@ export function GoogleConnectionCard({ returnTo }: { returnTo?: string }) {
     if (googleParam === "connected") {
       setBanner({ kind: "success", message: "Google account connected." });
       statusQuery.refetch();
+      // The auth store still holds the pre-consent user (googleConnected:
+      // false) — refresh it so every googleConnected-dependent surface
+      // (Meet buttons, schedule sync) updates without a re-login.
+      verifyRequest()
+        .then((user) => useAuthStore.getState().setUser(user))
+        .catch(() => {
+          // non-fatal — the status query above still reflects the connection
+        });
     } else if (googleParam === "no_refresh_token") {
       setBanner({
         kind: "error",

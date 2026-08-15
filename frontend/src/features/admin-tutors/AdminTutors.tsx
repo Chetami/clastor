@@ -36,6 +36,38 @@ function formatDate(iso: string | null | undefined): string {
   });
 }
 
+/**
+ * Sortable column header. Hoisted to module scope (not declared inside the
+ * page component) so React doesn't remount the header buttons on every
+ * render — e.g. every keystroke in the search box.
+ */
+function SortHeader({
+  field,
+  label,
+  active,
+  ascending,
+  onToggle,
+}: {
+  field: SortField;
+  label: string;
+  active: boolean;
+  ascending: boolean;
+  onToggle: (field: SortField) => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onToggle(field)}
+      className={`group inline-flex items-center gap-1 transition-colors hover:text-foreground ${
+        active ? "text-foreground" : ""
+      }`}
+    >
+      {label}
+      <SortIndicator active={active} ascending={ascending} />
+    </button>
+  );
+}
+
 export default function AdminTutors() {
   const currency = useUserCurrency();
   const { data: tutors = [], isLoading, error } = useListAdminTutors();
@@ -91,22 +123,6 @@ export default function AdminTutors() {
     }
   }
 
-  function SortHeader({ field, label }: { field: SortField; label: string }) {
-    const active = sortField === field;
-    return (
-      <button
-        type="button"
-        onClick={() => toggleSort(field)}
-        className={`group inline-flex items-center gap-1 transition-colors hover:text-foreground ${
-          active ? "text-foreground" : ""
-        }`}
-      >
-        {label}
-        <SortIndicator active={active} ascending={sortOrder === "asc"} />
-      </button>
-    );
-  }
-
   return (
     <div className="space-y-6">
       {isLoading && (
@@ -151,22 +167,58 @@ export default function AdminTutors() {
                   <TableHeader>
                     <TableRow className="bg-muted/30 hover:bg-muted/30">
                       <TableHead className="pl-4">
-                        <SortHeader field="name" label="Tutor" />
+                        <SortHeader
+                          field="name"
+                          label="Tutor"
+                          active={sortField === "name"}
+                          ascending={sortOrder === "asc"}
+                          onToggle={toggleSort}
+                        />
                       </TableHead>
                       <TableHead>
-                        <SortHeader field="studentCount" label="Students" />
+                        <SortHeader
+                          field="studentCount"
+                          label="Students"
+                          active={sortField === "studentCount"}
+                          ascending={sortOrder === "asc"}
+                          onToggle={toggleSort}
+                        />
                       </TableHead>
                       <TableHead>
-                        <SortHeader field="outstandingAmount" label="Outstanding" />
+                        <SortHeader
+                          field="outstandingAmount"
+                          label="Outstanding"
+                          active={sortField === "outstandingAmount"}
+                          ascending={sortOrder === "asc"}
+                          onToggle={toggleSort}
+                        />
                       </TableHead>
                       <TableHead className="hidden md:table-cell">
-                        <SortHeader field="googleConnected" label="Google" />
+                        <SortHeader
+                          field="googleConnected"
+                          label="Google"
+                          active={sortField === "googleConnected"}
+                          ascending={sortOrder === "asc"}
+                          onToggle={toggleSort}
+                        />
                       </TableHead>
                       <TableHead className="hidden md:table-cell">
-                        <SortHeader field="lastActive" label="Last active" />
+                        <SortHeader
+                          field="lastActive"
+                          label="Last active"
+                          active={sortField === "lastActive"}
+                          ascending={sortOrder === "asc"}
+                          onToggle={toggleSort}
+                        />
                       </TableHead>
                       <TableHead className="hidden lg:table-cell">
-                        <SortHeader field="createdAt" label="Joined" />
+                        <SortHeader
+                          field="createdAt"
+                          label="Joined"
+                          active={sortField === "createdAt"}
+                          ascending={sortOrder === "asc"}
+                          onToggle={toggleSort}
+                        />
                       </TableHead>
                     </TableRow>
                   </TableHeader>

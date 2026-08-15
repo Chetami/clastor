@@ -17,5 +17,13 @@ export function defaultInvoiceDueDate(now: Date = new Date()): string {
 
 /** Default invoice due date as a `YYYY-MM-DD` string (for <input type="date">). */
 export function defaultInvoiceDueDateInput(now: Date = new Date()): string {
-  return defaultInvoiceDueDate(now).slice(0, 10);
+  // Slice the LOCAL calendar date — an ISO slice of now+14d can be a day off
+  // for anyone not on UTC (the default is stored as a date-only value, so
+  // what matters is the user's calendar day, not the UTC one).
+  const d = new Date(now.getTime());
+  d.setDate(d.getDate() + DEFAULT_INVOICE_DUE_DAYS);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }

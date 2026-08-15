@@ -60,7 +60,7 @@ export function NextLesson({ lesson, studentName, studentEmail }: Props) {
   }
 
   const callLink = lesson.meetLink;
-  const isMeet = !!lesson.meetLink;
+  const isMeet = !!callLink?.includes("meet.google.com");
 
   const notifiedAt = lesson.lastStudentNotifiedAt
     ? new Date(lesson.lastStudentNotifiedAt)

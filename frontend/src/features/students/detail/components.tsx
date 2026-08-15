@@ -130,8 +130,13 @@ export function StudentNotesCard({
   }
 
   async function save() {
-    await onSave(draft.trim() || null);
-    setEditing(false);
+    try {
+      await onSave(draft.trim() || null);
+      setEditing(false);
+    } catch {
+      // Save failed — stay in edit mode so the draft isn't lost; the
+      // parent surfaces the error.
+    }
   }
 
   return (

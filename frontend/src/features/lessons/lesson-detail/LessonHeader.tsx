@@ -46,7 +46,6 @@ interface LessonHeaderProps {
   onCancel: () => void;
   onResync: () => void;
   notifyPending: boolean;
-  cancelPending: boolean;
   resyncPending: boolean;
 }
 
@@ -65,7 +64,6 @@ export function LessonHeader({
   onCancel,
   onResync,
   notifyPending,
-  cancelPending,
   resyncPending,
 }: LessonHeaderProps) {
   const subject = lesson.subject;
@@ -232,7 +230,6 @@ export function LessonHeader({
                   {canManage && (
                     <DropdownMenuItem
                       onClick={onCancel}
-                      disabled={cancelPending}
                       className="text-destructive focus:text-destructive"
                     >
                       <Ban className="mr-2 h-4 w-4" />
