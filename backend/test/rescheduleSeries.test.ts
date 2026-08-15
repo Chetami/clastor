@@ -412,3 +412,132 @@ describe("rescheduleSeriesFromOccurrence", () => {
     expect(_stores.lessonStore.has("lesson_cancelled")).toBe(true);
   });
 });
+
+describe("rescheduleSeriesFromOccurrence — non-weekly series", () => {
+  const JAN7 = new Date("2026-01-07T19:00:00.000Z"); // Wednesday
+  const JAN21 = new Date("2026-01-21T19:00:00.000Z"); // Wednesday
+  const FEB4 = new Date("2026-02-04T19:00:00.000Z"); // Wednesday
+  const FEB18 = new Date("2026-02-18T19:00:00.000Z"); // Wednesday
+
+  function setupBiweekly(overrides: Record<string, unknown> = {}) {
+    const fs = createMockFirestore(
+      {
+        series_test: makeSeriesDoc({
+          intervalWeeks: 2,
+          slots: [{ dayOfWeek: "wednesday", timeOfDay: "19:00" }],
+          startDate: "2026-01-07",
+          until: "2026-03-01",
+          ...overrides,
+        }),
+      },
+      {
+        lesson_jan7: makeLessonDoc(JAN7),
+        lesson_jan21: makeLessonDoc(JAN21),
+        lesson_feb4: makeLessonDoc(FEB4),
+        lesson_feb18: makeLessonDoc(FEB18),
+      },
+    );
+    mockFirestoreHolder.current = fs.firestore;
+    _stores = fs;
+  }
+
+  it("regenerates from the dropped week when moved to an off-cadence week", async () => {
+    setupBiweekly();
+    // Move the Jan 21 occurrence to Wed Jan 28 — a week that is OFF the
+    // original biweekly grid (on-weeks were Jan 7, Jan 21, Feb 4, ...).
+    const newStart = new Date("2026-01-28T19:00:00.000Z");
+
+    const { removed, created } = await rescheduleSeriesFromOccurrence(
+      "series_test",
+      JAN21,
+      newStart,
+    );
+
+    const removedStarts = removed
+      .map((l) => (l.startDateTime as Date).toISOString())
+      .sort();
+    expect(removedStarts).toEqual([
+      "2026-01-21T19:00:00.000Z",
+      "2026-02-04T19:00:00.000Z",
+      "2026-02-18T19:00:00.000Z",
+    ]);
+
+    // The series must follow the user's drop: first occurrence Jan 28, then
+    // every 2 weeks from THAT week (not the original on-week grid).
+    const createdStarts = created
+      .map((l) => (l.startDateTime as Date).toISOString())
+      .sort();
+    expect(createdStarts).toEqual([
+      "2026-01-28T19:00:00.000Z",
+      "2026-02-11T19:00:00.000Z",
+      "2026-02-25T19:00:00.000Z",
+    ]);
+
+    // Jan 7 (before oldStart) untouched.
+    expect(_stores.lessonStore.has("lesson_jan7")).toBe(true);
+
+    // The persisted rule is re-anchored at the dropped week.
+    const series = _stores.seriesStore.get("series_test")!;
+    expect(series.startDate).toBe("2026-01-28");
+  });
+
+  it("does not skip a cycle when moved to an earlier day in the same week", async () => {
+    setupBiweekly();
+    // Move Wed Jan 21 back to Tue Jan 20 — earlier day within the same week.
+    const newStart = new Date("2026-01-20T18:00:00.000Z");
+
+    const { created } = await rescheduleSeriesFromOccurrence(
+      "series_test",
+      JAN21,
+      newStart,
+    );
+
+    // First occurrence must be the dropped slot itself, not a full interval
+    // later (the old anchor-at-oldStart logic skipped the anchor week).
+    const createdStarts = created
+      .map((l) => (l.startDateTime as Date).toISOString())
+      .sort();
+    expect(createdStarts).toEqual([
+      "2026-01-20T18:00:00.000Z",
+      "2026-02-03T18:00:00.000Z",
+      "2026-02-17T18:00:00.000Z",
+    ]);
+  });
+});
+
+describe("rescheduleSeriesFromOccurrence — count-bounded series", () => {
+  it("regenerates only the remaining occurrences, not the full count", async () => {
+    const fs = createMockFirestore(
+      {
+        series_test: makeSeriesDoc({
+          startDate: "2026-01-05",
+          until: null,
+          count: 4,
+        }),
+      },
+      {
+        lesson_jan5: makeLessonDoc(JAN5),
+        lesson_jan12: makeLessonDoc(JAN12),
+        lesson_jan19: makeLessonDoc(JAN19),
+        lesson_jan26: makeLessonDoc(JAN26),
+      },
+    );
+    mockFirestoreHolder.current = fs.firestore;
+    _stores = fs;
+
+    // Reschedule the 3rd of 4 occurrences: 2 are preserved, so only 2 remain.
+    const { created } = await rescheduleSeriesFromOccurrence(
+      "series_test",
+      JAN19,
+      new Date("2026-01-19T14:00:00.000Z"),
+    );
+
+    const createdStarts = created
+      .map((l) => (l.startDateTime as Date).toISOString())
+      .sort();
+    expect(createdStarts).toEqual([
+      "2026-01-19T14:00:00.000Z",
+      "2026-01-26T14:00:00.000Z",
+    ]);
+  });
+});

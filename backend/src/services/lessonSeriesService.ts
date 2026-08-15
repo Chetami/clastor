@@ -681,17 +681,34 @@ export async function rescheduleSeriesFromOccurrence(
       await batch.commit();
     }
 
-    // Regenerate from the rescheduled occurrence's date with the updated rule.
-    // Using oldStart (not "today") ensures lessons between today and the
-    // rescheduled occurrence are preserved, not regenerated.
-    const rescheduleStartStr = formatInTimeZone(oldStart, tz, "yyyy-MM-dd");
+    // Regenerate from the NEW start's date with the updated rule. Anchoring
+    // at newStart (not oldStart) makes the dropped slot the first occurrence
+    // and re-anchors the intervalWeeks grid on the week the user actually
+    // chose. Anchoring at oldStart breaks non-weekly series: an off-week drop
+    // would snap back to the original on-week, and an earlier-day drop within
+    // the anchor week would be skipped for a full interval. Lessons before
+    // oldStart are still preserved — only occurrences from oldStart onwards
+    // were deleted above, and generateOccurrences never emits before its
+    // anchor date.
+    const rescheduleStartStr = formatInTimeZone(newStart, tz, "yyyy-MM-dd");
+
+    // A count-bounded series caps TOTAL occurrences across the series;
+    // subtract the lessons preserved before oldStart so only the remainder
+    // is regenerated instead of a full count's worth again.
+    const preservedCount = snapshot.docs.filter((d) => {
+      const start = d.data()?.startDateTime;
+      return start ? start.toDate().getTime() < oldStartMs : false;
+    }).length;
+    const remainingCount =
+      series.count != null ? Math.max(0, series.count - preservedCount) : null;
+
     const occurrences = generateOccurrences({
       startDate: rescheduleStartStr,
       timezone: tz,
       intervalWeeks: series.intervalWeeks,
       slots: updatedSlots,
       until: series.until ?? null,
-      count: series.count ?? null,
+      count: remainingCount,
     });
 
     if (occurrences.length > MAX_OCCURRENCES) {
@@ -758,10 +775,13 @@ export async function rescheduleSeriesFromOccurrence(
       await batch.commit();
     }
 
-    // Update the series rule so future edits reflect the new slot + duration.
+    // Update the series rule so future edits reflect the new slot, duration,
+    // and anchor week (startDate re-anchored at the dropped occurrence so the
+    // persisted rule matches the regenerated lessons' interval grid).
     await firestore.collection("lessonSeries").doc(seriesId).update({
       slots: updatedSlots,
       durationMinutes: newDuration,
+      startDate: rescheduleStartStr,
       updatedAt: now,
     });
 
