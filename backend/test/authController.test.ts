@@ -259,7 +259,12 @@ describe("googleAuth controller", () => {
     await googleAuth(mockReq({ body: { timezone: "Australia/Sydney" } }), res);
 
     expect(res.statusCode).toBe(200);
-    expect(res.body).toEqual({ jwtToken: "jwt-1", refreshToken: "refresh-1", user: userInfo });
+    expect(res.body).toEqual({
+      jwtToken: "jwt-1",
+      refreshToken: "refresh-1",
+      user: userInfo,
+      isNewUser: true,
+    });
     // name falls back to the decoded Google name; email + picture from the token.
     expect(userService.createUserInFirestore).toHaveBeenCalledWith(
       "fb-uid-1",
@@ -284,6 +289,9 @@ describe("googleAuth controller", () => {
     expect(res.statusCode).toBe(200);
     expect(userService.createUserInFirestore).not.toHaveBeenCalled();
     expect(tokenService.issueNewTokenPair).toHaveBeenCalledWith(dbUser);
+    // Not a first sign-in — clients must not run signup-time flows (e.g. the
+    // calendar consent prompt).
+    expect((res.body as { isNewUser?: boolean }).isNewUser).toBe(false);
   });
 
   it("falls back to the email local-part when the profile has no name", async () => {

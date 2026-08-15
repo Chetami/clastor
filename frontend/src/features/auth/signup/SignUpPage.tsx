@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/card";
 import { useRegister } from "@/features/auth/api";
 import { GoogleSignInButton } from "@/features/auth/GoogleSignInButton";
+import { connectGoogleRequest } from "@/features/settings/api/requests";
 import { BrandMark } from "@/features/auth/BrandMark";
 import { LEGAL_URLS } from "@/config";
 import { track } from "@/lib/analytics";
@@ -73,6 +74,21 @@ export default function SignUpPage() {
   const strengthBars = strength <= 0 ? 1 : strength;
   const passwordsMismatch =
     confirmPassword.length > 0 && password !== confirmPassword;
+
+  /**
+   * Brand-new Google signups are sent straight into the Calendar/Meet consent
+   * flow so the connection (refresh token) is granted during signup. The
+   * onboarding wizard's calendar step is then skipped. Falls back to the
+   * wizard if the consent URL can't be fetched.
+   */
+  async function startGoogleCalendarConsent() {
+    try {
+      const { authUrl } = await connectGoogleRequest("/onboarding");
+      window.location.href = authUrl;
+    } catch {
+      navigate("/onboarding");
+    }
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -163,6 +179,14 @@ export default function SignUpPage() {
               onSuccess={(data) => {
                 track("signup_success", { method: "google" });
                 clearSurvey();
+                if (
+                  data.isNewUser &&
+                  !data.user.googleConnected &&
+                  !data.user.onboardingComplete
+                ) {
+                  void startGoogleCalendarConsent();
+                  return;
+                }
                 navigate(
                   data.user.onboardingComplete ? "/dashboard" : "/onboarding",
                 );

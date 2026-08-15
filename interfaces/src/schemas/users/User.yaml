@@ -75,6 +75,14 @@ properties:
     type: boolean
     default: false
     description: Whether the user has finished or dismissed the onboarding flow
+  googleConnected:
+    type: boolean
+    default: false
+    description: >-
+      Whether this tutor has a stored Google OAuth connection (refresh token
+      for Calendar / Meet). Derived from the untyped `googleConnection` field
+      on the Firestore document; the connection payload itself is
+      server-side only and never included in client responses.
   tourSeen:
     type: boolean
     default: false

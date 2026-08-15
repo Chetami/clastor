@@ -64,6 +64,14 @@ properties:
     type: boolean
     default: false
     description: Whether the user has finished or dismissed the onboarding flow
+  googleConnected:
+    type: boolean
+    default: false
+    description: >-
+      Whether the tutor has connected a Google account (Calendar / Meet) via
+      the OAuth consent flow. Derived server-side from the stored connection;
+      lets clients skip connect prompts (e.g. the onboarding calendar step)
+      without a separate status fetch.
   tourSeen:
     type: boolean
     default: false

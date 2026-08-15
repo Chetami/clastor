@@ -14,6 +14,12 @@ properties:
     example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
   user:
     $ref: './UserInfo.yaml'
+  isNewUser:
+    type: boolean
+    description: >-
+      True when this exchange created the user's Firestore document (first-ever
+      sign-in). Only set by the Google auth endpoint; clients use it to run
+      first-time flows (e.g. the calendar consent prompt) right after signup.
 description: |-
   Login response body
   Returned from backend /api/auth/login endpoint

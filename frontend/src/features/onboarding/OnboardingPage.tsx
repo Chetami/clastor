@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { BrandMark } from "@/features/auth/BrandMark";
+import { verifyRequest } from "@/features/auth/api";
 import { useAuthStore } from "@/store/auth-store";
 import { useListStudents } from "@/features/students/api/use-list-students";
 import { useListLessons } from "@/features/schedule/api/use-list-lessons";
@@ -39,27 +40,48 @@ const STEPS = [
   { key: "finish", label: "All set" },
 ] as const;
 
-const GOOGLE_STEP_INDEX = STEPS.findIndex((s) => s.key === "google");
-const STUDENT_STEP_INDEX = STEPS.findIndex((s) => s.key === "student");
-const LESSON_STEP_INDEX = STEPS.findIndex((s) => s.key === "lesson");
-const SUBJECTS_STEP_INDEX = STEPS.findIndex((s) => s.key === "subjects");
+type StepKey = (typeof STEPS)[number]["key"];
+const STEP_KEYS: readonly StepKey[] = STEPS.map((s) => s.key);
 
 const STEP_STORAGE_KEY = "onboardingStep";
 
-function readStoredStep(): number {
+function readStoredStep(): StepKey {
   try {
     const raw = sessionStorage.getItem(STEP_STORAGE_KEY);
-    if (raw == null) return 0;
+    if (raw == null) return "welcome";
+    if ((STEP_KEYS as readonly string[]).includes(raw)) return raw as StepKey;
+    // Legacy format: the step was persisted as a numeric index.
     const n = Number(raw);
-    return Number.isInteger(n) && n >= 0 && n < STEPS.length ? n : 0;
+    if (Number.isInteger(n) && n >= 0 && n < STEP_KEYS.length) {
+      return STEP_KEYS[n];
+    }
+    return "welcome";
   } catch {
-    return 0;
+    return "welcome";
   }
+}
+
+/**
+ * Resolve a (possibly removed) step key to an index in the visible step list.
+ * When the current step was filtered out — e.g. the calendar step because the
+ * tutor connected Google during signup — resume on the first surviving step
+ * that came after it.
+ */
+function resolveStepIndex(key: StepKey, steps: readonly StepKey[]): number {
+  const i = steps.indexOf(key);
+  if (i !== -1) return i;
+  const order = STEP_KEYS.indexOf(key);
+  for (let j = order + 1; j < STEP_KEYS.length; j++) {
+    const k = steps.indexOf(STEP_KEYS[j]);
+    if (k !== -1) return k;
+  }
+  return steps.length - 1;
 }
 
 export default function OnboardingPage() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
+  const setUser = useAuthStore((s) => s.setUser);
   const complete = useCompleteOnboarding();
   const studentsQuery = useListStudents();
   const hasStudents = (studentsQuery.data?.length ?? 0) > 0;
@@ -68,30 +90,60 @@ export default function OnboardingPage() {
   const subjects = useSubjects();
   const hasSubjects = subjects.length > 0;
 
-  const [step, setStep] = useState<number>(() => {
+  // Tutors who already granted Calendar access (e.g. during Google signup)
+  // skip the connect step entirely.
+  const googleConnected = user?.googleConnected === true;
+  const steps = useMemo<readonly StepKey[]>(
+    () =>
+      googleConnected
+        ? STEP_KEYS.filter((k) => k !== "google")
+        : [...STEP_KEYS],
+    [googleConnected],
+  );
+
+  const [stepKey, setStepKey] = useState<StepKey>(() => {
     // Returning from the Google consent flow comes back with a `google` param;
     // resume on the calendar step so the success banner is visible there.
+    // (If they connected during signup the step is filtered out and
+    // resolveStepIndex lands them on the step that follows it.)
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
-      if (params.has("google")) return GOOGLE_STEP_INDEX;
+      if (params.has("google")) return "google";
     }
     return readStoredStep();
   });
+
+  const stepIndex = resolveStepIndex(stepKey, steps);
+  const activeKey = steps[stepIndex];
+
+  // Refresh the signed-in user once on mount: returning from the Google OAuth
+  // redirect, the store still holds the pre-consent user (the connection is
+  // written server-side), so `googleConnected` would otherwise be stale.
+  const userRefreshStarted = useRef(false);
+  useEffect(() => {
+    if (userRefreshStarted.current) return;
+    userRefreshStarted.current = true;
+    verifyRequest()
+      .then(setUser)
+      .catch(() => {
+        // non-fatal — the wizard still works with the stored user
+      });
+  }, [setUser]);
 
   // Persist current step so a page reload (e.g. the Google OAuth redirect)
   // resumes the wizard where the user left off.
   useEffect(() => {
     try {
-      sessionStorage.setItem(STEP_STORAGE_KEY, String(step));
+      sessionStorage.setItem(STEP_STORAGE_KEY, stepKey);
     } catch {
       // ignore (private mode / storage disabled)
     }
-  }, [step]);
+  }, [stepKey]);
 
   // Funnel: record each step the user lands on.
   useEffect(() => {
-    track("onboarding_step", { step: STEPS[step].key, index: step });
-  }, [step]);
+    track("onboarding_step", { step: activeKey, index: stepIndex });
+  }, [activeKey, stepIndex]);
 
   // Onboarding is tutor-only. Admins never get the tutor-flavoured wizard, so
   // if one lands here with an incomplete flag, mark them complete (they have
@@ -112,9 +164,9 @@ export default function OnboardingPage() {
     }
   }, [user?.role, user?.onboardingComplete, navigate, complete]);
 
-  const isFirst = step === 0;
-  const isLast = step === STEPS.length - 1;
-  const progressValue = ((step + 1) / STEPS.length) * 100;
+  const isFirst = stepIndex === 0;
+  const isLast = stepIndex === steps.length - 1;
+  const progressValue = ((stepIndex + 1) / steps.length) * 100;
 
   // The "Add student" / "Book lesson" actions live in the footer and are
   // driven by each step via an imperative handle. Each step reports its phase
@@ -194,8 +246,8 @@ export default function OnboardingPage() {
   }
 
   const advance = useCallback(() => {
-    setStep((s) => Math.min(STEPS.length - 1, s + 1));
-  }, []);
+    setStepKey(steps[Math.min(steps.length - 1, stepIndex + 1)]);
+  }, [steps, stepIndex]);
 
   return (
     <div className="flex min-h-svh flex-col">
@@ -210,18 +262,18 @@ export default function OnboardingPage() {
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <span>
-              Step {step + 1} of {STEPS.length}
+              Step {stepIndex + 1} of {steps.length}
             </span>
-            <span>{STEPS[step].label}</span>
+            <span>{STEPS.find((s) => s.key === activeKey)?.label}</span>
           </div>
           <Progress value={progressValue} />
         </div>
 
         <Card>
           <CardContent className="p-6">
-            {step === 0 && <WelcomeStep />}
-            {step === 1 && <SubjectsStep />}
-            {step === 2 && (
+            {activeKey === "welcome" && <WelcomeStep />}
+            {activeKey === "subjects" && <SubjectsStep />}
+            {activeKey === "student" && (
               <AddStudentStep
                 ref={studentStepRef}
                 hasStudents={hasStudents}
@@ -229,7 +281,7 @@ export default function OnboardingPage() {
                 onStateChange={handleStudentState}
               />
             )}
-            {step === 3 && (
+            {activeKey === "lesson" && (
               <ScheduleLessonStep
                 ref={lessonStepRef}
                 hasLessons={hasLessons}
@@ -237,8 +289,8 @@ export default function OnboardingPage() {
                 onStateChange={handleLessonState}
               />
             )}
-            {step === 4 && <GoogleConnectStep />}
-            {step === 5 && <FinishStep />}
+            {activeKey === "google" && <GoogleConnectStep />}
+            {activeKey === "finish" && <FinishStep />}
           </CardContent>
         </Card>
 
@@ -246,7 +298,7 @@ export default function OnboardingPage() {
           {!isFirst ? (
             <Button
               variant="ghost"
-              onClick={() => setStep((s) => Math.max(0, s - 1))}
+              onClick={() => setStepKey(steps[Math.max(0, stepIndex - 1)])}
             >
               <ArrowLeft className="size-4" />
               Back
@@ -264,10 +316,10 @@ export default function OnboardingPage() {
               )}
               Finish
             </Button>
-          ) : (step === STUDENT_STEP_INDEX && studentAutoAdvance) ||
-            (step === LESSON_STEP_INDEX && lessonAutoAdvance) ? (
+          ) : (activeKey === "student" && studentAutoAdvance) ||
+            (activeKey === "lesson" && lessonAutoAdvance) ? (
             <div />
-          ) : step === STUDENT_STEP_INDEX && studentPhase === "form" ? (
+          ) : activeKey === "student" && studentPhase === "form" ? (
             <Button
               onClick={() => studentStepRef.current?.submit()}
               disabled={!studentCanSubmit || studentPending}
@@ -279,7 +331,7 @@ export default function OnboardingPage() {
               )}
               Add student
             </Button>
-          ) : step === LESSON_STEP_INDEX && lessonPhase === "form" ? (
+          ) : activeKey === "lesson" && lessonPhase === "form" ? (
             <Button
               onClick={() => lessonStepRef.current?.submit()}
               disabled={!lessonCanSubmit || lessonPending}
@@ -292,14 +344,17 @@ export default function OnboardingPage() {
               Book lesson
             </Button>
           ) : (
-            <Button onClick={advance} disabled={!hasSubjects && step === SUBJECTS_STEP_INDEX}>
-              {step === 0 ? "Get started" : "Continue"}
+            <Button
+              onClick={advance}
+              disabled={!hasSubjects && activeKey === "subjects"}
+            >
+              {isFirst ? "Get started" : "Continue"}
               <ArrowRight className="size-4" />
             </Button>
           )}
         </div>
 
-        {step === STUDENT_STEP_INDEX &&
+        {activeKey === "student" &&
           studentPhase === "form" &&
           studentError && (
             <p className="text-center text-xs text-destructive">
@@ -307,7 +362,7 @@ export default function OnboardingPage() {
             </p>
           )}
 
-        {step === LESSON_STEP_INDEX &&
+        {activeKey === "lesson" &&
           lessonPhase === "form" &&
           lessonError && (
             <p className="text-center text-xs text-destructive">

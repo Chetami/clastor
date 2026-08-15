@@ -91,6 +91,7 @@ export function toUserInfo(user: User): UserInfo {
     workingHours: user.workingHours ?? null,
     subjects: user.subjects ?? [],
     onboardingComplete: user.onboardingComplete === true,
+    googleConnected: user.googleConnected === true,
     tourSeen: user.tourSeen === true,
     invoiceSettings: user.invoiceSettings ?? null,
     emailReviewSettings: user.emailReviewSettings ?? null,
@@ -345,6 +346,7 @@ export async function getUserFromFirestore(uid: string): Promise<User> {
       // Legacy docs created before onboarding existed lack this field; treat
       // anything missing/non-true as incomplete so existing users get prompted.
       onboardingComplete: userData!.onboardingComplete === true,
+      googleConnected: !!userData!.googleConnection?.refreshToken,
       tourSeen: userData!.tourSeen === true,
       invoiceSettings: normalizeInvoiceSettings(userData!.invoiceSettings),
       emailReviewSettings: normalizeEmailReviewSettings(
@@ -797,6 +799,7 @@ export async function createUserInFirestore(
       reminderLeadTime: null,
       subjects: [],
       onboardingComplete: false,
+      googleConnected: false,
       tourSeen: false,
       invoiceSettings: null,
       emailReviewSettings: null,

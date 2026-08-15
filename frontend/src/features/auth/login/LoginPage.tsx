@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/card";
 import { useLogin } from "@/features/auth/api";
 import { GoogleSignInButton } from "@/features/auth/GoogleSignInButton";
+import { connectGoogleRequest } from "@/features/settings/api/requests";
 import { BrandMark } from "@/features/auth/BrandMark";
 
 export default function LoginPage() {
@@ -26,6 +27,20 @@ export default function LoginPage() {
   const login = useLogin();
 
   const authError = googleError ?? login.error?.message;
+
+  /**
+   * A first-ever Google sign-in through this page still creates an account,
+   * so send brand-new users straight into the Calendar/Meet consent flow
+   * (same as the signup page) and skip the onboarding calendar step later.
+   */
+  async function startGoogleCalendarConsent() {
+    try {
+      const { authUrl } = await connectGoogleRequest("/onboarding");
+      window.location.href = authUrl;
+    } catch {
+      navigate("/onboarding");
+    }
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -59,11 +74,19 @@ export default function LoginPage() {
           <div className="space-y-4">
             <GoogleSignInButton
               label="Continue with Google"
-              onSuccess={(data) =>
+              onSuccess={(data) => {
+                if (
+                  data.isNewUser &&
+                  !data.user.googleConnected &&
+                  !data.user.onboardingComplete
+                ) {
+                  void startGoogleCalendarConsent();
+                  return;
+                }
                 navigate(
                   data.user.onboardingComplete ? "/dashboard" : "/onboarding",
-                )
-              }
+                );
+              }}
               onError={(error) =>
                 setGoogleError(
                   error instanceof Error

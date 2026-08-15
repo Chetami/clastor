@@ -119,7 +119,12 @@ export async function googleAuth(
 
     const userInfo: UserInfo = toUserInfo(user);
 
-    res.status(200).json({ jwtToken, refreshToken, user: userInfo });
+    res.status(200).json({
+      jwtToken,
+      refreshToken,
+      user: userInfo,
+      isNewUser: !existingUser,
+    });
   } catch (error) {
     console.error('Google authentication failed:', error);
     const message = error instanceof Error ? error.message : 'Google authentication failed';
