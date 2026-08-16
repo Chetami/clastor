@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,7 +7,8 @@ import { Video, Radio, ExternalLink, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import type { LessonResponse } from "@examify-tms/interfaces";
 import { useGenerateMeetLink } from "../api";
-import { useUpdateLesson } from "@/features/schedule/api";
+import { updateLessonRequest } from "@/features/schedule/api";
+import { queryClient } from "@/lib/query-client";
 import { lessonTimeRange } from "../lib";
 
 type Props = {
@@ -16,24 +18,36 @@ type Props = {
 
 export function CurrentLesson({ lesson, studentName }: Props) {
   const generateMeet = useGenerateMeetLink();
-  const updateLesson = useUpdateLesson(lesson.id);
 
   const callLink = lesson.meetLink;
   const isMeet = !!callLink?.includes("meet.google.com");
 
+  // Id of the lesson whose Meet link is being generated. The "current
+  // lesson" can change (refetch, rollover) mid-generation — the spinner
+  // must only show on the lesson that started it, and the link must be
+  // persisted to that same lesson.
+  const [generatingFor, setGeneratingFor] = useState<string | null>(null);
+
   const handleGenerate = async () => {
+    // Capture the lesson at click time; the displayed lesson may change
+    // before the generation round-trip finishes.
+    const target = lesson;
+    setGeneratingFor(target.id);
     try {
       const res = await generateMeet.mutateAsync({
-        lessonId: lesson.id,
-        startDateTime: lesson.startDateTime,
-        durationMinutes: lesson.durationMinutes,
+        lessonId: target.id,
+        startDateTime: target.startDateTime,
+        durationMinutes: target.durationMinutes,
       });
-      // Persist the link on the lesson so the button becomes "Join Meet" on
-      // the next render and the calendar/schedule can display it too.
-      await updateLesson.mutateAsync({
+      // Persist the link on the lesson that generated it so the button
+      // becomes "Join Meet" on the next render and the calendar/schedule
+      // can display it too.
+      await updateLessonRequest(target.id, {
         location: "Google Meet",
         meetLink: res.meetingLink,
       });
+      queryClient.invalidateQueries({ queryKey: ["lessons"] });
+      queryClient.invalidateQueries({ queryKey: ["lessons", target.id] });
       toast.success("Google Meet link created");
     } catch (err) {
       toast.error(
@@ -41,6 +55,8 @@ export function CurrentLesson({ lesson, studentName }: Props) {
           ? err.message
           : "Connect your Google account to generate Meet links",
       );
+    } finally {
+      setGeneratingFor(null);
     }
   };
 
@@ -89,9 +105,9 @@ export function CurrentLesson({ lesson, studentName }: Props) {
             variant="secondary"
             className="shrink-0 gap-1.5"
             onClick={handleGenerate}
-            disabled={generateMeet.isPending || updateLesson.isPending}
+            disabled={generatingFor === lesson.id}
           >
-            {generateMeet.isPending || updateLesson.isPending ? (
+            {generatingFor === lesson.id ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <Video className="h-4 w-4" />

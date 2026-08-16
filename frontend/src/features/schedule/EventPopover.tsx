@@ -14,10 +14,10 @@ import { SendInvoiceDialog } from "@/components/send-invoice-dialog";
 import {
   useGetLesson,
   useNotifyStudent,
-  useUpdateLesson,
   previewNotifyStudentRequest,
 } from "./api";
-import { generateMeetLinkRequest } from "./api/requests";
+import { generateMeetLinkRequest, updateLessonRequest } from "./api/requests";
+import { queryClient } from "@/lib/query-client";
 import { EmailComposeDialog } from "@/components/email-compose-dialog";
 import { MarkAttendanceDialog } from "@/components/mark-attendance-dialog";
 import { isLessonFinished } from "./lesson-utils";
@@ -50,7 +50,6 @@ export function EventPopover({
 }: EventPopoverProps) {
   const { data: lesson, isLoading } = useGetLesson(lessonId ?? undefined);
   const notifyStudent = useNotifyStudent(lessonId ?? "");
-  const updateLesson = useUpdateLesson(lessonId ?? "");
   const {
     names: studentNames,
     byId: studentById,
@@ -61,7 +60,11 @@ export function EventPopover({
     setSendInvoiceId,
   } = useMarkAttendanceAndInvoice();
   const [actionError, setActionError] = useState<string | null>(null);
-  const [meetLoading, setMeetLoading] = useState(false);
+  // Id of the lesson whose Meet link is being generated. Scoped to an id
+  // (not a boolean) because this popover instance survives switching to a
+  // different lesson mid-generation — the spinner must only show on the
+  // lesson that started it.
+  const [meetLoadingId, setMeetLoadingId] = useState<string | null>(null);
   const [notifyOpen, setNotifyOpen] = useState(false);
   const [rescheduleOpen, setRescheduleOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
@@ -110,18 +113,25 @@ export function EventPopover({
 
   async function handleGenerateMeet() {
     if (!lesson) return;
+    // Capture the lesson at click time. This component stays mounted while
+    // the user pops over another lesson, and the generation round-trip takes
+    // seconds — persisting via an id scoped to the *current* render would
+    // attach the link to whatever lesson is open when the response lands.
+    const target = lesson;
     setActionError(null);
-    setMeetLoading(true);
+    setMeetLoadingId(target.id);
     try {
       const { meetingLink } = await generateMeetLinkRequest({
-        lessonId: lesson.id,
-        startDateTime: lesson.startDateTime,
-        durationMinutes: lesson.durationMinutes,
+        lessonId: target.id,
+        startDateTime: target.startDateTime,
+        durationMinutes: target.durationMinutes,
       });
-      await updateLesson.mutateAsync({
+      await updateLessonRequest(target.id, {
         location: "Google Meet",
         meetLink: meetingLink,
       });
+      queryClient.invalidateQueries({ queryKey: ["lessons"] });
+      queryClient.invalidateQueries({ queryKey: ["lessons", target.id] });
       toast.success("Google Meet link created");
     } catch (err) {
       toast.error(
@@ -130,7 +140,7 @@ export function EventPopover({
           : "Connect your Google account to generate Meet links",
       );
     } finally {
-      setMeetLoading(false);
+      setMeetLoadingId(null);
     }
   }
 
@@ -206,7 +216,7 @@ export function EventPopover({
                 onCancel={handleCancel}
                 onGenerateMeet={handleGenerateMeet}
                 onMarkAttendance={() => setAttendanceOpen(true)}
-                meetLoading={meetLoading}
+                meetLoading={meetLoadingId != null && meetLoadingId === lesson.id}
               />
             )}
           </div>

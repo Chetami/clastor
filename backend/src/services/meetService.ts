@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { google, calendar_v3 } from "googleapis";
 import { getOAuth2ClientForUser } from "../config/googleOAuth";
 import { getGoogleConnection } from "./userService";
@@ -77,7 +78,10 @@ export async function generateMeetLinkForUser(
 
   const conferenceData: calendar_v3.Schema$ConferenceData = {
     createRequest: {
-      requestId: `examify-${start.getTime()}`,
+      // Google keys conference creation on this requestId per OAuth client
+      // (not per event), so a colliding id returns another lesson's Meet
+      // conference. It must be unique per request.
+      requestId: `examify-${lesson ? `lesson-${lesson.id}-` : ""}${randomUUID()}`,
       conferenceSolutionKey: { type: "hangoutsMeet" },
     },
   };

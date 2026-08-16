@@ -23,8 +23,10 @@ import {
 } from "@/components/ui/select";
 import {
   generateMeetLinkRequest,
+  updateLessonRequest,
   getGoogleAuthUrl,
 } from "@/features/schedule/api/requests";
+import { queryClient } from "@/lib/query-client";
 import { lessonEndDate, formatLessonDateTime, formatLessonTime } from "@/features/schedule/lesson-utils";
 import { DetailRow } from "./ui";
 
@@ -59,11 +61,18 @@ export function LessonDetailsCard({
   googleConnected,
 }: LessonDetailsCardProps) {
   const [subjectError, setSubjectError] = useState<string | null>(null);
-  const [meetLoading, setMeetLoading] = useState(false);
+  // Id of the lesson whose Meet link is being generated. The route param
+  // can change (navigate to another lesson) mid-generation — the spinner
+  // must only show on the lesson that started it, and the link must be
+  // persisted to that same lesson.
+  const [meetLoadingId, setMeetLoadingId] = useState<string | null>(null);
   const [meetError, setMeetError] = useState<string | null>(null);
 
   const end = lessonEndDate(lesson);
   const existingMeet = lesson.meetLink;
+  // Spinner/disabled only when THIS lesson's generation is in flight — not
+  // when another lesson (navigated away from mid-generation) is generating.
+  const generating = meetLoadingId != null && meetLoadingId === lesson.id;
   const subject = lesson.subject;
   const subjectOptions =
     subject && !studentSubjects.some((s) => s.name === subject)
@@ -83,8 +92,12 @@ export function LessonDetailsCard({
   }
 
   async function handleGenerateMeet() {
-    setMeetLoading(true);
+    // Capture the lesson at click time; the user may navigate to another
+    // lesson before the generation round-trip finishes, and the parent's
+    // `updateLesson` mutation is scoped to the *current* route param.
+    const target = lesson;
     setMeetError(null);
+    setMeetLoadingId(target.id);
     try {
       if (!googleConnected) {
         const { authUrl } = await getGoogleAuthUrl();
@@ -92,20 +105,22 @@ export function LessonDetailsCard({
         return;
       }
       const { meetingLink } = await generateMeetLinkRequest({
-        lessonId: lesson.id,
-        startDateTime: lesson.startDateTime,
-        durationMinutes: lesson.durationMinutes,
+        lessonId: target.id,
+        startDateTime: target.startDateTime,
+        durationMinutes: target.durationMinutes,
       });
-      await updateLesson.mutateAsync({
+      await updateLessonRequest(target.id, {
         location: "Google Meet",
         meetLink: meetingLink,
       });
+      queryClient.invalidateQueries({ queryKey: ["lessons"] });
+      queryClient.invalidateQueries({ queryKey: ["lessons", target.id] });
     } catch (err) {
       setMeetError(
         err instanceof Error ? err.message : "Failed to generate Meet link",
       );
     } finally {
-      setMeetLoading(false);
+      setMeetLoadingId(null);
     }
   }
 
@@ -216,7 +231,7 @@ export function LessonDetailsCard({
                   size="sm"
                   className="h-8"
                   disabled={
-                    meetLoading ||
+                    generating ||
                     googleConnected === null ||
                     updateLesson.isPending
                   }
@@ -227,13 +242,13 @@ export function LessonDetailsCard({
                       : "Connect your Google account to generate Meet links"
                   }
                 >
-                  {meetLoading || updateLesson.isPending ? (
+                  {generating ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
                     <Video className="h-4 w-4" />
                   )}
                   <span className="ml-1.5">
-                    {meetLoading || updateLesson.isPending
+                    {generating
                       ? "Generating…"
                       : googleConnected
                         ? "Generate Meet link"
