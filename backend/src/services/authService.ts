@@ -5,6 +5,7 @@ import {
   getEmailTransporter,
   getSenderAddress,
   getSenderDisplayName,
+  getFrontendUrl,
   isEmailConfigured,
 } from "../config/email";
 import { emailButtonHtml, wrapEmailHtml } from "./emailLayout";
@@ -39,17 +40,6 @@ export async function getEmailVerified(uid: string): Promise<boolean> {
     console.error("Firebase getUser failed:", error);
     throw new UnauthorizedError("User no longer exists");
   }
-}
-
-/**
- * Shared helper for the frontend-facing base URL used in email links.
- */
-function getFrontendUrl(): string {
-  return (
-    process.env.FRONTEND_URL ||
-    process.env.CORS_ORIGIN ||
-    "http://localhost:5173"
-  ).replace(/\/$/, "");
 }
 
 /**
@@ -93,9 +83,9 @@ export async function sendEmailVerificationEmail(
   const html = wrapEmailHtml(
     `<p style="margin:0 0 12px 0">Welcome to ${brand}! Verify your email address to unlock sending emails to students and invoices.</p>` +
     `<p style="margin:0 0 20px 0">${emailButtonHtml(link, "Verify email")}</p>` +
-    `<p style="margin:0 0 12px 0;font-size:13px;color:#6b7280">Or paste this link into your browser:<br>` +
-    `<a href="${link}" style="color:#2563eb;word-break:break-all">${link}</a></p>` +
-    `<p style="margin:0;color:#6b7280;font-size:13px">If you didn't create an account, you can safely ignore this email.</p>`
+    `<p style="margin:0 0 12px 0;font-size:13px;color:#8a7d6e">Or paste this link into your browser:<br>` +
+    `<a href="${link}" style="color:#e05e0f;word-break:break-all">${link}</a></p>` +
+    `<p style="margin:0;color:#8a7d6e;font-size:13px">If you didn't create an account, you can safely ignore this email.</p>`
   );
 
   const transporter = getEmailTransporter();
@@ -159,8 +149,8 @@ export async function sendPasswordResetEmail(
   const html = wrapEmailHtml(
     `<p style="margin:0 0 12px 0">A password reset was requested for your ${brand} account. Click the button below to choose a new password.</p>` +
     `<p style="margin:0 0 20px 0">${emailButtonHtml(link, "Reset password")}</p>` +
-    `<p style="margin:0 0 12px 0;font-size:13px;color:#6b7280">This link expires in 1 hour.</p>` +
-    `<p style="margin:0;color:#6b7280;font-size:13px">If you didn't request this, you can safely ignore this email.</p>`
+    `<p style="margin:0 0 12px 0;font-size:13px;color:#8a7d6e">This link expires in 1 hour.</p>` +
+    `<p style="margin:0;color:#8a7d6e;font-size:13px">If you didn't request this, you can safely ignore this email.</p>`
   );
 
   const transporter = getEmailTransporter();

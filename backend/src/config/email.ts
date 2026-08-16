@@ -91,6 +91,20 @@ export function getPublicApiUrl(): string {
 }
 
 /**
+ * The publicly-reachable base URL of the web frontend, used for links in
+ * outbound emails (verification, password reset) and for branding assets
+ * served by the frontend (e.g. the email wordmark image). Falls back through
+ * CORS_ORIGIN to the local dev origin.
+ */
+export function getFrontendUrl(): string {
+  return (
+    process.env.FRONTEND_URL ||
+    process.env.CORS_ORIGIN ||
+    "http://localhost:5173"
+  ).replace(/\/$/, "");
+}
+
+/**
  * Lazily build and cache the nodemailer SMTP transporter.
  */
 export function getEmailTransporter(): nodemailer.Transporter {

@@ -190,7 +190,7 @@ export function buildLessonNotificationHtml(input: LessonNotificationInput): str
   const details = rows
     .map(
       ([label, value]) =>
-        `<tr><td style="padding:2px 12px 2px 0;color:#6b7280;white-space:nowrap;vertical-align:top">${label}</td><td style="padding:2px 0">${value}</td></tr>`
+        `<tr><td style="padding:2px 12px 2px 0;color:#8a7d6e;white-space:nowrap;vertical-align:top">${label}</td><td style="padding:2px 0">${value}</td></tr>`
     )
     .join("");
 
@@ -205,7 +205,7 @@ export function buildLessonNotificationHtml(input: LessonNotificationInput): str
   return wrapEmailHtml(
     `<p style="margin:0 0 16px 0;white-space:pre-line">${greeting}</p>` +
     (input.icsContent
-      ? `<p style="margin:0 0 8px 0;color:#6b7280;font-size:13px">A calendar invite is attached — add it to your calendar to confirm the time.</p>`
+      ? `<p style="margin:0 0 8px 0;color:#8a7d6e;font-size:13px">A calendar invite is attached — add it to your calendar to confirm the time.</p>`
       : "") +
     `<hr style="border:none;border-top:1px solid #e5e7eb;margin:16px 0">` +
     `<table style="border-collapse:collapse;font-size:14px">${details}</table>` +
@@ -372,14 +372,14 @@ export function buildLessonCancellationHtml(
   const details = rows
     .map(
       ([label, value]) =>
-        `<tr><td style="padding:2px 12px 2px 0;color:#6b7280;white-space:nowrap;vertical-align:top">${label}</td><td style="padding:2px 0">${value}</td></tr>`,
+        `<tr><td style="padding:2px 12px 2px 0;color:#8a7d6e;white-space:nowrap;vertical-align:top">${label}</td><td style="padding:2px 0">${value}</td></tr>`,
     )
     .join("");
 
   return wrapEmailHtml(
     `<p style="margin:0 0 16px 0;white-space:pre-line">${greeting}</p>` +
     (input.icsContent
-      ? `<p style="margin:0 0 8px 0;color:#6b7280;font-size:13px">A calendar update is attached — the event will be removed from your calendar.</p>`
+      ? `<p style="margin:0 0 8px 0;color:#8a7d6e;font-size:13px">A calendar update is attached — the event will be removed from your calendar.</p>`
       : "") +
     `<hr style="border:none;border-top:1px solid #e5e7eb;margin:16px 0">` +
     `<table style="border-collapse:collapse;font-size:14px">${details}</table>`
@@ -515,7 +515,7 @@ export function buildSeriesRescheduleContent(
   const html = wrapEmailHtml(
     `<p style="margin:0 0 12px 0;white-space:pre-line">${escapeHtml(greeting)}</p>` +
     `<p style="margin:0 0 8px 0"><strong>${escapeHtml(slotSummary)}</strong> ` +
-    `<span style="color:#6b7280">(${escapeHtml(cadence)})</span></p>` +
+    `<span style="color:#8a7d6e">(${escapeHtml(cadence)})</span></p>` +
     (firstLine ? `<p style="margin:0 0 12px 0">${escapeHtml(firstLine)}</p>` : "") +
     `<p style="margin:0 0 12px 0">Tutor: ${escapeHtml(input.tutorName)}</p>`
   );
@@ -620,7 +620,7 @@ export function buildSeriesCancellationContent(
       .map((d) => `<li>${escapeHtml(d)}</li>`)
       .join("")}</ul>` +
     (input.removedDates.length > dateList.length
-      ? `<p style="margin:0 0 12px 0;color:#6b7280">…and ${input.removedDates.length - dateList.length} more</p>`
+      ? `<p style="margin:0 0 12px 0;color:#8a7d6e">…and ${input.removedDates.length - dateList.length} more</p>`
       : "") +
     `<p style="margin:0 0 12px 0">Tutor: ${escapeHtml(input.tutorName)}</p>`
   );
@@ -728,7 +728,7 @@ export function buildSeriesNotificationContent(
           l.location && l.location.trim().length > 0 ? l.location : null;
         return (
           `<li><strong>${escapeHtml(when)}</strong> (${l.durationMinutes} min)` +
-          (loc ? `<br><span style="color:#6b7280">${escapeHtml(loc)}</span>` : "") +
+          (loc ? `<br><span style="color:#8a7d6e">${escapeHtml(loc)}</span>` : "") +
           `</li>`
         );
       })
@@ -852,8 +852,8 @@ export function buildInvoiceEmailContent(input: InvoiceEmailInput): SentEmailCon
 
   const payButtonHtml = paymentUrl
     ? `<div style="margin:4px 0 16px 0">` +
-      emailButtonHtml(paymentUrl, `Pay ${total} online`, { color: "#16a34a" }) +
-      `<p style="margin:8px 0 0 0;color:#6b7280;font-size:13px">Payment is processed securely by Stripe and goes directly to ${escapeHtml(fromName)}. No account required.</p>` +
+      emailButtonHtml(paymentUrl, `Pay ${total} online`) +
+      `<p style="margin:8px 0 0 0;color:#8a7d6e;font-size:13px">Payment is processed securely by Stripe and goes directly to ${escapeHtml(fromName)}. No account required.</p>` +
       `</div>`
     : "";
 
