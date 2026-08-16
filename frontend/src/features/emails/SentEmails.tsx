@@ -14,6 +14,7 @@ import type {
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { SortIndicator } from "@/components/ui/sort-indicator";
 import {
   Select,
@@ -32,6 +33,7 @@ import {
 } from "@/components/ui/table";
 import { useListSentEmails } from "./api";
 import { EmailViewerDialog } from "./EmailViewerDialog";
+import { SkeletonTabGroup, SkeletonTable } from "@/components/skeletons";
 import { useListStudents } from "@/features/students/api";
 import { formatDateTime } from "@/features/payments/invoice-utils";
 
@@ -183,9 +185,27 @@ export default function SentEmails() {
   return (
     <div className="space-y-6">
       {isLoading && (
-        <div className="flex items-center justify-center py-12">
-          <p className="text-sm text-muted-foreground">Loading emails...</p>
-        </div>
+        <Card aria-busy="true">
+          <CardContent className="space-y-4 p-4">
+            <SkeletonTabGroup widths={["w-14", "w-18", "w-18"]} />
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-9 w-full max-w-xs" />
+              <Skeleton className="h-9 w-44" />
+            </div>
+            <SkeletonTable
+              columns={[
+                { w: "w-[34%]", cell: "pl-4 w-[40%]" },
+                { w: "w-16", cell: "w-28" },
+                { w: "w-24", cell: "w-[18%]" },
+                { w: "w-32", cell: "hidden md:table-cell md:w-[22%]" },
+                { w: "w-16", cell: "w-24" },
+                { w: "w-24", cell: "hidden lg:table-cell lg:w-40" },
+              ]}
+              rows={8}
+            />
+            <Skeleton className="h-3 w-16" />
+          </CardContent>
+        </Card>
       )}
 
       {error && (

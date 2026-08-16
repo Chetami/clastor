@@ -4,6 +4,7 @@ import { ArrowLeft, CreditCard, ExternalLink, Loader2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Card,
   CardContent,
@@ -94,7 +95,18 @@ export default function StripePaymentsSettings() {
           {error && <p className="text-sm text-destructive">{error.message}</p>}
 
           {isLoading ? (
-            <p className="text-sm text-muted-foreground">Loading…</p>
+            <div className="space-y-4" aria-busy="true">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="flex items-center justify-between">
+                  <Skeleton className="h-4 w-28" />
+                  <Skeleton className="h-5 w-16 rounded-full" />
+                </div>
+              ))}
+              <div className="flex gap-2 pt-1">
+                <Skeleton className="h-9 w-32" />
+                <Skeleton className="h-9 w-36" />
+              </div>
+            </div>
           ) : !connected ? (
             <div className="flex flex-col gap-3">
               <p className="text-sm text-muted-foreground">

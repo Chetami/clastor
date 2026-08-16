@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody } from "@/components/ui/table";
 import { useMarkInvoicePaid, useVoidInvoice, listInvoicesRequest } from "./api";
 import { SendInvoiceDialog } from "@/components/send-invoice-dialog";
+import { SkeletonTable } from "@/components/skeletons";
 import {
   PAGE_SIZE,
   STATUS_TABS,
@@ -214,10 +215,21 @@ export default function Payments() {
         <CardContent className="flex min-h-0 min-w-0 flex-1 flex-col gap-4">
           {/* Content area */}
           {isLoading ? (
-            <div className="flex flex-1 items-center justify-center py-16">
-              <p className="text-sm text-muted-foreground">
-                Loading invoices...
-              </p>
+            <div className="min-h-0 min-w-0 flex-1" aria-busy="true">
+              <SkeletonTable
+                className="h-full"
+                columns={[
+                  { w: "w-16", cell: "w-[5.5rem]" },
+                  "w-14",
+                  "w-16",
+                  "w-24",
+                  { w: "w-32", cell: "hidden md:table-cell md:w-[12rem]" },
+                  { w: "w-16", cell: "hidden lg:table-cell lg:w-[6rem]" },
+                  { w: "w-16", cell: "hidden lg:table-cell lg:w-[6rem]" },
+                  "w-6",
+                ]}
+                rows={8}
+              />
             </div>
           ) : error ? (
             <div className="flex flex-1 flex-col items-center justify-center gap-3 py-16">

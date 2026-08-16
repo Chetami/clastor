@@ -1,8 +1,10 @@
 import { useMemo } from "react";
 import { useParams } from "react-router-dom";
-import { CalendarDays, Loader2 } from "lucide-react";
+import { CalendarDays } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { SkeletonAvatarList } from "@/components/skeletons";
 import {
   useGetLessonSeries,
   useListLessons,
@@ -82,8 +84,25 @@ export default function LessonSeriesDetail() {
   return (
     <div className="flex h-full flex-col gap-6">
       {isLoading && (
-        <div className="flex shrink-0 items-center justify-center py-12">
-          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        <div className="space-y-6" aria-busy="true">
+          <Card className="shrink-0">
+            <CardContent className="space-y-4 p-6">
+              <div className="flex items-center justify-between gap-4">
+                <Skeleton className="h-7 w-56" />
+                <Skeleton className="size-8 rounded-md" />
+              </div>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <Skeleton key={i} className="h-10 rounded-md" />
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="min-h-0 flex-1">
+            <CardContent>
+              <SkeletonAvatarList rows={6} trailingWidth="w-20" />
+            </CardContent>
+          </Card>
         </div>
       )}
 

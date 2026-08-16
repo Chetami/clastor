@@ -11,6 +11,7 @@ import {
 import type { LessonResponse } from "@examify-tms/interfaces";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { SkeletonAvatarList } from "@/components/skeletons";
 import { useListLessonsInfinite } from "@/features/schedule/api";
 import { useStudentLookups } from "@/lib/use-student-lookups";
 import {
@@ -79,9 +80,8 @@ export default function Lessons() {
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="flex items-center justify-center gap-2 py-12 text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span className="text-sm">Loading lessons…</span>
+            <div aria-busy="true">
+              <SkeletonAvatarList rows={8} trailingWidth="w-28" />
             </div>
           ) : error ? (
             <div className="flex flex-col items-center justify-center gap-3 py-12 text-center">

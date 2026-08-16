@@ -3,10 +3,12 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
   CalendarClock,
-  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { SkeletonCard } from "@/components/skeletons";
 import {
   useGetLesson,
   useRecordAttendance,
@@ -53,9 +55,33 @@ export default function LessonDetail() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-20 text-muted-foreground">
-        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-        Loading lesson…
+      <div className="space-y-6" aria-busy="true">
+        <Skeleton className="h-8 w-20" />
+        <Card>
+          <CardContent className="space-y-4">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3">
+                <Skeleton className="size-10 rounded-full" />
+                <div className="space-y-2">
+                  <Skeleton className="h-6 w-44" />
+                  <Skeleton className="h-3.5 w-56" />
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Skeleton className="h-8 w-24" />
+                <Skeleton className="h-8 w-24" />
+                <Skeleton className="h-8 w-9" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <div className="grid gap-6 lg:grid-cols-3">
+          <div className="space-y-6 lg:col-span-2">
+            <SkeletonCard titleWidth="w-20" lines={5} />
+            <SkeletonCard titleWidth="w-16" lines={4} />
+          </div>
+          <SkeletonCard titleWidth="w-20" lines={4} />
+        </div>
       </div>
     );
   }

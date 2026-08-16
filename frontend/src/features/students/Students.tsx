@@ -19,6 +19,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import { SkeletonAvatarList, SkeletonTabGroup } from "@/components/skeletons";
 import {
   Select,
   SelectContent,
@@ -185,9 +187,20 @@ export default function Students() {
   return (
     <div className="space-y-6">
       {isLoading && (
-        <div className="flex items-center justify-center py-12">
-          <p className="text-sm text-muted-foreground">Loading students...</p>
-        </div>
+        <Card aria-busy="true">
+          <CardHeader className="flex flex-col gap-4 space-y-0 sm:flex-row sm:items-center sm:justify-between">
+            <SkeletonTabGroup widths={["w-14", "w-12", "w-10"]} />
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-9 w-full sm:w-56" />
+              <Skeleton className="hidden h-9 w-40 sm:block" />
+              <Skeleton className="h-8 w-20" />
+              <Skeleton className="h-8 w-28" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <SkeletonAvatarList rows={7} trailingWidth="w-28" />
+          </CardContent>
+        </Card>
       )}
 
       {error && (

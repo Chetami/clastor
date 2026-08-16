@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import type { UpdateTutorProfileRequest } from "@examify-tms/interfaces";
-import { Loader2 } from "lucide-react";
 
 import {
   Card,
@@ -11,6 +10,8 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
+import { SkeletonCard } from "@/components/skeletons";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/use-auth";
 import { useGetTutorProfile } from "./api/use-get-tutor-profile";
@@ -192,8 +193,25 @@ export default function TutorProfileEditor() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="size-6 animate-spin text-muted-foreground" />
+      <div className="space-y-6" aria-busy="true">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-9 w-24" />
+            <Skeleton className="h-9 w-24" />
+          </div>
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-9 w-20" />
+            <Skeleton className="h-9 w-24" />
+          </div>
+        </div>
+        <div className="space-y-4">
+          <SkeletonCard titleWidth="w-28" lines={4} />
+          <div className="grid gap-4 lg:grid-cols-2">
+            <SkeletonCard titleWidth="w-24" lines={3} />
+            <SkeletonCard titleWidth="w-32" lines={3} />
+          </div>
+          <SkeletonCard titleWidth="w-24" lines={3} />
+        </div>
       </div>
     );
   }

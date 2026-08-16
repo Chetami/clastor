@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import type { InvoiceEventType } from "@examify-tms/interfaces";
 import { useListInvoiceEvents } from "./api";
+import { SkeletonTimeline } from "@/components/skeletons";
 import { formatDateTime } from "./invoice-utils";
 
 const EVENT_META: Record<
@@ -43,9 +44,9 @@ export function InvoiceTimeline({ invoiceId }: { invoiceId: string }) {
         Activity
       </h2>
       {isLoading ? (
-        <p className="py-2 text-xs text-muted-foreground">
-          Loading activity...
-        </p>
+        <div aria-busy="true">
+          <SkeletonTimeline rows={4} />
+        </div>
       ) : events.length === 0 ? (
         <p className="py-2 text-xs text-muted-foreground">
           No activity recorded yet.

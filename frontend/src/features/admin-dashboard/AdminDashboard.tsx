@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Avatar,
   AvatarFallback,
@@ -235,9 +236,19 @@ export default function AdminDashboard() {
           </CardHeader>
           <CardContent>
             {overviewLoading || !overview ? (
-              <p className="py-8 text-center text-sm text-muted-foreground">
-                Loading…
-              </p>
+              <div className="space-y-1" aria-busy="true">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} className="flex items-center gap-3 px-2 py-2">
+                    <Skeleton className="h-4 w-4" />
+                    <Skeleton className="size-8 rounded-full" />
+                    <div className="min-w-0 flex-1 space-y-1.5">
+                      <Skeleton className="h-3.5 w-32" />
+                      <Skeleton className="h-2.5 w-24" />
+                    </div>
+                    <Skeleton className="h-4 w-16" />
+                  </div>
+                ))}
+              </div>
             ) : overview.topTutors.length === 0 ? (
               <p className="py-8 text-center text-sm text-muted-foreground">
                 No tutoring activity this period yet.
@@ -287,9 +298,21 @@ export default function AdminDashboard() {
             </CardHeader>
             <CardContent>
               {overviewLoading || !overview ? (
-                <p className="py-4 text-center text-sm text-muted-foreground">
-                  Loading…
-                </p>
+                <div className="space-y-3" aria-busy="true">
+                  <div className="flex gap-2">
+                    <Skeleton className="h-5 w-16 rounded-full" />
+                    <Skeleton className="h-5 w-20 rounded-full" />
+                  </div>
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <Skeleton className="h-5 w-16 rounded-full" />
+                        <Skeleton className="h-3 w-16" />
+                      </div>
+                      <Skeleton className="h-3.5 w-full" />
+                    </div>
+                  ))}
+                </div>
               ) : (
                 <div className="space-y-3">
                   <div className="flex gap-2">
@@ -340,9 +363,18 @@ export default function AdminDashboard() {
             </CardHeader>
             <CardContent>
               {overviewLoading || !overview ? (
-                <p className="py-4 text-center text-sm text-muted-foreground">
-                  Loading…
-                </p>
+                <div className="space-y-1" aria-busy="true">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="flex items-center gap-3 px-2 py-1.5">
+                      <Skeleton className="size-7 rounded-full" />
+                      <div className="min-w-0 flex-1 space-y-1.5">
+                        <Skeleton className="h-3.5 w-28" />
+                        <Skeleton className="h-2.5 w-40" />
+                      </div>
+                      <Skeleton className="h-3 w-16" />
+                    </div>
+                  ))}
+                </div>
               ) : overview.recentTutors.length === 0 ? (
                 <p className="py-4 text-center text-sm text-muted-foreground">
                   No tutors yet.

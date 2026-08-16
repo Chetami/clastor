@@ -3,6 +3,7 @@ import { Search, Users } from "lucide-react";
 import type { AdminTutorSummary } from "@examify-tms/interfaces";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { SortIndicator } from "@/components/ui/sort-indicator";
 import {
   Table,
@@ -20,6 +21,7 @@ import {
 import { useUserCurrency } from "@/lib/use-currency";
 import { formatCurrencyWhole as formatCurrency } from "@/features/dashboard/lib";
 import { getInitials } from "@examify-tms/shared";
+import { SkeletonTable } from "@/components/skeletons";
 import { useListAdminTutors } from "./api";
 
 type SortField = "name" | "studentCount" | "outstandingAmount" | "googleConnected" | "lastActive" | "createdAt";
@@ -126,9 +128,24 @@ export default function AdminTutors() {
   return (
     <div className="space-y-6">
       {isLoading && (
-        <div className="flex items-center justify-center py-12">
-          <p className="text-sm text-muted-foreground">Loading tutors…</p>
-        </div>
+        <Card aria-busy="true">
+          <CardContent className="space-y-4 p-4">
+            <Skeleton className="h-9 w-full max-w-xs" />
+            <SkeletonTable
+              firstCellAvatar
+              columns={[
+                "w-32",
+                "w-14",
+                "w-20",
+                { w: "w-24", cell: "hidden md:table-cell" },
+                { w: "w-24", cell: "hidden md:table-cell" },
+                { w: "w-24", cell: "hidden lg:table-cell" },
+              ]}
+              rows={6}
+            />
+            <Skeleton className="h-3 w-16" />
+          </CardContent>
+        </Card>
       )}
 
       {error && (

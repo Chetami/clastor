@@ -18,6 +18,8 @@ import type {
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import { SkeletonTabGroup, SkeletonTable } from "@/components/skeletons";
 import {
   Table,
   TableBody,
@@ -130,9 +132,27 @@ export default function AdminFeedback() {
   return (
     <div className="space-y-6">
       {isLoading && (
-        <div className="flex items-center justify-center py-12">
-          <p className="text-sm text-muted-foreground">Loading feedback…</p>
-        </div>
+        <Card aria-busy="true">
+          <CardContent className="space-y-4 p-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <SkeletonTabGroup widths={["w-14", "w-16", "w-18"]} />
+              <SkeletonTabGroup widths={["w-16", "w-14", "w-14"]} />
+            </div>
+            <Skeleton className="h-9 w-full max-w-xs" />
+            <SkeletonTable
+              columns={[
+                "w-20",
+                "w-[38%]",
+                { w: "w-32", cell: "hidden md:table-cell" },
+                "w-20",
+                { w: "w-24", cell: "hidden lg:table-cell" },
+                "w-4",
+              ]}
+              rows={6}
+            />
+            <Skeleton className="h-3 w-14" />
+          </CardContent>
+        </Card>
       )}
 
       {error && (

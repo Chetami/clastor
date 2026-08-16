@@ -1,7 +1,7 @@
 import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2 } from "lucide-react";
 
+import { Skeleton } from "@/components/ui/skeleton";
 import { BrandMark } from "@/features/auth/BrandMark";
 import { getPublicProfileRequest } from "./api/requests";
 import { getTemplate } from "./templates/registry";
@@ -25,8 +25,24 @@ export default function PublicTutorPage() {
       </header>
 
       {isLoading && (
-        <div className="flex items-center justify-center py-32">
-          <Loader2 className="size-6 animate-spin text-muted-foreground" />
+        <div className="mx-auto max-w-3xl px-4 py-12" aria-busy="true">
+          <div className="flex items-center gap-4">
+            <Skeleton className="size-16 rounded-full" />
+            <div className="space-y-2">
+              <Skeleton className="h-8 w-48" />
+              <Skeleton className="h-4 w-64" />
+            </div>
+          </div>
+          <div className="mt-10 space-y-2.5">
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-3/4" />
+          </div>
+          <div className="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <Skeleton key={i} className="h-20 rounded-xl" />
+            ))}
+          </div>
         </div>
       )}
 

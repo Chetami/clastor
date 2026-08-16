@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
+import { SkeletonTimeline } from "@/components/skeletons";
 import type {
   SentEmailResponse,
   SentEmailType,
@@ -70,16 +70,8 @@ export function EmailHistory({
   const body = (
     <>
       {isLoading ? (
-        <div className="space-y-3">
-          {[0, 1, 2].map((i) => (
-            <div key={i} className="flex gap-2.5">
-              <Skeleton className="h-3.5 w-3.5 rounded-full" />
-              <div className="flex-1 space-y-1.5">
-                <Skeleton className="h-3 w-2/3" />
-                <Skeleton className="h-2.5 w-1/3" />
-              </div>
-            </div>
-          ))}
+        <div aria-busy="true">
+          <SkeletonTimeline rows={3} />
         </div>
       ) : error ? (
         // Don't render the "No emails sent yet." success message for a

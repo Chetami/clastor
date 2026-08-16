@@ -15,6 +15,8 @@ import {
   SelectValue,
 } from "@/components/ui";
 import { MorphChevron } from "@/components/ui/morph-chevron";
+import { Skeleton } from "@/components/ui/skeleton";
+import { SkeletonTable } from "@/components/skeletons";
 import { useListStudents } from "@/features/students/api";
 import { useSubjects, resolveSubjectNames } from "@/lib/subjects";
 import { useListLessons } from "@/features/schedule/api";
@@ -330,9 +332,18 @@ export default function CreateInvoice() {
                 {!selectedStudent ? (
                   <LockedPlaceholder text="Select a student to choose lessons" />
                 ) : lessonsLoading ? (
-                  <p className="py-6 text-center text-sm text-muted-foreground">
-                    Loading unpaid lessons...
-                  </p>
+                  <div className="space-y-4" aria-busy="true">
+                    <Skeleton className="h-3 w-32" />
+                    <SkeletonTable
+                      columns={["w-6", "w-[46%]", "w-24", "w-20"]}
+                      rows={3}
+                    />
+                    <Skeleton className="h-3 w-24" />
+                    <SkeletonTable
+                      columns={["w-6", "w-[46%]", "w-24", "w-20"]}
+                      rows={2}
+                    />
+                  </div>
                 ) : completedLessons.chargeable.length === 0 &&
                   completedLessons.unrecorded.length === 0 &&
                   upcomingLessons.length === 0 ? (

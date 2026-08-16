@@ -22,6 +22,13 @@ import { InvoiceTimeline } from "./InvoiceTimeline";
 import { EmailHistory } from "@/features/emails/EmailHistory";
 import { SendInvoiceDialog } from "@/components/send-invoice-dialog";
 import { EmailGuard } from "@/components/email-guard";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  SkeletonCard,
+  SkeletonPageHeader,
+  SkeletonTable,
+  SkeletonTimeline,
+} from "@/components/skeletons";
 import { formatCurrency } from "./invoice-utils";
 import { InvoiceDetailsCard, InvoiceLineItemsTable } from "./detail/components";
 
@@ -86,8 +93,48 @@ export default function InvoiceDetail() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="text-sm text-muted-foreground">Loading invoice...</div>
+      <div className="space-y-6" aria-busy="true">
+        <SkeletonPageHeader />
+        <div className="grid gap-6 lg:grid-cols-3">
+          <div className="space-y-6 lg:col-span-2">
+            <Card>
+              <CardHeader>
+                <Skeleton className="h-5 w-28" />
+              </CardHeader>
+              <CardContent className="grid gap-4 sm:grid-cols-2">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="space-y-1.5">
+                    <Skeleton className="h-3 w-16" />
+                    <Skeleton className="h-4 w-32" />
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <Skeleton className="h-5 w-24" />
+              </CardHeader>
+              <CardContent>
+                <SkeletonTable
+                  columns={["w-[42%]", "w-[14%]", "w-[14%]", "w-[16%]"]}
+                  rows={4}
+                />
+              </CardContent>
+            </Card>
+          </div>
+          <div className="space-y-6">
+            <SkeletonCard titleWidth="w-16" lines={2} />
+            <SkeletonCard titleWidth="w-14" lines={2} />
+            <div className="space-y-3">
+              <Skeleton className="h-3.5 w-16" />
+              <SkeletonTimeline rows={3} />
+            </div>
+            <div className="space-y-3">
+              <Skeleton className="h-3.5 w-24" />
+              <SkeletonTimeline rows={2} />
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
