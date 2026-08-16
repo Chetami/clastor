@@ -1,4 +1,5 @@
 import { useEffect, type ReactNode } from "react";
+import { Loader2 } from "lucide-react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { ApiRequestError } from "@examify-tms/shared";
 import { queryClient } from "@/lib/query-client";
@@ -9,11 +10,20 @@ import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/hooks/use-theme";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
+import { LogoMark } from "@/components/ui/logo";
 
 function FullScreenLoader() {
   return (
-    <div className="flex min-h-screen items-center justify-center">
-      <div className="text-lg">Loading...</div>
+    <div
+      role="status"
+      className="flex min-h-screen flex-col items-center justify-center gap-6 bg-background p-8"
+    >
+      <div className="flex animate-in fade-in slide-in-from-bottom-2 flex-col items-center gap-3 duration-300">
+        <LogoMark size={48} />
+        <span className="font-display text-2xl tracking-tight">Clastor</span>
+      </div>
+      <Loader2 className="size-5 animate-spin text-muted-foreground" />
+      <span className="sr-only">Loading…</span>
     </div>
   );
 }
