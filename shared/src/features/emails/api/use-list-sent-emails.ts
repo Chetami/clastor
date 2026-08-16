@@ -10,6 +10,8 @@ import { listSentEmailsRequest, type ListSentEmailsParams } from "./requests";
  * - **Unscoped** (no params): used by the Sent Emails sidebar page. The
  *   backend auto-scopes tutors to their own emails and returns the global
  *   recent list for system admins.
+ * - **Tutor filter** (pass `tutorId`): system_admin-only server-side drill;
+ *   tutors are always scoped to their own uid regardless.
  */
 export function useListSentEmails(params: ListSentEmailsParams = {}) {
   return useQuery({

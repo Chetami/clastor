@@ -9,7 +9,7 @@ import type { RequestHandler } from "express";
 const backendFeatureFlags: Record<FeatureFlagKey, boolean> = {
   publicProfile: false,
   templates: true,
-  sentEmails: false,
+  sentEmails: true,
 };
 
 /**

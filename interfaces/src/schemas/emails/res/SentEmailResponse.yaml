@@ -29,6 +29,10 @@ properties:
     type: string
   tutorId:
     type: string
+  tutorName:
+    type: string
+    nullable: true
+    description: Owning tutor's display name (enriched for system_admin list views)
   lessonId:
     type: string
     nullable: true

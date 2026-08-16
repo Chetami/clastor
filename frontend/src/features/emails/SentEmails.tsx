@@ -35,6 +35,8 @@ import { useListSentEmails } from "./api";
 import { EmailViewerDialog } from "./EmailViewerDialog";
 import { SkeletonTabGroup, SkeletonTable } from "@/components/skeletons";
 import { useListStudents } from "@/features/students/api";
+import { useListAdminTutors } from "@/features/admin-tutors/api";
+import { useAuth } from "@/hooks/use-auth";
 import { formatDateTime } from "@/features/payments/invoice-utils";
 
 /**
@@ -43,6 +45,7 @@ import { formatDateTime } from "@/features/payments/invoice-utils";
  */
 type TypeGroup = "all" | "lesson" | "invoice";
 type StudentFilter = "all" | string;
+type TutorFilter = "all" | string;
 type SortField = "sentAt" | "subject" | "to";
 type SortOrder = "asc" | "desc";
 
@@ -98,15 +101,24 @@ function SortHeader({
 }
 
 export default function SentEmails() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "system_admin";
+
   const [typeFilter, setTypeFilter] = useState<TypeGroup>("all");
   const [studentFilter, setStudentFilter] = useState<StudentFilter>("all");
+  const [tutorFilter, setTutorFilter] = useState<TutorFilter>("all");
   const [search, setSearch] = useState("");
   const [sortField, setSortField] = useState<SortField>("sentAt");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   const [selected, setSelected] = useState<SentEmailResponse | null>(null);
 
-  const { data, isLoading, error } = useListSentEmails();
+  // Admins drill into a single tutor server-side (?tutorId=…); tutors are
+  // auto-scoped to their own emails by the backend.
+  const { data, isLoading, error } = useListSentEmails(
+    isAdmin && tutorFilter !== "all" ? { tutorId: tutorFilter } : {},
+  );
   const { data: students = [] } = useListStudents();
+  const { data: tutors = [] } = useListAdminTutors({ enabled: isAdmin });
 
   // Memoize so the downstream useMemo deps stay referentially stable (the
   // `?? []` fallback would otherwise mint a fresh array each render).
@@ -197,6 +209,9 @@ export default function SentEmails() {
                 { w: "w-[34%]", cell: "pl-4 w-[40%]" },
                 { w: "w-16", cell: "w-28" },
                 { w: "w-24", cell: "w-[18%]" },
+                ...(isAdmin
+                  ? [{ w: "w-20", cell: "hidden xl:table-cell xl:w-36" }]
+                  : []),
                 { w: "w-32", cell: "hidden md:table-cell md:w-[22%]" },
                 { w: "w-16", cell: "w-24" },
                 { w: "w-24", cell: "hidden lg:table-cell lg:w-40" },
@@ -267,6 +282,25 @@ export default function SentEmails() {
                   ))}
                 </SelectContent>
               </Select>
+
+              {isAdmin && (
+                <Select
+                  value={tutorFilter}
+                  onValueChange={(v) => setTutorFilter(v)}
+                >
+                  <SelectTrigger aria-label="Filter by tutor" className="w-full sm:w-52">
+                    <SelectValue placeholder="All tutors" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All tutors</SelectItem>
+                    {tutors.map((t) => (
+                      <SelectItem key={t.tutorId} value={t.tutorId}>
+                        {t.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
 
             <div className="hidden items-center gap-1 text-xs text-muted-foreground sm:flex">
@@ -278,7 +312,10 @@ export default function SentEmails() {
               <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
                 <Mail className="h-8 w-8 text-muted-foreground" />
                 <p className="text-sm text-muted-foreground">
-                  {search.trim() || studentFilter !== "all" || typeFilter !== "all"
+                  {search.trim() ||
+                    studentFilter !== "all" ||
+                    typeFilter !== "all" ||
+                    (isAdmin && tutorFilter !== "all")
                     ? "No emails match your filters."
                     : "No emails sent yet. Emails you send (lesson reminders, cancellations, invoices) will appear here."}
                 </p>
@@ -299,6 +336,11 @@ export default function SentEmails() {
                       </TableHead>
                       <TableHead className="w-28">Type</TableHead>
                       <TableHead className="w-[18%]">Student</TableHead>
+                      {isAdmin && (
+                        <TableHead className="hidden xl:table-cell xl:w-36">
+                          Tutor
+                        </TableHead>
+                      )}
                       <TableHead className="hidden md:table-cell md:w-[22%]">
                         <SortHeader
                           field="to"
@@ -377,6 +419,13 @@ export default function SentEmails() {
                               {studentName ?? "—"}
                             </span>
                           </TableCell>
+                          {isAdmin && (
+                            <TableCell className="hidden overflow-hidden text-muted-foreground xl:table-cell">
+                              <span className="block truncate">
+                                {email.tutorName ?? "—"}
+                              </span>
+                            </TableCell>
+                          )}
                           <TableCell className="hidden overflow-hidden text-muted-foreground md:table-cell">
                             <span className="block truncate">
                               {email.to.join(", ")}

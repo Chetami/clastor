@@ -6,7 +6,7 @@
 export const featureFlags = {
   publicProfile: false, // <-- off for now
   templates: true,
-  sentEmails: false, // <-- off for now (UI + GET endpoints only; outbound sends still logged)
+  sentEmails: true, // UI + GET endpoints (outbound sends are always logged)
 } as const;
 
 export type FeatureFlags = typeof featureFlags;

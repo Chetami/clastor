@@ -8,6 +8,8 @@ export interface ListSentEmailsParams {
   lessonId?: string;
   invoiceId?: string;
   studentId?: string;
+  /** System_admin-only server-side filter (tutors are auto-scoped). */
+  tutorId?: string;
 }
 
 export async function listSentEmailsRequest(

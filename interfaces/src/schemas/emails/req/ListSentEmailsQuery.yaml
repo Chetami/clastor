@@ -1,16 +1,10 @@
 type: object
-required:
-  - type
-  - to
-  - subject
-  - status
-  - bodyHtml
-  - tutorId
-  - sentBy
 description: |-
-  Query parameters for GET /api/sent-emails. Exactly one scoping filter is
-  expected (lessonId / invoiceId / studentId); when none is supplied only
-  system_admin users receive an unscoped list.
+  Query parameters for GET /api/sent-emails. At most one scoping filter is
+  expected (lessonId / invoiceId / studentId / tutorId); when none is
+  supplied only system_admin users receive an unscoped list. The tutorId
+  filter is honored for system_admin users only — tutors are always scoped
+  to their own uid.
 properties:
   lessonId:
     type: string
@@ -21,3 +15,8 @@ properties:
   studentId:
     type: string
     description: Scope to emails sent for / about a specific student
+  tutorId:
+    type: string
+    description: >-
+      Scope to emails sent by a specific tutor (system_admin only; ignored
+      alongside the entity filters)

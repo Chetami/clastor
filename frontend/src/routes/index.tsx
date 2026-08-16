@@ -57,6 +57,9 @@ export const router = createBrowserRouter([
               children: [
                 { path: "dashboard", element: <DashboardRoute /> },
                 { path: "account", element: <Account /> },
+                ...(isFeatureEnabled("sentEmails")
+                  ? [{ path: "sent-emails" as const, element: <SentEmails /> }]
+                  : []),
                 {
                   element: <AdminRoute />,
                   children: [
@@ -79,9 +82,6 @@ export const router = createBrowserRouter([
                     { path: "schedule", element: <Schedule /> },
                     ...(isFeatureEnabled("templates")
                       ? [{ path: "templates" as const, element: <Templates /> }]
-                      : []),
-                    ...(isFeatureEnabled("sentEmails")
-                      ? [{ path: "sent-emails" as const, element: <SentEmails /> }]
                       : []),
                     { path: "settings", element: <Settings /> },
                     {
