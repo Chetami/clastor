@@ -3,6 +3,7 @@ import { Outlet } from "react-router-dom";
 import { AppSidebar } from "./app-sidebar";
 import { ThemeToggle } from "./theme-toggle";
 import { OnboardingBanner } from "@/features/onboarding/components/OnboardingBanner";
+import { VerifyEmailBanner } from "@/features/auth/components/VerifyEmailBanner";
 import { TourBoot } from "@/features/tour/TourBoot";
 import {
   SidebarInset,
@@ -23,6 +24,7 @@ export function DashboardLayout() {
           </div>
         </header>
         <main className="min-h-0 min-w-0 flex-1 overflow-auto p-4 lg:p-6">
+          <VerifyEmailBanner />
           <OnboardingBanner />
           <Outlet />
         </main>

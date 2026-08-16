@@ -50,6 +50,10 @@ export const refreshTokenSchema = z.object({
   refreshToken: z.string().min(1, "Refresh token is required"),
 });
 
+export const forgotPasswordSchema = z.object({
+  email: z.string().trim().email("A valid email is required").max(254),
+});
+
 export const googleAuthSchema = z.object({
   timezone: z.string().optional(),
 });

@@ -1,5 +1,6 @@
 import * as React from "react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useAuthStore } from "@/store/auth-store";
 
 /**
  * Default explanation shown when a send-email action is disabled because the
@@ -7,6 +8,13 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
  */
 export const NO_EMAIL_TOOLTIP =
   "This student needs an email before you can send.";
+
+/**
+ * Explanation shown when a send-email action is disabled because the signed-in
+ * tutor hasn't verified their email address yet.
+ */
+export const EMAIL_UNVERIFIED_TOOLTIP =
+  "Verify your email first — check your inbox for the verification link.";
 
 interface EmailGuardProps {
   /**
@@ -31,6 +39,11 @@ interface EmailGuardProps {
  * explaining that the student has no email. Renders the child untouched when
  * an email is present.
  *
+ * Also gates on the signed-in tutor's own email-verification status: sending
+ * is disabled while `user.emailVerified === false` (undefined — sessions from
+ * older responses — is treated as verified). The backend enforces the same
+ * rule via requireVerifiedEmail, so this is UX, not security.
+ *
  * Reused by every invoice-send and lesson-notify button so the guard + copy
  * stays consistent.
  */
@@ -39,7 +52,11 @@ export function EmailGuard({
   tooltip = NO_EMAIL_TOOLTIP,
   children,
 }: EmailGuardProps) {
-  if (hasEmail) return children;
+  const user = useAuthStore((s) => s.user);
+  // undefined = unknown (legacy session) — don't block.
+  const unverified = user?.emailVerified === false;
+
+  if (hasEmail && !unverified) return children;
   return (
     <Tooltip>
       <TooltipTrigger asChild>
@@ -47,7 +64,9 @@ export function EmailGuard({
           {React.cloneElement(children, { disabled: true })}
         </span>
       </TooltipTrigger>
-      <TooltipContent>{tooltip}</TooltipContent>
+      <TooltipContent>
+        {unverified ? EMAIL_UNVERIFIED_TOOLTIP : tooltip}
+      </TooltipContent>
     </Tooltip>
   );
 }

@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { listExternalEvents, syncLessons } from "../controllers/calendarController";
-import { authenticateJWT, requireRole } from "../middleware/auth";
+import { authenticateJWT, requireRole, requireVerifiedEmail } from "../middleware/auth";
 import { validateRequest } from "../middleware/validateRequest";
 import { calendarEventsQuerySchema } from "../schemas";
 
@@ -16,6 +16,6 @@ router.get("/events", authenticateJWT, requireRole("tutor", "system_admin"), val
  * POST /api/calendar/sync
  * Manually backfill all upcoming lessons to Google Calendar.
  */
-router.post("/sync", authenticateJWT, requireRole("tutor", "system_admin"), syncLessons);
+router.post("/sync", authenticateJWT, requireRole("tutor", "system_admin"), requireVerifiedEmail, syncLessons);
 
 export default router;

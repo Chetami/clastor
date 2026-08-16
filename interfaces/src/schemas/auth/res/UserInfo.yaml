@@ -22,6 +22,14 @@ properties:
     example: admin@example.com
   role:
     $ref: '../../common/Role.yaml'
+  emailVerified:
+    type: boolean
+    description: >-
+      Whether the user's email address is verified in Firebase Auth. Absent on
+      responses from older deployments. Google sign-in accounts are always
+      verified. Unverified users can sign in but are blocked from actions that
+      reach other people (emails to students, invoices, calendar writes).
+    example: true
   avatarUrl:
     type: string
     nullable: true

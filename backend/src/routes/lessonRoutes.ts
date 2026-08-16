@@ -23,7 +23,7 @@ import {
   notifySeriesStudent,
   previewNotifySeriesStudent,
 } from "../controllers/lessonSeriesController";
-import { authenticateJWT, requireRole } from "../middleware/auth";
+import { authenticateJWT, requireRole, requireVerifiedEmail } from "../middleware/auth";
 import { validateRequest } from "../middleware/validateRequest";
 import {
   cancelLessonSchema,
@@ -128,6 +128,7 @@ router.post(
   "/series/:id/generate-meet",
   authenticateJWT,
   requireRole("tutor", "system_admin"),
+  requireVerifiedEmail,
   generateSeriesMeetLink
 );
 
@@ -140,6 +141,7 @@ router.post(
   "/series/:id/notify-student/preview",
   authenticateJWT,
   requireRole("tutor", "system_admin"),
+  requireVerifiedEmail,
   validateRequest({ body: messageBodySchema }),
   previewNotifySeriesStudent
 );
@@ -154,6 +156,7 @@ router.post(
   "/series/:id/notify-student",
   authenticateJWT,
   requireRole("tutor", "system_admin"),
+  requireVerifiedEmail,
   validateRequest({ body: notifyStudentSchema }),
   notifySeriesStudent
 );
@@ -242,6 +245,7 @@ router.post(
   "/:id/notify-student/preview",
   authenticateJWT,
   requireRole("tutor", "system_admin"),
+  requireVerifiedEmail,
   validateRequest({ body: messageBodySchema }),
   previewNotifyStudent
 );
@@ -255,6 +259,7 @@ router.post(
   "/:id/notify-student",
   authenticateJWT,
   requireRole("tutor", "system_admin"),
+  requireVerifiedEmail,
   validateRequest({ body: notifyStudentSchema }),
   notifyStudent
 );
@@ -268,6 +273,7 @@ router.post(
   "/:id/resync",
   authenticateJWT,
   requireRole("tutor", "system_admin"),
+  requireVerifiedEmail,
   resyncLesson
 );
 

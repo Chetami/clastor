@@ -12,6 +12,7 @@ import {
   toUserInfo,
   updateLastActive,
 } from "./userService";
+import { getEmailVerified } from "./authService";
 import type { User, UserInfo } from "@examify-tms/interfaces";
 import { UnauthorizedError } from "../utils/AppError";
 
@@ -136,8 +137,12 @@ export async function rotateRefreshToken(
   const user = await getUserFromFirestore(payload.uid);
   await updateLastActive(user.id);
 
+  // Live Firebase lookup keeps the client's emailVerified flag fresh without a
+  // re-login (the flag flips when the user clicks the link in the email).
+  const emailVerified = await getEmailVerified(user.id);
+
   const pair = await issueTokenPair(user, payload.familyId);
-  return { ...pair, user: toUserInfo(user) };
+  return { ...pair, user: toUserInfo(user, emailVerified) };
 }
 
 /**

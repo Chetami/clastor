@@ -11,6 +11,7 @@ import {
   subjectNamePart,
   subjectPart,
 } from "./emailTemplateStore";
+import { emailButtonHtml, wrapEmailHtml } from "./emailLayout";
 import { ServiceUnavailableError } from "../utils/AppError";
 
 /**
@@ -196,25 +197,19 @@ export function buildLessonNotificationHtml(input: LessonNotificationInput): str
   const rsvp = input.rsvpLinks
     ? `<div style="margin-top:24px;font-size:15px">Will you be there?</div>` +
       `<div style="margin-top:10px">` +
-      `<a href="${escapeHtml(
-        input.rsvpLinks.accept
-      )}" style="display:inline-block;background:#16a34a;color:#fff;text-decoration:none;padding:10px 20px;border-radius:6px;margin-right:8px;font-weight:600">Accept</a>` +
-      `<a href="${escapeHtml(
-        input.rsvpLinks.decline
-      )}" style="display:inline-block;background:#dc2626;color:#fff;text-decoration:none;padding:10px 20px;border-radius:6px;font-weight:600">Decline</a>` +
+      `<span style="margin-right:8px">${emailButtonHtml(input.rsvpLinks.accept, "Accept", { color: "#16a34a" })}</span>` +
+      emailButtonHtml(input.rsvpLinks.decline, "Decline", { color: "#dc2626" }) +
       `</div>`
     : "";
 
-  return (
-    `<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#111827;line-height:1.5">` +
+  return wrapEmailHtml(
     `<p style="margin:0 0 16px 0;white-space:pre-line">${greeting}</p>` +
     (input.icsContent
       ? `<p style="margin:0 0 8px 0;color:#6b7280;font-size:13px">A calendar invite is attached — add it to your calendar to confirm the time.</p>`
       : "") +
     `<hr style="border:none;border-top:1px solid #e5e7eb;margin:16px 0">` +
     `<table style="border-collapse:collapse;font-size:14px">${details}</table>` +
-    rsvp +
-    `</div>`
+    rsvp
   );
 }
 
@@ -381,15 +376,13 @@ export function buildLessonCancellationHtml(
     )
     .join("");
 
-  return (
-    `<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#111827;line-height:1.5">` +
+  return wrapEmailHtml(
     `<p style="margin:0 0 16px 0;white-space:pre-line">${greeting}</p>` +
     (input.icsContent
       ? `<p style="margin:0 0 8px 0;color:#6b7280;font-size:13px">A calendar update is attached — the event will be removed from your calendar.</p>`
       : "") +
     `<hr style="border:none;border-top:1px solid #e5e7eb;margin:16px 0">` +
-    `<table style="border-collapse:collapse;font-size:14px">${details}</table>` +
-    `</div>`
+    `<table style="border-collapse:collapse;font-size:14px">${details}</table>`
   );
 }
 
@@ -519,14 +512,13 @@ export function buildSeriesRescheduleContent(
     (firstLine ? `${firstLine}\n` : "") +
     `\nTutor: ${input.tutorName}`;
 
-  const html =
-    `<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#111827;line-height:1.5">` +
+  const html = wrapEmailHtml(
     `<p style="margin:0 0 12px 0;white-space:pre-line">${escapeHtml(greeting)}</p>` +
     `<p style="margin:0 0 8px 0"><strong>${escapeHtml(slotSummary)}</strong> ` +
     `<span style="color:#6b7280">(${escapeHtml(cadence)})</span></p>` +
     (firstLine ? `<p style="margin:0 0 12px 0">${escapeHtml(firstLine)}</p>` : "") +
-    `<p style="margin:0 0 12px 0">Tutor: ${escapeHtml(input.tutorName)}</p>` +
-    `</div>`;
+    `<p style="margin:0 0 12px 0">Tutor: ${escapeHtml(input.tutorName)}</p>`
+  );
 
   return { subject: subjectLine, text, html };
 }
@@ -622,8 +614,7 @@ export function buildSeriesCancellationContent(
       : "") +
     `\n\nTutor: ${input.tutorName}`;
 
-  const html =
-    `<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#111827;line-height:1.5">` +
+  const html = wrapEmailHtml(
     `<p style="margin:0 0 12px 0;white-space:pre-line">${escapeHtml(greeting)}</p>` +
     `<ul style="margin:0 0 12px 0;padding-left:20px;line-height:1.8">${dateList
       .map((d) => `<li>${escapeHtml(d)}</li>`)
@@ -631,8 +622,8 @@ export function buildSeriesCancellationContent(
     (input.removedDates.length > dateList.length
       ? `<p style="margin:0 0 12px 0;color:#6b7280">…and ${input.removedDates.length - dateList.length} more</p>`
       : "") +
-    `<p style="margin:0 0 12px 0">Tutor: ${escapeHtml(input.tutorName)}</p>` +
-    `</div>`;
+    `<p style="margin:0 0 12px 0">Tutor: ${escapeHtml(input.tutorName)}</p>`
+  );
 
   return { subject: subjectLine, text, html };
 }
@@ -728,8 +719,7 @@ export function buildSeriesNotificationContent(
     lessonBullets.join("\n") +
     `\n\nTutor: ${input.tutorName}`;
 
-  const html =
-    `<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#111827;line-height:1.5">` +
+  const html = wrapEmailHtml(
     `<p style="margin:0 0 12px 0;white-space:pre-line">${escapeHtml(greeting)}</p>` +
     `<ul style="margin:0 0 12px 0;padding-left:20px;line-height:1.8">${input.lessons
       .map((l) => {
@@ -743,8 +733,8 @@ export function buildSeriesNotificationContent(
         );
       })
       .join("")}</ul>` +
-    `<p style="margin:0 0 12px 0">Tutor: ${escapeHtml(input.tutorName)}</p>` +
-    `</div>`;
+    `<p style="margin:0 0 12px 0">Tutor: ${escapeHtml(input.tutorName)}</p>`
+  );
 
   return { subject: subjectLine, text, html };
 }
@@ -862,7 +852,7 @@ export function buildInvoiceEmailContent(input: InvoiceEmailInput): SentEmailCon
 
   const payButtonHtml = paymentUrl
     ? `<div style="margin:4px 0 16px 0">` +
-      `<a href="${escapeHtml(paymentUrl)}" style="display:inline-block;background:#16a34a;color:#fff;text-decoration:none;padding:12px 24px;border-radius:6px;font-weight:600">Pay ${escapeHtml(total)} online</a>` +
+      emailButtonHtml(paymentUrl, `Pay ${total} online`, { color: "#16a34a" }) +
       `<p style="margin:8px 0 0 0;color:#6b7280;font-size:13px">Payment is processed securely by Stripe and goes directly to ${escapeHtml(fromName)}. No account required.</p>` +
       `</div>`
     : "";
@@ -877,13 +867,12 @@ export function buildInvoiceEmailContent(input: InvoiceEmailInput): SentEmailCon
       `Invoice ${invoice.invoiceNumber} attached. Amount due: ${total}.\n` +
       payLineText;
 
-    const html =
-      `<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#111827;line-height:1.5">` +
+    const html = wrapEmailHtml(
       `<p style="margin:0 0 12px 0;white-space:pre-line">${escapeHtml(custom)}</p>` +
       `<p style="margin:0 0 12px 0">Invoice <strong>${escapeHtml(invoice.invoiceNumber)}</strong> attached. ` +
       `Amount due: <strong>${escapeHtml(total)}</strong>.</p>` +
-      payButtonHtml +
-      `</div>`;
+      payButtonHtml
+    );
 
     return { subject, text, html };
   }
@@ -915,11 +904,10 @@ export function buildInvoiceEmailContent(input: InvoiceEmailInput): SentEmailCon
     )
     .replace(escapeHtml(total), `<strong>${escapeHtml(total)}</strong>`);
 
-  const html =
-    `<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#111827;line-height:1.5">` +
+  const html = wrapEmailHtml(
     `<p style="margin:0 0 12px 0;white-space:pre-line">${renderedHtmlGreeting}</p>` +
-    payButtonHtml +
-    `</div>`;
+    payButtonHtml
+  );
 
   return { subject, text, html };
 }

@@ -50,6 +50,8 @@ export {
   verifyRequest,
   refreshRequest,
   revokeRefreshToken,
+  resendVerificationRequest,
+  forgotPasswordRequest,
   joinWaitlistRequest,
   useVerifyToken,
 } from "./features/auth/api";

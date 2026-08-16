@@ -8,6 +8,8 @@ import { TutorRoute } from "./tutor-route";
 import { NotFound } from "./not-found";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import LoginPage from "@/features/auth/login/LoginPage";
+import ForgotPasswordPage from "@/features/auth/forgot-password/ForgotPasswordPage";
+import AuthActionPage from "@/features/auth/auth-action/AuthActionPage";
 import SignupSurveyPage from "@/features/auth/signup/SignupSurveyPage";
 import SignUpPage from "@/features/auth/signup/SignUpPage";
 import Students from "@/features/students/Students";
@@ -111,6 +113,14 @@ export const router = createBrowserRouter([
       {
         path: "login",
         element: <LoginPage />,
+      },
+      {
+        path: "forgot-password",
+        element: <ForgotPasswordPage />,
+      },
+      {
+        path: "auth/action",
+        element: <AuthActionPage />,
       },
       {
         path: "signup",

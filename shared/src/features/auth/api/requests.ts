@@ -5,6 +5,7 @@ import type {
   RefreshTokenResponse,
   SignupSurvey,
   UserInfo,
+  ForgotPasswordResponse,
 } from "@examify-tms/interfaces";
 
 /**
@@ -126,6 +127,39 @@ export async function revokeRefreshToken(
     { refreshToken },
     { headers: { [SKIP_AUTH_REFRESH]: "true" } },
   );
+}
+
+/**
+ * Ask the backend to re-send the Firebase email-verification email for the
+ * signed-in user (it generates the link server-side via the Admin SDK, so it
+ * works even without a live Firebase client session). Not tagged with
+ * SKIP_AUTH_REFRESH — this carries the app JWT like any authenticated call.
+ * `sent` is false when the user was already verified (harmless no-op).
+ */
+export async function resendVerificationRequest(): Promise<{
+  message: string;
+  sent: boolean;
+}> {
+  const response = await api.post<{ message: string; sent: boolean }>(
+    "/api/auth/resend-verification",
+  );
+  return response.data;
+}
+
+/**
+ * Request a password-reset email. Public (no auth) and deliberately returns
+ * the same generic response whether or not the address is known. Tagged with
+ * SKIP_AUTH_REFRESH since it carries no app JWT for the interceptor to use.
+ */
+export async function forgotPasswordRequest(
+  email: string,
+): Promise<ForgotPasswordResponse> {
+  const response = await api.post<ForgotPasswordResponse>(
+    "/api/auth/forgot-password",
+    { email },
+    { headers: { [SKIP_AUTH_REFRESH]: "true" } },
+  );
+  return response.data;
 }
 
 /**

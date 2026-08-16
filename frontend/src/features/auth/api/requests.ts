@@ -15,6 +15,7 @@ import {
   refreshRequest,
 } from "@examify-tms/shared";
 import type { LoginResponse, RefreshTokenResponse, SignupSurvey } from "@examify-tms/interfaces";
+import type { User as FirebaseUser } from "firebase/auth";
 
 // Re-export the platform-agnostic auth requests so existing imports
 // (`@/features/auth/api` barrel) keep resolving without touching call sites.
@@ -81,7 +82,7 @@ export async function registerRequest(
   password: string,
   signupSurvey?: SignupSurvey,
 ): Promise<LoginResponse> {
-  let firebaseUserCredential: { user: { getIdToken: () => Promise<string>; delete: () => Promise<void> } } | null = null;
+  let firebaseUserCredential: { user: FirebaseUser } | null = null;
 
   try {
     const firebaseAuth = getFirebaseAuth();
@@ -94,7 +95,8 @@ export async function registerRequest(
     const firebaseToken = await firebaseUserCredential.user.getIdToken();
     // Route through /api/auth/register (not /api/auth/login) so the backend
     // CREATES the Firestore document for this brand-new Firebase user. The
-    // login endpoint requires the doc to already exist and would 401.
+    // login endpoint requires the doc to already exist and would 401. The
+    // backend also sends the branded verification email as part of register.
     return registerFirebaseToken(firebaseToken, {
       name,
       timezone: detectBrowserTimezone(),

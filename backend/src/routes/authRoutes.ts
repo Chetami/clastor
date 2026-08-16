@@ -1,8 +1,8 @@
 import { Router } from "express";
-import { login, verifyToken, register, googleAuth, refresh, logout, joinWaitlist } from "../controllers/authController";
+import { login, verifyToken, register, googleAuth, refresh, logout, joinWaitlist, resendVerification, forgotPassword } from "../controllers/authController";
 import { authenticateJWT } from "../middleware/auth";
 import { validateRequest } from "../middleware/validateRequest";
-import { registerSchema, refreshTokenSchema, joinWaitlistSchema } from "../schemas";
+import { registerSchema, refreshTokenSchema, joinWaitlistSchema, forgotPasswordSchema } from "../schemas";
 
 const router = Router();
 
@@ -44,6 +44,20 @@ router.post("/refresh", validateRequest({ body: refreshTokenSchema }), refresh);
  * Revoke the presented refresh token server-side. Always succeeds (200).
  */
 router.post("/logout", logout);
+
+/**
+ * POST /api/auth/forgot-password
+ * Public. Sends a branded password-reset email when the address is known.
+ * Always returns the same generic 200 (no account enumeration).
+ */
+router.post("/forgot-password", validateRequest({ body: forgotPasswordSchema }), forgotPassword);
+
+/**
+ * POST /api/auth/resend-verification
+ * Re-send the Firebase email-verification link to the authenticated user via
+ * SMTP. No-op success when already verified.
+ */
+router.post("/resend-verification", authenticateJWT, resendVerification);
 
 /**
  * POST /api/auth/waitlist

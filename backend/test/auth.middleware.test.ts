@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi, beforeEach } from "vitest";
 import type { Request, Response, NextFunction } from "express";
 import type { ApiError } from "@examify-tms/interfaces";
 import {
@@ -6,8 +6,17 @@ import {
   requireRole,
   requireSystemAdmin,
   requireTutor,
+  requireVerifiedEmail,
 } from "../src/middleware/auth";
 import { generateToken } from "../src/utils/jwt";
+
+const { firebaseAuth } = vi.hoisted(() => ({
+  firebaseAuth: { getUser: vi.fn() },
+}));
+
+vi.mock("../src/config/firebase", () => ({
+  getFirebaseAuth: () => firebaseAuth,
+}));
 
 function mockRes() {
   const res = {
@@ -141,5 +150,61 @@ describe("requireRole middleware factory", () => {
     const res3 = mockRes();
     requireTutor(adminReq, res3, vi.fn());
     expect(res3.statusCode).toBe(403);
+  });
+});
+
+describe("requireVerifiedEmail middleware", () => {
+  const req = () =>
+    ({ user: { uid: "uid-1", email: "a@b.com", role: "tutor" } }) as unknown as Request;
+
+  beforeEach(() => {
+    firebaseAuth.getUser.mockReset();
+  });
+
+  it("calls next() when Firebase reports the email as verified", async () => {
+    firebaseAuth.getUser.mockResolvedValue({ emailVerified: true });
+    const res = mockRes();
+    const next = vi.fn();
+
+    await requireVerifiedEmail(req(), res, next);
+
+    expect(firebaseAuth.getUser).toHaveBeenCalledWith("uid-1");
+    expect(next).toHaveBeenCalledTimes(1);
+    expect(res.statusCode).toBe(200);
+  });
+
+  it("returns 403 with EMAIL_NOT_VERIFIED when unverified", async () => {
+    firebaseAuth.getUser.mockResolvedValue({ emailVerified: false });
+    const res = mockRes();
+    const next = vi.fn();
+
+    await requireVerifiedEmail(req(), res, next);
+
+    expect(next).not.toHaveBeenCalled();
+    expect(res.statusCode).toBe(403);
+    expect((res.body as ApiError).message).toMatch(/verify your email/i);
+    expect((res.body as ApiError).code).toBe("EMAIL_NOT_VERIFIED");
+  });
+
+  it("fails closed with 401 when the Firebase lookup errors", async () => {
+    firebaseAuth.getUser.mockRejectedValue(new Error("auth/user-not-found"));
+    const res = mockRes();
+    const next = vi.fn();
+
+    await requireVerifiedEmail(req(), res, next);
+
+    expect(next).not.toHaveBeenCalled();
+    expect(res.statusCode).toBe(401);
+  });
+
+  it("returns 401 when there is no user on the request", async () => {
+    const res = mockRes();
+    const next = vi.fn();
+
+    await requireVerifiedEmail({} as Request, res, next);
+
+    expect(next).not.toHaveBeenCalled();
+    expect(res.statusCode).toBe(401);
+    expect(firebaseAuth.getUser).not.toHaveBeenCalled();
   });
 });

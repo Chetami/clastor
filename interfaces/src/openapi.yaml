@@ -32,6 +32,8 @@ components:
       $ref: './schemas/auth/req/VerifyTokenRequest.yaml'
     RefreshTokenRequest:
       $ref: './schemas/auth/req/RefreshTokenRequest.yaml'
+    ForgotPasswordRequest:
+      $ref: './schemas/auth/req/ForgotPasswordRequest.yaml'
     # Auth Response Schemas
     LoginResponse:
       $ref: './schemas/auth/res/LoginResponse.yaml'
@@ -43,6 +45,8 @@ components:
       $ref: './schemas/auth/res/VerifyTokenResponse.yaml'
     RefreshTokenResponse:
       $ref: './schemas/auth/res/RefreshTokenResponse.yaml'
+    ForgotPasswordResponse:
+      $ref: './schemas/auth/res/ForgotPasswordResponse.yaml'
     GoogleConnectionStatus:
       $ref: './schemas/auth/res/GoogleConnectionStatus.yaml'
     UserInfo:

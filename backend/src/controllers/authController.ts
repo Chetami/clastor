@@ -1,10 +1,11 @@
 import { Request, Response } from "express";
-import { verifyFirebaseToken } from "../services/authService";
+import { verifyFirebaseToken, getEmailVerified, sendEmailVerificationEmail, sendPasswordResetEmail } from "../services/authService";
 import { getUserFromFirestore, updateLastActive, createUserInFirestore, toUserInfo } from "../services/userService";
 import { addToWaitlist } from "../services/waitlistService";
 import { issueNewTokenPair, rotateRefreshToken, revokeRefreshToken } from "../services/tokenService";
 import { LoginResponse, UserInfo, ApiError } from "@examify-tms/interfaces";
-import { RegisterRequest, RefreshTokenResponse, JoinWaitlistRequest, JoinWaitlistResponse } from "@examify-tms/interfaces";
+import { RegisterRequest, RefreshTokenResponse, JoinWaitlistRequest, JoinWaitlistResponse, ForgotPasswordRequest, ForgotPasswordResponse } from "@examify-tms/interfaces";
+import { AppError } from "../utils/AppError";
 
 /**
  * Login controller
@@ -32,7 +33,7 @@ export async function login(req: Request, res: Response<LoginResponse | ApiError
     // Update last active timestamp
     await updateLastActive(user.id);
 
-    const userInfo: UserInfo = toUserInfo(user);
+    const userInfo: UserInfo = toUserInfo(user, decodedFirebase.email_verified === true);
 
     return res.status(200).json({
       jwtToken,
@@ -60,7 +61,11 @@ export async function verifyToken(req: Request, res: Response<{ user: UserInfo }
   try {
     const user = await getUserFromFirestore(req.user.uid);
 
-    const userInfo: UserInfo = toUserInfo(user);
+    // Verification status lives in Firebase Auth, not Firestore — read it live
+    // so the client sees the current state on every session bootstrap.
+    const emailVerified = await getEmailVerified(req.user.uid);
+
+    const userInfo: UserInfo = toUserInfo(user, emailVerified);
 
     return res.status(200).json({
       user: userInfo,
@@ -117,7 +122,7 @@ export async function googleAuth(
     const { jwtToken, refreshToken } = await issueNewTokenPair(user);
     await updateLastActive(user.id);
 
-    const userInfo: UserInfo = toUserInfo(user);
+    const userInfo: UserInfo = toUserInfo(user, decodedFirebase.email_verified === true);
 
     res.status(200).json({
       jwtToken,
@@ -174,6 +179,17 @@ export async function register(
       req.body.signupSurvey ?? null,
     );
 
+    // 4b. Best-effort: send the branded verification email now that the
+    // account fully exists. Failure (SMTP down, rate limit) must not fail
+    // sign-up — the in-app verify-email banner offers a resend.
+    try {
+      if (decodedToken.email && decodedToken.email_verified !== true) {
+        await sendEmailVerificationEmail(decodedToken.uid, decodedToken.email);
+      }
+    } catch (verificationError) {
+      console.warn('Failed to send verification email at registration:', verificationError);
+    }
+
     // 5. Generate access + refresh token pair
     const { jwtToken, refreshToken } = await issueNewTokenPair(user);
 
@@ -181,7 +197,7 @@ export async function register(
     await updateLastActive(user.id);
 
     // 7. Return UserInfo (not full User, consistent with login endpoint)
-    const userInfo: UserInfo = toUserInfo(user);
+    const userInfo: UserInfo = toUserInfo(user, decodedToken.email_verified === true);
 
     res.status(200).json({ jwtToken, refreshToken, user: userInfo });
   } catch (error) {
@@ -249,5 +265,67 @@ export async function joinWaitlist(
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to join waitlist";
     res.status(400).json({ message });
+  }
+}
+
+/**
+ * Forgot-password controller
+ * Sends a branded password-reset email via the Admin SDK + SMTP. Always
+ * returns the same generic 200 whether or not the address is known, so the
+ * endpoint can't be used to enumerate accounts. SMTP failures are logged and
+ * also swallowed to the same 200 — the user experience of "check your inbox"
+ * is preferable to revealing email configuration details.
+ */
+export async function forgotPassword(
+  req: Request<{}, {}, ForgotPasswordRequest>,
+  res: Response<ForgotPasswordResponse>,
+): Promise<void> {
+  const email = req.body.email?.trim();
+
+  if (email) {
+    try {
+      await sendPasswordResetEmail(email);
+    } catch (error) {
+      console.error("Failed to send password reset email:", error);
+    }
+  }
+
+  res.status(200).json({
+    message: "If an account exists for that email, a reset link has been sent.",
+  });
+}
+
+/**
+ * Resend email verification controller
+ * Generates a fresh Firebase verification link for the authenticated user and
+ * emails it via SMTP. Works on any device (no live Firebase client session
+ * needed, unlike the client SDK's sendEmailVerification). No-op success when
+ * the user is already verified.
+ */
+export async function resendVerification(
+  req: Request,
+  res: Response<{ message: string; sent: boolean } | ApiError>,
+): Promise<void> {
+  if (!req.user) {
+    res.status(401).json({ message: "Invalid token" });
+    return;
+  }
+
+  try {
+    const user = await getUserFromFirestore(req.user.uid);
+    const sent = await sendEmailVerificationEmail(user.id, user.email);
+    res.status(200).json({
+      sent,
+      message: sent
+        ? "Verification email sent"
+        : "Your email is already verified",
+    });
+  } catch (error) {
+    if (error instanceof AppError) {
+      res.status(error.statusCode).json({ message: error.message });
+      return;
+    }
+    console.error("Resend verification failed:", error);
+    res.status(500).json({ message: "Failed to send verification email" });
   }
 }

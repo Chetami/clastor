@@ -14,7 +14,7 @@ import {
   getStudentInvoices,
   getStudentDebt,
 } from "../controllers/paymentController";
-import { authenticateJWT, requireRole } from "../middleware/auth";
+import { authenticateJWT, requireRole, requireVerifiedEmail } from "../middleware/auth";
 import { validateRequest } from "../middleware/validateRequest";
 import {
   createInvoiceSchema,
@@ -120,6 +120,7 @@ router.post(
   "/:id/send/preview",
   authenticateJWT,
   requireRole("tutor", "system_admin"),
+  requireVerifiedEmail,
   validateRequest({ body: invoiceMessageSchema }),
   previewSendInvoice
 );
@@ -132,6 +133,7 @@ router.post(
   "/:id/send",
   authenticateJWT,
   requireRole("tutor", "system_admin"),
+  requireVerifiedEmail,
   validateRequest({ body: invoiceMessageSchema }),
   sendInvoice
 );

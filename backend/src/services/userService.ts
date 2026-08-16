@@ -77,13 +77,18 @@ export function normalizeWorkingHours(raw: unknown): WorkingHours | null {
 /**
  * Map a full User to the trimmed UserInfo returned to clients.
  * Centralized here so auth + user controllers stay in sync.
+ *
+ * `emailVerified` comes from Firebase Auth (not Firestore), so callers that
+ * know it (decoded Firebase token, or a live Admin lookup) pass it in; callers
+ * that don't simply omit it and the field is left undefined.
  */
-export function toUserInfo(user: User): UserInfo {
+export function toUserInfo(user: User, emailVerified?: boolean): UserInfo {
   return {
     uid: user.id,
     name: user.name,
     email: user.email,
     role: user.role,
+    ...(emailVerified !== undefined ? { emailVerified } : {}),
     avatarUrl: user.avatarUrl,
     currency: user.currency,
     timezone: user.timezone ?? null,

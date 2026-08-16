@@ -7,8 +7,11 @@ import type { User, UserInfo } from "@examify-tms/interfaces";
 // tokenService. We swap all three for vi.fn()s so the tests assert the
 // controller's routing/branching logic without touching Firebase or Firestore.
 
-const { verifyFirebaseToken } = vi.hoisted(() => ({
+const { verifyFirebaseToken, getEmailVerified, sendEmailVerificationEmail, sendPasswordResetEmail } = vi.hoisted(() => ({
   verifyFirebaseToken: vi.fn(),
+  getEmailVerified: vi.fn(),
+  sendEmailVerificationEmail: vi.fn(),
+  sendPasswordResetEmail: vi.fn(),
 }));
 
 const userService = vi.hoisted(() => ({
@@ -24,7 +27,12 @@ const tokenService = vi.hoisted(() => ({
   revokeRefreshToken: vi.fn(),
 }));
 
-vi.mock("../src/services/authService", () => ({ verifyFirebaseToken }));
+vi.mock("../src/services/authService", () => ({
+  verifyFirebaseToken,
+  getEmailVerified,
+  sendEmailVerificationEmail,
+  sendPasswordResetEmail,
+}));
 vi.mock("../src/services/userService", () => userService);
 vi.mock("../src/services/tokenService", () => tokenService);
 
@@ -35,6 +43,9 @@ import {
   googleAuth,
   refresh,
   logout,
+  verifyToken,
+  resendVerification,
+  forgotPassword,
 } from "../src/controllers/authController";
 
 // --- Fixtures -------------------------------------------------------------
@@ -118,6 +129,8 @@ beforeEach(() => {
   userService.toUserInfo.mockReturnValue(userInfo);
   tokenService.issueNewTokenPair.mockResolvedValue(tokenPair);
   userService.updateLastActive.mockResolvedValue(undefined);
+  sendEmailVerificationEmail.mockResolvedValue(true);
+  sendPasswordResetEmail.mockResolvedValue(true);
 });
 
 describe("login controller", () => {
@@ -198,6 +211,63 @@ describe("register controller", () => {
       "Australia/Sydney",
       null,
     );
+    expect(tokenService.issueNewTokenPair).toHaveBeenCalledWith(dbUser);
+  });
+
+  it("sends the branded verification email after creating the account", async () => {
+    verifyFirebaseToken.mockResolvedValue({
+      ...firebaseDecoded,
+      email_verified: false,
+    });
+    userService.getUserFromFirestore.mockResolvedValue(null);
+    userService.createUserInFirestore.mockResolvedValue(dbUser);
+
+    const res = mockRes();
+    await register(
+      mockReq({ body: { name: "Jane Doe" } }) as Request,
+      res,
+    );
+
+    expect(res.statusCode).toBe(200);
+    expect(sendEmailVerificationEmail).toHaveBeenCalledWith(
+      "fb-uid-1",
+      "tutor@example.com",
+    );
+  });
+
+  it("skips the verification email when the token is already verified", async () => {
+    verifyFirebaseToken.mockResolvedValue({
+      ...firebaseDecoded,
+      email_verified: true,
+    });
+    userService.getUserFromFirestore.mockResolvedValue(null);
+    userService.createUserInFirestore.mockResolvedValue(dbUser);
+
+    const res = mockRes();
+    await register(
+      mockReq({ body: { name: "Jane Doe" } }) as Request,
+      res,
+    );
+
+    expect(res.statusCode).toBe(200);
+    expect(sendEmailVerificationEmail).not.toHaveBeenCalled();
+  });
+
+  it("does not fail registration when the verification email can't be sent", async () => {
+    verifyFirebaseToken.mockResolvedValue(firebaseDecoded);
+    userService.getUserFromFirestore.mockResolvedValue(null);
+    userService.createUserInFirestore.mockResolvedValue(dbUser);
+    sendEmailVerificationEmail.mockRejectedValue(
+      new Error("SMTP not configured"),
+    );
+
+    const res = mockRes();
+    await register(
+      mockReq({ body: { name: "Jane Doe" } }) as Request,
+      res,
+    );
+
+    expect(res.statusCode).toBe(200);
     expect(tokenService.issueNewTokenPair).toHaveBeenCalledWith(dbUser);
   });
 
@@ -321,6 +391,105 @@ describe("googleAuth controller", () => {
 
     expect(res.statusCode).toBe(401);
     expect((res.body as { message: string }).message).toMatch(/No token provided/);
+  });
+});
+
+describe("verifyToken controller", () => {
+  it("returns the user with the live email-verification status", async () => {
+    userService.getUserFromFirestore.mockResolvedValue(dbUser);
+    getEmailVerified.mockResolvedValue(true);
+
+    const res = mockRes();
+    await verifyToken(mockReq({ user: { uid: "fb-uid-1" } } as never), res);
+
+    expect(res.statusCode).toBe(200);
+    expect(getEmailVerified).toHaveBeenCalledWith("fb-uid-1");
+    expect(userService.toUserInfo).toHaveBeenCalledWith(dbUser, true);
+    expect(res.body).toEqual({ user: userInfo });
+  });
+
+  it("returns 404 when the Firestore document is missing", async () => {
+    userService.getUserFromFirestore.mockRejectedValue(new Error("User not found"));
+
+    const res = mockRes();
+    await verifyToken(mockReq({ user: { uid: "fb-uid-1" } } as never), res);
+
+    expect(res.statusCode).toBe(404);
+  });
+});
+
+describe("resendVerification controller", () => {
+  it("sends the email and reports sent: true", async () => {
+    userService.getUserFromFirestore.mockResolvedValue(dbUser);
+    sendEmailVerificationEmail.mockResolvedValue(true);
+
+    const res = mockRes();
+    await resendVerification(mockReq({ user: { uid: "fb-uid-1" } } as never), res);
+
+    expect(res.statusCode).toBe(200);
+    expect(sendEmailVerificationEmail).toHaveBeenCalledWith("fb-uid-1", "tutor@example.com");
+    expect(res.body).toEqual({ sent: true, message: "Verification email sent" });
+  });
+
+  it("is a no-op success when already verified", async () => {
+    userService.getUserFromFirestore.mockResolvedValue(dbUser);
+    sendEmailVerificationEmail.mockResolvedValue(false);
+
+    const res = mockRes();
+    await resendVerification(mockReq({ user: { uid: "fb-uid-1" } } as never), res);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toEqual({ sent: false, message: "Your email is already verified" });
+  });
+
+  it("returns 401 without a user on the request", async () => {
+    const res = mockRes();
+    await resendVerification(mockReq(), res);
+
+    expect(res.statusCode).toBe(401);
+    expect(sendEmailVerificationEmail).not.toHaveBeenCalled();
+  });
+});
+
+describe("forgotPassword controller", () => {
+  it("calls the reset service with the trimmed email and returns the generic message", async () => {
+    const res = mockRes();
+    await forgotPassword(
+      mockReq({ body: { email: "  tutor@example.com  " } }) as Request,
+      res,
+    );
+
+    expect(res.statusCode).toBe(200);
+    expect(sendPasswordResetEmail).toHaveBeenCalledWith("tutor@example.com");
+    expect((res.body as { message: string }).message).toMatch(/reset link has been sent/i);
+  });
+
+  it("returns the same generic 200 when the address is unknown (no enumeration)", async () => {
+    sendPasswordResetEmail.mockResolvedValue(false);
+
+    const res = mockRes();
+    await forgotPassword(
+      mockReq({ body: { email: "nobody@example.com" } }) as Request,
+      res,
+    );
+
+    expect(res.statusCode).toBe(200);
+    expect((res.body as { message: string }).message).toMatch(/reset link has been sent/i);
+  });
+
+  it("swallows SMTP failures to the same generic 200", async () => {
+    sendPasswordResetEmail.mockRejectedValue(new Error("SMTP down"));
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const res = mockRes();
+    await forgotPassword(
+      mockReq({ body: { email: "tutor@example.com" } }) as Request,
+      res,
+    );
+
+    expect(res.statusCode).toBe(200);
+    expect((res.body as { message: string }).message).toMatch(/reset link has been sent/i);
+    consoleError.mockRestore();
   });
 });
 

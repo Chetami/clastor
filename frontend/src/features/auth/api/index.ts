@@ -4,3 +4,4 @@ export { useVerifyToken } from "./use-verify-token";
 export { useLogout } from "./use-logout";
 export { useGoogleSignIn } from "./use-google-sign-in";
 export { loginRequest, registerRequest, verifyRequest, logoutRequest, googleSignInRequest } from "./requests";
+export { resendVerificationRequest } from "@examify-tms/shared";
