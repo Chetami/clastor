@@ -16,6 +16,7 @@ import adminRoutes from "./routes/adminRoutes";
 import templateRoutes from "./routes/templateRoutes";
 import sentEmailRoutes from "./routes/sentEmailRoutes";
 import { authenticateJWT, requireSystemAdmin } from "./middleware/auth";
+import { globalApiLimiter } from "./middleware/rateLimit";
 import { initializeFirebase } from "./config/firebase";
 import { ApiError } from "@examify-tms/interfaces";
 import { ZodError } from "zod";
@@ -48,6 +49,13 @@ import stripeRoutes from "./routes/stripeRoutes";
 app.use("/api/stripe/webhook", express.raw({ type: "application/json" }));
 
 app.use(express.json());
+
+// Global rate-limit backstop for everything under /api. Strict per-endpoint
+// limiters for the public auth surface live in the route files (see
+// middleware/rateLimit.ts for the tiering rationale). Mounted after the
+// Stripe webhook's raw-body handler — that path is skipped inside the
+// limiter (Stripe signs and legitimately retries webhook deliveries).
+app.use("/api", globalApiLimiter);
 
 // Initialize Firebase
 initializeFirebase();

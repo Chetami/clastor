@@ -7,6 +7,7 @@ import {
   webhook,
 } from "../controllers/stripeController";
 import { authenticateJWT, requireRole } from "../middleware/auth";
+import { stripePayLimiter } from "../middleware/rateLimit";
 
 const router = Router();
 
@@ -22,9 +23,10 @@ router.post("/webhook", webhook);
  * GET /api/stripe/pay/:invoiceId
  * PUBLIC. Mints a fresh Checkout Session and 302-redirects to Stripe's hosted
  * checkout. This is the stable link embedded in invoice emails; the recipient
- * is not a user, so no auth.
+ * is not a user, so no auth. Rate-limited: each hit mints a Stripe Checkout
+ * Session, so predictable invoice ids must not be scrapeable.
  */
-router.get("/pay/:invoiceId", payRedirect);
+router.get("/pay/:invoiceId", stripePayLimiter, payRedirect);
 
 /**
  * GET /api/stripe/account

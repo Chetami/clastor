@@ -2,29 +2,45 @@ import { describe, expect, it, vi } from "vitest";
 import type { Request, Response, NextFunction } from "express";
 
 // Import AFTER test env bootstrap (setup-env.ts sets the secrets the JWT
-// module requires at import time; the rate-limit module itself is env-light).
+// module requires at import time).
 import {
+  loginLimiter,
+  registerLimiter,
+  firebaseGoogleLoginLimiter,
+  forgotPasswordLimiter,
+  resendVerificationLimiter,
+  waitlistLimiter,
+  refreshLimiter,
   googleLoginStartLimiter,
+  googleCallbackLimiter,
   googleLoginExchangeLimiter,
+  rsvpLimiter,
+  stripePayLimiter,
+  publicProfileLimiter,
+  globalApiLimiter,
 } from "../src/middleware/rateLimit";
 
 /**
  * The limiters are exercised as raw middleware: invoke with a fake req/res
- * and count. Each test uses a unique client IP so the shared module-level
- * buckets don't bleed between tests.
+ * and count. Each test uses a unique client IP (or uid) so the shared
+ * module-level buckets don't bleed between tests.
  */
 
 let ipCounter = 0;
 function nextIp(): string {
   ipCounter += 1;
-  return `10.0.0.${ipCounter}`;
+  return `10.0.${Math.floor(ipCounter / 250)}.${(ipCounter % 250) + 1}`;
 }
 
-function fakeReq(ip: string): Request {
-  return { ip, headers: {} } as unknown as Request;
+function fakeReq(overrides: Partial<Request> = {}): Request {
+  return { ip: nextIp(), headers: {}, ...overrides } as unknown as Request;
 }
 
-function fakeRes(): Response & { statusCode: number; body: unknown; redirectedTo?: string } {
+function fakeRes(): Response & {
+  statusCode: number;
+  body: unknown;
+  redirectedTo?: string;
+} {
   const res = {
     statusCode: 200,
     redirectedTo: undefined as string | undefined,
@@ -36,7 +52,7 @@ function fakeRes(): Response & { statusCode: number; body: unknown; redirectedTo
       return this;
     },
     // express-rate-limit's default 429 handler uses res.send, while the
-    // custom start-limiter handler uses res.redirect — stub both.
+    // custom redirect handlers use res.redirect — stub both.
     send(data: unknown) {
       this.body = data;
       return this;
@@ -54,82 +70,156 @@ function fakeRes(): Response & { statusCode: number; body: unknown; redirectedTo
   return res as unknown as ReturnType<typeof fakeRes>;
 }
 
-/** Drive the limiter `count` times for one IP; return the last result. */
+type Limiter = (req: Request, res: Response, next: NextFunction) => void;
+
+/** Drive the limiter `count` times for one client; return the last result. */
 async function hit(
-  limiter: (req: Request, res: Response, next: NextFunction) => void,
-  ip: string,
+  limiter: Limiter,
+  req: Request,
   count: number,
-) {
-  let nextCalls = 0;
+): Promise<{ res: ReturnType<typeof fakeRes>; passed: number }> {
+  let passed = 0;
   let lastRes = fakeRes();
   for (let i = 0; i < count; i++) {
     lastRes = fakeRes();
     const next = vi.fn(() => {
-      nextCalls += 1;
+      passed += 1;
     }) as unknown as NextFunction;
     // The limiter is sync for in-store hits (MemoryStore), but treat it as
     // async so the test stays correct if the store changes.
     // eslint-disable-next-line no-await-in-loop
-    await Promise.resolve(limiter(fakeReq(ip), lastRes, next));
+    await Promise.resolve(limiter(req, lastRes, next));
   }
-  return { res: lastRes, nextCalls };
+  return { res: lastRes, passed };
 }
 
-describe("googleLoginStartLimiter", () => {
-  it("lets requests under the limit through (calls next)", async () => {
-    const { nextCalls } = await hit(googleLoginStartLimiter, nextIp(), 30);
-    expect(nextCalls).toBe(30);
+/** Assert a limiter passes exactly `limit` requests then blocks the next. */
+async function expectLimit(
+  limiter: Limiter,
+  limit: number,
+  style: "json" | "redirect",
+  req: Request = fakeReq(),
+) {
+  const under = await hit(limiter, req, limit);
+  expect(under.passed).toBe(limit);
+
+  const over = await hit(limiter, req, 1);
+  expect(over.passed).toBe(0);
+  if (style === "json") {
+    expect(over.res.statusCode).toBe(429);
+    expect(over.res.body).toEqual({ message: expect.any(String) });
+  } else {
+    expect(over.res.redirectedTo).toMatch(/error=rate_limited$/);
+  }
+}
+
+// --- Tier 1: strictest public auth surface -----------------------------------
+
+describe("public auth limiters", () => {
+  it("loginLimiter: 20/15min then JSON 429", async () => {
+    await expectLimit(loginLimiter, 20, "json");
   });
 
-  it("redirects to the frontend error page on the (limit+1)th hit", async () => {
-    const ip = nextIp();
-    await hit(googleLoginStartLimiter, ip, 30);
+  it("registerLimiter: 10/15min then JSON 429", async () => {
+    await expectLimit(registerLimiter, 10, "json");
+  });
 
-    const { res, nextCalls } = await hit(googleLoginStartLimiter, ip, 1);
+  it("firebaseGoogleLoginLimiter: 30/15min then JSON 429", async () => {
+    await expectLimit(firebaseGoogleLoginLimiter, 30, "json");
+  });
 
-    // Navigation endpoint: a JSON 429 would render as raw JSON in the
-    // browser — the handler must redirect to a friendly page instead.
-    expect(res.redirectedTo).toMatch(
-      /^https?:\/\/[^/]+\/auth\/google\/callback\?error=rate_limited$/,
+  it("forgotPasswordLimiter: 5/15min then JSON 429 (email-bombing guard)", async () => {
+    await expectLimit(forgotPasswordLimiter, 5, "json");
+  });
+
+  it("resendVerificationLimiter: 5/15min keyed by uid, not IP", async () => {
+    const uid = `uid-${nextIp()}`;
+    const reqFor = (ip: string) =>
+      fakeReq({ ip, user: { uid } } as Partial<Request>);
+
+    // Burn the whole bucket from one IP…
+    await hit(resendVerificationLimiter, reqFor("10.9.9.1"), 5);
+
+    // …a different IP with the SAME uid is still blocked (uid-keyed)…
+    const sameUid = await hit(resendVerificationLimiter, reqFor("10.9.9.2"), 1);
+    expect(sameUid.passed).toBe(0);
+
+    // …and a different uid on the original IP is unaffected.
+    const otherUid = await hit(
+      resendVerificationLimiter,
+      fakeReq({ ip: "10.9.9.1", user: { uid: "uid-someone-else" } } as Partial<Request>),
+      1,
     );
-    expect(nextCalls).toBe(0);
+    expect(otherUid.passed).toBe(1);
   });
 
-  it("keys buckets per IP — one abusive IP doesn't block others", async () => {
-    const abuser = nextIp();
-    const normal = nextIp();
-    await hit(googleLoginStartLimiter, abuser, 31);
+  it("waitlistLimiter: 5/15min then JSON 429", async () => {
+    await expectLimit(waitlistLimiter, 5, "json");
+  });
 
-    const { nextCalls } = await hit(googleLoginStartLimiter, normal, 5);
-    expect(nextCalls).toBe(5);
+  it("refreshLimiter: 60/15min then JSON 429", async () => {
+    await expectLimit(refreshLimiter, 60, "json");
   });
 });
 
-describe("googleLoginExchangeLimiter", () => {
-  it("lets requests under the limit through (calls next)", async () => {
-    const { nextCalls } = await hit(googleLoginExchangeLimiter, nextIp(), 30);
-    expect(nextCalls).toBe(30);
+// --- Tier 1: Google merged-login flow ----------------------------------------
+
+describe("Google merged-login limiters", () => {
+  it("googleLoginStartLimiter: 30/15min then redirects (navigation)", async () => {
+    await expectLimit(googleLoginStartLimiter, 30, "redirect");
   });
 
-  it("returns a 429 JSON ApiError on the (limit+1)th hit", async () => {
-    const ip = nextIp();
-    await hit(googleLoginExchangeLimiter, ip, 30);
-
-    const { res, nextCalls } = await hit(googleLoginExchangeLimiter, ip, 1);
-
-    expect(res.statusCode).toBe(429);
-    expect(res.body).toEqual({
-      message: expect.stringContaining("Too many sign-in attempts"),
-    });
-    expect(nextCalls).toBe(0);
+  it("googleCallbackLimiter: 30/15min then redirects (navigation)", async () => {
+    await expectLimit(googleCallbackLimiter, 30, "redirect");
   });
 
-  it("keys buckets per IP — one abusive IP doesn't block others", async () => {
-    const abuser = nextIp();
-    const normal = nextIp();
-    await hit(googleLoginExchangeLimiter, abuser, 31);
+  it("googleLoginExchangeLimiter: 30/15min then JSON 429", async () => {
+    await expectLimit(googleLoginExchangeLimiter, 30, "json");
+  });
+});
 
-    const { nextCalls } = await hit(googleLoginExchangeLimiter, normal, 5);
-    expect(nextCalls).toBe(5);
+// --- Tier 2: public link/read endpoints --------------------------------------
+
+describe("public link/read limiters", () => {
+  it("rsvpLimiter: 60/15min then JSON 429", async () => {
+    await expectLimit(rsvpLimiter, 60, "json");
+  });
+
+  it("stripePayLimiter: 30/15min then JSON 429", async () => {
+    await expectLimit(stripePayLimiter, 30, "json");
+  });
+
+  it("publicProfileLimiter: 60/15min then JSON 429", async () => {
+    await expectLimit(publicProfileLimiter, 60, "json");
+  });
+});
+
+// --- Tier 3: global /api ceiling ----------------------------------------------
+
+describe("globalApiLimiter", () => {
+  it("is generous: 2000/5min pass before the JSON 429", async () => {
+    await expectLimit(globalApiLimiter, 2000, "json");
+  }, 20_000);
+
+  it("skips the Stripe webhook path (Stripe signs and retries legitimately)", async () => {
+    const { passed } = await hit(
+      globalApiLimiter,
+      fakeReq({ path: "/stripe/webhook" } as Partial<Request>),
+      2050,
+    );
+    // Every request passes regardless of volume — the path is excluded.
+    expect(passed).toBe(2050);
+  }, 20_000);
+});
+
+// --- Cross-cutting: per-client buckets ----------------------------------------
+
+describe("bucket isolation", () => {
+  it("one abusive IP doesn't exhaust another client's bucket", async () => {
+    const abuser = fakeReq();
+    await hit(loginLimiter, abuser, 21);
+
+    const { passed } = await hit(loginLimiter, fakeReq(), 5);
+    expect(passed).toBe(5);
   });
 });

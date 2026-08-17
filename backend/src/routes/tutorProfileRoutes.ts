@@ -9,14 +9,16 @@ import {
 } from "../controllers/tutorProfileController";
 import { authenticateJWT, requireRole } from "../middleware/auth";
 import { requireFeature } from "../middleware/featureFlags";
+import { publicProfileLimiter } from "../middleware/rateLimit";
 
 const router = Router();
 
 /**
  * GET /api/tutor-profiles/public/:slug
  * Public endpoint (no auth) — returns a published profile for anyone.
+ * Rate-limited: slugs are guessable, so cap scraping well above browse rate.
  */
-router.get("/public/:slug", requireFeature("publicProfile"), getPublicProfile);
+router.get("/public/:slug", publicProfileLimiter, requireFeature("publicProfile"), getPublicProfile);
 
 /**
  * GET /api/tutor-profiles/check-slug?slug=...

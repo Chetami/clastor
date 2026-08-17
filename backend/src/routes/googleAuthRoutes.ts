@@ -11,6 +11,7 @@ import { authenticateJWT } from "../middleware/auth";
 import { validateRequest } from "../middleware/validateRequest";
 import {
   googleLoginStartLimiter,
+  googleCallbackLimiter,
   googleLoginExchangeLimiter,
 } from "../middleware/rateLimit";
 import { googleLoginStartQuerySchema, googleLoginExchangeSchema } from "../schemas";
@@ -35,8 +36,9 @@ router.get(
  * GET /api/auth/google/callback
  * OAuth redirect target (no auth header — identity comes from signed state).
  * Handles both the public login flow and the authenticated connect flow.
+ * Navigation endpoint: rate-limited with a redirect, not a JSON 429.
  */
-router.get("/callback", googleAuthCallback);
+router.get("/callback", googleCallbackLimiter, googleAuthCallback);
 
 /**
  * POST /api/auth/google/exchange

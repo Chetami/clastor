@@ -25,6 +25,7 @@ import {
 } from "../controllers/lessonSeriesController";
 import { authenticateJWT, requireRole, requireVerifiedEmail } from "../middleware/auth";
 import { validateRequest } from "../middleware/validateRequest";
+import { rsvpLimiter } from "../middleware/rateLimit";
 import {
   cancelLessonSchema,
   cancelPreviewSchema,
@@ -52,9 +53,10 @@ router.get("/", authenticateJWT, listLessons);
  * GET /api/lessons/rsvp?token=...&status=accepted|declined
  * Public one-click RSVP, reached from the Accept/Decline buttons in the
  * invite email. Registered before /:id so "rsvp" isn't captured as an id.
- * Returns a confirmation HTML page.
+ * Returns a confirmation HTML page. Rate-limited (the signed token is the
+ * real guard; the cap stops URL-guessing scrapers).
  */
-router.get("/rsvp", rsvpLesson);
+router.get("/rsvp", rsvpLimiter, rsvpLesson);
 
 /**
  * GET /api/lessons/series/:id
