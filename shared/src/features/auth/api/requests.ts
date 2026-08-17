@@ -91,6 +91,24 @@ export async function registerFirebaseToken(
 }
 
 /**
+ * Exchange the single-use code from the merged Google login redirect for the
+ * app's JWT + refresh token pair. Public endpoint — the code itself is the
+ * credential (short-lived, one-time), so no Authorization header is sent and
+ * a 401 must not trigger the transparent refresh+retry (tagged with
+ * SKIP_AUTH_REFRESH like the other exchanges).
+ */
+export async function exchangeGoogleLoginCode(
+  code: string,
+): Promise<LoginResponse> {
+  const response = await api.post<LoginResponse>(
+    "/api/auth/google/exchange",
+    { code },
+    { headers: { [SKIP_AUTH_REFRESH]: "true" } },
+  );
+  return response.data;
+}
+
+/**
  * Validate the current session and return the user. Also used as the
  * bootstrap query that hydrates the auth store on app launch.
  */

@@ -20,9 +20,7 @@ const { firebaseUser, firebaseAuthModule } = vi.hoisted(() => {
     firebaseAuthModule: {
       signInWithEmailAndPassword: vi.fn(),
       createUserWithEmailAndPassword: vi.fn(),
-      signInWithPopup: vi.fn(),
       signOut: vi.fn(),
-      GoogleAuthProvider: class {},
     },
   };
 });
@@ -38,7 +36,7 @@ vi.mock("@/config/firebase", () => ({
 import {
   loginRequest,
   registerRequest,
-  googleSignInRequest,
+  buildGoogleLoginUrl,
   logoutRequest,
 } from "./requests";
 
@@ -97,7 +95,6 @@ beforeEach(() => {
   firebaseUser.delete.mockResolvedValue(undefined);
   firebaseAuthModule.signInWithEmailAndPassword.mockResolvedValue({ user: firebaseUser });
   firebaseAuthModule.createUserWithEmailAndPassword.mockResolvedValue({ user: firebaseUser });
-  firebaseAuthModule.signInWithPopup.mockResolvedValue({ user: firebaseUser });
   firebaseAuthModule.signOut.mockResolvedValue(undefined);
 });
 
@@ -183,25 +180,46 @@ describe("registerRequest (regression: must NOT hit /api/auth/login)", () => {
   });
 });
 
-describe("googleSignInRequest", () => {
-  it("POSTs to /api/auth/google (not /login) so the backend creates the doc", async () => {
-    const captures: CapturedRequest[] = [];
-    server.use(captureEndpoint("google", captures));
-    server.use(
-      http.post("*/api/auth/login", () =>
-        HttpResponse.json(
-          { message: "BUG: google sign-in must not hit /login" },
-          { status: 401 },
-        ),
-      ),
+describe("buildGoogleLoginUrl", () => {
+  it("points at the backend merged-login redirect endpoint", () => {
+    const url = new URL(buildGoogleLoginUrl());
+
+    expect(url.origin).toBe("http://localhost:3001");
+    expect(url.pathname).toBe("/api/auth/google/start");
+  });
+
+  it("carries returnTo, the browser timezone, and the survey", () => {
+    const url = new URL(
+      buildGoogleLoginUrl({
+        returnTo: "/onboarding",
+        signupSurvey: {
+          intent: "independent_tutor",
+          studentCountBucket: null,
+          tutoringFormat: null,
+          tutorCountBucket: null,
+          currentTools: ["spreadsheets"],
+        },
+      }),
     );
 
-    await googleSignInRequest();
+    expect(url.searchParams.get("returnTo")).toBe("/onboarding");
+    expect(url.searchParams.get("timezone")).toBe(
+      Intl.DateTimeFormat().resolvedOptions().timeZone,
+    );
+    expect(JSON.parse(url.searchParams.get("survey") ?? "{}")).toEqual(
+      expect.objectContaining({ intent: "independent_tutor" }),
+    );
+  });
 
-    expect(captures).toHaveLength(1);
-    expect(captures[0].path).toBe("/api/auth/google");
-    expect(captures[0].headers.authorization).toBe("Bearer firebase-id-token");
-    expect(captures[0].headers[SKIP_HEADER]).toBe("true");
+  it("omits the survey and returnTo params when not supplied", () => {
+    const url = new URL(buildGoogleLoginUrl());
+
+    expect(url.searchParams.has("survey")).toBe(false);
+    // timezone is best-effort; only assert it's a valid param when present.
+    if (url.searchParams.has("timezone")) {
+      expect(url.searchParams.get("timezone")).toMatch(/^[A-Za-z/_+-]+$/);
+    }
+    expect(url.searchParams.has("returnTo")).toBe(false);
   });
 });
 

@@ -8,6 +8,7 @@ import { TutorRoute } from "./tutor-route";
 import { NotFound } from "./not-found";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import LoginPage from "@/features/auth/login/LoginPage";
+import GoogleLoginCallbackPage from "@/features/auth/google-callback/GoogleLoginCallbackPage";
 import ForgotPasswordPage from "@/features/auth/forgot-password/ForgotPasswordPage";
 import AuthActionPage from "@/features/auth/auth-action/AuthActionPage";
 import SignupSurveyPage from "@/features/auth/signup/SignupSurveyPage";
@@ -113,6 +114,10 @@ export const router = createBrowserRouter([
       {
         path: "login",
         element: <LoginPage />,
+      },
+      {
+        path: "auth/google/callback",
+        element: <GoogleLoginCallbackPage />,
       },
       {
         path: "forgot-password",

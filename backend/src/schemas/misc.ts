@@ -58,6 +58,23 @@ export const googleAuthSchema = z.object({
   timezone: z.string().optional(),
 });
 
+/**
+ * Query validation for GET /api/auth/google/start (public merged-login
+ * redirect). The survey arrives as a URL-encoded JSON string and is parsed +
+ * normalized leniently in the controller — a malformed value should degrade
+ * to "no survey", not block sign-in.
+ */
+export const googleLoginStartQuerySchema = z.object({
+  returnTo: z.string().max(2048).optional(),
+  timezone: z.string().max(64).optional(),
+  survey: z.string().max(4096).optional(),
+});
+
+/** Body validation for POST /api/auth/google/exchange (one-time code swap). */
+export const googleLoginExchangeSchema = z.object({
+  code: z.string().min(1, "code is required").max(512),
+});
+
 export const createFeedbackSchema = z.object({
   type: feedbackTypeSchema,
   message: z.string().trim().min(1, "Message is required"),

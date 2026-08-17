@@ -34,6 +34,8 @@ components:
       $ref: './schemas/auth/req/RefreshTokenRequest.yaml'
     ForgotPasswordRequest:
       $ref: './schemas/auth/req/ForgotPasswordRequest.yaml'
+    GoogleLoginExchangeRequest:
+      $ref: './schemas/auth/req/GoogleLoginExchangeRequest.yaml'
     # Auth Response Schemas
     LoginResponse:
       $ref: './schemas/auth/res/LoginResponse.yaml'

@@ -1,0 +1,16 @@
+type: object
+required:
+  - code
+properties:
+  code:
+    type: string
+    description: >-
+      Single-use, short-lived opaque code delivered to the browser via the
+      frontend /auth/google/callback redirect after completing the merged
+      Google sign-in + Calendar consent flow. Bound to one user, expires
+      shortly after issue, and is invalidated on first use.
+    example: kx9Gwb2Fq8sAe1Jm4tZnRk
+description: |-
+  Request body for POST /api/auth/google/exchange
+  Swaps the one-time code from the merged Google login redirect for a
+  LoginResponse (JWT + refresh token + user).
