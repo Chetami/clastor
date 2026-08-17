@@ -14,6 +14,7 @@ import {
   type InvoiceLessonEdits,
 } from "@/features/payments/api";
 import { useStudentLookups } from "@/lib/use-student-lookups";
+import { track } from "@/lib/analytics";
 import { ATTENDANCE_LABELS } from "@/features/schedule/lesson-utils";
 
 export interface AttendanceConfirmResult {
@@ -50,6 +51,10 @@ export function useMarkAttendanceAndInvoice() {
     const name = names[lesson.studentId] ?? "Unknown student";
     try {
       await markDone.mutateAsync({ id: lesson.id, attendanceStatus });
+      track("attendance_marked", {
+        status: attendanceStatus,
+        invoiced: shouldInvoice,
+      });
 
       // Apply any lesson tweaks first — happens whether or not an invoice is
       // sent, since the lesson should reflect what was done.

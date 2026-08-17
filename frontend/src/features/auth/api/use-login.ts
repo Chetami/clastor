@@ -2,6 +2,7 @@ import { useMutation } from "@tanstack/react-query";
 import { loginRequest } from "./requests";
 import { useAuthStore } from "@/store/auth-store";
 import { queryClient } from "@/lib/query-client";
+import { track } from "@/lib/analytics";
 
 export function useLogin() {
   const setAuth = useAuthStore((s) => s.setAuth);
@@ -14,6 +15,7 @@ export function useLogin() {
       // the new identity, so no other user's data is ever shown.
       queryClient.clear();
       setAuth(data.user, data.jwtToken, data.refreshToken);
+      track("login", { method: "password" });
     },
   });
 }

@@ -14,6 +14,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { track } from "@/lib/analytics";
 import {
   useRescheduleLesson,
   previewRescheduleEmailRequest,
@@ -142,6 +143,11 @@ export function RescheduleDialog({
 
     try {
       await reschedule.mutateAsync(payload);
+      track("lesson_rescheduled", {
+        via: "dialog",
+        scope: isSeries ? scope : "single",
+        notified_student: notifyStudent,
+      });
       toast.success(
         notifyStudent
           ? scope === "this_and_future"

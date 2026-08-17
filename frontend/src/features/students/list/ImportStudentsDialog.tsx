@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
+import { track } from "@/lib/analytics";
 import type { StudentImportSummary } from "@examify-tms/interfaces";
 import { Button } from "@/components/ui/button";
 import {
@@ -48,6 +49,10 @@ export function ImportStudentsDialog({
     if (!importFile) return;
     try {
       const summary = await importStudents.mutateAsync(importFile);
+      track("students_imported", {
+        created: summary.created,
+        skipped: summary.skipped,
+      });
       setImportResult(summary);
       if (summary.created > 0) {
         toast.success(

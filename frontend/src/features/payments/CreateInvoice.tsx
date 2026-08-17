@@ -19,6 +19,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { SkeletonTable } from "@/components/skeletons";
 import { useListStudents } from "@/features/students/api";
 import { useSubjects, resolveSubjectNames } from "@/lib/subjects";
+import { track } from "@/lib/analytics";
 import { useListLessons } from "@/features/schedule/api";
 import { useCreateInvoice } from "./api";
 import { SendInvoiceDialog } from "@/components/send-invoice-dialog";
@@ -214,6 +215,10 @@ export default function CreateInvoice() {
         paymentMethod: result.data.paymentMethod,
         notes: result.data.notes ?? null,
         status: result.data.status,
+      });
+      track("invoice_created", {
+        status: result.data.status,
+        send_email: sendEmail,
       });
 
       if (sendEmail) {

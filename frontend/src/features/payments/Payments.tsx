@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { track } from "@/lib/analytics";
 import {
   ChevronLeft,
   ChevronRight,
@@ -272,6 +273,7 @@ export default function Payments() {
                         markPaid.mutate(
                           { id },
                           {
+                            onSuccess: () => track("invoice_marked_paid"),
                             onError: (err) =>
                               toast.error(
                                 err instanceof Error && err.message
@@ -283,6 +285,7 @@ export default function Payments() {
                       }
                       onVoid={(id) =>
                         voidInvoice.mutate(id, {
+                          onSuccess: () => track("invoice_voided"),
                           onError: (err) =>
                             toast.error(
                               err instanceof Error && err.message

@@ -77,6 +77,8 @@ export default function GoogleLoginCallbackPage() {
         if (data.isNewUser) {
           track("signup_success", { method: "google" });
           clearSurvey();
+        } else {
+          track("login", { method: "google" });
         }
 
         const returnTo = safeReturnTo(searchParams.get("returnTo"));

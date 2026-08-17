@@ -9,6 +9,7 @@ import {
   Users,
 } from "lucide-react";
 import { toast } from "sonner";
+import { track } from "@/lib/analytics";
 import type { StudentResponse } from "@examify-tms/interfaces";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -144,6 +145,7 @@ export default function Students() {
   async function handleAdd(values: StudentFormData) {
     try {
       await createStudent.mutateAsync(formToCreateRequest(values));
+      track("student_created");
       setAddOpen(false);
     } catch (error) {
       toast.error(
@@ -161,6 +163,7 @@ export default function Students() {
         id: editing.id,
         data: formToUpdateRequest(values),
       });
+      track("student_updated");
       setEditing(null);
     } catch (error) {
       toast.error(
@@ -179,6 +182,7 @@ export default function Students() {
     const csv = studentsToCsv(students, subjects);
     const date = new Date().toISOString().slice(0, 10);
     downloadCsv(`students-${date}.csv`, csv);
+    track("students_exported", { count: students.length });
     toast.success(
       `Exported ${students.length} student${students.length === 1 ? "" : "s"}.`,
     );

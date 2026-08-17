@@ -1,4 +1,5 @@
 import { toast } from "sonner";
+import { track } from "@/lib/analytics";
 import { EmailComposeDialog } from "@/components/email-compose-dialog";
 import { useSendInvoice, previewSendInvoiceRequest } from "@/features/payments/api";
 
@@ -42,6 +43,7 @@ export function SendInvoiceDialog({
           id: invoiceId,
           message: message || undefined,
         });
+        track("invoice_sent");
         toast.success("Invoice sent.");
         onSent?.(invoiceId);
         onClose();

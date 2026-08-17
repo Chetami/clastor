@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
+import { track } from "@/lib/analytics";
 import {
   ArrowLeft,
   Ban,
@@ -67,6 +68,7 @@ export default function InvoiceDetail() {
     if (!invoice) return;
     try {
       await markPaid.mutateAsync({ id: invoice.id });
+      track("invoice_marked_paid");
       toast.success("Invoice marked as paid");
     } catch (err) {
       toast.error(
@@ -81,6 +83,7 @@ export default function InvoiceDetail() {
     if (!invoice) return;
     try {
       await voidInvoice.mutateAsync(invoice.id);
+      track("invoice_voided");
       toast.success("Invoice voided");
     } catch (err) {
       toast.error(

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { EventApi } from "@fullcalendar/core";
 import { toast } from "sonner";
+import { track } from "@/lib/analytics";
 import { useRescheduleLesson } from "./api";
 
 export type DropScope = "this" | "this_and_future";
@@ -99,6 +100,11 @@ export function useDropReschedule() {
         notifyStudent: dropNotify,
         message,
         ...(dropPending.seriesId ? { scope: dropScope } : {}),
+      });
+      track("lesson_rescheduled", {
+        via: "drag_drop",
+        scope: dropPending.seriesId ? dropScope : "single",
+        notified_student: dropNotify,
       });
       toast.success(
         dropNotify

@@ -23,6 +23,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useListStudents } from "@/features/students/api";
 import { useSubjects } from "@/lib/subjects";
+import { track } from "@/lib/analytics";
 import { useCreateLesson, useCreateRecurringLesson } from "./api";
 import { pollSeriesMeetLink } from "./api";
 import { generateMeetLinkRequest, updateLessonRequest } from "./api/requests";
@@ -351,6 +352,10 @@ export function CreateEventDialog({
         const lesson = await createLesson.mutateAsync(
           toCreateLessonRequest(result.data),
         );
+        track("lesson_created", {
+          recurring: false,
+          location_mode: locationMode,
+        });
         onOpenChange(false);
 
         toast.success("Lesson created", {
@@ -379,6 +384,11 @@ export function CreateEventDialog({
         const created = await createRecurring.mutateAsync(
           toCreateRecurringLessonRequest(result.data, timezone),
         );
+        track("lesson_created", {
+          recurring: true,
+          count: created.count,
+          location_mode: locationMode,
+        });
         onOpenChange(false);
 
         const plural = created.count === 1 ? "" : "s";

@@ -1,8 +1,9 @@
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { Loader2 } from "lucide-react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { ApiRequestError } from "@examify-tms/shared";
 import { queryClient } from "@/lib/query-client";
+import { identifyUser, resetAnalytics } from "@/lib/analytics";
 import { useVerifyToken } from "@/features/auth/api";
 import { useAuthStore } from "@/store/auth-store";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
@@ -78,9 +79,34 @@ function AuthBoot({ children }: { children: ReactNode }) {
   return children;
 }
 
+/**
+ * Keeps the PostHog identity in sync with the auth store: identifies the
+ * signed-in user whenever the uid changes (login, signup, Google sign-in,
+ * persisted-session boot) and clears the identity on any sign-out path,
+ * including passive ones (session expiry, cross-tab sign-out).
+ */
+function AnalyticsIdentitySync() {
+  const user = useAuthStore((s) => s.user);
+  const lastUid = useRef<string | null>(null);
+
+  useEffect(() => {
+    const uid = user?.uid ?? null;
+    if (uid === lastUid.current) return;
+    if (user) {
+      identifyUser(user);
+    } else {
+      resetAnalytics();
+    }
+    lastUid.current = uid;
+  }, [user]);
+
+  return null;
+}
+
 export function AppProvider({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
+      <AnalyticsIdentitySync />
       <ThemeProvider>
         <TooltipProvider>
           <AuthBoot>{children}</AuthBoot>

@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { track } from "@/lib/analytics";
 import {
   useCancelLesson,
   previewCancelEmailRequest,
@@ -80,6 +81,10 @@ export function CancelLessonDialog({
 
     try {
       await cancelLesson.mutateAsync(payload);
+      track("lesson_cancelled", {
+        scope: isSeries ? scope : "single",
+        notified_student: notifyStudent,
+      });
       toast.success(
         notifyStudent
           ? scope === "this_and_future"
