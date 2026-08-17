@@ -15,7 +15,7 @@ export default function PrivacyPage() {
             Privacy Policy
           </h1>
           <p className="text-lg text-muted-foreground">
-            Last Updated: 12 August 2026
+            Last Updated: 17 August 2026
           </p>
         </div>
 
@@ -96,7 +96,12 @@ export default function PrivacyPage() {
                 Information retrieved through integrations you connect, such as
                 Google Calendar and Google Meet; and
               </li>
-              <li>Usage data and analytics.</li>
+              <li>
+                Usage data and analytics, including product analytics events
+                and session recordings of on-screen activity, as described in
+                the &quot;How do we use cookies and analytics?&quot; section
+                below.
+              </li>
             </ul>
             <p className="mt-4 leading-relaxed text-muted-foreground">
               We do not collect or store full payment card numbers. Card
@@ -220,10 +225,81 @@ export default function PrivacyPage() {
                 our Website.
               </li>
             </ul>
+            <p className="mt-4 mb-4 leading-relaxed text-muted-foreground">
+              We use a third-party product analytics service,{" "}
+              <strong>PostHog</strong>, to help us understand how our Website
+              and Services are used so we can improve them. When you use
+              Clastor, PostHog may collect:
+            </p>
+            <ul className="list-disc space-y-2 pl-6 text-muted-foreground">
+              <li>
+                Analytics events, such as pages viewed, elements clicked, and
+                features used;
+              </li>
+              <li>
+                Device and browser information, such as browser type,
+                operating system, and approximate location derived from your
+                IP address;
+              </li>
+              <li>
+                If you have an account, limited account details (your user ID,
+                name, email address, and role) so we can understand how you
+                use the Services; and
+              </li>
+              <li>
+                Session recordings — recordings of on-screen activity (such as
+                mouse movements, scrolls, and the page content visible during
+                your session) that help us troubleshoot issues and improve
+                the Services. Text you type into input fields (such as
+                passwords) is masked in these recordings by default.
+              </li>
+            </ul>
+            <p className="mt-4 leading-relaxed text-muted-foreground">
+              PostHog processes this information on our behalf as a service
+              provider. You can learn more about PostHog&apos;s data practices
+              at{" "}
+              <a
+                href="https://posthog.com/privacy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline"
+              >
+                posthog.com/privacy
+              </a>
+              .
+            </p>
             <p className="mt-4 leading-relaxed text-muted-foreground">
               By using our Website and our Services, you are consenting to the
               use of these technologies in accordance with this Privacy Policy.
             </p>
+          </section>
+
+          <section>
+            <h2 className="mb-4 text-3xl">
+              How do we use artificial intelligence?
+            </h2>
+            <p className="mb-4 leading-relaxed text-muted-foreground">
+              We may use artificial intelligence (AI) to help provide certain
+              features of the Services — for example, assisting with drafting
+              emails or summarising information. Where you use an AI-assisted
+              feature:
+            </p>
+            <ul className="list-disc space-y-2 pl-6 text-muted-foreground">
+              <li>
+                Your input is processed only as needed to generate the output
+                you requested;
+              </li>
+              <li>
+                We do not use your content, your students&apos; details, or
+                any data you add to Clastor to train AI models, whether our
+                own or those of third parties; and
+              </li>
+              <li>
+                We require any third-party AI providers we use to process data
+                on our behalf solely to deliver the feature, and not to use it
+                to train their models.
+              </li>
+            </ul>
           </section>
 
           <section>
@@ -286,6 +362,11 @@ export default function PrivacyPage() {
               </li>
               <li>Payment systems operators (such as Stripe) and financial institutions;</li>
               <li>Cloud service providers and data storage providers;</li>
+              <li>
+                Product analytics providers (such as PostHog), who process
+                usage data and session recordings on our behalf to help us
+                understand and improve the Services;
+              </li>
               <li>
                 Integration providers you connect (such as Google, for Calendar
                 and Meet), only to the extent needed to provide the feature you
@@ -565,10 +646,12 @@ export default function PrivacyPage() {
               We store personal information in secure data centers. Where we
               transfer personal information internationally, we take appropriate
               steps to ensure that overseas recipients that we disclose personal
-              information to have adequate safeguards in place. This may include
-              assessing the privacy laws in the country where the information is
-              disclosed or putting in place contractual clauses with third party
-              service providers regarding data handling practices.
+              information to have adequate safeguards in place. For example,
+              our product analytics provider, PostHog, processes analytics data
+              in the United States. This may include assessing the privacy laws
+              in the country where the information is disclosed or putting in
+              place contractual clauses with third party service providers
+              regarding data handling practices.
             </p>
           </section>
 

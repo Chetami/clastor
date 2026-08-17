@@ -15,7 +15,7 @@ export default function TermsPage() {
             Terms of Service
           </h1>
           <p className="text-lg text-muted-foreground">
-            Last Updated: 26 June 2026
+            Last Updated: 17 August 2026
           </p>
         </div>
 
@@ -168,13 +168,14 @@ export default function TermsPage() {
             </p>
             <div className="border-l-4 border-primary bg-primary/10 p-4 my-6">
               <p className="text-sm font-medium">
-                Data Ownership: For users accessing our Services through a
-                school, institution, or paid subscription, all data you provide
-                or upload to our platform remains your property. We act solely
-                as a processor of this information to provide you with our
-                services, and we do not use institutional or paid-subscriber
-                data to train artificial intelligence models or for any purpose
-                not directly related to delivering the Services to you.
+                Data Ownership: All data you provide or upload to our platform
+                remains your property. We act solely as a processor of this
+                information to provide you with our services. We may use
+                AI-assisted features to help deliver the Services, but we do
+                not use your data — including your content, student records,
+                and lesson notes — to train artificial intelligence models or
+                for any purpose not directly related to delivering the
+                Services to you.
               </p>
             </div>
             <p className="leading-relaxed text-muted-foreground">
@@ -203,12 +204,14 @@ export default function TermsPage() {
           <section>
             <h2 className="mb-4 text-3xl">7. Third-Party Services</h2>
             <p className="leading-relaxed text-muted-foreground">
-              The Services integrate with third-party tools and services such as
-              Google Calendar, Stripe, and cloud infrastructure providers. Your
-              use of those third-party services is subject to their own terms and
-              policies, and Clastor is not responsible for their availability,
-              conduct, or handling of your data. We may modify or remove
-              third-party integrations at any time.
+              The Services integrate with third-party tools and services such
+              as Google Calendar, Stripe, PostHog (product analytics,
+              including session recordings), artificial intelligence providers
+              used to deliver AI-assisted features, and cloud infrastructure
+              providers. Your use of those third-party services is subject to
+              their own terms and policies, and Clastor is not responsible for
+              their availability, conduct, or handling of your data. We may
+              modify or remove third-party integrations at any time.
             </p>
           </section>
 
