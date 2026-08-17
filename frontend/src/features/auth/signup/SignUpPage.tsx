@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Card,
   CardContent,
@@ -16,7 +15,6 @@ import {
 } from "@/components/ui/card";
 import { useRegister } from "@/features/auth/api";
 import { GoogleSignInButton } from "@/features/auth/GoogleSignInButton";
-import { connectGoogleRequest } from "@/features/settings/api/requests";
 import { BrandMark } from "@/features/auth/BrandMark";
 import { LEGAL_URLS } from "@/config";
 import { track } from "@/lib/analytics";
@@ -58,7 +56,6 @@ export default function SignUpPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [agreed, setAgreed] = useState(false);
   const [validationError, setValidationError] = useState("");
   const navigate = useNavigate();
 
@@ -74,21 +71,6 @@ export default function SignUpPage() {
   const strengthBars = strength <= 0 ? 1 : strength;
   const passwordsMismatch =
     confirmPassword.length > 0 && password !== confirmPassword;
-
-  /**
-   * Brand-new Google signups are sent straight into the Calendar/Meet consent
-   * flow so the connection (refresh token) is granted during signup. The
-   * onboarding wizard's calendar step is then skipped. Falls back to the
-   * wizard if the consent URL can't be fetched.
-   */
-  async function startGoogleCalendarConsent() {
-    try {
-      const { authUrl } = await connectGoogleRequest("/onboarding");
-      window.location.href = authUrl;
-    } catch {
-      navigate("/onboarding");
-    }
-  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -142,55 +124,10 @@ export default function SignUpPage() {
 
         <CardContent>
           <div className="space-y-4">
-            <div className="flex items-start gap-2">
-              <Checkbox
-                id="terms"
-                checked={agreed}
-                onCheckedChange={(checked) => setAgreed(checked === true)}
-                className="mt-0.5"
-              />
-              <Label htmlFor="terms" className="text-xs leading-relaxed">
-                I agree to the{" "}
-                <a
-                  href={LEGAL_URLS.terms}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-medium text-primary hover:underline"
-                >
-                  Terms of Service
-                </a>{" "}
-                and{" "}
-                <a
-                  href={LEGAL_URLS.privacy}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-medium text-primary hover:underline"
-                >
-                  Privacy Policy
-                </a>
-                .
-              </Label>
-            </div>
-
             <GoogleSignInButton
               label="Sign up with Google"
+              returnTo="/onboarding"
               signupSurvey={surveyRef.current}
-              disabled={!agreed}
-              onSuccess={(data) => {
-                track("signup_success", { method: "google" });
-                clearSurvey();
-                if (
-                  data.isNewUser &&
-                  !data.user.googleConnected &&
-                  !data.user.onboardingComplete
-                ) {
-                  void startGoogleCalendarConsent();
-                  return;
-                }
-                navigate(
-                  data.user.onboardingComplete ? "/dashboard" : "/onboarding",
-                );
-              }}
             />
 
             <div className="relative">
@@ -284,14 +221,34 @@ export default function SignUpPage() {
 
               <Button
                 type="submit"
-                disabled={
-                  register.isPending || !agreed || passwordsMismatch
-                }
+                disabled={register.isPending || passwordsMismatch}
                 className="w-full"
               >
                 {register.isPending ? "Creating account..." : "Create account"}
               </Button>
             </form>
+
+            <p className="text-center text-xs leading-relaxed text-muted-foreground">
+              By continuing, you agree to our{" "}
+              <a
+                href={LEGAL_URLS.terms}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline underline-offset-4 hover:text-foreground"
+              >
+                Terms of Service
+              </a>{" "}
+              and{" "}
+              <a
+                href={LEGAL_URLS.privacy}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline underline-offset-4 hover:text-foreground"
+              >
+                Privacy Policy
+              </a>
+              .
+            </p>
           </div>
         </CardContent>
       </Card>

@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
-import { useGoogleSignIn } from "@/features/auth/api";
-import type { LoginResponse, SignupSurvey } from "@examify-tms/interfaces";
+import { buildGoogleLoginUrl } from "@/features/auth/api";
+import type { SignupSurvey } from "@examify-tms/interfaces";
 
 function GoogleIcon({ className }: { className?: string }) {
   return (
@@ -33,40 +33,43 @@ function GoogleIcon({ className }: { className?: string }) {
 
 type GoogleSignInButtonProps = {
   label?: string;
-  signupSurvey?: SignupSurvey;
-  onSuccess?: (data: LoginResponse) => void;
-  onError?: (error: unknown) => void;
+  /**
+   * Same-origin path to land on after the Google round-trip (defaults to the
+   * standard post-login destination on the /auth/google/callback page).
+   */
+  returnTo?: string;
+  /** Qualifier-survey answers forwarded to the backend for first-time signup. */
+  signupSurvey?: SignupSurvey | null;
   disabled?: boolean;
 };
 
+/**
+ * Starts the merged server-side Google login: ONE Google screen covers both
+ * signing in and granting the Calendar/Meet offline scope. Navigating the
+ * whole tab (not a popup) is the standard OAuth redirect flow — completion
+ * is handled by /auth/google/callback, which exchanges the one-time code and
+ * establishes the session.
+ */
 export function GoogleSignInButton({
   label = "Continue with Google",
+  returnTo,
   signupSurvey,
-  onSuccess,
-  onError,
   disabled = false,
 }: GoogleSignInButtonProps) {
-  const googleSignIn = useGoogleSignIn();
-
-  async function handleClick() {
-    try {
-      const data = await googleSignIn.mutateAsync(signupSurvey);
-      onSuccess?.(data);
-    } catch (error) {
-      onError?.(error);
-    }
-  }
-
   return (
     <Button
       type="button"
       variant="outline"
       className="w-full"
-      disabled={disabled || googleSignIn.isPending}
-      onClick={handleClick}
+      disabled={disabled}
+      onClick={() => {
+        window.location.assign(
+          buildGoogleLoginUrl({ returnTo, signupSurvey }),
+        );
+      }}
     >
       <GoogleIcon className="mr-2" />
-      {googleSignIn.isPending ? "Connecting..." : label}
+      {label}
     </Button>
   );
 }

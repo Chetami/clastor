@@ -166,6 +166,61 @@ export function verifyStateToken(
 }
 
 /**
+ * Sign a short-lived, opaque state token for the PUBLIC Google login flow
+ * (merged sign-in + Calendar consent). Unlike {@link signStateToken} there is
+ * no uid yet — the user isn't authenticated — so the state instead carries the
+ * sign-up context (returnTo path, detected timezone, optional survey) that
+ * must survive the round-trip through Google. The `m: "login"` marker keeps
+ * login states from ever being accepted by the connect-flow verifier (and
+ * vice versa: {@link verifyStateToken} requires a uid these tokens lack).
+ */
+export function signLoginStateToken(data: {
+  returnTo: string;
+  timezone: string | null;
+  survey: unknown;
+}): string {
+  return jwt.sign(
+    { m: "login", r: data.returnTo, tz: data.timezone ?? undefined, sv: data.survey ?? undefined },
+    JWT_SECRET,
+    { expiresIn: "10m" },
+  );
+}
+
+/** Payload returned by {@link verifyLoginStateToken}. */
+export interface LoginStatePayload {
+  returnTo: string;
+  timezone: string | null;
+  survey: unknown;
+}
+
+/**
+ * Verify a login-mode state token, or null when invalid/expired/not a
+ * login-mode token. The survey is returned raw — callers normalize it via
+ * `normalizeSignupSurvey` before use.
+ */
+export function verifyLoginStateToken(
+  token: string | undefined,
+): LoginStatePayload | null {
+  if (!token) return null;
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as {
+      m?: string;
+      r?: string;
+      tz?: string;
+      sv?: unknown;
+    };
+    if (decoded.m !== "login" || typeof decoded.r !== "string") return null;
+    return {
+      returnTo: decoded.r,
+      timezone: typeof decoded.tz === "string" ? decoded.tz : null,
+      survey: decoded.sv ?? null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Sign a short-lived RSVP token for a lesson invite email. Students aren't
  * users in the system (no auth), so the Accept/Decline buttons in the email
  * carry this signed token instead. It binds the link to a specific lesson

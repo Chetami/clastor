@@ -15,36 +15,19 @@ import {
 } from "@/components/ui/card";
 import { useLogin } from "@/features/auth/api";
 import { GoogleSignInButton } from "@/features/auth/GoogleSignInButton";
-import { connectGoogleRequest } from "@/features/settings/api/requests";
 import { BrandMark } from "@/features/auth/BrandMark";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [googleError, setGoogleError] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const login = useLogin();
 
-  const authError = googleError ?? login.error?.message;
-
-  /**
-   * A first-ever Google sign-in through this page still creates an account,
-   * so send brand-new users straight into the Calendar/Meet consent flow
-   * (same as the signup page) and skip the onboarding calendar step later.
-   */
-  async function startGoogleCalendarConsent() {
-    try {
-      const { authUrl } = await connectGoogleRequest("/onboarding");
-      window.location.href = authUrl;
-    } catch {
-      navigate("/onboarding");
-    }
-  }
+  const authError = login.error?.message;
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    setGoogleError(null);
 
     try {
       const data = await login.mutateAsync({ email, password });
@@ -72,29 +55,7 @@ export default function LoginPage() {
 
         <CardContent>
           <div className="space-y-4">
-            <GoogleSignInButton
-              label="Continue with Google"
-              onSuccess={(data) => {
-                if (
-                  data.isNewUser &&
-                  !data.user.googleConnected &&
-                  !data.user.onboardingComplete
-                ) {
-                  void startGoogleCalendarConsent();
-                  return;
-                }
-                navigate(
-                  data.user.onboardingComplete ? "/dashboard" : "/onboarding",
-                );
-              }}
-              onError={(error) =>
-                setGoogleError(
-                  error instanceof Error
-                    ? error.message
-                    : "Google sign-in failed. Please try again.",
-                )
-              }
-            />
+            <GoogleSignInButton label="Continue with Google" />
 
             <div className="relative">
               <div className="absolute inset-0 flex items-center">

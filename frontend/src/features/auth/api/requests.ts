@@ -2,19 +2,21 @@ import {
   signInWithEmailAndPassword,
   signOut as firebaseSignOut,
   createUserWithEmailAndPassword,
-  signInWithPopup,
-  GoogleAuthProvider,
 } from "firebase/auth";
 import { getFirebaseAuth } from "@/config/firebase";
 import {
   exchangeFirebaseToken,
-  exchangeGoogleFirebaseToken,
   registerFirebaseToken,
   revokeRefreshToken,
   verifyRequest,
   refreshRequest,
+  getApiBaseUrl,
 } from "@examify-tms/shared";
-import type { LoginResponse, RefreshTokenResponse, SignupSurvey } from "@examify-tms/interfaces";
+import type {
+  LoginResponse,
+  RefreshTokenResponse,
+  SignupSurvey,
+} from "@examify-tms/interfaces";
 import type { User as FirebaseUser } from "firebase/auth";
 
 // Re-export the platform-agnostic auth requests so existing imports
@@ -135,27 +137,29 @@ export async function logoutRequest(refreshToken?: string | null): Promise<void>
   await firebaseSignOut(firebaseAuth);
 }
 
-export async function googleSignInRequest(
-  signupSurvey?: SignupSurvey,
-): Promise<LoginResponse> {
-  try {
-    const firebaseAuth = getFirebaseAuth();
-    const provider = new GoogleAuthProvider();
-    const userCredential = await signInWithPopup(firebaseAuth, provider);
-    const firebaseToken = await userCredential.user.getIdToken();
-    // Route through /api/auth/google (not /api/auth/login) so the backend
-    // creates the Firestore document on first Google sign-in.
-    return exchangeGoogleFirebaseToken(firebaseToken, {
-      timezone: detectBrowserTimezone(),
-      signupSurvey: signupSurvey ?? null,
-    });
-  } catch (error) {
-    const code = (error as { code?: string }).code ?? "";
-    if (code.startsWith("auth/")) {
-      throw mapFirebaseError(error);
-    }
-    throw error;
+/**
+ * Build the backend URL that begins the merged Google login flow (sign-in +
+ * Calendar consent in ONE Google screen). Navigating here 302-redirects to
+ * Google; the browser eventually lands on /auth/google/callback with a
+ * one-time code that `exchangeGoogleLoginCode` swaps for the app's tokens.
+ *
+ * Carries the same sign-up context the old popup flow sent in the request
+ * body: the browser timezone (so server-rendered emails use the tutor's local
+ * time) and the optional qualifier survey answers.
+ */
+export function buildGoogleLoginUrl(options: {
+  returnTo?: string;
+  signupSurvey?: SignupSurvey | null;
+} = {}): string {
+  const params = new URLSearchParams();
+  if (options.returnTo) params.set("returnTo", options.returnTo);
+  const timezone = detectBrowserTimezone();
+  if (timezone) params.set("timezone", timezone);
+  if (options.signupSurvey) {
+    params.set("survey", JSON.stringify(options.signupSurvey));
   }
+  const qs = params.toString();
+  return `${getApiBaseUrl()}/api/auth/google/start${qs ? `?${qs}` : ""}`;
 }
 
 export type { RefreshTokenResponse };

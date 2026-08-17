@@ -12,6 +12,20 @@ export const GOOGLE_OAUTH_SCOPES = [
   "email",
 ];
 
+/**
+ * Scopes requested by the merged Google LOGIN flow (public redirect-based
+ * sign-in). In addition to the connect-flow scopes this includes `profile`
+ * so a brand-new user's display name and avatar can be seeded from their
+ * Google profile. Requesting everything up front means ONE Google consent
+ * screen covers both sign-in and the Calendar offline grant.
+ */
+export const GOOGLE_LOGIN_OAUTH_SCOPES = [
+  "openid",
+  "email",
+  "profile",
+  "https://www.googleapis.com/auth/calendar.events",
+];
+
 let sharedClient: InstanceType<typeof google.auth.OAuth2> | null = null;
 
 /**

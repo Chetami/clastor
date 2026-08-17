@@ -46,6 +46,7 @@ export { useAuthStore } from "./store/auth-store";
 export {
   exchangeFirebaseToken,
   exchangeGoogleFirebaseToken,
+  exchangeGoogleLoginCode,
   registerFirebaseToken,
   verifyRequest,
   refreshRequest,
