@@ -13,6 +13,17 @@ import type { UserInfo } from "@examify-tms/interfaces";
 
 type EventProps = Record<string, unknown>;
 
+/**
+ * Deployment environment tag (local / dev / staging / …) attached to every
+ * event as a super-property, so a single shared PostHog project can be
+ * filtered per environment in dashboards.
+ */
+const APP_ENV = import.meta.env.VITE_APP_ENV ?? import.meta.env.MODE;
+
+// Queued by the SDK until the PostHog client initializes; covers custom,
+// autocapture, and pageview events alike.
+posthog.register({ app_env: APP_ENV });
+
 export function track(event: string, props: EventProps = {}): void {
   posthog.capture(event, props);
   if (import.meta.env.DEV) {
