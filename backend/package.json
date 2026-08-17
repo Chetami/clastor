@@ -19,6 +19,7 @@
     "date-fns-tz": "^3.2.0",
     "dotenv": "^16.4.5",
     "express": "^4.19.0",
+    "express-rate-limit": "^8.6.2",
     "firebase-admin": "^12.3.0",
     "googleapis": "^173.0.0",
     "ical-generator": "^8.1.1",

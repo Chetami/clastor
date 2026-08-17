@@ -9,6 +9,10 @@ import {
 } from "../controllers/googleAuthController";
 import { authenticateJWT } from "../middleware/auth";
 import { validateRequest } from "../middleware/validateRequest";
+import {
+  googleLoginStartLimiter,
+  googleLoginExchangeLimiter,
+} from "../middleware/rateLimit";
 import { googleLoginStartQuerySchema, googleLoginExchangeSchema } from "../schemas";
 
 const router = Router();
@@ -18,9 +22,11 @@ const router = Router();
  * PUBLIC. Begins the merged Google login flow (sign-in + Calendar consent in
  * one screen): 302-redirects the browser to Google with a signed login-mode
  * state. The button on the login/signup pages navigates here directly.
+ * Rate-limited per IP (redirects to the error page when tripped).
  */
 router.get(
   "/start",
+  googleLoginStartLimiter,
   validateRequest({ query: googleLoginStartQuerySchema }),
   startGoogleLogin,
 );
@@ -35,10 +41,11 @@ router.get("/callback", googleAuthCallback);
 /**
  * POST /api/auth/google/exchange
  * PUBLIC. Back-channel half of the merged login flow: swaps the single-use
- * code from the redirect for a JWT + refresh token pair.
+ * code from the redirect for a JWT + refresh token pair. Rate-limited per IP.
  */
 router.post(
   "/exchange",
+  googleLoginExchangeLimiter,
   validateRequest({ body: googleLoginExchangeSchema }),
   exchangeGoogleLoginCode,
 );

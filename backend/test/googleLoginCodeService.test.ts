@@ -47,6 +47,7 @@ import {
   createGoogleLoginCode,
   consumeGoogleLoginCode,
 } from "../src/services/googleLoginCodeService";
+import admin from "firebase-admin";
 import crypto from "crypto";
 
 const sha256 = (s: string) =>
@@ -80,6 +81,19 @@ describe("googleLoginCodeService", () => {
       expect(JSON.stringify(doc)).not.toContain(code);
       expect(doc.uid).toBe("u1");
       expect(doc.isNewUser).toBe(true);
+    });
+
+    it("writes a Timestamp ttlExpiresAt beyond the functional expiry", async () => {
+      // Firestore TTL policies only fire on timestamp-typed fields, and the
+      // policy registered in FIREBASE_SETUP.md targets `ttlExpiresAt`. It
+      // must sit past expiresAtMs so the in-code expiry check decides first.
+      const code = await createGoogleLoginCode({ uid: "u1", isNewUser: false });
+
+      const doc = firestore.store.get(`googleLoginCodes/${sha256(code)}`)!;
+      expect(doc.ttlExpiresAt).toBeInstanceOf(admin.firestore.Timestamp);
+      expect(doc.ttlExpiresAt.toMillis()).toBeGreaterThan(
+        doc.expiresAtMs as number,
+      );
     });
   });
 

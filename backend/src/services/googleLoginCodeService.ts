@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import admin from "firebase-admin";
 import { getFirebaseFirestore } from "../config/firebase";
 
 /**
@@ -17,10 +18,19 @@ import { getFirebaseFirestore } from "../config/firebase";
  *  - Single-use: the doc is deleted inside the transaction that reads it, so
  *    two concurrent redemptions can't both succeed.
  *  - Short TTL (2 minutes) — the exchange happens seconds after the redirect.
+ *
+ * Garbage collection: expired-but-never-redeemed docs are deleted by a
+ * Firestore TTL policy on `ttlExpiresAt` (see the setup step in
+ * deploy/templates/FIREBASE_SETUP.md). TTL deletion is lazy — Google allows
+ * up to ~72h lag — so the policy runs on a timestamp comfortably beyond the
+ * functional expiry, which is still checked exactly in code via
+ * `expiresAtMs`.
  */
 
 const COLLECTION = "googleLoginCodes";
 const CODE_TTL_MS = 2 * 60 * 1000;
+/** Slack for the TTL policy's lazy deletion — well past the functional TTL. */
+const CODE_TTL_GRACE_MS = 60 * 60 * 1000;
 
 /** Identity data bound to an issued code. */
 export interface GoogleLoginCodeData {
@@ -53,6 +63,13 @@ export async function createGoogleLoginCode(
       // Timestamp objects on read (no .getTime()), which would break the
       // comparison below. Numbers round-trip exactly.
       expiresAtMs: Date.now() + CODE_TTL_MS,
+      // Firestore TTL policies require a timestamp-typed field; this is what
+      // the `googleLoginCodes.ttlExpiresAt` policy (FIREBASE_SETUP.md step 8)
+      // deletes never-redeemed docs by. Set beyond the functional expiry so
+      // the code path above always decides first.
+      ttlExpiresAt: admin.firestore.Timestamp.fromMillis(
+        Date.now() + CODE_TTL_MS + CODE_TTL_GRACE_MS,
+      ),
       createdAt: new Date(),
     });
   return code;

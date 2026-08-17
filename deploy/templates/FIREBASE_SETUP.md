@@ -40,6 +40,16 @@ Each environment is its own Firebase project. Do these once, in order:
    In the new project's Authentication, add the admin user, then create the
    matching "users" Firestore doc (see the root .env.example for the schema).
 
+8. Enable the TTL cleanup policy for one-time Google login codes
+   The merged Google sign-in stores single-use codes in the `googleLoginCodes`
+   collection; expired-but-unused docs are garbage-collected by a TTL policy.
+   Firestore Database -> Data -> (any collection) -> "TTL Policy" button ->
+   Add policy:
+     Collection group: googleLoginCodes
+     TTL field:        ttlExpiresAt
+   (equivalent CLI: `gcloud firestore fields ttls update ttlExpiresAt
+   --collection-group=googleLoginCodes`)
+
 Done. Then deploy:
   .\deploy_backend.ps1  -Environment {{NAME}} -IdentityFile <path-to-key>
   .\deploy_frontend.ps1 -Environment {{NAME}} -IdentityFile <path-to-key>

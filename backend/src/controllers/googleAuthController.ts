@@ -195,10 +195,12 @@ export async function googleAuthCallback(
 
     const googleEmail = decodeEmailFromIdToken(tokens.id_token);
 
+    const previous = await getGoogleConnection(statePayload.uid);
     await setGoogleConnection(statePayload.uid, {
       refreshToken,
       googleEmail,
     });
+    revokeStaleGoogleToken(previous, refreshToken);
 
     // Best-effort backfill: push all upcoming lessons to Google Calendar.
     // Fire-and-forget (non-blocking) so the OAuth redirect resolves fast;
@@ -297,10 +299,12 @@ async function completeGoogleLogin(
     // flow) Google may omit one — login still succeeds, the tutor can
     // connect from Settings which forces a fresh grant.
     if (tokens.refresh_token) {
+      const previous = await getGoogleConnection(uid);
       await setGoogleConnection(uid, {
         refreshToken: tokens.refresh_token,
         googleEmail: email,
       });
+      revokeStaleGoogleToken(previous, tokens.refresh_token);
 
       backfillUpcomingLessons(uid).catch((err) => {
         console.error(
@@ -429,7 +433,9 @@ export async function getGoogleConnectionStatus(
 
 /**
  * DELETE /api/auth/google
- * Disconnect the authenticated user's Google account (clears stored tokens).
+ * Disconnect the authenticated user's Google account: clears the stored
+ * tokens locally and best-effort revokes the grant server-side at Google so
+ * the app's access actually ends (not just our copy of it).
  */
 export async function disconnectGoogle(
   req: Request,
@@ -440,11 +446,19 @@ export async function disconnectGoogle(
     return;
   }
 
+  const connection = await getGoogleConnection(req.user.uid);
   await clearGoogleConnection(req.user.uid);
+
+  // Local state is already cleared — revoke at Google without blocking the
+  // response (a Google outage must not stop a user disconnecting).
+  if (connection?.refreshToken) {
+    revokeGoogleTokenQuietly(connection.refreshToken);
+  }
+
   res.json({ connected: false });
 }
 
-/** Best-effort decode of the email from a Google id_token payload. */
+/** Best-effort revoke of the email from a Google id_token payload. */
 function decodeEmailFromIdToken(idToken?: string | null): string {
   if (!idToken) return "";
   try {
@@ -455,5 +469,38 @@ function decodeEmailFromIdToken(idToken?: string | null): string {
     return json.email ?? "";
   } catch {
     return "";
+  }
+}
+
+/**
+ * Best-effort revocation of a Google refresh token at Google's end. Local
+ * state is always the source of truth and is cleared/overwritten by the
+ * caller BEFORE this runs — a revoke failure (network, already-revoked,
+ * Google hiccup) must never fail the user's disconnect/reconnect, so the
+ * promise is only observed for logging.
+ */
+function revokeGoogleTokenQuietly(refreshToken: string): void {
+  getOAuth2Client()
+    .revokeToken(refreshToken)
+    .catch((err) => {
+      console.warn(
+        "[google-oauth] Failed to revoke refresh token at Google:",
+        err instanceof Error ? err.message : err,
+      );
+    });
+}
+
+/**
+ * When a fresh grant replaces a previous connection, revoke the superseded
+ * refresh token so no orphaned grant lingers on the user's Google account.
+ * Guarded against the (rare) case where Google re-issues the SAME refresh
+ * token for a re-grant — revoking the token we just stored would kill the
+ * new connection.
+ */
+function revokeStaleGoogleToken(previous: {
+  refreshToken?: string;
+} | null, next: string): void {
+  if (previous?.refreshToken && previous.refreshToken !== next) {
+    revokeGoogleTokenQuietly(previous.refreshToken);
   }
 }

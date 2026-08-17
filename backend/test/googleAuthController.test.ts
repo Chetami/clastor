@@ -13,6 +13,7 @@ const oauthClient = vi.hoisted(() => ({
   generateAuthUrl: vi.fn(),
   getToken: vi.fn(),
   verifyIdToken: vi.fn(),
+  revokeToken: vi.fn(),
 }));
 
 vi.mock("../src/config/googleOAuth", async (importOriginal) => {
@@ -72,6 +73,7 @@ import {
   startGoogleLogin,
   googleAuthCallback,
   exchangeGoogleLoginCode,
+  disconnectGoogle,
 } from "../src/controllers/googleAuthController";
 import {
   GOOGLE_LOGIN_OAUTH_SCOPES,
@@ -174,6 +176,9 @@ beforeEach(() => {
   firebaseAuth.getUserByEmail.mockResolvedValue({ uid: "uid-1" });
   loginCodes.createGoogleLoginCode.mockResolvedValue("otc-1");
   calendar.backfillUpcomingLessons.mockResolvedValue(undefined);
+  userService.getGoogleConnection.mockResolvedValue(null);
+  userService.clearGoogleConnection.mockResolvedValue(undefined);
+  oauthClient.revokeToken.mockResolvedValue({ data: "" });
 });
 
 // --- Scope configuration ----------------------------------------------------
@@ -562,5 +567,131 @@ describe("exchangeGoogleLoginCode", () => {
 
     expect(res.statusCode).toBe(401);
     expect(loginCodes.consumeGoogleLoginCode).not.toHaveBeenCalled();
+  });
+});
+
+// --- Google token revocation (disconnect / reconnect) ------------------------
+
+describe("Google token revocation", () => {
+  describe("disconnectGoogle (DELETE /api/auth/google)", () => {
+    it("clears the connection AND revokes the grant at Google", async () => {
+      userService.getGoogleConnection.mockResolvedValue({
+        refreshToken: "stored-rt",
+        googleEmail: "tutor@example.com",
+        connectedAt: new Date(),
+      });
+
+      const res = mockRes();
+      await disconnectGoogle(
+        { user: { uid: "uid-1" } } as unknown as Request,
+        res,
+      );
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body).toEqual({ connected: false });
+      expect(userService.clearGoogleConnection).toHaveBeenCalledWith("uid-1");
+      expect(oauthClient.revokeToken).toHaveBeenCalledWith("stored-rt");
+    });
+
+    it("succeeds when there was no connection to begin with", async () => {
+      userService.getGoogleConnection.mockResolvedValue(null);
+
+      const res = mockRes();
+      await disconnectGoogle(
+        { user: { uid: "uid-1" } } as unknown as Request,
+        res,
+      );
+
+      expect(res.statusCode).toBe(200);
+      expect(userService.clearGoogleConnection).toHaveBeenCalledWith("uid-1");
+      expect(oauthClient.revokeToken).not.toHaveBeenCalled();
+    });
+
+    it("succeeds even when Google's revoke endpoint is unreachable", async () => {
+      // Best-effort: local state is the source of truth and is already
+      // cleared, so a Google outage must not fail the disconnect.
+      userService.getGoogleConnection.mockResolvedValue({
+        refreshToken: "stored-rt",
+        googleEmail: null,
+        connectedAt: new Date(),
+      });
+      oauthClient.revokeToken.mockRejectedValue(new Error("network down"));
+
+      const res = mockRes();
+      await disconnectGoogle(
+        { user: { uid: "uid-1" } } as unknown as Request,
+        res,
+      );
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body).toEqual({ connected: false });
+    });
+
+    it("returns 401 without a user", async () => {
+      const res = mockRes();
+      await disconnectGoogle({} as Request, res);
+
+      expect(res.statusCode).toBe(401);
+      expect(userService.clearGoogleConnection).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("reconnect overwriting a previous grant (login mode)", () => {
+    it("revokes the superseded refresh token after storing the new one", async () => {
+      mockGoogleTokens();
+      userService.getGoogleConnection.mockResolvedValue({
+        refreshToken: "old-rt",
+        googleEmail: "tutor@example.com",
+        connectedAt: new Date(),
+      });
+
+      const res = mockRes();
+      await googleAuthCallback(mockReq(loginStateQuery()), res);
+
+      expect(res.redirectedTo).toContain("code=otc-1");
+      expect(userService.setGoogleConnection).toHaveBeenCalledWith("uid-1", {
+        refreshToken: "google-refresh-token",
+        googleEmail: "tutor@example.com",
+      });
+      expect(oauthClient.revokeToken).toHaveBeenCalledWith("old-rt");
+    });
+
+    it("does NOT revoke when Google re-issued the same refresh token", async () => {
+      // Google occasionally returns an identical refresh token for a
+      // re-grant — revoking "old" would kill the connection just stored.
+      mockGoogleTokens();
+      userService.getGoogleConnection.mockResolvedValue({
+        refreshToken: "google-refresh-token",
+        googleEmail: "tutor@example.com",
+        connectedAt: new Date(),
+      });
+
+      const res = mockRes();
+      await googleAuthCallback(mockReq(loginStateQuery()), res);
+
+      expect(res.redirectedTo).toContain("code=otc-1");
+      expect(oauthClient.revokeToken).not.toHaveBeenCalled();
+    });
+
+    it("revokes the superseded token in the connect (Settings) flow too", async () => {
+      mockGoogleTokens();
+      userService.getGoogleConnection.mockResolvedValue({
+        refreshToken: "old-rt",
+        googleEmail: null,
+        connectedAt: new Date(),
+      });
+
+      const res = mockRes();
+      await googleAuthCallback(
+        mockReq({
+          code: "google-auth-code",
+          state: signStateToken("uid-9", "/settings"),
+        }),
+        res,
+      );
+
+      expect(res.redirectedTo).toBe(`${FRONTEND}/settings?google=connected`);
+      expect(oauthClient.revokeToken).toHaveBeenCalledWith("old-rt");
+    });
   });
 });

@@ -25,6 +25,13 @@ import { formatZodError } from "./middleware/validateRequest";
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Production runs behind Passenger (a single reverse-proxy hop). Trusting
+// exactly ONE hop makes req.ip the real client address (from
+// X-Forwarded-For), which the IP-keyed rate limiters depend on. Keep this at
+// 1 — a higher value would let clients spoof their IP via chained XFF
+// headers and bypass rate limiting.
+app.set("trust proxy", 1);
+
 // Middleware
 app.use(cors({
   origin: (process.env.CORS_ORIGIN || "http://localhost:5173")

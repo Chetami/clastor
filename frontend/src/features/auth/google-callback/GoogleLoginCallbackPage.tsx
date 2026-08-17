@@ -25,6 +25,8 @@ import {
 
 const ERROR_MESSAGES: Record<string, string> = {
   denied: "Google sign-in was cancelled. You can try again any time.",
+  rate_limited:
+    "Too many sign-in attempts. Please wait a few minutes and try again.",
   email_not_verified:
     "Your Google account's email address isn't verified. Verify it with Google, then try again.",
   server_error:
