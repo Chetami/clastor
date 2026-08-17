@@ -11,6 +11,7 @@ import {
   verifyStateToken,
   signLoginStateToken,
   verifyLoginStateToken,
+  type LoginStatePayload,
 } from "../utils/jwt";
 import {
   setGoogleConnection,
@@ -61,20 +62,28 @@ function safeReturnTo(raw: unknown): string {
  */
 export function startGoogleLogin(req: Request, res: Response): void {
   try {
-    const returnTo = safeReturnTo(req.query.returnTo ?? "/dashboard");
+    // No default landing path: when the caller didn't send returnTo the
+    // frontend callback page decides post-login routing (onboarding for
+    // incomplete tutors, dashboard otherwise). Injecting /dashboard here
+    // would override that check and skip onboarding for brand-new users
+    // signing in via the login page's Google button.
+    const returnTo =
+      typeof req.query.returnTo === "string"
+        ? safeReturnTo(req.query.returnTo)
+        : null;
     const timezone = normalizeTimezone(req.query.timezone);
     const survey = normalizeSignupSurvey(parseJsonParam(req.query.survey));
 
     const oauthClient = getOAuth2Client();
     const state = signLoginStateToken({ returnTo, timezone, survey });
 
-    // access_type=offline requests a refresh token for Calendar sync. Google
-    // grants one on the FIRST offline authorization without forcing the
-    // consent interstitial, so most users see a single screen. `prompt` is
-    // deliberately NOT "consent": returning users who already granted offline
-    // access won't be re-issued a refresh token anyway, and re-showing the
-    // full consent page is what made the old flow feel like a second login.
-    // select_account keeps the account chooser so users can pick identities.
+    // access_type=offline requests a refresh token for Calendar sync. With
+    // plain select_account, Google shows the consent screen (and grants the
+    // refresh token) only on a user's FIRST authorization — every later
+    // sign-in is a single silent account-picker screen, matching the
+    // Calendly-style "ask once" behaviour. The gap this leaves (a prior grant
+    // with no stored connection returns no refresh token and sees no consent
+    // screen) is patched by a one-time consent retry in completeGoogleLogin.
     const authUrl = oauthClient.generateAuthUrl({
       access_type: "offline",
       prompt: "select_account",
@@ -224,13 +233,20 @@ export async function googleAuthCallback(
  * the Firebase + Firestore user, persist the Calendar connection when Google
  * granted a refresh token, then redirect to the frontend callback route with
  * a single-use code it can exchange for the app's tokens.
+ *
+ * Consent handling (Calendly-style "ask once"): when Google skips the consent
+ * screen because of a prior grant, no refresh token comes back. If the tutor
+ * also has no stored connection, they are bounced back to Google ONCE with
+ * prompt=consent to capture the offline grant; the verified identity rides in
+ * the signed retry state so a declined retry still completes the sign-in
+ * (Calendar stays unconnected, connectable later from Settings/onboarding).
  */
 async function completeGoogleLogin(
   res: Response,
   input: {
     code?: string;
     denied: boolean;
-    loginState: { returnTo: string; timezone: string | null; survey: unknown };
+    loginState: LoginStatePayload;
   },
 ): Promise<void> {
   const base = frontendUrl();
@@ -240,6 +256,17 @@ async function completeGoogleLogin(
     );
 
   if (input.denied || !input.code) {
+    // Declined on the consent-retry pass: identity was already verified on
+    // the first pass — finish signing in without the Calendar connection
+    // instead of failing the login.
+    if (input.loginState.retry?.uid) {
+      await finishGoogleLoginForUid(
+        res,
+        input.loginState.retry.uid,
+        input.loginState,
+      );
+      return;
+    }
     loginFail("denied");
     return;
   }
@@ -293,12 +320,8 @@ async function completeGoogleLogin(
           normalizeSignupSurvey(input.loginState.survey),
         );
 
-    // Persist the Calendar connection when Google granted offline access.
-    // First-time consents always include a refresh token; if the user had
-    // previously authorized this client (e.g. via the old Firebase popup
-    // flow) Google may omit one — login still succeeds, the tutor can
-    // connect from Settings which forces a fresh grant.
     if (tokens.refresh_token) {
+      // Persist the Calendar connection: this pass carried the offline grant.
       const previous = await getGoogleConnection(uid);
       await setGoogleConnection(uid, {
         refreshToken: tokens.refresh_token,
@@ -312,21 +335,84 @@ async function completeGoogleLogin(
           err instanceof Error ? err.message : err,
         );
       });
+    } else if (!input.loginState.retry) {
+      // Google omitted the refresh token: it skipped the consent screen
+      // because this account granted the client before. Returning users with
+      // a stored connection stay silent (nothing to do). Only when we hold no
+      // connection either (grant predates this flow, or the user disconnected
+      // — which revokes the grant) do we bounce back to Google ONCE with
+      // prompt=consent to capture a fresh offline grant.
+      const connection = await getGoogleConnection(uid);
+      if (!connection) {
+        const retryState = signLoginStateToken({
+          returnTo: input.loginState.returnTo,
+          timezone: input.loginState.timezone,
+          survey: input.loginState.survey,
+          retry: { uid, isNewUser: !existingUser },
+        });
+
+        res.redirect(
+          oauthClient.generateAuthUrl({
+            access_type: "offline",
+            prompt: "consent",
+            scope: GOOGLE_LOGIN_OAUTH_SCOPES,
+            state: retryState,
+          }),
+        );
+        return;
+      }
     }
 
-    const oneTimeCode = await createGoogleLoginCode({
-      uid: user.id,
-      isNewUser: !existingUser,
-    });
-
-    const returnTo = encodeURIComponent(input.loginState.returnTo);
-    res.redirect(
-      `${base}/auth/google/callback?code=${encodeURIComponent(oneTimeCode)}&returnTo=${returnTo}`,
-    );
+    // On the retry pass the Firestore user was already created by the first
+    // pass — trust the isNewUser flag from that pass so brand-new signups
+    // still route into onboarding.
+    const isNewUser = input.loginState.retry?.isNewUser ?? !existingUser;
+    await issueGoogleLoginRedirect(res, user, isNewUser, input.loginState.returnTo);
   } catch (err) {
     console.error("completeGoogleLogin error:", err);
     loginFail("server_error");
   }
+}
+
+/**
+ * Complete the sign-in for an identity verified on a previous pass (the uid
+ * comes from our own signed retry state, not from Google), used when the
+ * consent retry is declined. Calendar simply stays unconnected.
+ */
+async function finishGoogleLoginForUid(
+  res: Response,
+  uid: string,
+  loginState: LoginStatePayload,
+): Promise<void> {
+  const user = await getUserFromFirestore(uid).catch(() => null);
+  if (!user) {
+    res.redirect(
+      `${frontendUrl()}/auth/google/callback?error=${encodeURIComponent("server_error")}`,
+    );
+    return;
+  }
+  await issueGoogleLoginRedirect(
+    res,
+    user,
+    loginState.retry?.isNewUser ?? false,
+    loginState.returnTo,
+  );
+}
+
+/** Mint the one-time login code and redirect to the frontend callback. */
+async function issueGoogleLoginRedirect(
+  res: Response,
+  user: { id: string },
+  isNewUser: boolean,
+  returnTo: string | null,
+): Promise<void> {
+  const oneTimeCode = await createGoogleLoginCode({ uid: user.id, isNewUser });
+  const returnParam = returnTo
+    ? `&returnTo=${encodeURIComponent(returnTo)}`
+    : "";
+  res.redirect(
+    `${frontendUrl()}/auth/google/callback?code=${encodeURIComponent(oneTimeCode)}${returnParam}`,
+  );
 }
 
 /**

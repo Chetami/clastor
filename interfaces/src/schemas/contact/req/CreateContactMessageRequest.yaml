@@ -1,0 +1,37 @@
+type: object
+required:
+  - name
+  - email
+  - topic
+  - message
+properties:
+  name:
+    type: string
+    minLength: 1
+    maxLength: 100
+    description: The submitter's display name.
+    example: Maya Reynolds
+  email:
+    type: string
+    format: email
+    maxLength: 254
+    description: The submitter's reply-to email address.
+    example: maya@example.com
+  topic:
+    type: string
+    enum:
+      - General question
+      - Sales & plans
+      - Support / billing
+      - Partnerships & teams
+      - Press
+    description: The contact topic selected on the website form.
+    example: Sales & plans
+  message:
+    type: string
+    minLength: 10
+    maxLength: 4000
+    description: The message body.
+description: |-
+  Request body for the public website contact form.
+  Sent to backend POST /api/contact, which forwards it to a Discord webhook.

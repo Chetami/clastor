@@ -90,3 +90,26 @@ export const generateMeetLinkSchema = z.object({
   startDateTime: schemaUtils.isoDateTime.optional(),
   durationMinutes: z.number().int().min(1).optional(),
 });
+
+/** Body validation for POST /api/contact (public website contact form). */
+export const createContactMessageSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, "Name is required")
+    .max(100, "Name must be 100 characters or less"),
+  email: z.string().trim().email("A valid email is required").max(254),
+  topic: z.enum([
+    "General question",
+    "Sales & plans",
+    "Support / billing",
+    "Partnerships & teams",
+    "Press",
+  ]),
+  // Discord embed descriptions cap at 4096 chars — keep headroom for wrapping.
+  message: z
+    .string()
+    .trim()
+    .min(10, "Message must be at least 10 characters")
+    .max(4000, "Message must be 4000 characters or less"),
+});

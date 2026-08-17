@@ -262,3 +262,8 @@ components:
       $ref: './schemas/emails/res/SentEmailListResponse.yaml'
     EmailPreviewResponse:
       $ref: './schemas/emails/res/EmailPreviewResponse.yaml'
+    # Contact (public website form) Schemas
+    CreateContactMessageRequest:
+      $ref: './schemas/contact/req/CreateContactMessageRequest.yaml'
+    CreateContactMessageResponse:
+      $ref: './schemas/contact/res/CreateContactMessageResponse.yaml'

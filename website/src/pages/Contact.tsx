@@ -1,14 +1,14 @@
 import { useState } from "react";
-import { Mail, Clock, MessageSquare, ArrowRight, Check } from "lucide-react";
+import { Mail, Clock, MessageSquare, ArrowRight, Check, CheckCircle, AlertCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
 /**
  * Contact page.
  *
- * The form is presentational only — it does not submit anywhere yet. The real
- * contact channel is the email address below. Wire the submit handler up to a
- * backend / form service when ready.
+ * The form POSTs to the public backend endpoint POST /api/contact, which
+ * forwards the submission to the team's Discord channel via webhook. The
+ * fallback contact channel is the email address below.
  */
 
 const TOPICS = [
@@ -21,13 +21,74 @@ const TOPICS = [
 
 const CONTACT_EMAIL = "info@xamify.com.au";
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
+
 const FIELD =
   "w-full rounded-2xl border-[2.5px] border-foreground bg-card px-4 py-3 text-base text-foreground placeholder:text-muted-foreground/70 transition-colors focus:outline-none focus-visible:ring-4 focus-visible:ring-brand/30";
 
 const LABEL = "mb-1.5 block font-mono text-[11px] uppercase tracking-[0.08em] text-muted-foreground";
 
+interface FormValues {
+  name: string;
+  email: string;
+  message: string;
+}
+
+const EMPTY_FORM: FormValues = { name: "", email: "", message: "" };
+
 export default function ContactPage() {
   const [topic, setTopic] = useState<(typeof TOPICS)[number]>(TOPICS[0]);
+  const [form, setForm] = useState<FormValues>(EMPTY_FORM);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [status, setStatus] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
+
+  const set = (key: keyof FormValues) => (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+  ) => setForm((f) => ({ ...f, [key]: e.target.value }));
+
+  const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setStatus(null);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/contact`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...form, topic }),
+      });
+
+      if (response.ok) {
+        setStatus({
+          type: "success",
+          message:
+            "Thank you — your message is with the team. We'll get back to you within one business day.",
+        });
+        setForm(EMPTY_FORM);
+      } else {
+        const error = (await response.json().catch(() => null)) as
+          | { message?: string }
+          | null;
+        setStatus({
+          type: "error",
+          message:
+            error?.message ||
+            "Something went wrong sending your message. Please try again or email us directly.",
+        });
+      }
+    } catch {
+      setStatus({
+        type: "error",
+        message:
+          "Couldn't reach the server. Please try again or email us directly.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <section className="px-5 pb-24 pt-32 sm:px-6 sm:pb-28 sm:pt-36 lg:px-8">
@@ -98,7 +159,7 @@ export default function ContactPage() {
 
           {/* Form column */}
           <form
-            onSubmit={(e) => e.preventDefault()}
+            onSubmit={onSubmit}
             className="doodle-card flex flex-col gap-5 rounded-3xl p-7 shadow-sketch-lg sm:p-8"
           >
             <div className="flex items-center gap-2.5">
@@ -118,8 +179,12 @@ export default function ContactPage() {
                   name="name"
                   type="text"
                   required
+                  minLength={2}
+                  maxLength={100}
                   autoComplete="name"
                   placeholder="Maya Reynolds"
+                  value={form.name}
+                  onChange={set("name")}
                   className={FIELD}
                 />
               </div>
@@ -132,8 +197,11 @@ export default function ContactPage() {
                   name="email"
                   type="email"
                   required
+                  maxLength={254}
                   autoComplete="email"
                   placeholder="you@example.com"
+                  value={form.email}
+                  onChange={set("email")}
                   className={FIELD}
                 />
               </div>
@@ -168,11 +236,33 @@ export default function ContactPage() {
                 id="message"
                 name="message"
                 required
+                minLength={10}
+                maxLength={4000}
                 rows={6}
                 placeholder="Tell us what you're trying to do…"
+                value={form.message}
+                onChange={set("message")}
                 className={`${FIELD} min-h-[160px] resize-y`}
               />
             </div>
+
+            {status && (
+              <div
+                role="status"
+                className={`flex items-start gap-3 rounded-2xl border-[2.5px] px-4 py-3 text-sm font-medium ${
+                  status.type === "success"
+                    ? "border-[hsl(143_54%_28%)] bg-[hsl(143_54%_95%)] text-[hsl(143_54%_22%)]"
+                    : "border-red-700 bg-red-50 text-red-700"
+                }`}
+              >
+                {status.type === "success" ? (
+                  <CheckCircle className="mt-0.5 h-4 w-4 shrink-0" strokeWidth={2.5} />
+                ) : (
+                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" strokeWidth={2.5} />
+                )}
+                <span>{status.message}</span>
+              </div>
+            )}
 
             <div className="flex flex-wrap items-center justify-between gap-4 border-t-2 border-dashed border-border pt-5">
               <p className="max-w-[34ch] text-sm text-muted-foreground">
@@ -185,8 +275,13 @@ export default function ContactPage() {
                 </a>
                 .
               </p>
-              <Button type="submit" variant="brand" size="lg">
-                Send message
+              <Button
+                type="submit"
+                variant="brand"
+                size="lg"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? "Sending…" : "Send message"}
                 <ArrowRight className="h-4 w-4" />
               </Button>
             </div>

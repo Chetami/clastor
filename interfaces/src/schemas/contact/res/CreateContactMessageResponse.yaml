@@ -1,0 +1,11 @@
+type: object
+required:
+  - delivered
+properties:
+  delivered:
+    type: boolean
+    description: True when the message was accepted for delivery to Discord.
+    example: true
+description: |-
+  Contact form response body.
+  Returned from backend POST /api/contact.

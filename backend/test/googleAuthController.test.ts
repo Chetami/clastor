@@ -228,15 +228,17 @@ describe("startGoogleLogin", () => {
     expect(res.redirectedTo).toMatch(/^https:\/\/accounts\.google\.com\//);
   });
 
-  it("requests offline access WITHOUT forcing the consent interstitial", () => {
+  it("asks for consent only on first authorization (Calendly-style)", () => {
     const res = mockRes();
     startGoogleLogin(mockReq(), res);
 
     const url = new URL(res.redirectedTo!);
     // access_type=offline → Google issues a refresh token for Calendar sync.
     expect(url.searchParams.get("access_type")).toBe("offline");
-    // select_account (not "consent") → returning users skip the full consent
-    // page; this is what keeps the merged flow to a single Google screen.
+    // select_account, NOT consent → Google shows the consent screen only on
+    // a user's first authorization and stays silent for every later sign-in;
+    // the missing-grant gap is patched by the one-time consent retry in the
+    // callback (see the retry tests below).
     expect(url.searchParams.get("prompt")).toBe("select_account");
   });
 
@@ -276,6 +278,18 @@ describe("startGoogleLogin", () => {
 
     const state = new URL(res.redirectedTo!).searchParams.get("state")!;
     expect(verifyLoginStateToken(state)!.returnTo).toBe("/settings");
+  });
+
+  it("omits returnTo entirely when none was passed", () => {
+    // No /dashboard default: the frontend callback page owns post-login
+    // routing (onboarding for incomplete tutors, dashboard otherwise).
+    // Injecting one here would skip onboarding for brand-new users signing
+    // in via the login page's Google button.
+    const res = mockRes();
+    startGoogleLogin(mockReq(), res);
+
+    const state = new URL(res.redirectedTo!).searchParams.get("state")!;
+    expect(verifyLoginStateToken(state)!.returnTo).toBeNull();
   });
 
   it("redirects to the frontend error page when OAuth isn't configured", () => {
@@ -426,11 +440,16 @@ describe("googleAuthCallback (login mode)", () => {
     });
   });
 
-  it("still signs in when Google omits a refresh token (prior grant)", async () => {
-    // A user who authorized this client before (e.g. via the old popup flow)
-    // gets no refresh_token back — login must succeed, just without the
-    // Calendar connection (they can force one from Settings).
+  it("still signs in when Google omits a refresh token but a connection exists", async () => {
+    // Returning user: Google skips consent (no refresh token), but the tutor
+    // connected before and the stored grant is intact — login stays silent,
+    // the connection is left untouched, and no consent retry is triggered.
     mockGoogleTokens({ refresh_token: undefined });
+    userService.getGoogleConnection.mockResolvedValue({
+      refreshToken: "stored-rt",
+      googleEmail: "tutor@example.com",
+      connectedAt: new Date(),
+    });
 
     const res = mockRes();
     await googleAuthCallback(mockReq(loginStateQuery()), res);
@@ -438,6 +457,142 @@ describe("googleAuthCallback (login mode)", () => {
     expect(res.redirectedTo).toContain("code=otc-1");
     expect(userService.setGoogleConnection).not.toHaveBeenCalled();
     expect(calendar.backfillUpcomingLessons).not.toHaveBeenCalled();
+  });
+
+  it("bounces back to Google ONCE for consent when a prior grant yields no refresh token", async () => {
+    // The broken case: Google skips the consent screen because the account
+    // granted this client before (old popup flow, disconnected Settings
+    // grant), so no refresh token comes back and nothing is stored. The fix:
+    // a single automatic prompt=consent pass, with the verified identity
+    // carried in the signed retry state.
+    mockGoogleTokens({ refresh_token: undefined });
+    userService.getGoogleConnection.mockResolvedValue(null);
+
+    const res = mockRes();
+    await googleAuthCallback(mockReq(loginStateQuery()), res);
+
+    expect(res.statusCode).toBe(302);
+    expect(res.redirectedTo).toMatch(/^https:\/\/accounts\.google\.com\//);
+    const url = new URL(res.redirectedTo!);
+    expect(url.searchParams.get("prompt")).toBe("consent");
+    expect(url.searchParams.get("access_type")).toBe("offline");
+
+    const state = verifyLoginStateToken(url.searchParams.get("state")!);
+    expect(state).not.toBeNull();
+    expect(state!.retry).toEqual({ uid: "uid-1", isNewUser: false });
+
+    // Nothing connected or issued yet — the retry pass finishes the login.
+    expect(userService.setGoogleConnection).not.toHaveBeenCalled();
+    expect(loginCodes.createGoogleLoginCode).not.toHaveBeenCalled();
+  });
+
+  it("connects Calendar and finishes signup after the consent retry grants a token", async () => {
+    mockGoogleTokens();
+
+    const res = mockRes();
+    await googleAuthCallback(
+      mockReq(
+        loginStateQuery({
+          state: signLoginStateToken({
+            returnTo: "/dashboard",
+            timezone: "Australia/Sydney",
+            survey: null,
+            retry: { uid: "uid-1", isNewUser: true },
+          }),
+        }),
+      ),
+      res,
+    );
+
+    expect(res.redirectedTo).toContain("code=otc-1");
+    expect(userService.setGoogleConnection).toHaveBeenCalledWith("uid-1", {
+      refreshToken: "google-refresh-token",
+      googleEmail: "tutor@example.com",
+    });
+    expect(calendar.backfillUpcomingLessons).toHaveBeenCalledWith("uid-1");
+    // The Firestore user was created by the first pass — the retry state's
+    // isNewUser=true still routes the signup into onboarding.
+    expect(loginCodes.createGoogleLoginCode).toHaveBeenCalledWith({
+      uid: "uid-1",
+      isNewUser: true,
+    });
+  });
+
+  it("still signs in when the consent retry is declined", async () => {
+    // Calendar is optional: identity was verified on the first pass (uid in
+    // the signed retry state), so declining consent completes the login
+    // without the Calendar connection.
+    const res = mockRes();
+    await googleAuthCallback(
+      mockReq(
+        loginStateQuery({
+          code: undefined,
+          error: "access_denied",
+          state: signLoginStateToken({
+            returnTo: "/dashboard",
+            timezone: null,
+            survey: null,
+            retry: { uid: "uid-1", isNewUser: true },
+          }),
+        }),
+      ),
+      res,
+    );
+
+    expect(res.redirectedTo).toContain("code=otc-1");
+    expect(userService.setGoogleConnection).not.toHaveBeenCalled();
+    expect(oauthClient.getToken).not.toHaveBeenCalled();
+    expect(loginCodes.createGoogleLoginCode).toHaveBeenCalledWith({
+      uid: "uid-1",
+      isNewUser: true,
+    });
+  });
+
+  it("never loops: a retry that still yields no refresh token just signs in", async () => {
+    mockGoogleTokens({ refresh_token: undefined });
+    userService.getGoogleConnection.mockResolvedValue(null);
+
+    const res = mockRes();
+    await googleAuthCallback(
+      mockReq(
+        loginStateQuery({
+          state: signLoginStateToken({
+            returnTo: "/dashboard",
+            timezone: null,
+            survey: null,
+            retry: { uid: "uid-1", isNewUser: false },
+          }),
+        }),
+      ),
+      res,
+    );
+
+    expect(res.redirectedTo).toContain("code=otc-1");
+    expect(res.redirectedTo).not.toMatch(/accounts\.google\.com/);
+    expect(userService.setGoogleConnection).not.toHaveBeenCalled();
+  });
+
+  it("omits returnTo in the redirect when the state carried none", async () => {
+    // Login-page entry: no explicit landing path, so the frontend's
+    // onboarding-aware fallback must get its turn (asserted on the frontend
+    // side; here we verify the URL simply has no returnTo param).
+    mockGoogleTokens();
+
+    const res = mockRes();
+    await googleAuthCallback(
+      mockReq({
+        code: "google-auth-code",
+        state: signLoginStateToken({
+          returnTo: null,
+          timezone: null,
+          survey: null,
+        }),
+      }),
+      res,
+    );
+
+    expect(res.redirectedTo).toContain("code=otc-1");
+    expect(res.redirectedTo).not.toContain("returnTo=");
   });
 
   it("redirects with error=denied when the user rejects consent", async () => {

@@ -173,14 +173,26 @@ export function verifyStateToken(
  * must survive the round-trip through Google. The `m: "login"` marker keeps
  * login states from ever being accepted by the connect-flow verifier (and
  * vice versa: {@link verifyStateToken} requires a uid these tokens lack).
+ *
+ * `retry` is set only on the one-time consent-retry pass: when Google skips
+ * the consent screen (prior grant) and returns no refresh token, the verified
+ * identity (uid + whether this is a brand-new signup) rides in the signed
+ * state so a declined retry can still complete the sign-in.
  */
 export function signLoginStateToken(data: {
-  returnTo: string;
+  returnTo: string | null;
   timezone: string | null;
   survey: unknown;
+  retry?: { uid: string; isNewUser: boolean } | null;
 }): string {
   return jwt.sign(
-    { m: "login", r: data.returnTo, tz: data.timezone ?? undefined, sv: data.survey ?? undefined },
+    {
+      m: "login",
+      r: data.returnTo ?? undefined,
+      tz: data.timezone ?? undefined,
+      sv: data.survey ?? undefined,
+      rt: data.retry ?? undefined,
+    },
     JWT_SECRET,
     { expiresIn: "10m" },
   );
@@ -188,15 +200,19 @@ export function signLoginStateToken(data: {
 
 /** Payload returned by {@link verifyLoginStateToken}. */
 export interface LoginStatePayload {
-  returnTo: string;
+  returnTo: string | null;
   timezone: string | null;
   survey: unknown;
+  /** Present only on the consent-retry pass; null otherwise. */
+  retry: { uid: string; isNewUser: boolean } | null;
 }
 
 /**
  * Verify a login-mode state token, or null when invalid/expired/not a
  * login-mode token. The survey is returned raw — callers normalize it via
- * `normalizeSignupSurvey` before use.
+ * `normalizeSignupSurvey` before use. `returnTo` is null when the caller
+ * supplied no explicit landing path; the post-login destination is then the
+ * frontend's onboarding-aware decision, not ours.
  */
 export function verifyLoginStateToken(
   token: string | undefined,
@@ -208,12 +224,19 @@ export function verifyLoginStateToken(
       r?: string;
       tz?: string;
       sv?: unknown;
+      rt?: { uid?: unknown; isNewUser?: unknown };
     };
-    if (decoded.m !== "login" || typeof decoded.r !== "string") return null;
+    if (decoded.m !== "login") return null;
     return {
-      returnTo: decoded.r,
+      returnTo: typeof decoded.r === "string" ? decoded.r : null,
       timezone: typeof decoded.tz === "string" ? decoded.tz : null,
       survey: decoded.sv ?? null,
+      retry:
+        decoded.rt &&
+        typeof decoded.rt.uid === "string" &&
+        typeof decoded.rt.isNewUser === "boolean"
+          ? { uid: decoded.rt.uid, isNewUser: decoded.rt.isNewUser }
+          : null,
     };
   } catch {
     return null;

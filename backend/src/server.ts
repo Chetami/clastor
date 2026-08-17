@@ -15,6 +15,7 @@ import feedbackRoutes from "./routes/feedbackRoutes";
 import adminRoutes from "./routes/adminRoutes";
 import templateRoutes from "./routes/templateRoutes";
 import sentEmailRoutes from "./routes/sentEmailRoutes";
+import contactRoutes from "./routes/contactRoutes";
 import { authenticateJWT, requireSystemAdmin } from "./middleware/auth";
 import { globalApiLimiter } from "./middleware/rateLimit";
 import { initializeFirebase } from "./config/firebase";
@@ -79,6 +80,8 @@ app.use("/api/calendar", calendarRoutes);
 app.use("/api/feedback", feedbackRoutes);
 app.use("/api/templates", templateRoutes);
 app.use("/api/sent-emails", sentEmailRoutes);
+// Public website contact form (forwards to the team Discord channel).
+app.use("/api/contact", contactRoutes);
 // Admin-only API surface. Both gates are applied here so every route under
 // /api/admin is authenticated and restricted to system_admin by default.
 app.use("/api/admin", authenticateJWT, requireSystemAdmin, adminRoutes);

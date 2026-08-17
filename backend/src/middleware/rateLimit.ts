@@ -1,5 +1,5 @@
 import { RequestHandler } from "express";
-import { rateLimit } from "express-rate-limit";
+import { rateLimit, ipKeyGenerator } from "express-rate-limit";
 
 /**
  * Tiered rate limiting for the API.
@@ -110,7 +110,11 @@ export const forgotPasswordLimiter = jsonLimiter({
 /**
  * POST /api/auth/resend-verification — authenticated, so keyed by uid
  * (mounted AFTER authenticateJWT): one user spamming SMTP can't exhaust the
- * bucket for anyone else.
+ * bucket for anyone else. Unauthenticated requests (shouldn't happen — the
+ * route sits behind authenticateJWT) fall back to the ipKeyGenerator helper,
+ * which normalizes IPv6 addresses into subnets so /64-rotating clients can't
+ * sidestep the cap (required by express-rate-limit's ERR_ERL_KEY_GEN_IPV6
+ * validation for any keyGenerator touching req.ip).
  */
 export const resendVerificationLimiter = jsonLimiter({
   windowMs: FIFTEEN_MIN,
@@ -118,7 +122,8 @@ export const resendVerificationLimiter = jsonLimiter({
   message: "Too many verification-email requests. Please wait a few minutes and try again.",
   keyGenerator: (req) => {
     const uid = (req.user as { uid?: string } | undefined)?.uid;
-    return typeof uid === "string" && uid ? uid : (req.ip ?? "unknown-client");
+    if (typeof uid === "string" && uid) return uid;
+    return req.ip ? ipKeyGenerator(req.ip) : "unknown-client";
   },
 });
 
@@ -127,6 +132,16 @@ export const waitlistLimiter = jsonLimiter({
   windowMs: FIFTEEN_MIN,
   limit: 5,
   message: "Too many requests. Please try again later.",
+});
+
+/**
+ * POST /api/contact — public, and every accepted hit fires a Discord webhook
+ * call, so keep the cap as tight as the waitlist one.
+ */
+export const contactLimiter = jsonLimiter({
+  windowMs: FIFTEEN_MIN,
+  limit: 5,
+  message: "Too many messages sent. Please try again later.",
 });
 
 /**
