@@ -10,6 +10,8 @@ import {
   verifyRefreshToken,
   signStateToken,
   verifyStateToken,
+  signLoginStateToken,
+  verifyLoginStateToken,
   signRsvpToken,
   verifyRsvpToken,
 } from "../src/utils/jwt";
@@ -136,6 +138,73 @@ describe("jwt utils", () => {
     it("returns null for undefined / garbage", () => {
       expect(verifyStateToken(undefined)).toBeNull();
       expect(verifyStateToken("garbage")).toBeNull();
+    });
+  });
+
+  describe("login state tokens (public Google login redirect)", () => {
+    const survey = { intent: "independent_tutor", currentTools: ["paper"] };
+
+    it("round-trips returnTo, timezone and survey", () => {
+      const token = signLoginStateToken({
+        returnTo: "/onboarding",
+        timezone: "Australia/Sydney",
+        survey,
+      });
+      const decoded = verifyLoginStateToken(token);
+      expect(decoded).not.toBeNull();
+      expect(decoded!.returnTo).toBe("/onboarding");
+      expect(decoded!.timezone).toBe("Australia/Sydney");
+      expect(decoded!.survey).toEqual(survey);
+    });
+
+    it("collapses absent timezone/survey to null", () => {
+      const decoded = verifyLoginStateToken(
+        signLoginStateToken({ returnTo: "/dashboard", timezone: null, survey: null }),
+      );
+      expect(decoded!.timezone).toBeNull();
+      expect(decoded!.survey).toBeNull();
+    });
+
+    it("returns null for undefined / garbage", () => {
+      expect(verifyLoginStateToken(undefined)).toBeNull();
+      expect(verifyLoginStateToken("garbage")).toBeNull();
+    });
+
+    it("rejects a token signed with the wrong secret", () => {
+      const forged = jwt.sign(
+        { m: "login", r: "/dashboard" },
+        "wrong-secret",
+      );
+      expect(verifyLoginStateToken(forged)).toBeNull();
+    });
+
+    it("rejects an expired token", () => {
+      const expired = jwt.sign(
+        { m: "login", r: "/dashboard" },
+        process.env.JWT_SECRET!,
+        { expiresIn: -60 },
+      );
+      expect(verifyLoginStateToken(expired)).toBeNull();
+    });
+
+    it("is NOT accepted by the connect-flow verifier (mode confusion)", () => {
+      // A login state must never be replayed as an authenticated connect
+      // state — it carries no uid, so it would be rejected anyway, but the
+      // guard must hold even if someone adds uid-less connect usage later.
+      const loginState = signLoginStateToken({
+        returnTo: "/dashboard",
+        timezone: null,
+        survey: null,
+      });
+      expect(verifyStateToken(loginState)).toBeNull();
+    });
+
+    it("a connect state is NOT accepted by the login-flow verifier", () => {
+      // Connect states carry a uid but no m:"login" marker — the login
+      // branch of the callback must ignore them (they fall through to the
+      // authenticated connect handler).
+      const connectState = signStateToken(UID, "/settings");
+      expect(verifyLoginStateToken(connectState)).toBeNull();
     });
   });
 
