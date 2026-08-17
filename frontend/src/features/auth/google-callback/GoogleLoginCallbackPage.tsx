@@ -53,7 +53,11 @@ export default function GoogleLoginCallbackPage() {
   });
 
   // The one-time code is single-use: guard against React StrictMode's
-  // double-invoked effects in dev (and any re-mount) burning it twice.
+  // double-invoked effects in dev (and any re-mount) burning it twice. The
+  // ref alone is the guard — there is deliberately NO "cancelled" cleanup:
+  // StrictMode's simulated unmount would set it after the exchange started,
+  // and the remount is skipped by this ref, so gating completion on it would
+  // strand the page on the spinner forever.
   const exchanged = useRef(false);
 
   useEffect(() => {
@@ -61,12 +65,9 @@ export default function GoogleLoginCallbackPage() {
     if (!code || exchanged.current) return;
     exchanged.current = true;
 
-    let cancelled = false;
-
     (async () => {
       try {
         const data = await exchangeGoogleLoginCode(code);
-        if (cancelled) return;
 
         queryClient.clear();
         setAuth(data.user, data.jwtToken, data.refreshToken);
@@ -82,17 +83,11 @@ export default function GoogleLoginCallbackPage() {
           { replace: true },
         );
       } catch {
-        if (!cancelled) {
-          setError(
-            "Your sign-in code expired or was already used. Please sign in again.",
-          );
-        }
+        setError(
+          "Your sign-in code expired or was already used. Please sign in again.",
+        );
       }
     })();
-
-    return () => {
-      cancelled = true;
-    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

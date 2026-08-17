@@ -49,7 +49,10 @@ export async function createGoogleLoginCode(
     .set({
       uid: data.uid,
       isNewUser: data.isNewUser === true,
-      expiresAt: new Date(Date.now() + CODE_TTL_MS),
+      // Stored as epoch millis, NOT a Date: Firestore returns Dates as
+      // Timestamp objects on read (no .getTime()), which would break the
+      // comparison below. Numbers round-trip exactly.
+      expiresAtMs: Date.now() + CODE_TTL_MS,
       createdAt: new Date(),
     });
   return code;
@@ -69,14 +72,14 @@ export async function consumeGoogleLoginCode(
   return firestore.runTransaction(async (tx) => {
     const snap = await tx.get(ref);
     const data = snap.data() as
-      | { uid?: string; isNewUser?: boolean; expiresAt?: Date }
+      | { uid?: string; isNewUser?: boolean; expiresAtMs?: number }
       | undefined;
 
     const expired =
       !data ||
       !data.uid ||
-      !data.expiresAt ||
-      data.expiresAt.getTime() < Date.now();
+      typeof data.expiresAtMs !== "number" ||
+      data.expiresAtMs < Date.now();
 
     if (!snap.exists || expired) {
       // Best-effort cleanup of an expired doc so the collection self-prunes.
