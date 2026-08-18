@@ -16,6 +16,48 @@ export const STEPS = [
 export type StepKey = (typeof STEPS)[number]["key"];
 export const STEP_KEYS: readonly StepKey[] = STEPS.map((s) => s.key);
 
+/**
+ * Steps that represent real setup work. "welcome" and "finish" are
+ * ceremonial, so the progress indicator counts only these — otherwise the
+ * bar starts at "Step 1 of 6" before the tutor has done anything.
+ */
+export const WORKING_STEP_KEYS: readonly StepKey[] = [
+  "subjects",
+  "student",
+  "lesson",
+  "google",
+];
+
+export type StepProgress = {
+  /** "Step k of n" counter; null on ceremonial steps. */
+  label: string | null;
+  /** Progress bar value, 0–100. */
+  value: number;
+};
+
+/**
+ * Resolve the "Step k of n" label and progress-bar value for the active
+ * step, counting only working steps. Welcome reads as an untouched bar,
+ * finish as a full one — regardless of whether the calendar step was
+ * filtered out.
+ */
+export function resolveStepProgress(
+  key: StepKey,
+  steps: readonly StepKey[],
+): StepProgress {
+  const working = steps.filter((k) => WORKING_STEP_KEYS.includes(k));
+  const i = working.indexOf(key);
+  if (i === -1) {
+    return key === "finish"
+      ? { label: null, value: 100 }
+      : { label: null, value: 0 };
+  }
+  return {
+    label: `Step ${i + 1} of ${working.length}`,
+    value: ((i + 1) / working.length) * 100,
+  };
+}
+
 export const STEP_STORAGE_KEY = "onboardingStep";
 
 export function readStoredStep(): StepKey {

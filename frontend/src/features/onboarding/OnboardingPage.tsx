@@ -28,6 +28,7 @@ import {
   readStoredStep,
   resolveStepIndex,
   resolveInitialStep,
+  resolveStepProgress,
   type StepKey,
 } from "./onboarding-steps";
 import { WelcomeStep } from "./steps/WelcomeStep";
@@ -114,7 +115,9 @@ export default function OnboardingPage() {
 
   const isFirst = stepIndex === 0;
   const isLast = stepIndex === steps.length - 1;
-  const progressValue = ((stepIndex + 1) / steps.length) * 100;
+  // Count only working steps: welcome reads as an empty bar, finish as a
+  // full one, and "Step k of n" reflects real setup work either way.
+  const progress = resolveStepProgress(activeKey, steps);
 
   // The "Add student" / "Book lesson" actions live in the footer and are
   // driven by each step via an imperative handle. Each step reports its phase
@@ -209,17 +212,17 @@ export default function OnboardingPage() {
       <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 p-4 lg:p-6">
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>
-              Step {stepIndex + 1} of {steps.length}
-            </span>
+            <span>{progress.label ?? ""}</span>
             <span>{STEPS.find((s) => s.key === activeKey)?.label}</span>
           </div>
-          <Progress value={progressValue} />
+          <Progress value={progress.value} />
         </div>
 
         <Card>
           <CardContent className="p-6">
-            {activeKey === "welcome" && <WelcomeStep />}
+            {activeKey === "welcome" && (
+              <WelcomeStep googleConnected={googleConnected} />
+            )}
             {activeKey === "subjects" && <SubjectsStep />}
             {activeKey === "student" && (
               <AddStudentStep

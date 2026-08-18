@@ -1,15 +1,16 @@
 import { useEffect } from "react";
-import { Check, Mail } from "lucide-react";
+import { Check } from "lucide-react";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
 import { fireConfettiCannons } from "@/lib/confetti";
-import { FOUNDERS } from "../founders";
+import { FoundersContactCard } from "../components/FoundersContactCard";
 
 /**
- * Final step. Celebrates completion and reinforces the personal touch with a
- * second founders contact point. The wizard's "Finish" button (owned by the
- * page) marks onboarding complete and sends them to the dashboard.
+ * Final step. Celebrates completion and reinforces the personal touch with
+ * the founders contact card — the payoff of the one-line mention on the
+ * welcome step. Copy stays generic about what was set up so it holds true
+ * for tutors who connected Google during signup or arrived with existing
+ * data. The wizard's "Finish" button (owned by the page) marks onboarding
+ * complete and sends them to the dashboard.
  */
 const CONFETTI_KEY = "onboardingConfettiFired";
 
@@ -33,9 +34,8 @@ export function FinishStep() {
           You're all set!
         </h2>
         <p className="mx-auto max-w-md text-sm text-muted-foreground">
-          And just like that, your first student is set up and your calendar is
-          ready. Your new tutoring home is completely tailored and waiting for
-          you.{" "}
+          Everything you set up is organised and waiting on your dashboard.
+          From here, Clastor grows with your tutoring.
         </p>
       </div>
 
@@ -55,43 +55,7 @@ export function FinishStep() {
         ))}
       </div>
 
-      <div className="w-full rounded-lg border bg-muted/30 p-5">
-        <p className="text-sm font-medium">Thanks for giving Clastor a go</p>
-        <p className="mx-auto mt-1 max-w-sm text-xs text-muted-foreground">
-          If anything feels confusing or you have an idea to share, message us
-          directly. We read and reply to every single message.{" "}
-        </p>
-
-        <div className="mt-4 flex flex-wrap items-center justify-center gap-4">
-          {FOUNDERS.map((founder) => (
-            <div
-              key={founder.name}
-              className="flex w-32 flex-col items-center gap-2"
-            >
-              <Avatar className="size-14 border">
-                <AvatarImage src={founder.photo} alt={founder.name} />
-                <AvatarFallback className="text-xs font-medium">
-                  {founder.initials}
-                </AvatarFallback>
-              </Avatar>
-              <span className="text-xs font-medium leading-tight">
-                {founder.name}
-              </span>
-              <Button
-                asChild
-                variant="outline"
-                size="sm"
-                className="w-full gap-1.5 text-xs"
-              >
-                <a href={founder.contactHref}>
-                  <Mail className="size-3.5 shrink-0" />
-                  {founder.contactLabel}
-                </a>
-              </Button>
-            </div>
-          ))}
-        </div>
-      </div>
+      <FoundersContactCard />
     </div>
   );
 }

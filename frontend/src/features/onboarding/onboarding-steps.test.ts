@@ -3,6 +3,7 @@ import {
   STEP_KEYS,
   resolveInitialStep,
   resolveStepIndex,
+  resolveStepProgress,
 } from "./onboarding-steps";
 
 const STEPS_WITHOUT_GOOGLE = STEP_KEYS.filter((k) => k !== "google");
@@ -59,5 +60,43 @@ describe("resolveStepIndex", () => {
 
   it("keeps a welcome resume at welcome even when google is filtered out", () => {
     expect(resolveStepIndex("welcome", STEPS_WITHOUT_GOOGLE)).toBe(0);
+  });
+});
+
+describe("resolveStepProgress", () => {
+  it("shows an untouched bar on welcome", () => {
+    expect(resolveStepProgress("welcome", STEP_KEYS)).toEqual({
+      label: null,
+      value: 0,
+    });
+  });
+
+  it("counts only working steps in the label and bar", () => {
+    expect(resolveStepProgress("subjects", STEP_KEYS)).toEqual({
+      label: "Step 1 of 4",
+      value: 25,
+    });
+    expect(resolveStepProgress("student", STEP_KEYS).label).toBe(
+      "Step 2 of 4",
+    );
+    expect(resolveStepProgress("google", STEP_KEYS)).toEqual({
+      label: "Step 4 of 4",
+      value: 100,
+    });
+  });
+
+  it("shows a full bar on finish", () => {
+    expect(resolveStepProgress("finish", STEP_KEYS)).toEqual({
+      label: null,
+      value: 100,
+    });
+  });
+
+  it("renumbers over the working steps when google is filtered out", () => {
+    expect(resolveStepProgress("lesson", STEPS_WITHOUT_GOOGLE)).toEqual({
+      label: "Step 3 of 3",
+      value: 100,
+    });
+    expect(resolveStepProgress("welcome", STEPS_WITHOUT_GOOGLE).value).toBe(0);
   });
 });

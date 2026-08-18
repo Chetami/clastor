@@ -22,7 +22,7 @@ export type Founder = {
  */
 export const FOUNDERS: Founder[] = [
   {
-    name: "Amritesh D",
+    name: "Amritesh",
     role: "Co-founder",
     photo: "/founders/amritesh.jpg",
     initials: "AD",
@@ -30,7 +30,7 @@ export const FOUNDERS: Founder[] = [
     contactLabel: "Email Amritesh",
   },
   {
-    name: "Chethin W",
+    name: "Chethin",
     role: "Co-founder",
     photo: "/founders/chethin.jpg",
     initials: "CW",

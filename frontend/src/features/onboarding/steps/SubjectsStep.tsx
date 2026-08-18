@@ -10,7 +10,6 @@ import { useUpdateSubjects } from "@/features/subjects/api/use-update-subjects";
 const SUGGESTIONS = [
   "Mathematics",
   "English",
-  "Science",
   "Physics",
   "Chemistry",
   "Biology",
