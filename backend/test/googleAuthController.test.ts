@@ -146,6 +146,7 @@ function fakeAuthUrl(opts: {
   scope: string[];
   access_type?: string;
   prompt?: string;
+  login_hint?: string;
   state: string;
 }): string {
   const params = new URLSearchParams({
@@ -154,6 +155,7 @@ function fakeAuthUrl(opts: {
   });
   if (opts.access_type) params.set("access_type", opts.access_type);
   if (opts.prompt) params.set("prompt", opts.prompt);
+  if (opts.login_hint) params.set("login_hint", opts.login_hint);
   return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
 }
 
@@ -476,6 +478,10 @@ describe("googleAuthCallback (login mode)", () => {
     const url = new URL(res.redirectedTo!);
     expect(url.searchParams.get("prompt")).toBe("consent");
     expect(url.searchParams.get("access_type")).toBe("offline");
+    // login_hint carries the email verified on the first pass so Google
+    // skips the account picker and shows ONLY the consent screen — the
+    // account must never be selected twice.
+    expect(url.searchParams.get("login_hint")).toBe("tutor@example.com");
 
     const state = verifyLoginStateToken(url.searchParams.get("state")!);
     expect(state).not.toBeNull();

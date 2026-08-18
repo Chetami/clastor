@@ -237,7 +237,8 @@ export async function googleAuthCallback(
  * Consent handling (Calendly-style "ask once"): when Google skips the consent
  * screen because of a prior grant, no refresh token comes back. If the tutor
  * also has no stored connection, they are bounced back to Google ONCE with
- * prompt=consent to capture the offline grant; the verified identity rides in
+ * prompt=consent + login_hint (the verified email) to capture the offline
+ * grant without re-showing the account picker; the verified identity rides in
  * the signed retry state so a declined retry still completes the sign-in
  * (Calendar stays unconnected, connectable later from Settings/onboarding).
  */
@@ -351,10 +352,15 @@ async function completeGoogleLogin(
           retry: { uid, isNewUser: !existingUser },
         });
 
+        // login_hint: the account was just picked on the first pass and its
+        // email verified via the ID token. Hinting it makes Google skip the
+        // account picker on this retry and show ONLY the consent screen —
+        // without it the user would choose their account a second time.
         res.redirect(
           oauthClient.generateAuthUrl({
             access_type: "offline",
             prompt: "consent",
+            login_hint: email,
             scope: GOOGLE_LOGIN_OAUTH_SCOPES,
             state: retryState,
           }),
