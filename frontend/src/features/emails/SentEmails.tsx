@@ -4,6 +4,7 @@ import {
   CalendarClock,
   ChevronsUpDown,
   FileText,
+  Loader2,
   Mail,
   Search,
 } from "lucide-react";
@@ -13,6 +14,7 @@ import type {
 } from "@examify-tms/interfaces";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SortIndicator } from "@/components/ui/sort-indicator";
@@ -31,7 +33,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useListSentEmails } from "./api";
+import { useListSentEmailsInfinite } from "./api";
 import { EmailViewerDialog } from "./EmailViewerDialog";
 import { SkeletonTabGroup, SkeletonTable } from "@/components/skeletons";
 import { useListStudents } from "@/features/students/api";
@@ -54,6 +56,9 @@ const TYPE_TABS: { value: TypeGroup; label: string }[] = [
   { value: "lesson", label: "Lessons" },
   { value: "invoice", label: "Invoices" },
 ];
+
+/** Emails fetched per page from the backend. */
+const PAGE_SIZE = 20;
 
 const TYPE_BADGE: Record<
   SentEmailType,
@@ -112,17 +117,28 @@ export default function SentEmails() {
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   const [selected, setSelected] = useState<SentEmailResponse | null>(null);
 
-  // Admins drill into a single tutor server-side (?tutorId=…); tutors are
-  // auto-scoped to their own emails by the backend.
-  const { data, isLoading, error } = useListSentEmails(
+  // Cursor-paginated list: each page reads only ~PAGE_SIZE emails on the
+  // backend; pages accumulate here as the user loads more. Admins drill into
+  // a single tutor server-side (?tutorId=…); tutors are auto-scoped to their
+  // own emails by the backend.
+  const infinite = useListSentEmailsInfinite(
     isAdmin && tutorFilter !== "all" ? { tutorId: tutorFilter } : {},
+    PAGE_SIZE,
   );
   const { data: students = [] } = useListStudents();
   const { data: tutors = [] } = useListAdminTutors({ enabled: isAdmin });
 
+  const isLoading = infinite.isLoading;
+  const isFetchingNextPage = infinite.isFetchingNextPage;
+  const hasNextPage = infinite.hasNextPage;
+  const error = infinite.error;
+
   // Memoize so the downstream useMemo deps stay referentially stable (the
   // `?? []` fallback would otherwise mint a fresh array each render).
-  const emails = useMemo(() => data?.data ?? [], [data]);
+  const emails = useMemo(
+    () => infinite.data?.pages.flatMap((p) => p.data) ?? [],
+    [infinite.data],
+  );
 
   // studentId -> name, for display + the student filter dropdown.
   const studentNameById = useMemo(() => {
@@ -446,6 +462,26 @@ export default function SentEmails() {
                     })}
                   </TableBody>
                 </Table>
+              </div>
+            )}
+
+            {hasNextPage && (
+              <div className="flex justify-center border-t pt-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={isFetchingNextPage}
+                  onClick={() => infinite.fetchNextPage()}
+                >
+                  {isFetchingNextPage ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Loading…
+                    </>
+                  ) : (
+                    "Load more"
+                  )}
+                </Button>
               </div>
             )}
 

@@ -5,6 +5,13 @@ description: |-
   supplied only system_admin users receive an unscoped list. The tutorId
   filter is honored for system_admin users only — tutors are always scoped
   to their own uid.
+
+  Two modes:
+    * Paginated (sent-emails page): pass `limit` and, for pages after the
+      first, the `cursor` from the previous response. The backend reads
+      only ~`limit` documents via a Firestore cursor query.
+    * Unpaginated (scoped history panels): omit `limit` to receive up to
+      the most recent 100 matching emails in one response.
 properties:
   lessonId:
     type: string
@@ -20,3 +27,18 @@ properties:
     description: >-
       Scope to emails sent by a specific tutor (system_admin only; ignored
       alongside the entity filters)
+  limit:
+    type: integer
+    minimum: 1
+    maximum: 100
+    description: >-
+      Page size. When provided the response is a single cursor-paginated
+      page (read-efficient: only ~`limit` documents are fetched). Omit to
+      return the most recent matching emails unpaginated.
+    example: 20
+  cursor:
+    type: string
+    description: >-
+      Opaque cursor returned as `nextCursor` by the previous page. Pass it
+      back to fetch the next page. Only used together with `limit`.
+    example: eyJ2IjoiMjAyNi0wNi0wM1Q...

@@ -6,6 +6,7 @@ import {
   SentEmailType,
   SentEmailStatus,
 } from "@examify-tms/interfaces";
+import { BadRequestError } from "../utils/AppError";
 
 /**
  * Sent-email log service.
@@ -195,4 +196,127 @@ export async function getSentEmailByIdFromFirestore(
     console.error("Failed to get sent email from Firestore:", error);
     throw new Error("Failed to get sent email");
   }
+}
+
+const DEFAULT_SENT_EMAIL_PAGE_SIZE = 20;
+
+export interface SentEmailPageQuery {
+  limit?: number;
+  cursor?: string;
+}
+
+export interface SentEmailPageResult {
+  data: SentEmail[];
+  nextCursor: string | null;
+  hasMore: boolean;
+  total: number;
+}
+
+interface SentEmailCursor {
+  v: string;
+  id: string;
+}
+
+const CURSOR_ENCODING = "base64url";
+
+function encodeSentEmailCursor(email: SentEmail): string {
+  const payload: SentEmailCursor = {
+    v: new Date(email.sentAt as any).toISOString(),
+    id: email.id,
+  };
+  return Buffer.from(JSON.stringify(payload), "utf8").toString(CURSOR_ENCODING);
+}
+
+function decodeSentEmailCursor(cursor: string): SentEmailCursor {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(Buffer.from(cursor, CURSOR_ENCODING).toString("utf8"));
+  } catch {
+    throw new BadRequestError("Invalid cursor");
+  }
+  if (
+    typeof parsed !== "object" ||
+    parsed === null ||
+    typeof (parsed as SentEmailCursor).v !== "string" ||
+    typeof (parsed as SentEmailCursor).id !== "string"
+  ) {
+    throw new BadRequestError("Invalid cursor");
+  }
+  const decoded = parsed as SentEmailCursor;
+  if (Number.isNaN(new Date(decoded.v).getTime())) {
+    throw new BadRequestError("Invalid cursor");
+  }
+  return decoded;
+}
+
+/**
+ * Cursor-paginated sent-email listing for the sent-emails page.
+ *
+ * Pushes the entity filter + limit + orderBy to Firestore so only ~limit
+ * documents are read per page (vs up to 500 in `listSentEmailsFromFirestore`).
+ * Always newest-first by sentAt, tie-broken by document id.
+ *
+ * `total` comes from a count() aggregation over the same filter (1 read per
+ * 1000 matched docs), so the UI can show "x of y" while loading pages.
+ */
+export async function listSentEmailsPageFromFirestore(
+  filter: SentEmailFilter = {},
+  query: SentEmailPageQuery = {}
+): Promise<SentEmailPageResult> {
+  const firestore = getFirebaseFirestore();
+  const limit = Math.max(
+    1,
+    Math.min(
+      100,
+      Math.floor(query.limit ?? DEFAULT_SENT_EMAIL_PAGE_SIZE)
+    )
+  );
+
+  let q: admin.firestore.Query = firestore.collection("sent_emails");
+  if (filter.lessonId) {
+    q = q.where("lessonId", "==", filter.lessonId);
+  } else if (filter.invoiceId) {
+    q = q.where("invoiceId", "==", filter.invoiceId);
+  } else if (filter.studentId) {
+    q = q.where("studentId", "==", filter.studentId);
+  } else if (filter.tutorId) {
+    q = q.where("tutorId", "==", filter.tutorId);
+  }
+
+  // Capture the base filtered query for the count aggregation — Firestore
+  // Query objects are immutable, so this snapshot is unaffected by the
+  // orderBy/startAfter/limit added below.
+  const countQuery = q;
+
+  q = q
+    .orderBy("sentAt", "desc")
+    .orderBy(admin.firestore.FieldPath.documentId(), "desc");
+
+  if (query.cursor) {
+    const cursor = decodeSentEmailCursor(query.cursor);
+    q = q.startAfter(
+      admin.firestore.Timestamp.fromDate(new Date(cursor.v)),
+      cursor.id
+    );
+  }
+
+  // Run the page fetch + total count in parallel.
+  const [snapshot, countSnapshot] = await Promise.all([
+    q.limit(limit + 1).get(),
+    countQuery.count().get(),
+  ]);
+  const docs = snapshot.docs;
+  const total = countSnapshot.data().count;
+
+  const hasMore = docs.length > limit;
+  const pageDocs = hasMore ? docs.slice(0, limit) : docs;
+  const emails = pageDocs.map((doc) => mapSentEmail(doc.id, doc.data()));
+
+  let nextCursor: string | null = null;
+  if (hasMore && pageDocs.length > 0) {
+    const last = pageDocs[pageDocs.length - 1];
+    nextCursor = encodeSentEmailCursor(mapSentEmail(last.id, last.data()));
+  }
+
+  return { data: emails, nextCursor, hasMore, total };
 }

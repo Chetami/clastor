@@ -54,10 +54,15 @@ coverage/
 
 # Deploy
 backend/.deploy-stage/
-# Per-environment secrets: ignore everything under deploy/environments/<env>/
-# but keep the committed <env>.psd1 definitions at the top level.
-deploy/environments/*/
+# Deployment scripts/infra config live in a private repo; only the stub
+# README in deploy/ is tracked.
+deploy/*
+!deploy/README.md
+deploy_backend.ps1
+deploy_frontend.ps1
+deploy_website.ps1
 frontend/.env.production
+website/.env.production
 
 # Expo (local dev cache; keep only the README)
 .expo/*

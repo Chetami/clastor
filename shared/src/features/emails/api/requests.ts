@@ -10,6 +10,10 @@ export interface ListSentEmailsParams {
   studentId?: string;
   /** System_admin-only server-side filter (tutors are auto-scoped). */
   tutorId?: string;
+  /** Page size. When present the response is a single cursor-paginated page. */
+  limit?: number;
+  /** Opaque cursor from the previous page's `nextCursor` (requires `limit`). */
+  cursor?: string;
 }
 
 export async function listSentEmailsRequest(

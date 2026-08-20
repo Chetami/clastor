@@ -42,5 +42,6 @@
     "tsx": "^4.16.0",
     "typescript": "^5.5.0",
     "vitest": "^2.1.0"
-  }
+  },
+  "license": "AGPL-3.0"
 }

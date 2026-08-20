@@ -6,6 +6,7 @@ import {
 } from "@examify-tms/interfaces";
 import {
   listSentEmailsFromFirestore,
+  listSentEmailsPageFromFirestore,
   getSentEmailByIdFromFirestore,
   toSentEmailResponse,
   SentEmailFilter,
@@ -18,6 +19,7 @@ import { canViewInvoice } from "../permissions/paymentPermissions";
 import { canViewStudent } from "../permissions/studentPermissions";
 import { isUserSysAdmin } from "../permissions/permissions";
 import { resolveTutorNames } from "../services/tutorResolver";
+import { AppError } from "../utils/AppError";
 
 /**
  * Sent-email log controller.
@@ -29,11 +31,17 @@ import { resolveTutorNames } from "../services/tutorResolver";
  */
 
 /**
- * GET /api/sent-emails?lessonId=|invoiceId=|studentId=|tutorId=
+ * GET /api/sent-emails?lessonId=|invoiceId=|studentId=|tutorId=&limit=&cursor=
  *
  * List sent-email records scoped to one entity, newest-first. Tutors can only
  * query entities they own; system admins may query without a filter (returns
  * the most recent sends globally) or drill into one tutor via ?tutorId=….
+ *
+ * Two modes:
+ *   * Paginated (sent-emails page): `limit` (+ `cursor` for pages after the
+ *     first) — returns one cursor-paginated page reading only ~limit documents.
+ *   * Unpaginated (scoped history panels): `limit` omitted — returns up to the
+ *     most recent 100 matching emails with `nextCursor` null.
  */
 export async function listSentEmails(
   req: Request,
@@ -49,6 +57,17 @@ export async function listSentEmails(
     const invoiceId = (req.query.invoiceId as string | undefined)?.trim() || undefined;
     const studentId = (req.query.studentId as string | undefined)?.trim() || undefined;
     const tutorId = (req.query.tutorId as string | undefined)?.trim() || undefined;
+
+    const limitRaw = req.query.limit;
+    const hasLimit =
+      limitRaw != null &&
+      limitRaw !== "" &&
+      Number.isFinite(Number(limitRaw)) &&
+      Number(limitRaw) > 0;
+    const cursor =
+      typeof req.query.cursor === "string" && req.query.cursor
+        ? req.query.cursor
+        : undefined;
 
     const isAdmin = isUserSysAdmin(req.user.role);
 
@@ -103,6 +122,34 @@ export async function listSentEmails(
       filter.tutorId = req.user.uid;
     }
 
+    // ── Paginated path (sent-emails page) ────────────────────────────
+    if (hasLimit) {
+      const result = await listSentEmailsPageFromFirestore(filter, {
+        limit: Math.min(100, Math.floor(Number(limitRaw))),
+        cursor,
+      });
+      const data = result.data.map(toSentEmailResponse);
+
+      // Enrich with tutor names so admin views can render a "Tutor" column.
+      if (isAdmin) {
+        const tutorNames = await resolveTutorNames(
+          data.map((e) => e.tutorId),
+        );
+        for (const e of data) {
+          e.tutorName = tutorNames.get(e.tutorId)?.name ?? null;
+        }
+      }
+
+      res.status(200).json({
+        data,
+        total: result.total,
+        nextCursor: result.nextCursor,
+        hasMore: result.hasMore,
+      });
+      return;
+    }
+
+    // ── Unpaginated path (scoped history panels) ─────────────────────
     const emails = await listSentEmailsFromFirestore(filter);
     const data = emails.map(toSentEmailResponse);
 
@@ -116,8 +163,17 @@ export async function listSentEmails(
       }
     }
 
-    res.status(200).json({ data, total: data.length });
+    res.status(200).json({
+      data,
+      total: data.length,
+      nextCursor: null,
+      hasMore: false,
+    });
   } catch (error) {
+    if (error instanceof AppError) {
+      res.status(error.statusCode).json({ message: error.message });
+      return;
+    }
     console.error("List sent emails failed:", error);
     const message =
       error instanceof Error ? error.message : "Failed to list sent emails";

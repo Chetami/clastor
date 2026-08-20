@@ -2,6 +2,8 @@ type: object
 required:
   - data
   - total
+  - nextCursor
+  - hasMore
 properties:
   data:
     type: array
@@ -9,6 +11,25 @@ properties:
       $ref: './SentEmailResponse.yaml'
   total:
     type: integer
+    description: >-
+      Total number of emails matching the filter. In paginated mode this is
+      the full matched count (across all pages, via a cheap count
+      aggregation); in unpaginated mode it equals `data.length`.
+  nextCursor:
+    type: string
+    nullable: true
+    description: >-
+      Opaque cursor for the next page. Pass it back as the `cursor` query
+      parameter to fetch the next page. `null` when there are no more pages
+      (or in unpaginated mode).
+    example: eyJ2IjoiMjAyNi0wNi0wM1Q...
+  hasMore:
+    type: boolean
+    description: >-
+      `true` when another page is available (equivalent to `nextCursor`
+      being non-null).
+    example: true
 description: >-
   A chronologically ordered list of sent-email records (newest-first by
-  default).
+  default). Cursor-paginated when the request supplied a `limit`; otherwise
+  the most recent matching records in one response.

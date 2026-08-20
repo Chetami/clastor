@@ -8,10 +8,9 @@ A monorepo application with React SPA frontend and Node.js backend, using Fireba
 examify-tms/
 ├── interfaces/               # Shared TypeScript types (YAML source)
 │   └── src/
-│       ├── auth/            # Auth-related schemas (YAML)
-│       ├── user/            # User-related schemas (YAML)
-│       ├── openapi.yaml     # Generated complete spec (not committed)
-│   └── dist/               # Generated type declarations (not committed)
+│       ├── schemas/          # OpenAPI schemas by domain (auth, users, …)
+│       ├── openapi.yaml      # Main entry point with schema $refs
+│       └── dist/             # Generated type declarations (not committed)
 ├── shared/                   # Shared runtime logic (domain utils, API client, hooks) — frontend + mobile only
 │   └── src/
 │       ├── features/         # Per-feature utils + API/hooks (lessons, payments, students, …)
@@ -20,18 +19,21 @@ examify-tms/
 │       └── runtime.ts        # configureShared() platform abstraction
 ├── frontend/                 # React SPA (Vite + React Router + shadcn/ui)
 │   └── src/
-│       ├── features/auth/    # Login page, auth services
+│       ├── features/         # Feature modules (auth, schedule, payments, …)
 │       ├── components/ui/    # shadcn/ui components
 │       ├── services/         # API clients, Firebase config
 │       ├── hooks/            # Custom hooks (useAuth)
 │       └── contexts/         # AuthContext for global auth state
 ├── backend/                  # Node.js + Express API
 │   └── src/
-│       ├── controllers/     # authController
-│       ├── middleware/       # auth middleware (JWT verify)
-│       ├── services/         # authService, userService
-│       ├── routes/          # authRoutes, docsRoutes (Swagger UI)
-│       └── config/          # Firebase Admin setup
+│       ├── controllers/      # Route handlers
+│       ├── middleware/       # Auth, validation, rate limiting
+│       ├── services/         # Business logic
+│       ├── routes/           # Express routers
+│       ├── schemas/          # Zod request-validation schemas
+│       └── config/           # Firebase Admin, Stripe, email, OAuth setup
+├── mobile/                   # Expo / React Native app
+├── website/                  # Marketing site
 └── package.json              # Root monorepo package
 ```
 
@@ -177,6 +179,27 @@ The API specification is defined in OpenAPI 3.0 format. Type definitions are gen
   - `npm run dev:frontend` - Start frontend dev server
   - `npm run build:all` - Build all packages
 
+## Deployment
+
+Deployment scripts and environment definitions are kept in a private
+infrastructure repository — see [deploy/README.md](deploy/README.md) for
+guidance on self-hosting.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for dev setup, conventions, and the PR
+process. Please note our [code of conduct](CODE_OF_CONDUCT.md).
+
+Found a security issue? Follow the responsible-disclosure process in
+[SECURITY.md](SECURITY.md).
+
 ## License
 
-MIT
+This project is licensed under the **GNU Affero General Public License v3.0**
+([LICENSE](LICENSE)).
+
+In short: you are free to use, modify, and distribute this software —
+including commercially — but any modifications must be made available under
+the same license. Because Clastor is a web application, network/server use
+counts as distribution: if you run a modified version as a hosted service,
+you must offer its source code to its users.
