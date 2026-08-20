@@ -5,7 +5,7 @@ A monorepo application with React SPA frontend and Node.js backend, using Fireba
 ## Project Structure
 
 ```
-examify-tms/
+clastor/
 ├── interfaces/               # Shared TypeScript types (YAML source)
 │   └── src/
 │       ├── schemas/          # OpenAPI schemas by domain (auth, users, …)

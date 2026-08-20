@@ -204,7 +204,7 @@ The raw feature list (full inventory in the app) reframed as **benefits a tutor 
 
 ## 10. Brand & Naming Notes
 
-- **Name:** Clastor. (Internally the repo is `examify-tms`; the public/product brand is **Clastor** — use Clastor everywhere public.)
+- **Name:** Clastor. (The repo and the public/product brand are both **Clastor** — use Clastor everywhere.)
 - **Product category:** Tutor Management System / Tutor Practice Management.
 - **Suggested brand attributes:** organized, calm, reliable, modern, professional, human.
 - **Tagline candidates** (to A/B test on the hero):

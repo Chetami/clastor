@@ -13,8 +13,8 @@ conventions, and the PR process.
 ## Getting Started
 
 ```bash
-git clone https://github.com/Chetami/examify-tms.git
-cd examify-tms
+git clone https://github.com/Chetami/clastor.git
+cd clastor
 npm install          # installs all workspaces and builds `interfaces`
 cp .env.example .env # fill in Firebase + JWT credentials
 ```

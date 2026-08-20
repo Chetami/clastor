@@ -11,7 +11,7 @@ Instead, use GitHub's **private vulnerability reporting**:
 2. Open the **Security** tab.
 3. Click **Report a vulnerability**.
 
-Alternatively, open a draft [GitHub Security Advisory](https://github.com/Chetami/examify-tms/security/advisories/new).
+Alternatively, open a draft [GitHub Security Advisory](https://github.com/Chetami/clastor/security/advisories/new).
 
 Please include as much of the following as you can:
 
