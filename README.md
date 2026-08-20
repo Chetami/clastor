@@ -1,6 +1,28 @@
-# Clastor - Tutor Management System
+# Clastor — Tutor Management System
 
-A monorepo application with React SPA frontend and Node.js backend, using Firebase Authentication and a custom JWT-based auth system.
+Clastor is an open-source platform for running a tutoring business: schedule
+lessons, sync with Google Calendar, send automated reminders, take payments
+through Stripe, and manage students — all in one place.
+
+A monorepo with a React web app, an Expo (React Native) mobile app, a Node.js
+backend, and a marketing website, using Firebase Authentication with a custom
+JWT-based auth layer.
+
+## Features
+
+- **Scheduling** — lessons, recurring lesson series, and a calendar that
+  two-way syncs with Google Calendar; Google Meet links generated automatically
+- **Students** — student profiles, subjects, and notes/progress tracking
+- **Payments** — Stripe checkout, invoices (PDF), payment tracking, and
+  Stripe Connect for multi-tutor practices
+- **Email** — transactional email via SMTP with editable templates and
+  automated lesson reminders
+- **Auth** — email/password (Firebase) and Google OAuth, with short-lived
+  access JWTs + refresh tokens
+- **Roles** — `system_admin` and `tutor` with per-domain permissions, plus an
+  admin dashboard
+- **Extras** — iCal feed export, tutor profiles, feedback collection,
+  waitlist/public booking pages, analytics (PostHog)
 
 ## Project Structure
 
@@ -43,20 +65,26 @@ clastor/
 |-------|------------|
 | Shared types | `@examify-tms/interfaces` — YAML-based TypeScript types (auto-generated); consumed by every package |
 | Shared logic | `@examify-tms/shared` — runtime domain utils, API client, React Query hooks; consumed by frontend + mobile only |
-| Frontend | React 18, Vite, React Router, shadcn/ui, TypeScript |
+| Frontend | React 19, Vite, React Router, shadcn/ui, TypeScript |
+| Mobile | Expo (React Native), Expo Router |
 | Backend | Node.js, Express, TypeScript, Firebase Admin SDK |
-| Auth | Firebase Authentication, JWT (jsonwebtoken) |
-| Database | Firestore (users collection) |
+| Auth | Firebase Authentication (email/password + Google), JWT with refresh tokens |
+| Database | Google Firestore |
+| Payments | Stripe (Checkout + Connect + webhooks) |
+| Email | Nodemailer (SMTP), Google OAuth for Calendar/Meet |
 | UI | shadcn/ui (Radix UI + Tailwind CSS) |
 
 ## Prerequisites
 
 - Node.js 18+
 - npm 9+
-- Firebase project with:
-  - Authentication enabled (Email/Password provider)
+- A Firebase project with:
+  - Authentication enabled (Email/Password and optionally Google providers)
   - Firestore database
   - Service account credentials
+- Optional, per feature: Stripe account (payments), SMTP credentials
+  (transactional email), Google OAuth client (Calendar/Meet sync), PostHog
+  project (analytics)
 
 ## Getting Started
 
@@ -78,27 +106,27 @@ This will install dependencies for all packages (interfaces, shared, backend, fr
 
 ### 2. Configure Environment Variables
 
-Copy the example environment file and fill in your Firebase credentials:
+Copy the example env files and fill in your credentials — see
+`backend/.env.example` and `frontend/.env.example` for the full list with
+comments:
 
 ```bash
 cp .env.example .env
+cp backend/.env.example backend/.env
+cp frontend/.env.example frontend/.env
 ```
 
-Edit `.env` with your actual Firebase configuration values.
+**Backend (minimum):**
+- `JWT_SECRET`, `REFRESH_TOKEN_SECRET` — token signing secrets
+- `FIREBASE_SERVICE_ACCOUNT_KEY_PATH` — path to your service account JSON
+- `PORT` — backend port (default: 3001)
 
-**Backend `.env`:**
-- `JWT_SECRET` - Your secret key for JWT signing
-- `FIREBASE_PROJECT_ID` - Your Firebase project ID
-- `FIREBASE_CLIENT_EMAIL` - Service account email
-- `FIREBASE_PRIVATE_KEY` - Service account private key
-- `PORT` - Backend port (default: 3001)
+**Optional integrations:** `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET`
+(payments), `SMTP_*` / `EMAIL_FROM` (email), `GOOGLE_OAUTH_*`
+(Calendar/Meet), `DISCORD_CONTACT_WEBHOOK_URL` (contact notifications).
 
-**Frontend `.env`:**
-- `VITE_API_URL` - Backend API URL
-- `VITE_FIREBASE_API_KEY` - Firebase web API key
-- `VITE_FIREBASE_AUTH_DOMAIN` - Firebase auth domain
-- `VITE_FIREBASE_PROJECT_ID` - Firebase project ID
-- And other Firebase web app config values
+**Frontend:** `VITE_API_URL` plus your Firebase web-app config values
+(`VITE_FIREBASE_*`).
 
 ### 3. Create Your First Admin User
 
@@ -133,6 +161,8 @@ npm run dev:frontend
 ```
 App runs on http://localhost:5173
 
+**Mobile / website:** `npm run dev:mobile`, `npm run dev:website`.
+
 ### 5. Build for Production
 
 ```bash
@@ -141,43 +171,56 @@ npm run build:all
 
 ## Authentication Flow
 
-1. User enters email/password in login form
-2. Firebase Client Auth authenticates user → Returns Firebase ID token
-3. Frontend POSTs to `/api/auth/login` with Firebase token
-4. Backend verifies Firebase token, gets user from Firestore
-5. Backend generates custom JWT (1 hour expiry)
-6. Frontend stores JWT, uses it for subsequent API calls
-7. Protected routes use `authenticateJWT` middleware
+1. User signs in with email/password (Firebase) or Google OAuth
+2. Frontend exchanges the Firebase/Google credential for app tokens via
+   `POST /api/auth/login` or the Google OAuth callback
+3. Backend verifies the credential, loads the user from Firestore, and issues
+   a short-lived access JWT plus a 30-day refresh token
+4. Frontend stores the tokens and uses the access JWT for API calls,
+   refreshing it via `/api/auth/refresh` as needed
+5. Protected routes use the `authenticateJWT` middleware (plus per-route
+   role/permission checks)
 
 ## API Documentation
 
-The backend includes interactive API documentation powered by Swagger UI:
+The backend serves interactive API documentation:
 
 - **Swagger UI**: `http://localhost:3001/api/docs`
 - **OpenAPI Spec (JSON)**: `http://localhost:3001/api/docs.json`
 
-The API specification is defined in OpenAPI 3.0 format. Type definitions are generated from YAML schemas in the interfaces package using a custom build script that merges individual schema files and produces TypeScript declarations.
-- All API endpoints and methods
-- Request/response schemas
-- Authentication requirements
-- Error responses
+The API specification is defined in OpenAPI 3.0 format; TypeScript types are
+generated from the YAML schemas in the interfaces package.
 
-### Available Endpoints
+### API Areas
 
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|----------------|
-| POST | `/api/auth/login` | Exchange Firebase token for JWT | Firebase token |
-| GET | `/api/auth/verify` | Verify JWT and get user info | JWT |
-| GET | `/api/docs` | Swagger UI documentation | None |
-| GET | `/api/docs.json` | OpenAPI spec (JSON) | None |
-| GET | `/health` | Health check endpoint | None |
+| Prefix | Description |
+|--------|-------------|
+| `/api/auth` | Login, verify, refresh, Google OAuth |
+| `/api/students` | Student CRUD |
+| `/api/lessons` | Lessons and lesson series |
+| `/api/payments` | Payments and invoices |
+| `/api/meetings` | Google Meet integration |
+| `/api/users` | User management |
+| `/api/tutor-profiles` | Public tutor profiles |
+| `/api/dashboard` | Dashboard data |
+| `/api/calendar` | Calendar sync + iCal feed |
+| `/api/feedback` | Feedback collection |
+| `/api/templates` | Email templates |
+| `/api/sent-emails` | Sent-email log |
+| `/api/contact` | Public contact form |
+| `/api/stripe` | Stripe checkout + webhooks |
+| `/api/admin` | Admin-only endpoints (`system_admin`) |
+| `/health` | Health check |
 
 ## Development
 
 - Root scripts manage all workspaces:
-  - `npm run dev:backend` - Start backend dev server
-  - `npm run dev:frontend` - Start frontend dev server
-  - `npm run build:all` - Build all packages
+  - `npm run dev:backend` — start backend dev server
+  - `npm run dev:frontend` — start frontend dev server
+  - `npm run build:all` — build all packages
+
+See [AGENTS.md](AGENTS.md) for detailed architecture notes and conventions,
+and [CONTRIBUTING.md](CONTRIBUTING.md) for the full contributor guide.
 
 ## Deployment
 
