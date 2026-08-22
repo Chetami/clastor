@@ -1,0 +1,29 @@
+type: object
+required:
+  - id
+  - authorName
+  - rating
+  - createdAt
+properties:
+  id:
+    type: string
+    description: Review document ID
+  authorName:
+    type: string
+    description: Display name of the reviewer
+    example: Sarah M.
+  rating:
+    type: integer
+    minimum: 1
+    maximum: 5
+    example: 5
+  comment:
+    type: string
+    nullable: true
+    description: Optional written feedback
+  createdAt:
+    type: string
+    format: date-time
+    description: When the review was submitted
+description: |-
+  A publicly visible (approved) review. Contains no moderation fields.

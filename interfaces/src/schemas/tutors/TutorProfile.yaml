@@ -35,12 +35,14 @@ properties:
     type: string
     nullable: true
     description: Longer free-form about paragraph
-  subjects:
+  subjectIds:
     type: array
-    description: Subjects / expertise areas the tutor teaches
+    description: >-
+      Ids into the tutor's subject catalogue (users.subjects). Resolved to
+      full Subject objects (name + color) at read time.
     items:
       type: string
-    example: [Algebra, Geometry, Calculus]
+    example: [subj_abc123, subj_def456]
   qualifications:
     type: array
     description: Degrees, certifications or experience notes
@@ -54,6 +56,21 @@ properties:
     minimum: 0
     description: Optional hourly rate displayed on the public page
     example: 45
+  location:
+    type: string
+    nullable: true
+    description: Where the tutor teaches in person (suburb, city or region)
+    example: Sydney, NSW
+  teachesOnline:
+    type: boolean
+    description: Whether the tutor offers online lessons
+    example: true
+  yearsExperience:
+    type: integer
+    nullable: true
+    minimum: 0
+    description: Years of tutoring experience, shown on the public page
+    example: 8
   currency:
     type: string
     description: ISO 4217 currency code for the hourly rate (mirrors the user's currency)

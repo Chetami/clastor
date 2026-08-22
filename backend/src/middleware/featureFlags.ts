@@ -7,7 +7,7 @@ import type { RequestHandler } from "express";
 // erased by tsc. Keep these values in sync with the source of truth in
 // interfaces/src/featureFlags.ts (which the frontend reads at runtime).
 const backendFeatureFlags: Record<FeatureFlagKey, boolean> = {
-  publicProfile: false,
+  publicProfile: true,
   templates: true,
   sentEmails: true,
 };

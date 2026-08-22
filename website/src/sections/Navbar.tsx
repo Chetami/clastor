@@ -37,7 +37,7 @@ export function Navbar() {
         className="mx-auto flex h-[72px] max-w-[1180px] items-center justify-between px-5 sm:px-6 lg:px-9"
         aria-label="Primary"
       >
-        <a href="#top" className="flex items-center gap-2.5" aria-label="Clastor — home">
+        <a href="/" className="flex items-center gap-2.5" aria-label="Clastor — home">
           <Logo />
         </a>
 
@@ -51,6 +51,12 @@ export function Navbar() {
               {link.label}
             </a>
           ))}
+          <a
+            href="/tutors"
+            className="text-lg text-muted-foreground transition-colors hover:text-brand"
+          >
+            Find a tutor
+          </a>
         </div>
 
         <div className="hidden items-center gap-4 md:flex">
@@ -92,6 +98,13 @@ export function Navbar() {
               {link.label}
             </a>
           ))}
+          <a
+            href="/tutors"
+            onClick={() => setOpen(false)}
+            className="border-b-2 border-dashed border-border py-3 text-lg text-foreground"
+          >
+            Find a tutor
+          </a>
           <a
             href={APP_URL}
             onClick={() => setOpen(false)}

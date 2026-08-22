@@ -200,11 +200,64 @@ Document ID = Firebase Auth UID
   email: string,
   role: 'system_admin' | 'tutor',
   avatarUrl?: string | null,
+  subjects: Subject[],        // { id, name, color } — the subject catalogue
+  workingHours?: WorkingHours | null,  // per-day { start, end } "HH:mm" windows
   createdAt: Timestamp,
   updatedAt: Timestamp,
   lastActive?: Timestamp | null
 }
 ```
+
+**Collection:** `tutorProfiles` — public tutor pages (`/t/:slug`)
+
+Document ID = tutor UID. `subjectIds` reference the tutor's catalogue
+(resolved to `Subject[]` with colors at read time; legacy free-text
+`subjects` names are matched back into the catalogue). `name`, `avatarUrl`,
+`subjectNames` and `searchText` are denormalized snapshots refreshed on
+save/publish and via `syncTutorProfileIdentity` when the user's
+name/avatar/subjects change. `ratingAvg`/`reviewCount` are denormalized
+aggregates maintained by the review service.
+
+```typescript
+{
+  tutorId: string,
+  slug: string,               // unique, /^[a-z0-9-]{3,40}$/
+  template: 'classic' | 'modern',
+  status: 'draft' | 'published',
+  headline, bio: string | null,
+  subjectIds: string[],
+  subjects: string[],         // legacy, cleared on save
+  qualifications: string[],
+  hourlyRate: number | null,
+  currency: string,           // mirrors users doc
+  location: string | null,
+  teachesOnline: boolean,
+  yearsExperience: number | null,
+  contactEmail, ctaText: string | null,
+  name: string, avatarUrl: string | null,       // directory snapshot
+  subjectNames: string[], searchText: string,   // directory snapshot
+  ratingAvg: number | null, reviewCount: number,
+  createdAt, updatedAt, publishedAt: Timestamp
+}
+```
+
+**Collection:** `tutorReviews` — public reviews with tutor moderation
+
+```typescript
+{
+  tutorId: string,            // the reviewed tutor's UID
+  authorName: string,         // public display name
+  rating: number,             // 1-5
+  comment: string | null,
+  status: 'pending' | 'approved' | 'rejected',  // only approved are public
+  createdAt: Timestamp,
+  moderatedAt: Timestamp | null
+}
+```
+
+Reviews are submitted unauthenticated from `/t/:slug` (rate-limited),
+start `pending`, and the rating aggregates on `tutorProfiles` are
+recomputed whenever a review is approved/rejected.
 
 ## Testing the API
 

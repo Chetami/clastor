@@ -220,13 +220,35 @@ export const stripePayLimiter = jsonLimiter({
 });
 
 /**
- * GET /api/tutor-profiles/public/:slug — the only public profile read.
+ * GET /api/tutor-profiles/public/:slug — the public profile read.
  * Slugs are guessable, hence a cap well above any human browse rate.
  */
 export const publicProfileLimiter = jsonLimiter({
   windowMs: FIFTEEN_MIN,
   limit: 60,
   message: "Too many requests. Please try again later.",
+});
+
+/**
+ * GET /api/tutor-profiles/directory — the public directory listing. Each hit
+ * scans up to a few hundred profile docs, so it sits below the per-profile
+ * read cap but well above any human browse/filter rate.
+ */
+export const directoryLimiter = jsonLimiter({
+  windowMs: FIFTEEN_MIN,
+  limit: 60,
+  message: "Too many requests. Please try again later.",
+});
+
+/**
+ * POST /api/tutor-profiles/public/:slug/reviews — unauthenticated writes into
+ * Firestore (pending reviews). Every accepted hit is persisted work and a
+ * moderation burden, so keep it as tight as the contact form.
+ */
+export const reviewSubmitLimiter = jsonLimiter({
+  windowMs: FIFTEEN_MIN,
+  limit: 5,
+  message: "Too many reviews submitted. Please try again later.",
 });
 
 // ---------------------------------------------------------------------------

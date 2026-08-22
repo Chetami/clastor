@@ -1,0 +1,35 @@
+type: object
+properties:
+  search:
+    type: string
+    description: >-
+      Free-text query matched (case-insensitively) against the tutor's name,
+      headline and subject names.
+    example: maths
+  subject:
+    type: string
+    description: Exact (case-insensitive) subject name to filter on.
+    example: Mathematics
+  online:
+    type: boolean
+    description: When true, only tutors who teach online are returned.
+  maxRate:
+    type: number
+    format: double
+    minimum: 0
+    description: Only tutors whose hourly rate is at or below this value.
+    example: 60
+  sort:
+    type: string
+    enum: [recent, rating]
+    default: recent
+    description: >-
+      recent = newest published first; rating = highest average rating first
+      (tutors without reviews sort last).
+  limit:
+    type: integer
+    minimum: 1
+    maximum: 60
+    default: 24
+    description: Maximum number of results to return.
+description: Query parameters for the public tutor directory listing.

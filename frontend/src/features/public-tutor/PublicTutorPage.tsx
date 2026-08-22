@@ -1,10 +1,40 @@
+import { useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { BrandMark } from "@/features/auth/BrandMark";
+import { isFeatureEnabled } from "@/config/features";
 import { getPublicProfileRequest } from "./api/requests";
 import { getTemplate } from "./templates/registry";
+import { ReviewsSection } from "./ReviewsSection";
+
+/** Keep the browser tab + link previews useful for a public profile. */
+function useProfileMeta(
+  name: string | undefined,
+  headline: string | null | undefined,
+) {
+  useEffect(() => {
+    if (!name) return;
+    const previousTitle = document.title;
+    document.title = `${name} | Clastor Tutor`;
+    let meta = document.querySelector<HTMLMetaElement>(
+      'meta[name="description"]',
+    );
+    const previousContent = meta?.content ?? null;
+    if (headline && meta) meta.content = headline;
+    else if (!meta) {
+      meta = document.createElement("meta");
+      meta.name = "description";
+      meta.content = headline ?? `Book a lesson with ${name} on Clastor.`;
+      document.head.appendChild(meta);
+    }
+    return () => {
+      document.title = previousTitle;
+      if (meta && previousContent != null) meta.content = previousContent;
+    };
+  }, [name, headline]);
+}
 
 export default function PublicTutorPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -16,11 +46,23 @@ export default function PublicTutorPage() {
     retry: false,
   });
 
+  useProfileMeta(profile?.name, profile?.headline);
+
   return (
     <div className="min-h-dvh bg-background text-foreground">
       <header className="border-b">
-        <div className="mx-auto flex max-w-3xl items-center gap-2 px-4 py-4">
-          <BrandMark size={28} />
+        <div className="mx-auto flex max-w-3xl items-center justify-between gap-2 px-4 py-4">
+          <Link to="/tutors" aria-label="Clastor home" className="flex items-center gap-2">
+            <BrandMark size={28} />
+          </Link>
+          {isFeatureEnabled("publicProfile") && (
+            <Link
+              to="/tutors"
+              className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+            >
+              Browse tutors
+            </Link>
+          )}
         </div>
       </header>
 
@@ -54,19 +96,51 @@ export default function PublicTutorPage() {
           <p className="mt-2 text-muted-foreground">
             This tutor's page doesn't exist or hasn't been published yet.
           </p>
-          <Link
-            to="/login"
-            className="mt-6 inline-block text-sm underline underline-offset-4 hover:text-foreground"
-          >
-            Go to Clastor
-          </Link>
+          <div className="mt-6 flex items-center justify-center gap-4">
+            {isFeatureEnabled("publicProfile") && (
+              <Link
+                to="/tutors"
+                className="text-sm underline underline-offset-4 hover:text-foreground"
+              >
+                Browse tutors
+              </Link>
+            )}
+            <Link
+              to="/login"
+              className="text-sm underline underline-offset-4 hover:text-foreground"
+            >
+              Go to Clastor
+            </Link>
+          </div>
         </div>
       )}
 
-      {!isLoading && profile && (() => {
-        const Template = getTemplate(profile.template);
-        return <Template profile={profile} />;
-      })()}
+      {!isLoading && profile && (
+        <>
+          {(() => {
+            const Template = getTemplate(profile.template);
+            return <Template profile={profile} />;
+          })()}
+          {slug && <ReviewsSection slug={slug} />}
+          <footer className="border-t">
+            <div className="mx-auto flex max-w-3xl flex-col items-center gap-1 px-4 py-8 text-center">
+              <p className="text-sm text-muted-foreground">
+                This page was made with{" "}
+                <Link
+                  to="/signup"
+                  className="font-medium text-foreground underline underline-offset-4"
+                >
+                  Clastor
+                </Link>
+                .
+              </p>
+              <p className="text-xs text-muted-foreground/70">
+                Free scheduling, invoicing and student management for tutors.
+              </p>
+            </div>
+          </footer>
+        </>
+      )}
     </div>
   );
 }

@@ -1,0 +1,68 @@
+type: object
+required:
+  - slug
+  - name
+  - subjects
+properties:
+  slug:
+    type: string
+    description: The profile's URL slug (/t/:slug)
+    example: jane-math
+  name:
+    type: string
+    description: Tutor's display name
+    example: Jane Doe
+  avatarUrl:
+    type: string
+    nullable: true
+    description: Tutor's profile picture (data URL or remote URL)
+  headline:
+    type: string
+    nullable: true
+    description: Short one-line tagline
+  subjects:
+    type: array
+    description: Subjects the tutor teaches, resolved from their catalogue
+    items:
+      $ref: '../../common/Subject.yaml'
+  hourlyRate:
+    type: number
+    format: double
+    nullable: true
+    description: Optional hourly rate
+    example: 45
+  currency:
+    type: string
+    description: ISO 4217 currency code for the hourly rate
+    example: AUD
+  location:
+    type: string
+    nullable: true
+    description: Where the tutor teaches in person (e.g. a suburb or city)
+    example: Sydney, NSW
+  teachesOnline:
+    type: boolean
+    description: Whether the tutor offers online lessons
+  yearsExperience:
+    type: integer
+    nullable: true
+    minimum: 0
+    description: Years of tutoring experience, when provided
+    example: 8
+  ratingAvg:
+    type: number
+    format: double
+    nullable: true
+    description: Average rating (1-5) across approved reviews, null when none
+    example: 4.8
+  reviewCount:
+    type: integer
+    description: Number of approved reviews
+    example: 12
+  publishedAt:
+    type: string
+    format: date-time
+    description: When the profile was last published
+description: |-
+  A single tutor card in the public directory listing. Safe to serve to
+  unauthenticated visitors.

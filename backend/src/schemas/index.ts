@@ -12,3 +12,4 @@ export * from "./payments";
 export * from "./users";
 export * from "./misc";
 export * from "./queries";
+export * from "./tutorProfile";

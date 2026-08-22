@@ -32,8 +32,11 @@ properties:
     nullable: true
   subjects:
     type: array
+    description: >-
+      Showcase subjects resolved from the tutor's catalogue (subjectIds),
+      including each subject's color.
     items:
-      type: string
+      $ref: '../../common/Subject.yaml'
   qualifications:
     type: array
     items:
@@ -44,6 +47,14 @@ properties:
     nullable: true
   currency:
     type: string
+  location:
+    type: string
+    nullable: true
+  teachesOnline:
+    type: boolean
+  yearsExperience:
+    type: integer
+    nullable: true
   contactEmail:
     type: string
     format: email
@@ -51,6 +62,21 @@ properties:
   ctaText:
     type: string
     nullable: true
+  availability:
+    type: array
+    description: >-
+      Weekly availability derived from the tutor's working hours. Empty when
+      not configured.
+    items:
+      $ref: './AvailabilitySlot.yaml'
+  ratingAvg:
+    type: number
+    format: double
+    nullable: true
+    description: Average rating (1-5) across approved reviews, null when none
+  reviewCount:
+    type: integer
+    description: Number of approved reviews
   createdAt:
     type: string
     format: date-time

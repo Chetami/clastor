@@ -4,7 +4,7 @@
  * @examify-tms/interfaces package (imported by both).
  */
 export const featureFlags = {
-  publicProfile: false, // <-- off for now
+  publicProfile: true,
   templates: true,
   sentEmails: true, // UI + GET endpoints (outbound sends are always logged)
 } as const;

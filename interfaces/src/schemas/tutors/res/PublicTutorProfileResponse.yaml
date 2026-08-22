@@ -5,6 +5,8 @@ required:
   - subjects
   - qualifications
   - name
+  - teachesOnline
+  - reviewCount
 properties:
   slug:
     type: string
@@ -20,8 +22,11 @@ properties:
     nullable: true
   subjects:
     type: array
+    description: >-
+      Showcase subjects resolved from the tutor's subject catalogue, with
+      each subject's color for chips.
     items:
-      type: string
+      $ref: '../../common/Subject.yaml'
   qualifications:
     type: array
     items:
@@ -32,6 +37,19 @@ properties:
     nullable: true
   currency:
     type: string
+  location:
+    type: string
+    nullable: true
+    description: Where the tutor teaches in person
+    example: Sydney, NSW
+  teachesOnline:
+    type: boolean
+    description: Whether the tutor offers online lessons
+  yearsExperience:
+    type: integer
+    nullable: true
+    description: Years of tutoring experience
+    example: 8
   contactEmail:
     type: string
     format: email
@@ -39,6 +57,23 @@ properties:
   ctaText:
     type: string
     nullable: true
+  availability:
+    type: array
+    description: >-
+      Weekly availability derived from the tutor's working hours. Empty when
+      not configured.
+    items:
+      $ref: './AvailabilitySlot.yaml'
+  ratingAvg:
+    type: number
+    format: double
+    nullable: true
+    description: Average rating (1-5) across approved reviews, null when none
+    example: 4.8
+  reviewCount:
+    type: integer
+    description: Number of approved reviews
+    example: 12
   name:
     type: string
     description: Tutor's display name (from their user record)

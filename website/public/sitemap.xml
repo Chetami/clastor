@@ -6,6 +6,11 @@
     <priority>1.0</priority>
   </url>
   <url>
+    <loc>https://clastor.xamify.com.au/tutors</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
     <loc>https://clastor.xamify.com.au/contact</loc>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>

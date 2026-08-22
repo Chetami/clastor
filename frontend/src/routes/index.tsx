@@ -27,6 +27,8 @@ import Settings from "@/features/settings/Settings";
 import Account from "@/features/account/Account";
 import TutorProfileEditor from "@/features/tutor-profile/TutorProfileEditor";
 import PublicTutorPage from "@/features/public-tutor/PublicTutorPage";
+import TutorsDirectoryPage from "@/features/public-tutor/directory/TutorsDirectoryPage";
+import { PublicSiteRedirect } from "./public-site-redirect";
 import StripePaymentsSettings from "@/features/stripe-payments/StripePaymentsSettings";
 import OnboardingPage from "@/features/onboarding/OnboardingPage";
 import AdminFeedback from "@/features/feedback/AdminFeedback";
@@ -35,6 +37,7 @@ import Templates from "@/features/templates/Templates";
 import SentEmails from "@/features/emails/SentEmails";
 import { PaymentResult } from "@/features/public-pay/PaymentResult";
 import { isFeatureEnabled } from "@/config/features";
+import { PUBLIC_SITE_URL } from "@/config/site";
 
 export const router = createBrowserRouter([
   {
@@ -103,11 +106,26 @@ export const router = createBrowserRouter([
             },
         ],
       },
+      // Public tutor pages live on the marketing site (root domain) in
+      // production; the app redirects there. Local dev (no
+      // VITE_PUBLIC_SITE_URL) renders the app's own copies.
       ...(isFeatureEnabled("publicProfile")
         ? [
             {
               path: "t/:slug",
-              element: <PublicTutorPage />,
+              element: PUBLIC_SITE_URL ? (
+                <PublicSiteRedirect />
+              ) : (
+                <PublicTutorPage />
+              ),
+            },
+            {
+              path: "tutors",
+              element: PUBLIC_SITE_URL ? (
+                <PublicSiteRedirect />
+              ) : (
+                <TutorsDirectoryPage />
+              ),
             },
           ]
         : []),

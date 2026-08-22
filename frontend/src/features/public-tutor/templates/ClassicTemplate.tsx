@@ -1,8 +1,11 @@
 import type { PublicTutorProfileResponse } from "@examify-tms/interfaces";
 import {
+  AvailabilityList,
   ContactButton,
+  DetailBadges,
   ProfileAvatar,
   QualificationList,
+  RatingStars,
   SectionTitle,
   SubjectChips,
   formatRate,
@@ -16,6 +19,7 @@ export function ClassicTemplate({
 }) {
   const ctaLabel = getCtaLabel(profile);
   const rate = formatRate(profile);
+  const hasRating = profile.ratingAvg != null && profile.reviewCount > 0;
 
   return (
     <article className="mx-auto max-w-3xl px-4 py-12 sm:py-16">
@@ -36,12 +40,28 @@ export function ClassicTemplate({
               {profile.headline}
             </p>
           )}
+          {hasRating && (
+            <div className="flex justify-center">
+              <RatingStars
+                ratingAvg={profile.ratingAvg}
+                reviewCount={profile.reviewCount}
+              />
+            </div>
+          )}
           {rate && (
             <p className="text-sm font-medium text-foreground">
               {rate} / hour
             </p>
           )}
         </div>
+
+        {(profile.location || profile.teachesOnline || profile.yearsExperience != null) && (
+          <DetailBadges
+            location={profile.location}
+            teachesOnline={profile.teachesOnline}
+            yearsExperience={profile.yearsExperience}
+          />
+        )}
 
         <ContactButton
           email={profile.contactEmail}
@@ -69,6 +89,14 @@ export function ClassicTemplate({
             subjects={profile.subjects}
             chipClassName="border border-input bg-muted/40"
           />
+        </section>
+      )}
+
+      {/* Availability */}
+      {profile.availability && profile.availability.length > 0 && (
+        <section className="mt-10">
+          <SectionTitle className="mb-3">Availability</SectionTitle>
+          <AvailabilityList availability={profile.availability} />
         </section>
       )}
 

@@ -1,4 +1,7 @@
 import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import { Globe, X } from "lucide-react";
+import { formatWorkingHours } from "@examify-tms/shared";
 import type { UpdateTutorProfileRequest } from "@examify-tms/interfaces";
 
 import {
@@ -12,8 +15,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SkeletonCard } from "@/components/skeletons";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/use-auth";
+import { publicSiteUrl } from "@/config/site";
+import { SubjectMultiSelect } from "@/components/subjects/SubjectMultiSelect";
 import { useGetTutorProfile } from "./api/use-get-tutor-profile";
 import { useUpdateTutorProfile } from "./api/use-update-tutor-profile";
 import {
@@ -23,6 +29,7 @@ import {
 import { useCheckSlug } from "./api/use-check-slug";
 import { ProfilePreview } from "./ProfilePreview";
 import { TemplatePicker } from "./TemplatePicker";
+import { ReviewsModerationCard } from "./ReviewsModerationCard";
 import { profileResponseToValues } from "./preview-utils";
 import {
   tutorProfileFormSchema,
@@ -63,16 +70,34 @@ export default function TutorProfileEditor() {
 
   const slugCheck = useCheckSlug(values.slug, profile?.slug);
   const isPublished = profile?.status === "published";
+  const availabilityLines = formatWorkingHours(user?.workingHours);
 
+  const catalogueIds = useMemo(
+    () => new Set((user?.subjects ?? []).map((s) => s.id)),
+    [user?.subjects],
+  );
+  const legacyNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const subject of profile?.subjects ?? []) {
+      if (subject.id.startsWith("legacy:")) map.set(subject.id, subject.name);
+    }
+    return map;
+  }, [profile?.subjects]);
+  const legacySelected = values.subjectIds.filter(
+    (id) => !catalogueIds.has(id),
+  );
+
+  // Shareable URL points at the public site (root domain) in production;
+  // falls back to this origin in local dev.
   const previewUrl = useMemo(
     () =>
-      `${window.location.origin}/t/${
-        values.slug.trim().toLowerCase() || "your-slug"
-      }`,
+      publicSiteUrl(
+        `/t/${values.slug.trim().toLowerCase() || "your-slug"}`,
+      ),
     [values.slug],
   );
   const liveUrl = profile?.slug
-    ? `${window.location.origin}/t/${profile.slug}`
+    ? publicSiteUrl(`/t/${profile.slug}`)
     : null;
 
   function update<K extends keyof TutorProfileFormData>(
@@ -85,7 +110,7 @@ export default function TutorProfileEditor() {
   }
 
   function updateListItem(
-    key: "subjects" | "qualifications",
+    key: "qualifications",
     index: number,
     value: string,
   ) {
@@ -96,11 +121,11 @@ export default function TutorProfileEditor() {
     });
   }
 
-  function addListItem(key: "subjects" | "qualifications") {
+  function addListItem(key: "qualifications") {
     setValues((prev) => ({ ...prev, [key]: [...prev[key], ""] }));
   }
 
-  function removeListItem(key: "subjects" | "qualifications", index: number) {
+  function removeListItem(key: "qualifications", index: number) {
     setValues((prev) => ({
       ...prev,
       [key]: prev[key].filter((_, i) => i !== index),
@@ -116,9 +141,12 @@ export default function TutorProfileEditor() {
       template: values.template,
       headline: values.headline?.trim() || null,
       bio: values.bio?.trim() || null,
-      subjects: clean(values.subjects),
+      subjectIds: values.subjectIds,
       qualifications: clean(values.qualifications),
       hourlyRate: values.hourlyRate,
+      location: values.location?.trim() || null,
+      teachesOnline: values.teachesOnline,
+      yearsExperience: values.yearsExperience,
       contactEmail: values.contactEmail?.trim() || null,
       ctaText: values.ctaText?.trim() || null,
     };
@@ -295,6 +323,78 @@ export default function TutorProfileEditor() {
                   onChange={(e) => update("bio", e.target.value)}
                 />
               </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="location">
+                    Location{" "}
+                    <span className="text-xs font-normal text-muted-foreground">
+                      (optional)
+                    </span>
+                  </Label>
+                  <Input
+                    id="location"
+                    placeholder="Sydney, NSW"
+                    maxLength={80}
+                    value={values.location}
+                    onChange={(e) => update("location", e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Where you teach in person.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="yearsExperience">
+                    Years of experience{" "}
+                    <span className="text-xs font-normal text-muted-foreground">
+                      (optional)
+                    </span>
+                  </Label>
+                  <Input
+                    id="yearsExperience"
+                    type="number"
+                    min="0"
+                    max="60"
+                    placeholder="8"
+                    value={values.yearsExperience ?? ""}
+                    onChange={(e) =>
+                      update(
+                        "yearsExperience",
+                        e.target.value === "" ? null : e.target.valueAsNumber,
+                      )
+                    }
+                    aria-invalid={!!errors.yearsExperience}
+                  />
+                  {errors.yearsExperience && (
+                    <p className="text-xs text-destructive">
+                      {errors.yearsExperience}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between gap-4 rounded-lg border p-3">
+                <div className="flex items-start gap-2">
+                  <Globe className="mt-0.5 size-4 text-muted-foreground" />
+                  <div>
+                    <Label
+                      htmlFor="teachesOnline"
+                      className="text-sm font-medium"
+                    >
+                      Teaches online
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Show an "online lessons" badge on your page and in the
+                      tutor directory.
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  id="teachesOnline"
+                  checked={values.teachesOnline}
+                  onCheckedChange={(v) => update("teachesOnline", v)}
+                />
+              </div>
             </CardContent>
           </Card>
 
@@ -317,18 +417,80 @@ export default function TutorProfileEditor() {
             <CardHeader>
               <CardTitle>Subjects &amp; qualifications</CardTitle>
               <CardDescription>
-                Lists shown on your public page. Leave blank to hide a section.
+                Subjects come straight from your subject catalogue — pick the
+                ones to showcase. Leave blank to hide a section.
               </CardDescription>
             </CardHeader>
-            <CardContent className="grid gap-6 sm:grid-cols-2">
-              <ListEditor
-                label="Subjects"
-                placeholder="e.g. Algebra"
-                items={values.subjects}
-                onAdd={() => addListItem("subjects")}
-                onChange={(i, v) => updateListItem("subjects", i, v)}
-                onRemove={(i) => removeListItem("subjects", i)}
-              />
+            <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <Label>Subjects you teach</Label>
+                <SubjectMultiSelect
+                  value={values.subjectIds}
+                  onChange={(ids) => update("subjectIds", ids)}
+                />
+                {legacySelected.length > 0 && (
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">
+                      Also shown on your page (added before the catalogue):
+                    </p>
+                    <ul className="flex flex-wrap gap-2">
+                      {legacySelected.map((id) => (
+                        <li key={id}>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              update(
+                                "subjectIds",
+                                values.subjectIds.filter((v) => v !== id),
+                              )
+                            }
+                            className="inline-flex items-center gap-1.5 rounded-full border border-input bg-muted/40 px-3 py-1 text-sm hover:bg-muted"
+                          >
+                            {legacyNameById.get(id) ?? id.replace(/^legacy:/, "")}
+                            <X className="size-3.5 text-muted-foreground" />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Renaming or recolouring a subject in{" "}
+                  <Link
+                    to="/settings"
+                    className="underline underline-offset-4 hover:text-foreground"
+                  >
+                    Settings
+                  </Link>{" "}
+                  updates your public page automatically.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Availability</Label>
+                {availabilityLines.length > 0 ? (
+                  <ul className="space-y-1 rounded-md border bg-muted/30 p-3 text-sm text-muted-foreground">
+                    {availabilityLines.map((line) => (
+                      <li key={line}>{line}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+                    No weekly availability yet.
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Pulled from your{" "}
+                  <Link
+                    to="/settings"
+                    className="underline underline-offset-4 hover:text-foreground"
+                  >
+                    working hours in Settings
+                  </Link>
+                  .
+                </p>
+              </div>
+
               <ListEditor
                 label="Qualifications"
                 placeholder="e.g. BSc Mathematics"
@@ -337,6 +499,19 @@ export default function TutorProfileEditor() {
                 onChange={(i, v) => updateListItem("qualifications", i, v)}
                 onRemove={(i) => removeListItem("qualifications", i)}
               />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Reviews</CardTitle>
+              <CardDescription>
+                Reviews submitted from your public page appear here first.
+                Approve the ones you want shown.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ReviewsModerationCard />
             </CardContent>
           </Card>
 

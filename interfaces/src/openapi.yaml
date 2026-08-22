@@ -214,6 +214,28 @@ components:
       $ref: './schemas/tutors/res/TutorProfileResponse.yaml'
     PublicTutorProfileResponse:
       $ref: './schemas/tutors/res/PublicTutorProfileResponse.yaml'
+    AvailabilitySlot:
+      $ref: './schemas/tutors/res/AvailabilitySlot.yaml'
+    # Public tutor directory Schemas
+    ListPublicTutorsQuery:
+      $ref: './schemas/tutors/req/ListPublicTutorsQuery.yaml'
+    PublicTutorSummary:
+      $ref: './schemas/tutors/res/PublicTutorSummary.yaml'
+    PublicTutorListResponse:
+      $ref: './schemas/tutors/res/PublicTutorListResponse.yaml'
+    # Tutor review Schemas
+    TutorReviewStatus:
+      $ref: './schemas/tutors/TutorReviewStatus.yaml'
+    CreateTutorReviewRequest:
+      $ref: './schemas/tutors/req/CreateTutorReviewRequest.yaml'
+    TutorReview:
+      $ref: './schemas/tutors/res/TutorReview.yaml'
+    TutorReviewListResponse:
+      $ref: './schemas/tutors/res/TutorReviewListResponse.yaml'
+    PublicTutorReview:
+      $ref: './schemas/tutors/res/PublicTutorReview.yaml'
+    PublicTutorReviewListResponse:
+      $ref: './schemas/tutors/res/PublicTutorReviewListResponse.yaml'
     # Dashboard Schemas
     DashboardPeriod:
       $ref: './schemas/dashboard/DashboardPeriod.yaml'

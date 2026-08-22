@@ -3,6 +3,8 @@ import type {
   UpdateTutorProfileRequest,
   TutorProfileResponse,
   CheckSlugResponse,
+  TutorReview,
+  TutorReviewListResponse,
 } from "@examify-tms/interfaces";
 
 export async function getMyProfileRequest(): Promise<TutorProfileResponse | null> {
@@ -44,6 +46,23 @@ export async function checkSlugRequest(
   const response = await api.get<CheckSlugResponse>(
     "/api/tutor-profiles/check-slug",
     { params: { slug } },
+  );
+  return response.data;
+}
+
+export async function listMyReviewsRequest(): Promise<TutorReviewListResponse> {
+  const response = await api.get<TutorReviewListResponse>(
+    "/api/tutor-profiles/me/reviews",
+  );
+  return response.data;
+}
+
+export async function moderateReviewRequest(
+  reviewId: string,
+  action: "approve" | "reject",
+): Promise<TutorReview> {
+  const response = await api.post<TutorReview>(
+    `/api/tutor-profiles/me/reviews/${encodeURIComponent(reviewId)}/${action}`,
   );
   return response.data;
 }

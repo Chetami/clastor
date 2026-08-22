@@ -29,7 +29,7 @@ export const tutorProfileFormSchema = z.object({
   template: z.enum(TEMPLATE_IDS as [TemplateId, ...TemplateId[]]),
   headline: z.string().trim().optional().or(z.literal("")),
   bio: z.string().trim().optional().or(z.literal("")),
-  subjects: z.array(z.string()),
+  subjectIds: z.array(z.string()),
   qualifications: z.array(z.string()),
   hourlyRate: z
     .union([z.number(), z.string(), z.null()])
@@ -37,6 +37,15 @@ export const tutorProfileFormSchema = z.object({
     .refine(
       (v) => v === null || (!Number.isNaN(v) && v >= 0),
       "Enter a valid amount",
+    ),
+  location: z.string().trim().max(80).optional().or(z.literal("")),
+  teachesOnline: z.boolean(),
+  yearsExperience: z
+    .union([z.number(), z.string(), z.null()])
+    .transform((v) => (v === null || v === "" ? null : Number(v)))
+    .refine(
+      (v) => v === null || (!Number.isNaN(v) && v >= 0 && v <= 60),
+      "Enter 0–60 years",
     ),
   contactEmail: z
     .string()
@@ -57,9 +66,12 @@ export const EMPTY_TUTOR_PROFILE_FORM: TutorProfileFormData = {
   template: DEFAULT_TEMPLATE_ID,
   headline: "",
   bio: "",
-  subjects: [],
+  subjectIds: [],
   qualifications: [],
   hourlyRate: null,
+  location: "",
+  teachesOnline: false,
+  yearsExperience: null,
   contactEmail: "",
   ctaText: "",
 };

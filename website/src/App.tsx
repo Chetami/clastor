@@ -15,12 +15,15 @@ import { APP_URL } from "@/lib/site";
 import PrivacyPage from "@/pages/Privacy";
 import TermsPage from "@/pages/Terms";
 import ContactPage from "@/pages/Contact";
+import TutorsDirectoryPage from "@/pages/TutorsDirectory";
+import PublicTutorPage from "@/pages/PublicTutor";
 
 const TITLES: Record<string, string> = {
   "/": "Clastor — Tutor management software for private tutors",
   "/privacy": "Privacy Policy - Clastor",
   "/terms": "Terms of Service - Clastor",
   "/contact": "Contact Clastor",
+  "/tutors": "Find a tutor — Clastor Tutor Directory",
 };
 
 /** Resets scroll position and document title on every route change. */
@@ -29,7 +32,11 @@ function RouteManager() {
 
   useEffect(() => {
     window.scrollTo(0, 0);
-    document.title = TITLES[pathname] ?? "Clastor";
+    // /t/:slug pages manage their own document.title (tutor name) — don't
+    // clobber it here (parent effects run after child effects).
+    if (!pathname.startsWith("/t/")) {
+      document.title = TITLES[pathname] ?? "Clastor";
+    }
   }, [pathname]);
 
   return null;
@@ -80,23 +87,38 @@ function NotFound() {
   );
 }
 
+/**
+ * Skips the marketing navbar/footer on individual tutor profile pages —
+ * those are the tutor's own pages and carry their own minimal chrome
+ * (brand mark + browse link + "made with Clastor" footer).
+ */
+function SiteChrome({ children }: { children: React.ReactNode }) {
+  const { pathname } = useLocation();
+  const isTutorProfile = pathname.startsWith("/t/");
+  return (
+    <div className="min-h-screen bg-background">
+      {!isTutorProfile && <Navbar />}
+      <main>{children}</main>
+      {!isTutorProfile && <Footer />}
+    </div>
+  );
+}
+
 export default function App() {
   return (
     <BrowserRouter>
       <RouteManager />
-      <div className="min-h-screen bg-background">
-        <Navbar />
-        <main>
-          <Routes>
-            <Route path="/" element={<Landing />} />
-            <Route path="/privacy" element={<PrivacyPage />} />
-            <Route path="/terms" element={<TermsPage />} />
-            <Route path="/contact" element={<ContactPage />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </main>
-        <Footer />
-      </div>
+      <SiteChrome>
+        <Routes>
+          <Route path="/" element={<Landing />} />
+          <Route path="/privacy" element={<PrivacyPage />} />
+          <Route path="/terms" element={<TermsPage />} />
+          <Route path="/contact" element={<ContactPage />} />
+          <Route path="/tutors" element={<TutorsDirectoryPage />} />
+          <Route path="/t/:slug" element={<PublicTutorPage />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </SiteChrome>
     </BrowserRouter>
   );
 }

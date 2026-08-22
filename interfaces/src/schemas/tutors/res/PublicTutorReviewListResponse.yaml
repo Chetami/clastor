@@ -1,0 +1,9 @@
+type: object
+required:
+  - items
+properties:
+  items:
+    type: array
+    items:
+      $ref: './PublicTutorReview.yaml'
+description: Public list of approved reviews for a tutor profile, newest first.

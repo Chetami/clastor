@@ -1,0 +1,6 @@
+type: string
+enum: [pending, approved, rejected]
+description: |-
+  Moderation state of a tutor review. New public submissions start as
+  `pending` and only become visible on the public profile once the tutor
+  approves them.

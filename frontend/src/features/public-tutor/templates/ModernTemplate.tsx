@@ -1,8 +1,11 @@
 import type { PublicTutorProfileResponse } from "@examify-tms/interfaces";
 import {
+  AvailabilityList,
   ContactButton,
+  DetailBadges,
   ProfileAvatar,
   QualificationList,
+  RatingStars,
   SectionTitle,
   SubjectChips,
   formatRate,
@@ -21,6 +24,9 @@ export function ModernTemplate({
   const ctaLabel = getCtaLabel(profile);
   const rate = formatRate(profile);
   const firstName = profile.name.split(" ")[0];
+  const hasRating = profile.ratingAvg != null && profile.reviewCount > 0;
+  const hasBadges =
+    profile.location || profile.teachesOnline || profile.yearsExperience != null;
 
   return (
     <div className="min-h-dvh bg-background">
@@ -41,7 +47,21 @@ export function ModernTemplate({
                 {profile.headline}
               </p>
             )}
+            {hasRating && (
+              <RatingStars
+                ratingAvg={profile.ratingAvg}
+                reviewCount={profile.reviewCount}
+              />
+            )}
           </div>
+          {hasBadges && (
+            <DetailBadges
+              location={profile.location}
+              teachesOnline={profile.teachesOnline}
+              yearsExperience={profile.yearsExperience}
+              light
+            />
+          )}
           {rate && (
             <p className="text-sm font-medium text-primary-foreground/90">
               From {rate} / hour
@@ -69,7 +89,9 @@ export function ModernTemplate({
       </header>
 
       {/* Detail grid */}
-      {(profile.subjects.length > 0 || profile.qualifications.length > 0) && (
+      {(profile.subjects.length > 0 ||
+        profile.qualifications.length > 0 ||
+        (profile.availability?.length ?? 0) > 0) && (
         <section className="mx-auto grid max-w-4xl gap-6 px-6 py-12 sm:grid-cols-2 sm:px-12">
           {profile.subjects.length > 0 && (
             <div className="rounded-2xl border bg-card p-6">
@@ -78,6 +100,12 @@ export function ModernTemplate({
                 subjects={profile.subjects}
                 chipClassName="bg-primary/10 font-medium text-primary"
               />
+            </div>
+          )}
+          {(profile.availability?.length ?? 0) > 0 && (
+            <div className="rounded-2xl border bg-card p-6">
+              <SectionTitle className="mb-4">Availability</SectionTitle>
+              <AvailabilityList availability={profile.availability!} />
             </div>
           )}
           {profile.qualifications.length > 0 && (

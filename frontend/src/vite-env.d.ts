@@ -11,6 +11,8 @@ interface ImportMetaEnv {
   readonly VITE_POSTHOG_PROJECT_TOKEN: string
   readonly VITE_POSTHOG_HOST: string
   readonly VITE_APP_ENV?: string
+  /** Origin serving the public tutor pages (/t/:slug, /tutors). Empty in dev. */
+  readonly VITE_PUBLIC_SITE_URL?: string
 }
 
 interface ImportMeta {
