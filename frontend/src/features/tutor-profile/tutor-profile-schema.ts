@@ -1,20 +1,6 @@
 import { z } from "zod";
-import {
-  DEFAULT_TEMPLATE_ID,
-  TEMPLATE_IDS,
-  TEMPLATES,
-  type TemplateId,
-} from "@/features/public-tutor/templates/registry";
 
 export const SLUG_PATTERN = /^[a-z0-9-]{3,40}$/;
-
-/**
- * The selectable templates are derived from the registry — see
- * `public-tutor/templates/registry.ts`. No template ids or labels are
- * duplicated here.
- */
-export const TEMPLATE_OPTIONS: { value: TemplateId; label: string }[] =
-  TEMPLATE_IDS.map((value) => ({ value, label: TEMPLATES[value].label }));
 
 export const tutorProfileFormSchema = z.object({
   slug: z
@@ -26,7 +12,6 @@ export const tutorProfileFormSchema = z.object({
       SLUG_PATTERN,
       "Use lowercase letters, digits and hyphens only",
     ),
-  template: z.enum(TEMPLATE_IDS as [TemplateId, ...TemplateId[]]),
   headline: z.string().trim().optional().or(z.literal("")),
   bio: z.string().trim().optional().or(z.literal("")),
   subjectIds: z.array(z.string()),
@@ -63,7 +48,6 @@ export type TutorProfileFormData = z.infer<typeof tutorProfileFormSchema>;
 
 export const EMPTY_TUTOR_PROFILE_FORM: TutorProfileFormData = {
   slug: "",
-  template: DEFAULT_TEMPLATE_ID,
   headline: "",
   bio: "",
   subjectIds: [],

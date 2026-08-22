@@ -28,7 +28,6 @@ import {
 } from "./api/use-publish-tutor-profile";
 import { useCheckSlug } from "./api/use-check-slug";
 import { ProfilePreview } from "./ProfilePreview";
-import { TemplatePicker } from "./TemplatePicker";
 import { ReviewsModerationCard } from "./ReviewsModerationCard";
 import { profileResponseToValues } from "./preview-utils";
 import {
@@ -138,7 +137,6 @@ export default function TutorProfileEditor() {
 
     return {
       slug: values.slug.trim().toLowerCase(),
-      template: values.template,
       headline: values.headline?.trim() || null,
       bio: values.bio?.trim() || null,
       subjectIds: values.subjectIds,
@@ -274,13 +272,13 @@ export default function TutorProfileEditor() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="slug">Page URL</Label>
-                <div className="flex items-center rounded-md border border-input pr-3 focus-within:ring-1 focus-within:ring-ring">
-                  <span className="pl-3 text-sm text-muted-foreground">
-                    {window.location.origin}/t/
+                <div className="flex min-w-0 items-center rounded-md border border-input pr-3 focus-within:ring-1 focus-within:ring-ring">
+                  <span className="max-w-[45%] shrink-0 truncate pl-3 text-sm text-muted-foreground">
+                    {publicSiteUrl("/t/")}
                   </span>
                   <Input
                     id="slug"
-                    className="border-0 shadow-none focus-visible:ring-0"
+                    className="min-w-0 flex-1 border-0 shadow-none focus-visible:ring-0"
                     placeholder="jane-math"
                     value={values.slug}
                     onChange={(e) => update("slug", e.target.value)}
@@ -395,21 +393,6 @@ export default function TutorProfileEditor() {
                   onCheckedChange={(v) => update("teachesOnline", v)}
                 />
               </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Template</CardTitle>
-              <CardDescription>
-                Choose how your public page looks. Switch any time.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <TemplatePicker
-                value={values.template}
-                onChange={(v) => update("template", v)}
-              />
             </CardContent>
           </Card>
 

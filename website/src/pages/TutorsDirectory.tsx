@@ -21,75 +21,71 @@ function TutorCard({ tutor }: { tutor: PublicTutorSummary }) {
   return (
     <a
       href={`/t/${tutor.slug}`}
-      className="group flex flex-col gap-3 rounded-3xl border-[2.5px] border-foreground bg-card p-5 shadow-sketch transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-sketch-lg"
+      className="group flex flex-col overflow-hidden rounded-2xl border-2 border-foreground bg-card shadow-sketch transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-sketch-lg"
     >
-      <div className="flex items-center gap-3">
-        <TutorAvatar
-          name={tutor.name}
-          avatarUrl={tutor.avatarUrl}
-          className="size-12"
-        />
-        <div className="min-w-0 flex-1">
-          <p className="truncate font-display text-lg leading-tight">
-            {tutor.name}
+      {/* Compact square photo — the tutor's face stays the anchor without
+          eating vertical space. */}
+      <TutorAvatar
+        name={tutor.name}
+        avatarUrl={tutor.avatarUrl}
+        className="aspect-square w-full rounded-none border-0 text-3xl"
+      />
+
+      <div className="flex flex-1 flex-col gap-1.5 p-3">
+        <p className="truncate font-display text-base leading-tight">
+          {tutor.name}
+        </p>
+
+        {(tutor.ratingAvg != null || tutor.hourlyRate != null) && (
+          <div className="flex items-center justify-between gap-2">
+            <Stars ratingAvg={tutor.ratingAvg} reviewCount={tutor.reviewCount} />
+            {tutor.hourlyRate != null && (
+              <span className="text-sm font-semibold">
+                {tutor.currency} {tutor.hourlyRate.toFixed(0)}/hr
+              </span>
+            )}
+          </div>
+        )}
+
+        {tutor.bio && (
+          <p className="line-clamp-1 text-sm text-muted-foreground">
+            {tutor.bio}
           </p>
-          {tutor.headline && (
-            <p className="truncate text-sm text-muted-foreground">
-              {tutor.headline}
-            </p>
-          )}
-        </div>
+        )}
+
+        {tutor.subjects.length > 0 && (
+          <SubjectChips subjects={tutor.subjects} max={2} className="text-xs" />
+        )}
+
+        {(tutor.location || tutor.teachesOnline) && (
+          <div className="mt-auto flex flex-wrap items-center gap-x-2.5 gap-y-0.5 pt-0.5 text-xs text-muted-foreground">
+            {tutor.location && (
+              <span className="inline-flex items-center gap-1">
+                <MapPin className="size-3" />
+                {tutor.location}
+              </span>
+            )}
+            {tutor.teachesOnline && (
+              <span className="inline-flex items-center gap-1">
+                <Globe className="size-3" />
+                Online
+              </span>
+            )}
+          </div>
+        )}
       </div>
-
-      {(tutor.ratingAvg != null || tutor.hourlyRate != null) && (
-        <div className="flex items-center justify-between gap-2">
-          <Stars ratingAvg={tutor.ratingAvg} reviewCount={tutor.reviewCount} />
-          {tutor.hourlyRate != null && (
-            <span className="text-sm font-semibold">
-              {tutor.currency} {tutor.hourlyRate.toFixed(0)}/hr
-            </span>
-          )}
-        </div>
-      )}
-
-      {tutor.subjects.length > 0 && (
-        <SubjectChips subjects={tutor.subjects} max={3} className="text-xs" />
-      )}
-
-      {(tutor.location || tutor.teachesOnline) && (
-        <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-          {tutor.location && (
-            <span className="inline-flex items-center gap-1">
-              <MapPin className="size-3.5" />
-              {tutor.location}
-            </span>
-          )}
-          {tutor.teachesOnline && (
-            <span className="inline-flex items-center gap-1">
-              <Globe className="size-3.5" />
-              Online
-            </span>
-          )}
-        </div>
-      )}
     </a>
   );
 }
 
 function CardSkeleton() {
   return (
-    <div className="flex animate-pulse flex-col gap-3 rounded-3xl border-[2.5px] border-border bg-card p-5">
-      <div className="flex items-center gap-3">
-        <div className="size-12 rounded-2xl bg-muted" />
-        <div className="flex-1 space-y-2">
-          <div className="h-4 w-32 rounded bg-muted" />
-          <div className="h-3 w-24 rounded bg-muted" />
-        </div>
-      </div>
-      <div className="h-3 w-full rounded bg-muted" />
-      <div className="flex gap-2">
-        <div className="h-6 w-16 rounded-full bg-muted" />
-        <div className="h-6 w-20 rounded-full bg-muted" />
+    <div className="flex animate-pulse flex-col overflow-hidden rounded-2xl border-2 border-border bg-card">
+      <div className="aspect-square w-full bg-muted" />
+      <div className="space-y-1.5 p-3">
+        <div className="h-4 w-28 rounded bg-muted" />
+        <div className="h-3 w-full rounded bg-muted" />
+        <div className="h-3 w-2/3 rounded bg-muted" />
       </div>
     </div>
   );
@@ -228,7 +224,7 @@ export default function TutorsDirectoryPage() {
               : ""}
       </p>
 
-      <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-4">
         {showSkeleton &&
           Array.from({ length: 6 }).map((_, i) => <CardSkeleton key={i} />)}
 

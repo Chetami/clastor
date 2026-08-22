@@ -3,7 +3,6 @@ required:
   - id
   - tutorId
   - slug
-  - template
   - status
   - createdAt
   - updatedAt
@@ -22,8 +21,6 @@ properties:
       URL-safe slug used in the public URL (/t/:slug). Lowercase letters,
       digits and hyphens only, 3-40 characters, unique across all profiles.
     example: jane-math
-  template:
-    $ref: './TutorTemplate.yaml'
   status:
     $ref: './TutorProfileStatus.yaml'
   headline:

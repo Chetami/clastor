@@ -196,12 +196,9 @@ components:
       $ref: './schemas/stripe/CreateAccountLinkResponse.yaml'
     DashboardLinkResponse:
       $ref: './schemas/stripe/DashboardLinkResponse.yaml'
-    # Tutor Profile Enums
-    TutorTemplate:
-      $ref: './schemas/tutors/TutorTemplate.yaml'
+    # Tutor Profile Schemas
     TutorProfileStatus:
       $ref: './schemas/tutors/TutorProfileStatus.yaml'
-    # Tutor Profile Schemas
     TutorProfile:
       $ref: './schemas/tutors/TutorProfile.yaml'
     UpdateTutorProfileRequest:

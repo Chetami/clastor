@@ -8,8 +8,6 @@ properties:
       URL-safe slug for the public URL. Lowercase letters, digits and
       hyphens only, 3-40 characters, unique across all profiles.
     example: jane-math
-  template:
-    $ref: '../TutorTemplate.yaml'
   headline:
     type: string
     nullable: true

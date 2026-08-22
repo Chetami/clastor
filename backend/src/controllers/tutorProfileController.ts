@@ -58,7 +58,6 @@ async function toResponse(
     id: profile.id,
     tutorId: profile.tutorId,
     slug: profile.slug,
-    template: profile.template,
     status: profile.status,
     headline: profile.headline,
     bio: profile.bio,

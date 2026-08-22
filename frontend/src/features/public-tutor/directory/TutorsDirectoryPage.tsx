@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Globe, MapPin, Search } from "lucide-react";
 import { usePublicTutors, getInitials } from "@examify-tms/shared";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,18 +29,12 @@ function useDebouncedValue<T>(value: T, delayMs: number): T {
 
 function TutorCardSkeleton() {
   return (
-    <div className="flex flex-col gap-3 rounded-xl border p-5">
-      <div className="flex items-center gap-3">
-        <Skeleton className="size-12 rounded-full" />
-        <div className="flex-1 space-y-2">
-          <Skeleton className="h-4 w-32" />
-          <Skeleton className="h-3 w-24" />
-        </div>
-      </div>
-      <Skeleton className="h-3 w-full" />
-      <div className="flex gap-2">
-        <Skeleton className="h-6 w-16 rounded-full" />
-        <Skeleton className="h-6 w-20 rounded-full" />
+    <div className="flex flex-col gap-3 rounded-xl border p-0">
+      <Skeleton className="aspect-square w-full rounded-b-none rounded-t-xl" />
+      <div className="space-y-1.5 p-3 pt-0">
+        <Skeleton className="h-4 w-28" />
+        <Skeleton className="h-3 w-full" />
+        <Skeleton className="h-3 w-2/3" />
       </div>
     </div>
   );
@@ -171,7 +164,7 @@ export default function TutorsDirectoryPage() {
               : ""}
         </p>
 
-        <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-4">
           {(isLoading || isFetching) &&
             tutors.length === 0 &&
             Array.from({ length: 6 }).map((_, i) => <TutorCardSkeleton key={i} />)}
@@ -203,67 +196,75 @@ export default function TutorsDirectoryPage() {
             <Link
               key={tutor.slug}
               to={`/t/${tutor.slug}`}
-              className="group flex flex-col gap-3 rounded-xl border bg-card p-5 transition-shadow hover:shadow-md focus-visible:shadow-md"
+              className="group flex flex-col overflow-hidden rounded-xl border bg-card transition-shadow hover:shadow-md focus-visible:shadow-md"
             >
-              <div className="flex items-center gap-3">
-                <Avatar className="size-12">
-                  {tutor.avatarUrl && (
-                    <AvatarImage src={tutor.avatarUrl} alt={tutor.name} />
-                  )}
-                  <AvatarFallback>
+              {/* Compact square photo — face stays the anchor without eating
+                  vertical space. */}
+              <div className="relative aspect-square w-full overflow-hidden bg-muted">
+                {tutor.avatarUrl ? (
+                  <img
+                    src={tutor.avatarUrl}
+                    alt={tutor.name}
+                    className="absolute inset-0 size-full object-cover"
+                    loading="lazy"
+                  />
+                ) : (
+                  <div className="flex size-full items-center justify-center text-3xl font-medium text-muted-foreground">
                     {getInitials(tutor.name) || "?"}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-semibold group-hover:underline group-focus-visible:underline">
-                    {tutor.name}
-                  </p>
-                  {tutor.headline && (
-                    <p className="truncate text-sm text-muted-foreground">
-                      {tutor.headline}
-                    </p>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
 
-              {(tutor.ratingAvg != null || tutor.hourlyRate != null) && (
-                <div className="flex items-center justify-between gap-2">
-                  <RatingStars
-                    ratingAvg={tutor.ratingAvg}
-                    reviewCount={tutor.reviewCount}
+              <div className="flex flex-1 flex-col gap-1.5 p-3">
+                <p className="truncate text-sm font-semibold group-hover:underline group-focus-visible:underline">
+                  {tutor.name}
+                </p>
+
+                {(tutor.ratingAvg != null || tutor.hourlyRate != null) && (
+                  <div className="flex items-center justify-between gap-2">
+                    <RatingStars
+                      ratingAvg={tutor.ratingAvg}
+                      reviewCount={tutor.reviewCount}
+                    />
+                    {tutor.hourlyRate != null && (
+                      <span className="text-sm font-medium">
+                        {tutor.currency} {tutor.hourlyRate.toFixed(0)}/hr
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {tutor.bio && (
+                  <p className="line-clamp-1 text-sm text-muted-foreground">
+                    {tutor.bio}
+                  </p>
+                )}
+
+                {tutor.subjects.length > 0 && (
+                  <SubjectChips
+                    subjects={tutor.subjects}
+                    max={2}
+                    chipClassName="border border-input bg-muted/40 text-xs"
                   />
-                  {tutor.hourlyRate != null && (
-                    <span className="text-sm font-medium">
-                      {tutor.currency} {tutor.hourlyRate.toFixed(0)}/hr
-                    </span>
-                  )}
-                </div>
-              )}
+                )}
 
-              {tutor.subjects.length > 0 && (
-                <SubjectChips
-                  subjects={tutor.subjects}
-                  max={3}
-                  chipClassName="border border-input bg-muted/40 text-xs"
-                />
-              )}
-
-              {(tutor.location || tutor.teachesOnline) && (
-                <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                  {tutor.location && (
-                    <span className="inline-flex items-center gap-1">
-                      <MapPin className="size-3.5" />
-                      {tutor.location}
-                    </span>
-                  )}
-                  {tutor.teachesOnline && (
-                    <span className="inline-flex items-center gap-1">
-                      <Globe className="size-3.5" />
-                      Online
-                    </span>
-                  )}
-                </div>
-              )}
+                {(tutor.location || tutor.teachesOnline) && (
+                  <div className="mt-auto flex flex-wrap items-center gap-x-2.5 gap-y-0.5 pt-0.5 text-xs text-muted-foreground">
+                    {tutor.location && (
+                      <span className="inline-flex items-center gap-1">
+                        <MapPin className="size-3" />
+                        {tutor.location}
+                      </span>
+                    )}
+                    {tutor.teachesOnline && (
+                      <span className="inline-flex items-center gap-1">
+                        <Globe className="size-3" />
+                        Online
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
             </Link>
           ))}
         </div>

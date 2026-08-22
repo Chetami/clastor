@@ -20,6 +20,10 @@ properties:
     type: string
     nullable: true
     description: Short one-line tagline
+  bio:
+    type: string
+    nullable: true
+    description: Free-form about paragraph (the card shows a clamped excerpt)
   subjects:
     type: array
     description: Subjects the tutor teaches, resolved from their catalogue

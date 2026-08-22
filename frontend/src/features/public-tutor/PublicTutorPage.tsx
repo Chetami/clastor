@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { BrandMark } from "@/features/auth/BrandMark";
 import { isFeatureEnabled } from "@/config/features";
 import { getPublicProfileRequest } from "./api/requests";
-import { getTemplate } from "./templates/registry";
+import { TutorProfileLayout } from "./TutorProfileLayout";
 import { ReviewsSection } from "./ReviewsSection";
 
 /** Keep the browser tab + link previews useful for a public profile. */
@@ -117,11 +117,9 @@ export default function PublicTutorPage() {
 
       {!isLoading && profile && (
         <>
-          {(() => {
-            const Template = getTemplate(profile.template);
-            return <Template profile={profile} />;
-          })()}
-          {slug && <ReviewsSection slug={slug} />}
+          <TutorProfileLayout profile={profile}>
+            {slug && <ReviewsSection slug={slug} />}
+          </TutorProfileLayout>
           <footer className="border-t">
             <div className="mx-auto flex max-w-3xl flex-col items-center gap-1 px-4 py-8 text-center">
               <p className="text-sm text-muted-foreground">

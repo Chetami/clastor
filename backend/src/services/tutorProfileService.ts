@@ -7,7 +7,6 @@ import type {
   Subject,
   UpdateTutorProfileRequest,
   PublicTutorProfileResponse,
-  TutorTemplate,
   User,
   WorkingHours,
 } from "@examify-tms/interfaces";
@@ -21,7 +20,6 @@ export interface TutorProfileData {
   id: string;
   tutorId: string;
   slug: string;
-  template: TutorTemplate;
   status: "draft" | "published";
   headline: string | null;
   bio: string | null;
@@ -109,7 +107,6 @@ function mapDocToProfile(
     id,
     tutorId: data.tutorId,
     slug: data.slug,
-    template: data.template ?? "classic",
     status: data.status ?? "draft",
     headline: data.headline ?? null,
     bio: data.bio ?? null,
@@ -385,7 +382,6 @@ export async function upsertProfile(
 
     const profileData: Record<string, unknown> = {
       slug: normalized,
-      template: data.template ?? "classic",
       headline,
       bio: data.bio ?? null,
       subjectIds,
@@ -548,6 +544,7 @@ function toSummary(profile: TutorProfileData): PublicTutorSummary {
     name: profile.name,
     avatarUrl: profile.avatarUrl,
     headline: profile.headline,
+    bio: profile.bio,
     subjects: profile.subjectNames.map((name) => ({ id: name, name, color: null })),
     hourlyRate: profile.hourlyRate,
     currency: profile.currency,
@@ -599,7 +596,6 @@ export async function getPublicProfileBySlug(
 
   return {
     slug: profile.slug,
-    template: profile.template,
     headline: profile.headline,
     bio: profile.bio,
     subjects,

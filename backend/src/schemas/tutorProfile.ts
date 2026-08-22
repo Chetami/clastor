@@ -4,8 +4,6 @@
  */
 import { z } from "zod";
 
-export const tutorTemplateSchema = z.enum(["classic", "modern"]);
-
 export const updateTutorProfileSchema = z.object({
   slug: z
     .string()
@@ -13,7 +11,6 @@ export const updateTutorProfileSchema = z.object({
     .min(3)
     .max(40)
     .regex(/^[a-z0-9-]+$/, "Slug must be lowercase letters, digits and hyphens"),
-  template: tutorTemplateSchema.default("classic"),
   headline: z.string().trim().max(120).nullish(),
   bio: z.string().trim().max(4000).nullish(),
   subjectIds: z.array(z.string().min(1).max(64)).max(100).default([]),

@@ -222,7 +222,6 @@ aggregates maintained by the review service.
 {
   tutorId: string,
   slug: string,               // unique, /^[a-z0-9-]{3,40}$/
-  template: 'classic' | 'modern',
   status: 'draft' | 'published',
   headline, bio: string | null,
   subjectIds: string[],

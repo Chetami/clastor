@@ -3,7 +3,6 @@ required:
   - id
   - tutorId
   - slug
-  - template
   - status
   - subjects
   - qualifications
@@ -20,8 +19,6 @@ properties:
     type: string
     description: URL-safe slug used in the public URL (/t/:slug)
     example: jane-math
-  template:
-    $ref: '../TutorTemplate.yaml'
   status:
     $ref: '../TutorProfileStatus.yaml'
   headline:

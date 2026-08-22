@@ -1,7 +1,6 @@
 type: object
 required:
   - slug
-  - template
   - subjects
   - qualifications
   - name
@@ -12,8 +11,6 @@ properties:
     type: string
     description: The profile's URL slug
     example: jane-math
-  template:
-    $ref: '../TutorTemplate.yaml'
   headline:
     type: string
     nullable: true
