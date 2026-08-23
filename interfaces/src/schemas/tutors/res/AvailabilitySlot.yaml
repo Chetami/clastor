@@ -1,0 +1,22 @@
+type: object
+required:
+  - day
+  - start
+  - end
+properties:
+  day:
+    type: string
+    enum: [monday, tuesday, wednesday, thursday, friday, saturday, sunday]
+    description: Day of the week this availability window falls on.
+    example: monday
+  start:
+    type: string
+    description: Start of the window in 24h "HH:mm" (the tutor's local time).
+    example: "15:30"
+  end:
+    type: string
+    description: End of the window in 24h "HH:mm" (the tutor's local time).
+    example: "20:00"
+description: |-
+  One weekly availability window shown on a tutor's public page. Derived at
+  read time from the tutor's working hours — never stored on the profile.

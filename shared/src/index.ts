@@ -98,6 +98,13 @@ export * from "./features/public-tutor/api";
 export {
   getCtaLabel,
   formatRate as formatProfileRate,
+  formatTime as formatProfileTime,
+  formatAvailability,
+  formatAvailabilitySlot,
+  formatWorkingHours,
+  workingHoursToAvailability,
+  formatYearsExperience,
+  formatRating,
 } from "./features/public-tutor/profile-utils";
 export * from "./features/onboarding/api";
 export * from "./features/tour/api";

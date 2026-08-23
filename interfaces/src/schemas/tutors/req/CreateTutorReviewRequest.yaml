@@ -1,0 +1,26 @@
+type: object
+required:
+  - authorName
+  - rating
+properties:
+  authorName:
+    type: string
+    minLength: 1
+    maxLength: 60
+    description: Display name of the reviewer (shown once approved)
+    example: Sarah M.
+  rating:
+    type: integer
+    minimum: 1
+    maximum: 5
+    description: Star rating from 1 (worst) to 5 (best)
+    example: 5
+  comment:
+    type: string
+    maxLength: 1000
+    nullable: true
+    description: Optional written feedback
+    example: Jane transformed my daughter's confidence in maths.
+description: |-
+  Public submission body for leaving a review on a tutor's profile.
+  Reviews start pending and are only published after the tutor approves them.

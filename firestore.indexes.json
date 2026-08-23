@@ -1,5 +1,5 @@
 {
-  "// description": "Composite indexes required by the cursor-paginated GET /api/lessons and GET /api/payments endpoints, plus the calendar window fetch. Deploy with: firebase deploy --only firestore:indexes (requires a firebase.json referencing this file). Single-field indexes are created automatically by Firestore and are not listed here. If you prefer, run any paginated query once and click the 'Create index' link Firestore logs in the backend error output.",
+  "// description": "Composite indexes required by the cursor-paginated GET /api/lessons and GET /api/payments endpoints, the calendar window fetch, the public tutor directory (tutorProfiles) and tutor review listing/aggregates (tutorReviews). Deploy with: firebase deploy --only firestore:indexes (requires a firebase.json referencing this file). Single-field indexes are created automatically by Firestore and are not listed here. If you prefer, run any paginated query once and click the 'Create index' link Firestore logs in the backend error output.",
   "indexes": [
     {
       "collectionGroup": "lessons",
@@ -83,6 +83,31 @@
       "fields": [
         { "fieldPath": "tutorId", "order": "ASCENDING" },
         { "fieldPath": "sentAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "tutorProfiles",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "publishedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "tutorReviews",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "tutorId", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "tutorReviews",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "tutorId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     }
   ]

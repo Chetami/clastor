@@ -1,0 +1,9 @@
+type: object
+required:
+  - items
+properties:
+  items:
+    type: array
+    items:
+      $ref: './TutorReview.yaml'
+description: Owner-facing review list for the authenticated tutor.

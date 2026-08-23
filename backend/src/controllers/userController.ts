@@ -16,7 +16,10 @@ import {
   toUserInfo,
   normalizeWorkingHours,
 } from "../services/userService";
-import { syncTutorProfileCurrency } from "../services/tutorProfileService";
+import {
+  syncTutorProfileCurrency,
+  syncTutorProfileIdentity,
+} from "../services/tutorProfileService";
 import { AppError } from "../utils/AppError";
 
 /** Max upload size enforced by multer (5 MB) before processing. */
@@ -61,6 +64,11 @@ export async function uploadAvatar(
 
     const user = await updateUserAvatar(req.user!.uid, dataUrl);
 
+    // Keep the public tutor profile's denormalized avatar current.
+    void syncTutorProfileIdentity(req.user!.uid).catch((err) =>
+      console.error("Failed to sync tutor profile identity:", err),
+    );
+
     res.status(200).json(toUserInfo(user));
   } catch (error) {
     const message =
@@ -102,6 +110,10 @@ export async function updateMe(
 
     if (typeof name === "string") {
       updated = await updateUserName(uid, name);
+      // Keep the public tutor profile's denormalized name/search text current.
+      void syncTutorProfileIdentity(uid).catch((err) =>
+        console.error("Failed to sync tutor profile identity:", err),
+      );
     }
 
     if (typeof currency === "string") {
@@ -132,9 +144,13 @@ export async function updateMe(
     }
 
     // `subjects` is the full replacement for the tutor's subject catalogue.
-    // Removed subjects are cascaded off tagged students server-side.
+    // Removed subjects are cascaded off tagged students server-side, and the
+    // public profile's snapshot is refreshed so renames/colors propagate.
     if (subjects !== undefined) {
       updated = await updateUserSubjects(uid, subjects);
+      void syncTutorProfileIdentity(uid).catch((err) =>
+        console.error("Failed to sync tutor profile identity:", err),
+      );
     }
 
     if (typeof onboardingComplete === "boolean" && onboardingComplete) {
