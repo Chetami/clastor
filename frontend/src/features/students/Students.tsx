@@ -39,6 +39,12 @@ import {
   useListStudents,
   useUpdateStudent,
 } from "./api";
+import { useListLessons } from "@/features/schedule/api";
+import {
+  computeStudentStats,
+  type StudentStatsPeriod,
+} from "@examify-tms/shared";
+import { StatsPeriodSelect } from "./StatsPeriodSelect";
 import { useSubjectMap, useSubjects } from "@/lib/subjects";
 import {
   downloadCsv,
@@ -60,6 +66,7 @@ type SortKey =
   | "amount-low"
   | "debt-high"
   | "debt-low"
+  | "disruptions-high"
   | "updated";
 
 const SORT_OPTIONS: { value: SortKey; label: string }[] = [
@@ -69,6 +76,7 @@ const SORT_OPTIONS: { value: SortKey; label: string }[] = [
   { value: "amount-low", label: "Rate (Low–High)" },
   { value: "debt-high", label: "Debt (High–Low)" },
   { value: "debt-low", label: "Debt (Low–High)" },
+  { value: "disruptions-high", label: "Disruptions (High–Low)" },
   { value: "updated", label: "Recently Updated" },
 ];
 
@@ -76,6 +84,12 @@ export default function Students() {
   const navigate = useNavigate();
   const currency = useUserCurrency();
   const { data: students = [], isLoading, error } = useListStudents();
+  // All lessons feed the per-student disruption stats. React Query dedupes
+  // this with the dashboard's identical request.
+  const { data: lessons = [], isLoading: lessonsLoading } = useListLessons();
+  const [statsPeriod, setStatsPeriod] = useState<StudentStatsPeriod>(
+    "six_months",
+  );
   const subjectMap = useSubjectMap();
   const subjects = useSubjects();
   const studentIds = useMemo(() => students.map((s) => s.id), [students]);
@@ -103,6 +117,11 @@ export default function Students() {
     });
     return debts;
   }, [debtQueries, studentIds]);
+
+  const statsById = useMemo(
+    () => computeStudentStats(lessons, statsPeriod),
+    [lessons, statsPeriod],
+  );
 
   const visibleStudents = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -132,6 +151,11 @@ export default function Students() {
           return (studentDebts[b.id] || 0) - (studentDebts[a.id] || 0);
         case "debt-low":
           return (studentDebts[a.id] || 0) - (studentDebts[b.id] || 0);
+        case "disruptions-high":
+          return (
+            (statsById[b.id]?.disruptions ?? 0) -
+            (statsById[a.id]?.disruptions ?? 0)
+          );
         case "updated":
           return (
             new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
@@ -140,7 +164,7 @@ export default function Students() {
           return 0;
       }
     });
-  }, [students, statusFilter, search, sortKey, studentDebts, subjectMap]);
+  }, [students, statusFilter, search, sortKey, studentDebts, subjectMap, statsById]);
 
   async function handleAdd(values: StudentFormData) {
     try {
@@ -264,6 +288,11 @@ export default function Students() {
                   ))}
                 </SelectContent>
               </Select>
+              <StatsPeriodSelect
+                value={statsPeriod}
+                onChange={setStatsPeriod}
+                className="w-32"
+              />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm" data-tour="csv-actions">
@@ -325,6 +354,9 @@ export default function Students() {
                         (debtQueries[debtQueryIndex]?.isLoading ?? false)
                       }
                       currency={currency}
+                      stats={
+                        lessonsLoading ? null : (statsById[student.id] ?? null)
+                      }
                       onNavigate={() => navigate(`/students/${student.id}`)}
                       onEdit={() => setEditing(student)}
                     />
