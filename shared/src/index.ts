@@ -71,6 +71,7 @@ export * from "./features/lessons/lesson-series-utils";
 
 // ---- Feature: dashboard ----
 export * from "./features/dashboard/api";
+export * from "./features/dashboard/conflicts";
 export * from "./features/dashboard/lib";
 
 // ---- Feature: account (mirrors backend enums) ----
