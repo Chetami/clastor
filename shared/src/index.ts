@@ -80,6 +80,7 @@ export * from "./features/account/reminder-options";
 // ---- Feature: students ----
 export * from "./features/students/api";
 export * from "./features/students/student-schema";
+export * from "./features/students/student-stats";
 export * from "./features/students/student-utils";
 
 // ---- Feature: payments ----
