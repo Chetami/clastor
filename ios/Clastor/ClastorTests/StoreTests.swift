@@ -89,6 +89,7 @@ struct StoreTests {
             var limit: Int?
         }
         var calls: [Call] = []
+        var debtFetchCount = 0
         var page1: PaymentModels.InvoiceListResponse
         var page2: PaymentModels.InvoiceListResponse
 
@@ -132,7 +133,10 @@ struct StoreTests {
             return voided
         }
         func studentInvoices(studentId: String, accessToken: String) async throws -> [PaymentModels.InvoiceResponse] { page1.data }
-        func studentDebt(studentId: String, accessToken: String) async throws -> Double { 42 }
+        func studentDebt(studentId: String, accessToken: String) async throws -> Double {
+            debtFetchCount += 1
+            return 42
+        }
     }
 
     /// A session that is signed in via the offline preview auth fakes
@@ -242,12 +246,14 @@ struct StoreTests {
         await store.refresh(session)
         await store.loadStudentDebt(studentId: "student-1", session)
         await store.loadStudentInvoices(studentId: "student-1", session)
+        await store.loadStudentDebt(studentId: "student-1", session)
+        #expect(api.debtFetchCount == 1)  // cached between reads
 
         let paid = try await store.markPaid(id: "1", session)
         #expect(paid.status == "paid")
         #expect(store.invoices.first { $0.id == "1" }?.status == "paid")
-        // Student-scoped snapshots were invalidated by the mutation.
+        // The mutation invalidated the student snapshot — reloading refetches.
         await store.loadStudentDebt(studentId: "student-1", session)
-        #expect(api.calls.filter { $0.cursor == nil }.count >= 2)
+        #expect(api.debtFetchCount == 2)
     }
 }
