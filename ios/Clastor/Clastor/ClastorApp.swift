@@ -10,10 +10,18 @@ import SwiftUI
 @main
 struct ClastorApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+    @State private var session = SessionStore.live()
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ContentView(session: session)
+                .task { await session.restore() }
+                .onChange(of: scenePhase) { _, phase in
+                    if phase == .active {
+                        Task { await session.becameActive() }
+                    }
+                }
         }
     }
 }

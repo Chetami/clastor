@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, mobile]
   pull_request:
-    branches: [main]
+    branches: [main, mobile]
 
 # Cancel superseded runs on the same branch/PR to keep the queue fast.
 concurrency:
@@ -12,6 +12,17 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  native-configuration:
+    name: Check iOS configuration
+    runs-on: macos-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Test environment boundaries with synthetic Firebase configuration
+        run: python3 ios/Clastor/Scripts/test_prepare_firebase.py
+
   build-and-test:
     name: Build & Test
     runs-on: ubuntu-latest
@@ -42,6 +53,11 @@ jobs:
         run: |
           npm run build:interfaces
           npm run build:shared
+
+      - name: Check native API contracts
+        run: |
+          npm run check:swift-auth --workspace=interfaces
+          npm run check:swift-students --workspace=interfaces
 
       - name: Lint frontend
         run: npm run lint --workspace=frontend

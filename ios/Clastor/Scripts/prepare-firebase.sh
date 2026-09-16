@@ -29,6 +29,13 @@ case "${API_BASE_URL:-}" in
     *) fail "API_BASE_URL must use HTTPS (dev may use HTTP localhost)." ;;
 esac
 
+if [ "${PLATFORM_NAME:-}" = iphoneos ]; then
+    case "$API_BASE_URL" in
+        http://localhost|http://localhost:*|http://localhost/|https://localhost|https://localhost:*|https://localhost/)
+            fail "localhost points to the iPhone, not your Mac. Select the Clastor Staging scheme, or set a reachable HTTPS development API in Configuration/Firebase/dev/Local.xcconfig." ;;
+    esac
+fi
+
 source_path="${SCRIPT_INPUT_FILE_1:?Missing Firebase input path}"
 destination_path="${SCRIPT_OUTPUT_FILE_0:?Missing Firebase output path}"
 [ -f "$source_path" ] ||

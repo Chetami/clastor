@@ -34,6 +34,15 @@ struct AppConfigurationTests {
         }
     }
 
+    @Test func differentBackendsCannotReuseStoredCredentials() throws {
+        let first = try AppConfiguration.load(info: info(), bundleIdentifier: "dev.chethin.Clastor.dev")
+        let second = try AppConfiguration.load(info: info(url: "https://another.example.test"), bundleIdentifier: "dev.chethin.Clastor.dev")
+        var otherProject = info()
+        otherProject["ExpectedFirebaseProjectID"] = "another-project"
+        let third = try AppConfiguration.load(info: otherProject, bundleIdentifier: "dev.chethin.Clastor.dev")
+        #expect(Set([first.keychainService, second.keychainService, third.keychainService]).count == 3)
+    }
+
     @Test(arguments: [
         "http://api.example.test", "https://user:password@api.example.test",
         "https://api.example.test?token=value", "https://api.example.test#fragment",
