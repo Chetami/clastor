@@ -1,6 +1,6 @@
 import { getFirebaseAuth } from "../config/firebase";
 import type { DecodedIdToken } from "firebase-admin/auth";
-import { UnauthorizedError, ServiceUnavailableError } from "../utils/AppError";
+import { AppError, UnauthorizedError, ServiceUnavailableError } from "../utils/AppError";
 import {
   getEmailTransporter,
   getSenderAddress,
@@ -15,30 +15,43 @@ import { emailButtonHtml, wrapEmailHtml } from "./emailLayout";
  * @param token - Firebase ID token from client
  * @returns Decoded token with user info
  */
+function firebaseFailure(error: unknown): never {
+  if (error instanceof AppError) throw error;
+  const code = (error as { code?: string })?.code;
+  if (["auth/id-token-expired", "auth/id-token-revoked", "auth/invalid-id-token",
+       "auth/argument-error", "auth/user-disabled", "auth/user-not-found"].includes(code ?? "")) {
+    throw new UnauthorizedError("Invalid or revoked session", "AUTH_INVALID_SESSION");
+  }
+  // Never return/log the SDK error object: it may contain request credentials.
+  throw new ServiceUnavailableError("Authentication service is temporarily unavailable");
+}
+
 export async function verifyFirebaseToken(token: string): Promise<DecodedIdToken> {
   try {
-    const firebaseAuth = getFirebaseAuth();
-    const decodedToken = await firebaseAuth.verifyIdToken(token);
-    return decodedToken;
+    return await getFirebaseAuth().verifyIdToken(token, true);
   } catch (error) {
-    console.error("Firebase token verification failed:", error);
-    throw new UnauthorizedError("Invalid Firebase token");
+    return firebaseFailure(error);
   }
 }
 
-/**
- * Read the user's current email-verification status straight from Firebase
- * Auth. Firestore doesn't mirror this flag, so this is the only source of
- * truth. Throws UnauthorizedError when the Auth record is gone (user deleted
- * server-side) — callers should treat that as an invalid session.
- */
-export async function getEmailVerified(uid: string): Promise<boolean> {
+/** Check account status and the ORIGINAL authentication time against revocation. */
+export async function getEmailVerified(uid: string, authTime?: number): Promise<boolean> {
   try {
     const user = await getFirebaseAuth().getUser(uid);
+    if (user.disabled) {
+      throw new UnauthorizedError("Account is disabled", "AUTH_INVALID_SESSION");
+    }
+    if (authTime !== undefined) {
+      const validAfter = Date.parse(user.tokensValidAfterTime ?? "");
+      if (!Number.isInteger(authTime) || authTime <= 0 ||
+          authTime > Math.floor(Date.now() / 1000) ||
+          (Number.isFinite(validAfter) && authTime * 1000 < validAfter)) {
+        throw new UnauthorizedError("Session has been revoked. Please sign in again.", "AUTH_INVALID_SESSION");
+      }
+    }
     return user.emailVerified;
   } catch (error) {
-    console.error("Firebase getUser failed:", error);
-    throw new UnauthorizedError("User no longer exists");
+    return firebaseFailure(error);
   }
 }
 

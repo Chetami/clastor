@@ -10,16 +10,12 @@ export function useLogout() {
   return useMutation({
     mutationFn: () => {
       const refreshToken = useAuthStore.getState().refreshToken;
-      return logoutRequest(refreshToken);
-    },
-    onSettled: () => {
-      // Track while the identity is still active — clearAuth triggers the
-      // PostHog reset in AnalyticsIdentitySync.
       track("logout");
-      // Drop all cached query data so the next user doesn't see the
-      // previous user's students/lessons until the app is refreshed.
-      queryClient.clear();
+      // Advance the session generation immediately so an in-flight refresh
+      // cannot restore credentials while server-side revocation is pending.
       clearAuth();
+      queryClient.clear();
+      return logoutRequest(refreshToken);
     },
   });
 }

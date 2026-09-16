@@ -11,7 +11,7 @@ import {
   resendVerificationLimiter,
   waitlistLimiter,
 } from "../middleware/rateLimit";
-import { registerSchema, refreshTokenSchema, joinWaitlistSchema, forgotPasswordSchema } from "../schemas";
+import { googleAuthSchema, registerSchema, refreshTokenSchema, joinWaitlistSchema, forgotPasswordSchema } from "../schemas";
 
 const router = Router();
 
@@ -30,7 +30,7 @@ router.post("/login", loginLimiter, login);
  * Google sign-in endpoint - accepts Firebase token obtained via Google sign-in.
  * Logs in an existing user or creates a new account from the Google profile.
  */
-router.post("/google", firebaseGoogleLoginLimiter, googleAuth);
+router.post("/google", firebaseGoogleLoginLimiter, validateRequest({ body: googleAuthSchema }), googleAuth);
 
 /**
  * POST /api/auth/register

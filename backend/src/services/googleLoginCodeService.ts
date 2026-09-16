@@ -37,6 +37,8 @@ export interface GoogleLoginCodeData {
   uid: string;
   /** True when this login created the user's Firestore document. */
   isNewUser: boolean;
+  /** Original verified Google authentication time. */
+  authTime: number;
 }
 
 /** SHA-256 hex hash of a code string (never store the raw code). */
@@ -59,6 +61,7 @@ export async function createGoogleLoginCode(
     .set({
       uid: data.uid,
       isNewUser: data.isNewUser === true,
+      authTime: data.authTime,
       // Stored as epoch millis, NOT a Date: Firestore returns Dates as
       // Timestamp objects on read (no .getTime()), which would break the
       // comparison below. Numbers round-trip exactly.
@@ -89,12 +92,14 @@ export async function consumeGoogleLoginCode(
   return firestore.runTransaction(async (tx) => {
     const snap = await tx.get(ref);
     const data = snap.data() as
-      | { uid?: string; isNewUser?: boolean; expiresAtMs?: number }
+      | { uid?: string; isNewUser?: boolean; expiresAtMs?: number; authTime?: number }
       | undefined;
 
     const expired =
       !data ||
       !data.uid ||
+      typeof data.authTime !== "number" || !Number.isInteger(data.authTime) || data.authTime <= 0 ||
+      data.authTime > Math.floor(Date.now() / 1000) ||
       typeof data.expiresAtMs !== "number" ||
       data.expiresAtMs < Date.now();
 
@@ -105,6 +110,6 @@ export async function consumeGoogleLoginCode(
     }
 
     tx.delete(ref);
-    return { uid: data.uid!, isNewUser: data.isNewUser === true };
+    return { uid: data.uid!, isNewUser: data.isNewUser === true, authTime: data.authTime! };
   });
 }

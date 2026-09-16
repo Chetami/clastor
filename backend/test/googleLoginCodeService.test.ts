@@ -50,6 +50,7 @@ import {
 import admin from "firebase-admin";
 import crypto from "crypto";
 
+const AUTH_TIME = Math.floor(Date.now() / 1000) - 60;
 const sha256 = (s: string) =>
   crypto.createHash("sha256").update(s).digest("hex");
 
@@ -61,18 +62,18 @@ beforeEach(() => {
 describe("googleLoginCodeService", () => {
   describe("createGoogleLoginCode", () => {
     it("returns a URL-safe 256-bit code (43-char base64url)", async () => {
-      const code = await createGoogleLoginCode({ uid: "u1", isNewUser: true });
+      const code = await createGoogleLoginCode({ uid: "u1", isNewUser: true, authTime: AUTH_TIME });
       expect(code).toMatch(/^[A-Za-z0-9_-]{43}$/);
     });
 
     it("produces unique codes", async () => {
-      const a = await createGoogleLoginCode({ uid: "u1", isNewUser: false });
-      const b = await createGoogleLoginCode({ uid: "u1", isNewUser: false });
+      const a = await createGoogleLoginCode({ uid: "u1", isNewUser: false, authTime: AUTH_TIME });
+      const b = await createGoogleLoginCode({ uid: "u1", isNewUser: false, authTime: AUTH_TIME });
       expect(a).not.toBe(b);
     });
 
     it("stores only a SHA-256 hash — never the raw code", async () => {
-      const code = await createGoogleLoginCode({ uid: "u1", isNewUser: true });
+      const code = await createGoogleLoginCode({ uid: "u1", isNewUser: true, authTime: AUTH_TIME });
 
       const keys = [...firestore.store.keys()];
       expect(keys).toEqual([`googleLoginCodes/${sha256(code)}`]);
@@ -87,7 +88,7 @@ describe("googleLoginCodeService", () => {
       // Firestore TTL policies only fire on timestamp-typed fields, and the
       // policy registered in FIREBASE_SETUP.md targets `ttlExpiresAt`. It
       // must sit past expiresAtMs so the in-code expiry check decides first.
-      const code = await createGoogleLoginCode({ uid: "u1", isNewUser: false });
+      const code = await createGoogleLoginCode({ uid: "u1", isNewUser: false, authTime: AUTH_TIME });
 
       const doc = firestore.store.get(`googleLoginCodes/${sha256(code)}`)!;
       expect(doc.ttlExpiresAt).toBeInstanceOf(admin.firestore.Timestamp);
@@ -99,11 +100,12 @@ describe("googleLoginCodeService", () => {
 
   describe("consumeGoogleLoginCode", () => {
     it("round-trips the bound identity exactly once", async () => {
-      const code = await createGoogleLoginCode({ uid: "u1", isNewUser: true });
+      const code = await createGoogleLoginCode({ uid: "u1", isNewUser: true, authTime: AUTH_TIME });
 
       await expect(consumeGoogleLoginCode(code)).resolves.toEqual({
         uid: "u1",
         isNewUser: true,
+        authTime: AUTH_TIME,
       });
 
       // Single-use: the doc was deleted with the read; a replay gets null.
@@ -111,13 +113,13 @@ describe("googleLoginCodeService", () => {
     });
 
     it("deletes the document on redemption", async () => {
-      const code = await createGoogleLoginCode({ uid: "u2", isNewUser: false });
+      const code = await createGoogleLoginCode({ uid: "u2", isNewUser: false, authTime: AUTH_TIME });
       await consumeGoogleLoginCode(code);
       expect(firestore.store.size).toBe(0);
     });
 
     it("rejects an expired code (pruning the doc)", async () => {
-      const code = await createGoogleLoginCode({ uid: "u1", isNewUser: false });
+      const code = await createGoogleLoginCode({ uid: "u1", isNewUser: false, authTime: AUTH_TIME });
 
       // Simulate the passage of time by ageing the stored expiry.
       const docKey = `googleLoginCodes/${sha256(code)}`;

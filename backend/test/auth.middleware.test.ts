@@ -186,7 +186,7 @@ describe("requireVerifiedEmail middleware", () => {
     expect((res.body as ApiError).code).toBe("EMAIL_NOT_VERIFIED");
   });
 
-  it("fails closed with 401 when the Firebase lookup errors", async () => {
+  it("fails closed with 503 when the Firebase lookup errors", async () => {
     firebaseAuth.getUser.mockRejectedValue(new Error("auth/user-not-found"));
     const res = mockRes();
     const next = vi.fn();
@@ -194,7 +194,7 @@ describe("requireVerifiedEmail middleware", () => {
     await requireVerifiedEmail(req(), res, next);
 
     expect(next).not.toHaveBeenCalled();
-    expect(res.statusCode).toBe(401);
+    expect(res.statusCode).toBe(503);
   });
 
   it("returns 401 when there is no user on the request", async () => {

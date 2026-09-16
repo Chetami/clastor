@@ -42,12 +42,12 @@ export const joinWaitlistSchema = z.object({
 
 export const registerSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(100, "Name must be 100 characters or less"),
-  timezone: z.string().optional(),
+  timezone: z.string().max(64).nullish(),
   signupSurvey: signupSurveySchema,
 });
 
 export const refreshTokenSchema = z.object({
-  refreshToken: z.string().min(1, "Refresh token is required"),
+  refreshToken: z.string().min(1, "Refresh token is required").max(8192),
 });
 
 export const forgotPasswordSchema = z.object({
@@ -55,7 +55,8 @@ export const forgotPasswordSchema = z.object({
 });
 
 export const googleAuthSchema = z.object({
-  timezone: z.string().optional(),
+  timezone: z.string().max(64).nullish(),
+  signupSurvey: signupSurveySchema,
 });
 
 /**

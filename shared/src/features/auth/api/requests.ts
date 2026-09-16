@@ -5,6 +5,7 @@ import type {
   RefreshTokenResponse,
   SignupSurvey,
   UserInfo,
+  VerifyTokenResponse,
   ForgotPasswordResponse,
 } from "@examify-tms/interfaces";
 
@@ -113,7 +114,7 @@ export async function exchangeGoogleLoginCode(
  * bootstrap query that hydrates the auth store on app launch.
  */
 export async function verifyRequest(): Promise<UserInfo> {
-  const response = await api.get<LoginResponse>("/api/auth/verify");
+  const response = await api.get<VerifyTokenResponse>("/api/auth/verify");
   return response.data.user;
 }
 
@@ -143,7 +144,7 @@ export async function revokeRefreshToken(
   await api.post(
     "/api/auth/logout",
     { refreshToken },
-    { headers: { [SKIP_AUTH_REFRESH]: "true" } },
+    { headers: { [SKIP_AUTH_REFRESH]: "true" }, timeout: 5_000 },
   );
 }
 

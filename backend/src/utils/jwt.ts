@@ -23,6 +23,42 @@ function requireSecret(name: string): string {
 
 const JWT_SECRET = requireSecret("JWT_SECRET");
 const JWT_EXPIRY = "15m";
+const ISSUER = "clastor";
+type Purpose = "access" | "refresh" | "oauth-connect" | "oauth-login" | "rsvp";
+
+// Domain-separated keys avoid cross-protocol acceptance without new deployment
+// secrets. The purpose is also checked independently in the signed payload.
+function keyFor(purpose: Purpose): Buffer {
+  const secret = purpose === "refresh" ? REFRESH_TOKEN_SECRET : JWT_SECRET;
+  return crypto.createHmac("sha256", secret).update(`clastor:${purpose}:v1`).digest();
+}
+
+function signFor(purpose: Purpose, payload: object, expiresIn: jwt.SignOptions["expiresIn"]): string {
+  return jwt.sign({ ...payload, purpose }, keyFor(purpose), {
+    algorithm: "HS256", issuer: ISSUER, audience: `clastor:${purpose}`, expiresIn,
+  });
+}
+
+function verifyFor(token: string, purpose: Purpose): jwt.JwtPayload {
+  const decoded = jwt.verify(token, keyFor(purpose), {
+    algorithms: ["HS256"], issuer: ISSUER, audience: `clastor:${purpose}`,
+  });
+  if (typeof decoded === "string" || decoded.purpose !== purpose ||
+      !Number.isInteger(decoded.iat) || !Number.isInteger(decoded.exp) ||
+      decoded.iat! > Math.floor(Date.now() / 1000) || decoded.exp! <= decoded.iat!) {
+    throw new Error("Invalid token claims");
+  }
+  return decoded;
+}
+
+function nonEmpty(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function validAuthTime(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value) && value > 0 &&
+    value <= Math.floor(Date.now() / 1000);
+}
 
 /**
  * Refresh tokens use a SEPARATE secret from access tokens so a refresh token
@@ -39,31 +75,30 @@ export interface RefreshTokenPayload {
   familyId: string;
   /** Unique id of this token; also the Firestore doc id. */
   jti: string;
+  /** Original authentication time; never advanced by refresh. */
+  auth_time: number;
 }
 
 /**
  * Generate a JWT token for a user
  */
-export function generateToken(uid: string, email: string, role: Role): string {
-  const payload: Omit<JwtPayload, "iat" | "exp"> = {
-    uid,
-    email,
-    role,
-  };
-
-  return jwt.sign(payload, JWT_SECRET, {
-    expiresIn: JWT_EXPIRY,
-  });
+export function generateToken(
+  uid: string, email: string, role: Role,
+  authTime = Math.floor(Date.now() / 1000),
+): string {
+  return signFor("access", { uid, email, role, auth_time: authTime }, JWT_EXPIRY);
 }
 
-/**
- * Verify and decode a JWT token
- */
+/** Verify signature, protocol and required claims; legacy access tokens fail. */
 export function verifyToken(token: string): JwtPayload {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
-    return decoded;
-  } catch (error) {
+    const decoded = verifyFor(token, "access");
+    if (!nonEmpty(decoded.uid) || !nonEmpty(decoded.email) ||
+        !["tutor", "system_admin"].includes(decoded.role) ||
+        !validAuthTime(decoded.auth_time) || decoded.auth_time > decoded.iat! ||
+        decoded.exp! - decoded.iat! > 15 * 60) throw new Error("Invalid claims");
+    return decoded as JwtPayload;
+  } catch {
     throw new Error("Invalid or expired token");
   }
 }
@@ -82,11 +117,9 @@ export function generateRefreshToken(
   uid: string,
   familyId: string,
   jti: string,
+  authTime = Math.floor(Date.now() / 1000),
 ): string {
-  const payload: RefreshTokenPayload = { uid, familyId, jti };
-  return jwt.sign(payload, REFRESH_TOKEN_SECRET, {
-    expiresIn: REFRESH_TOKEN_EXPIRY,
-  });
+  return signFor("refresh", { uid, familyId, jti, auth_time: authTime }, REFRESH_TOKEN_EXPIRY);
 }
 
 /**
@@ -96,12 +129,11 @@ export function generateRefreshToken(
  */
 export function verifyRefreshToken(token: string): RefreshTokenPayload | null {
   try {
-    const decoded = jwt.verify(
-      token,
-      REFRESH_TOKEN_SECRET,
-    ) as RefreshTokenPayload;
-    if (!decoded.uid || !decoded.familyId || !decoded.jti) return null;
-    return decoded;
+    const decoded = verifyFor(token, "refresh");
+    if (!nonEmpty(decoded.uid) || !nonEmpty(decoded.familyId) || !nonEmpty(decoded.jti) ||
+        !validAuthTime(decoded.auth_time) || decoded.auth_time > decoded.iat! ||
+        decoded.exp! - decoded.iat! > 30 * 24 * 60 * 60) return null;
+    return decoded as unknown as RefreshTokenPayload;
   } catch {
     return null;
   }
@@ -133,7 +165,7 @@ export function extractToken(authHeader: string | undefined): string {
 export function signStateToken(uid: string, returnTo?: string): string {
   const payload: { uid: string; r?: string } = { uid };
   if (returnTo) payload.r = returnTo;
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: "10m" });
+  return signFor("oauth-connect", payload, "10m");
 }
 
 /** Payload returned by {@link verifyStateToken}. */
@@ -151,11 +183,11 @@ export function verifyStateToken(
 ): StateTokenPayload | null {
   if (!token) return null;
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as {
+    const decoded = verifyFor(token, "oauth-connect") as {
       uid?: string;
       r?: string;
     };
-    if (!decoded.uid) return null;
+    if (!nonEmpty(decoded.uid)) return null;
     return {
       uid: decoded.uid,
       returnTo: typeof decoded.r === "string" ? decoded.r : null,
@@ -183,9 +215,10 @@ export function signLoginStateToken(data: {
   returnTo: string | null;
   timezone: string | null;
   survey: unknown;
-  retry?: { uid: string; isNewUser: boolean } | null;
+  retry?: { uid: string; isNewUser: boolean; authTime: number } | null;
 }): string {
-  return jwt.sign(
+  return signFor(
+    "oauth-login",
     {
       m: "login",
       r: data.returnTo ?? undefined,
@@ -193,8 +226,7 @@ export function signLoginStateToken(data: {
       sv: data.survey ?? undefined,
       rt: data.retry ?? undefined,
     },
-    JWT_SECRET,
-    { expiresIn: "10m" },
+    "10m",
   );
 }
 
@@ -204,7 +236,7 @@ export interface LoginStatePayload {
   timezone: string | null;
   survey: unknown;
   /** Present only on the consent-retry pass; null otherwise. */
-  retry: { uid: string; isNewUser: boolean } | null;
+  retry: { uid: string; isNewUser: boolean; authTime: number } | null;
 }
 
 /**
@@ -219,12 +251,12 @@ export function verifyLoginStateToken(
 ): LoginStatePayload | null {
   if (!token) return null;
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as {
+    const decoded = verifyFor(token, "oauth-login") as {
       m?: string;
       r?: string;
       tz?: string;
       sv?: unknown;
-      rt?: { uid?: unknown; isNewUser?: unknown };
+      rt?: { uid?: unknown; isNewUser?: unknown; authTime?: unknown };
     };
     if (decoded.m !== "login") return null;
     return {
@@ -234,8 +266,8 @@ export function verifyLoginStateToken(
       retry:
         decoded.rt &&
         typeof decoded.rt.uid === "string" &&
-        typeof decoded.rt.isNewUser === "boolean"
-          ? { uid: decoded.rt.uid, isNewUser: decoded.rt.isNewUser }
+        typeof decoded.rt.isNewUser === "boolean" && validAuthTime(decoded.rt.authTime)
+          ? { uid: decoded.rt.uid, isNewUser: decoded.rt.isNewUser, authTime: decoded.rt.authTime }
           : null,
     };
   } catch {
@@ -253,9 +285,7 @@ export function verifyLoginStateToken(
  * initial reminder; a resend always supersedes prior links via the version.
  */
 export function signRsvpToken(lessonId: string, version: number): string {
-  return jwt.sign({ lid: lessonId, v: version }, JWT_SECRET, {
-    expiresIn: "30d",
-  });
+  return signFor("rsvp", { lid: lessonId, v: version }, "30d");
 }
 
 /** RSVP token payload returned by {@link verifyRsvpToken}. */
@@ -274,11 +304,21 @@ export function verifyRsvpToken(
 ): RsvpTokenPayload | null {
   if (!token) return null;
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as {
-      lid?: string;
-      v?: number;
-    };
-    if (!decoded.lid || typeof decoded.v !== "number") return null;
+    let decoded: jwt.JwtPayload;
+    try {
+      decoded = verifyFor(token, "rsvp");
+    } catch {
+      // Keep already-emailed legacy invites usable for their original lifetime.
+      // The exact legacy shape cannot be an access or OAuth-state credential.
+      const legacy = jwt.verify(token, JWT_SECRET, { algorithms: ["HS256"] });
+      if (typeof legacy === "string" ||
+          Object.keys(legacy).some((key) => !["lid", "v", "iat", "exp"].includes(key)) ||
+          !Number.isInteger(legacy.iat) || !Number.isInteger(legacy.exp) ||
+          legacy.iat! > Math.floor(Date.now() / 1000) ||
+          legacy.exp! <= legacy.iat! || legacy.exp! - legacy.iat! > 30 * 24 * 60 * 60) return null;
+      decoded = legacy;
+    }
+    if (!nonEmpty(decoded.lid) || !Number.isInteger(decoded.v) || decoded.v < 0) return null;
     return { lessonId: decoded.lid, version: decoded.v };
   } catch {
     return null;

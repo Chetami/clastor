@@ -1,8 +1,12 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { compareAsc } from "date-fns";
+import { addDays, compareAsc, startOfDay } from "date-fns";
 import { useAuth } from "@/hooks/use-auth";
-import { useListLessons } from "@/features/schedule/api";
+import {
+  useExternalCalendarEvents,
+  useListLessons,
+} from "@/features/schedule/api";
+import { useGoogleConnectionStatus } from "@/features/settings/api/use-google-connect";
 import { toast } from "sonner";
 import type {
   DashboardPeriod,
@@ -27,6 +31,7 @@ import { HoursChart } from "./components/hours-chart";
 import { IncomeChart } from "./components/income-chart";
 import { NextLesson } from "./components/next-lesson";
 import { CurrentLesson } from "./components/current-lesson";
+import { ScheduleConflictsBanner } from "./components/schedule-conflicts-banner";
 import { ThingsToDo, type OverdueRow } from "./components/things-to-do";
 import {
   StatCardsSkeleton,
@@ -41,6 +46,7 @@ import {
   expectedIncomeFromLessons,
   plannedLessons,
   lessonChecklistTodos,
+  findScheduleConflicts,
 } from "./lib";
 
 export default function Dashboard() {
@@ -66,8 +72,26 @@ export default function Dashboard() {
   const { data: unpaidLessons = [], isLoading: invoiceLoading } = useListLessons(
     { unpaid: true },
   );
-  const { data: overdueInvoices = [], isLoading: overdueLoading } =
-    useListInvoices({ status: "overdue" });
+  const {
+    data: overdueInvoices = [],
+    isLoading: overdueLoading,
+  } = useListInvoices({ status: "overdue" });
+  // External Google Calendar events for conflict detection. The window is
+  // anchored to the start of today so the query key stays stable for the
+  // whole day; +15 days covers the 14-day conflict horizon at any offset.
+  const { data: googleStatus } = useGoogleConnectionStatus();
+  const googleConnected = !!googleStatus?.connected;
+  const conflictWindow = useMemo(() => {
+    const from = startOfDay(new Date());
+    return { from: from.toISOString(), to: addDays(from, 15).toISOString() };
+  }, []);
+  const {
+    data: conflictExternalEvents = [],
+    isLoading: externalEventsLoading,
+  } = useExternalCalendarEvents(
+    googleConnected ? conflictWindow : null,
+    googleConnected,
+  );
   const {
     names: studentNames,
     byId: studentMap,
@@ -115,6 +139,18 @@ export default function Dashboard() {
   const plannedCount = useMemo(
     () => plannedLessons(lessons, period).length,
     [lessons, period],
+  );
+  // Upcoming overlaps between lessons (double bookings) and Google Calendar
+  // events. Held back until lessons — and, when Google is connected, the
+  // external events — have loaded, so partial results don't flash.
+  const conflictsReady =
+    !lessonsLoading && (!googleConnected || !externalEventsLoading);
+  const conflicts = useMemo(
+    () =>
+      conflictsReady
+        ? findScheduleConflicts(lessons, conflictExternalEvents)
+        : [],
+    [conflictsReady, lessons, conflictExternalEvents],
   );
 
   const handleTodoConfirm = async (
@@ -228,6 +264,14 @@ export default function Dashboard() {
         </div>
         <PeriodSelector value={period} onChange={setPeriod} />
       </div>
+
+      {/* Schedule conflict alerts */}
+      {conflicts.length > 0 && (
+        <ScheduleConflictsBanner
+          conflicts={conflicts}
+          studentNames={studentNames}
+        />
+      )}
 
       {/* Live lesson banner */}
       {currentLesson && (

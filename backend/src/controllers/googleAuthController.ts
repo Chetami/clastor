@@ -19,12 +19,15 @@ import {
   clearGoogleConnection,
   createUserInFirestore,
   getUserFromFirestore,
+  findUserInFirestore,
   normalizeSignupSurvey,
   normalizeTimezone,
   toUserInfo,
   updateLastActive,
 } from "../services/userService";
 import { issueNewTokenPair } from "../services/tokenService";
+import { UnauthorizedError } from "../utils/AppError";
+import { respondToAuthError } from "../utils/authError";
 import {
   createGoogleLoginCode,
   consumeGoogleLoginCode,
@@ -93,7 +96,7 @@ export function startGoogleLogin(req: Request, res: Response): void {
 
     res.redirect(authUrl);
   } catch (error) {
-    console.error("startGoogleLogin error:", error);
+    console.error("Could not start Google login");
     res.redirect(`${frontendUrl()}/auth/google/callback?error=server_error`);
   }
 }
@@ -138,9 +141,7 @@ export async function getGoogleAuthUrl(
 
     res.json({ authUrl });
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Failed to build auth URL";
-    res.status(500).json({ message });
+    respondToAuthError(res, error);
   }
 }
 
@@ -216,14 +217,13 @@ export async function googleAuthCallback(
     // failures are logged and the tutor can re-run it from Settings.
     backfillUpcomingLessons(statePayload.uid).catch((err) => {
       console.error(
-        "[calendar-backfill] Background backfill failed:",
-        err instanceof Error ? err.message : err,
+        "[calendar-backfill] Background backfill failed",
       );
     });
 
     res.redirect(`${base}${returnTo}?google=connected`);
   } catch (err) {
-    console.error("googleAuthCallback error:", err);
+    console.error("Google connection callback failed");
     fail(returnTo);
   }
 }
@@ -307,7 +307,8 @@ async function completeGoogleLogin(
     // linking semantics, matching Firebase's client-side popup behavior).
     const uid = await findOrCreateFirebaseUser({ email, name, avatarUrl });
 
-    const existingUser = await getUserFromFirestore(uid).catch(() => null);
+    const existingUser = await findUserInFirestore(uid);
+    const authTime = Math.floor(Date.now() / 1000);
     const user = existingUser
       ? existingUser
       : await createUserInFirestore(
@@ -332,8 +333,7 @@ async function completeGoogleLogin(
 
       backfillUpcomingLessons(uid).catch((err) => {
         console.error(
-          "[calendar-backfill] Background backfill failed:",
-          err instanceof Error ? err.message : err,
+          "[calendar-backfill] Background backfill failed",
         );
       });
     } else if (!input.loginState.retry) {
@@ -349,7 +349,7 @@ async function completeGoogleLogin(
           returnTo: input.loginState.returnTo,
           timezone: input.loginState.timezone,
           survey: input.loginState.survey,
-          retry: { uid, isNewUser: !existingUser },
+          retry: { uid, isNewUser: !existingUser, authTime },
         });
 
         // login_hint: the account was just picked on the first pass and its
@@ -373,9 +373,9 @@ async function completeGoogleLogin(
     // pass — trust the isNewUser flag from that pass so brand-new signups
     // still route into onboarding.
     const isNewUser = input.loginState.retry?.isNewUser ?? !existingUser;
-    await issueGoogleLoginRedirect(res, user, isNewUser, input.loginState.returnTo);
+    await issueGoogleLoginRedirect(res, user, isNewUser, input.loginState.returnTo, authTime);
   } catch (err) {
-    console.error("completeGoogleLogin error:", err);
+    console.error("Google login callback failed");
     loginFail("server_error");
   }
 }
@@ -402,6 +402,7 @@ async function finishGoogleLoginForUid(
     user,
     loginState.retry?.isNewUser ?? false,
     loginState.returnTo,
+    loginState.retry!.authTime,
   );
 }
 
@@ -411,8 +412,9 @@ async function issueGoogleLoginRedirect(
   user: { id: string },
   isNewUser: boolean,
   returnTo: string | null,
+  authTime: number,
 ): Promise<void> {
-  const oneTimeCode = await createGoogleLoginCode({ uid: user.id, isNewUser });
+  const oneTimeCode = await createGoogleLoginCode({ uid: user.id, isNewUser, authTime });
   const returnParam = returnTo
     ? `&returnTo=${encodeURIComponent(returnTo)}`
     : "";
@@ -434,6 +436,7 @@ async function findOrCreateFirebaseUser(profile: {
 
   try {
     const existing = await firebaseAuth.getUserByEmail(profile.email);
+    if (existing.disabled) throw new UnauthorizedError("Account is disabled");
     return existing.uid;
   } catch (error) {
     const code = (error as { code?: string }).code;
@@ -455,6 +458,7 @@ async function findOrCreateFirebaseUser(profile: {
     // auth/email-already-exists — resolve to the winner's record.
     if ((error as { code?: string }).code === "auth/email-already-exists") {
       const existing = await firebaseAuth.getUserByEmail(profile.email);
+      if (existing.disabled) throw new UnauthorizedError("Account is disabled");
       return existing.uid;
     }
     throw error;
@@ -484,7 +488,7 @@ export async function exchangeGoogleLoginCode(
     }
 
     const user = await getUserFromFirestore(data.uid);
-    const { jwtToken, refreshToken } = await issueNewTokenPair(user);
+    const { jwtToken, refreshToken } = await issueNewTokenPair(user, data.authTime);
     await updateLastActive(user.id);
 
     // Google asserted (and we verified) the email at consent time.
@@ -495,10 +499,7 @@ export async function exchangeGoogleLoginCode(
       isNewUser: data.isNewUser,
     });
   } catch (error) {
-    console.error("Google login code exchange failed:", error);
-    const message =
-      error instanceof Error ? error.message : "Google sign-in failed";
-    res.status(401).json({ message });
+    respondToAuthError(res, error);
   }
 }
 
@@ -576,8 +577,7 @@ function revokeGoogleTokenQuietly(refreshToken: string): void {
     .revokeToken(refreshToken)
     .catch((err) => {
       console.warn(
-        "[google-oauth] Failed to revoke refresh token at Google:",
-        err instanceof Error ? err.message : err,
+        "[google-oauth] Failed to revoke refresh token at Google",
       );
     });
 }

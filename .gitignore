@@ -73,3 +73,20 @@ website/.env.production
 # Expo (local dev cache; keep only the README)
 .expo/*
 !.expo/README.md
+
+# Local environment variants; commit placeholder examples only
+.env.*
+!.env.example
+
+# Native client configuration (public identifiers, kept local for environment hygiene)
+ios/**/GoogleService-Info.plist
+ios/**/Local.xcconfig
+
+# Server credentials and private signing material
+**/serviceAccountKey.json
+**/*firebase-adminsdk*.json
+*.p8
+*.p12
+*.key
+*.pem
+*.mobileprovision

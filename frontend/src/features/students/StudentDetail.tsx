@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -27,6 +27,13 @@ import {
 } from "@/components/ui/dialog";
 import { StudentForm } from "./StudentForm";
 import { useGetStudent, useUpdateStudent } from "./api";
+import { useListLessons } from "@/features/schedule/api";
+import {
+  computeStudentStats,
+  emptyStudentStats,
+  type StudentStatsPeriod,
+} from "@examify-tms/shared";
+import { StudentStatsCard } from "./StudentStatsCard";
 import { useStudentInvoices, useStudentDebt } from "./invoices-api";
 import { formToUpdateRequest, type StudentFormData } from "./student-schema";
 import { SubjectChips } from "@/components/subjects/SubjectChips";
@@ -63,6 +70,17 @@ export default function StudentDetail() {
   const { data: student, isLoading, error } = useGetStudent(studentId);
   const { data: invoices = [] } = useStudentInvoices(studentId);
   const { data: totalDebt = 0 } = useStudentDebt(studentId);
+  const {
+    data: lessons = [],
+    isLoading: lessonsLoading,
+  } = useListLessons(studentId ? { studentId } : undefined);
+  const [statsPeriod, setStatsPeriod] = useState<StudentStatsPeriod>(
+    "six_months",
+  );
+  const stats = useMemo(() => {
+    const byId = computeStudentStats(lessons, statsPeriod);
+    return byId[studentId ?? ""] ?? emptyStudentStats(studentId ?? "");
+  }, [lessons, statsPeriod, studentId]);
   const updateStudent = useUpdateStudent();
   const subjectMap = useSubjectMap();
   const [editing, setEditing] = useState(false);
@@ -357,6 +375,13 @@ export default function StudentDetail() {
           </CardContent>
         </Card>
       </div>
+
+      <StudentStatsCard
+        stats={stats}
+        period={statsPeriod}
+        onPeriodChange={setStatsPeriod}
+        isLoading={lessonsLoading}
+      />
 
       <StudentInvoicesCard invoices={openInvoices} />
 

@@ -1,9 +1,11 @@
 import type { StudentResponse } from "@examify-tms/interfaces";
+import type { StudentStats } from "@examify-tms/shared";
 import {
   ChevronRight,
   Mail,
   MoreHorizontal,
   Pencil,
+  TriangleAlert,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -56,6 +58,8 @@ interface StudentListItemProps {
   debt: number;
   isLoadingDebt: boolean;
   currency: string;
+  /** Lesson stats for the selected period, or null while loading. */
+  stats: StudentStats | null;
   onNavigate: () => void;
   onEdit: () => void;
 }
@@ -66,6 +70,7 @@ export function StudentListItem({
   debt,
   isLoadingDebt,
   currency,
+  stats,
   onNavigate,
   onEdit,
 }: StudentListItemProps) {
@@ -91,6 +96,12 @@ export function StudentListItem({
             >
               {student.status === "active" ? "Active" : "Past"}
             </span>
+            {stats?.warning && (
+              <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-600 dark:text-amber-400">
+                <TriangleAlert className="h-3 w-3" />
+                Unreliable
+              </span>
+            )}
           </div>
           <p className="flex items-center gap-1 truncate text-sm text-muted-foreground">
             <Mail className="h-3 w-3 shrink-0" />
@@ -98,6 +109,32 @@ export function StudentListItem({
           </p>
         </div>
       </div>
+
+      <div className="hidden shrink-0 text-center md:block">
+        {!stats ? (
+          <p className="text-xs text-muted-foreground">Loading…</p>
+        ) : (
+          <>
+            <p className="text-sm font-medium">
+              {stats.total} lesson{stats.total === 1 ? "" : "s"}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {stats.attendedRate !== null
+                ? `${Math.round(stats.attendedRate * 100)}% attended`
+                : stats.total > 0
+                  ? "None attended yet"
+                  : "No lessons"}
+            </p>
+            {stats.disruptions > 0 && (
+              <p className="text-xs font-medium text-amber-600 dark:text-amber-400">
+                {stats.disruptions} disruption
+                {stats.disruptions === 1 ? "" : "s"}
+              </p>
+            )}
+          </>
+        )}
+      </div>
+
       <div className="flex items-center gap-3">
         <div className="hidden text-right sm:block">
           <p className="font-medium">

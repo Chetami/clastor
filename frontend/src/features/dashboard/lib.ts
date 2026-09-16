@@ -23,6 +23,10 @@ export {
   peak,
   todayBucketLabel,
   isDenseSeries,
+  findScheduleConflicts,
   type LessonChecklistItem,
   type ChartPoint,
+  type ConflictPeer,
+  type ScheduleConflict,
+  type FindScheduleConflictsOptions,
 } from "@examify-tms/shared";
