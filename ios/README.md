@@ -12,6 +12,8 @@ for Profile/Archive, with the same environment throughout.
 
 Dev and staging defaults match the existing web environment configuration.
 The apps have distinct display names, bundle IDs and token-storage namespaces.
+Token storage is also scoped to the Firebase project and API origin, so changing
+a local override cannot send saved credentials to another deployment.
 The deployment target remains iOS 26.5. Product/module names stay `Clastor`.
 
 ## Supply your local Firebase configuration
@@ -86,8 +88,51 @@ App-delegate swizzling is disabled following Firebase's SwiftUI setup.
 Previews do not initialize Firebase.
 
 The build phase uses declared input/output paths with Xcode script sandboxing
-enabled, and does not print config contents. Auth networking and login screens
-are the next implementation step; adding the SDK does not implement login.
+enabled, and does not print config contents.
+
+## Basic email/password sign-in
+
+Run **Clastor Staging** to use your existing staging account, or **Clastor Dev**
+with the development backend running on your Mac. The app presents an email and
+password form, then a simple account screen with a Sign out button. Accounts
+belong to their Firebase environment; a staging account does not automatically
+exist in dev. This increment signs into existing accounts. Registration,
+password recovery, Google/Apple sign-in and account management are separate work.
+
+The password goes only to Firebase's SDK. Its Firebase ID token is exchanged at
+`POST /api/auth/login`; protected UI appears only after Clastor returns a user and
+both Clastor tokens have been saved successfully. API models are generated from
+the existing YAML contracts, including referenced user types:
+
+```sh
+npm run build:swift-auth --workspace=interfaces
+npm run check:swift-auth --workspace=interfaces
+```
+
+The access/refresh pair is stored as one non-synchronizing Keychain item using
+`WhenUnlockedThisDeviceOnly`. Passwords and credentials never go in UserDefaults
+or logs. UserDefaults holds only a signed-out flag, so failed Keychain deletion
+cannot silently restore a session on the next launch. Keychain items may survive
+reinstall; any recovered session is verified with the backend before display.
+
+Launch and foreground verification use `/api/auth/verify`. An expired access
+token triggers one coordinated refresh; its replacement pair is saved before
+showing the returned user. Verification outages show Retry and retain the pair.
+Rate-limited refreshes can be retried. An interrupted or ambiguous refresh requires
+sign-in again because replaying a consumed rotating token would revoke its family.
+A Keychain marker also detects termination during rotation. No Firebase session
+alone can recreate a Clastor session.
+
+Sign out immediately clears local state, invalidates pending work and signs out
+of Firebase. Server revocation is best-effort with a five-second request timeout;
+the backend's already-issued access tokens retain their documented expiry.
+The API transport rejects redirects and uses an ephemeral, uncached session.
+
+`SessionStoreTests`, `AuthAPITests` and `KeychainTokenStoreTests` cover persistence,
+token exchange, refresh races, network failures and logout. UI tests cover the
+basic success/error screens with offline dependencies. Their `--auth-ui-test`
+launch mode and preview fakes are compiled only in Debug and cannot contact real
+services or use real Keychain credentials. Release builds omit those fakes.
 
 ```sh
 python3 ios/Clastor/Scripts/test_prepare_firebase.py
@@ -95,7 +140,9 @@ xcodebuild -project ios/Clastor/Clastor.xcodeproj -scheme 'Clastor Dev' -destina
 ```
 
 Run `ClastorTests` on an installed iOS 26.5+ simulator for runtime configuration
-tests. Tests for the build phase use synthetic local plists and make no network
+and auth tests; keep normal Simulator ad-hoc code signing enabled for Keychain
+tests. Run `ClastorUITests/ClastorUITests` for the offline sign-in screen tests.
+Tests for the build phase use synthetic local plists and make no network
 requests. For CI compilation without Firebase access, explicitly override
 `FIREBASE_PLIST_PATH` with a synthetic Apple plist matching the selected
 environment; never use such a build for distribution or provider integration tests.

@@ -1,43 +1,55 @@
-//
-//  ClastorUITests.swift
-//  ClastorUITests
-//
-//  Created by Chethin Weerakkody on 16/9/2026.
-//
-
 import XCTest
 
 final class ClastorUITests: XCTestCase {
-
-    override func setUpWithError() throws {
-        // Put setup code here. This method is called before the invocation of each test method in the class.
-
-        // In UI tests it is usually best to stop immediately when a failure occurs.
-        continueAfterFailure = false
-
-        // In UI tests it’s important to set the initial state - such as interface orientation - required for your tests before they run. The setUp method is a good place to do this.
-    }
-
-    override func tearDownWithError() throws {
-        // Put teardown code here. This method is called after the invocation of each test method in the class.
-    }
+    override func setUpWithError() throws { continueAfterFailure = false }
 
     @MainActor
-    func testExample() throws {
-        // UI tests must launch the application that they test.
+    private func launch(scenario: String = "success") -> XCUIApplication {
         let app = XCUIApplication()
+        app.launchArguments = ["--auth-ui-test"]
+        app.launchEnvironment["AUTH_TEST_SCENARIO"] = scenario
         app.launch()
-
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
-        // XCUIAutomation Documentation
-        // https://developer.apple.com/documentation/xcuiautomation
+        XCTAssertTrue(app.textFields["login.email"].waitForExistence(timeout: 10))
+        return app
     }
 
     @MainActor
-    func testLaunchPerformance() throws {
-        // This measures how long it takes to launch your application.
-        measure(metrics: [XCTApplicationLaunchMetric()]) {
-            XCUIApplication().launch()
-        }
+    private func enterCredentials(_ app: XCUIApplication) {
+        app.textFields["login.email"].tap()
+        app.textFields["login.email"].typeText("tutor@example.test")
+        app.secureTextFields["login.password"].tap()
+        app.secureTextFields["login.password"].typeText("offline-test-password")
+        app.buttons["login.submit"].tap()
+    }
+
+    @MainActor
+    func testSignInAndSignOut() {
+        let app = launch()
+        XCTAssertFalse(app.buttons["login.submit"].isEnabled)
+        enterCredentials(app)
+        XCTAssertTrue(app.buttons["account.signOut"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["tutor@example.test"].exists)
+        app.buttons["account.signOut"].tap()
+        XCTAssertTrue(app.textFields["login.email"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["account.signOut"].exists)
+    }
+
+    @MainActor
+    func testIncorrectPasswordShowsAnErrorAndClearsPassword() {
+        let app = launch(scenario: "invalid-password")
+        enterCredentials(app)
+        XCTAssertTrue(app.staticTexts["login.error"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.staticTexts["login.error"].label, "The email or password is incorrect.")
+        XCTAssertEqual(app.textFields["login.email"].value as? String, "tutor@example.test")
+        XCTAssertFalse(app.buttons["login.submit"].isEnabled)
+        XCTAssertFalse(app.buttons["account.signOut"].exists)
+    }
+
+    @MainActor
+    func testBackendFailureDoesNotOpenTheAccountScreen() {
+        let app = launch(scenario: "backend-unavailable")
+        enterCredentials(app)
+        XCTAssertTrue(app.staticTexts["login.error"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["account.signOut"].exists)
     }
 }

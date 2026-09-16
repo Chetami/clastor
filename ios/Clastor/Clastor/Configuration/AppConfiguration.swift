@@ -32,8 +32,10 @@ struct AppConfiguration: Equatable {
     let apiBaseURL: URL
     let firebaseProjectID: String
 
-    // An environment-specific namespace for the forthcoming token store.
-    var keychainService: String { "\(environment.bundleIdentifier).auth.\(environment.rawValue)" }
+    // Changing the API or Firebase project must never reuse another deployment's credentials.
+    var keychainService: String {
+        "\(environment.bundleIdentifier).auth.\(environment.rawValue).\(firebaseProjectID).\(apiBaseURL.absoluteString)"
+    }
 
     static func load(bundle: Bundle = .main) throws -> AppConfiguration {
         try load(info: bundle.infoDictionary ?? [:], bundleIdentifier: bundle.bundleIdentifier)

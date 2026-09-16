@@ -16,12 +16,15 @@
     "build": "npm run build:types && npm run build:reexports && npm run build:flags && npm run build:flags:esm",
     "build:types": "openapi-typescript src/openapi.yaml -o dist/index.d.ts",
     "build:reexports": "node scripts/add-reexports.js",
+    "build:swift-auth": "node scripts/generate-swift-auth.cjs",
+    "check:swift-auth": "node scripts/generate-swift-auth.cjs --check",
     "build:flags": "tsc -p tsconfig.json",
     "build:flags:esm": "tsc -p tsconfig.esm.json",
     "postinstall": "npm run build",
     "clean": "rm -rf dist"
   },
   "devDependencies": {
+    "js-yaml": "^4.3.2",
     "openapi-typescript": "^7.4.0"
   },
   "license": "AGPL-3.0"
