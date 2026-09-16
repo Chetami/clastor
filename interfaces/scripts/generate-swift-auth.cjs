@@ -11,7 +11,7 @@ const modes = new Map([
     namespace: 'AuthModels',
     command: 'swift-auth',
     folder: 'Auth',
-    roots: ['LoginResponse', 'RefreshTokenResponse', 'VerifyTokenResponse', 'RefreshTokenRequest', 'ApiError'],
+    roots: ['LoginResponse', 'RefreshTokenResponse', 'VerifyTokenResponse', 'RefreshTokenRequest', 'UpdateUserRequest', 'ApiError'],
   }],
   ['--students', {
     namespace: 'StudentModels',

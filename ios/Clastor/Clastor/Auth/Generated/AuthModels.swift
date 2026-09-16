@@ -27,6 +27,23 @@ nonisolated enum AuthModels {
         var `refreshToken`: String
     }
 
+    // src/schemas/users/req/UpdateUserRequest.yaml
+    struct `UpdateUserRequest`: Codable, Equatable, Sendable {
+        var `name`: String? = nil
+        var `email`: String? = nil
+        var `role`: `Role`? = nil
+        var `avatarUrl`: String? = nil
+        var `currency`: String? = nil
+        var `timezone`: String? = nil
+        var `reminderLeadTime`: `ReminderLeadTime`? = nil
+        var `workingHours`: `WorkingHours`? = nil
+        var `subjects`: [`Subject`]? = nil
+        var `onboardingComplete`: Bool? = nil
+        var `tourSeen`: Bool? = nil
+        var `invoiceSettings`: `InvoiceSettings`? = nil
+        var `emailReviewSettings`: `EmailReviewSettings`? = nil
+    }
+
     // src/schemas/common/ApiError.yaml
     struct `ApiError`: Codable, Equatable, Sendable {
         var `message`: String

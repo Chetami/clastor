@@ -36,6 +36,10 @@ final class PreviewStore {
     private(set) var invoices: [PaymentModels.InvoiceResponse]
     private(set) var events: [PaymentModels.InvoiceEventResponse]
 
+    /// The signed-in preview user; the profile screen mutates it so every
+    /// surface (currency, subjects) reflects the change in previews/UI tests.
+    private(set) var user: AuthModels.UserInfo
+
     private init() {
         // Initialize everything first — the fixture builders below are
         // instance methods and need a fully initialized self.
@@ -43,6 +47,16 @@ final class PreviewStore {
         lessons = []
         invoices = []
         events = []
+        user = AuthModels.UserInfo(
+            uid: "preview-user", name: "Test Tutor", email: "tutor@example.test", role: "tutor",
+            emailVerified: true, currency: "AUD", timezone: nil, reminderLeadTime: "24h",
+            subjects: [
+                AuthModels.Subject(id: "subj-math", name: "Mathematics", color: nil),
+                AuthModels.Subject(id: "subj-phys", name: "Physics", color: nil),
+                AuthModels.Subject(id: "subj-chem", name: "Chemistry", color: nil),
+            ],
+            onboardingComplete: true, tourSeen: true
+        )
         let created = "2026-01-01T00:00:00Z"
         students = [
             student(id: "preview-0", name: "Alex Example", email: "alex@example.test",
@@ -131,6 +145,11 @@ final class PreviewStore {
         if let index = students.firstIndex(where: { $0.id == id }) {
             transform(&students[index])
         }
+    }
+
+    /// Apply a profile update (name/currency/timezone/subjects…).
+    func apply(_ updated: AuthModels.UserInfo) {
+        user = updated
     }
 
     func upsert(_ invoice: PaymentModels.InvoiceResponse) {
@@ -247,24 +266,14 @@ private final class PreviewIdentity: FirebaseSigningIn {
 @MainActor
 private final class PreviewAPI: AuthServing {
     let unavailable: Bool
-    let user = AuthModels.UserInfo(
-        uid: "preview-user", name: "Test Tutor", email: "tutor@example.test", role: "tutor",
-        emailVerified: true, currency: "AUD", timezone: nil, reminderLeadTime: "24h",
-        subjects: [
-            AuthModels.Subject(id: "subj-math", name: "Mathematics", color: nil),
-            AuthModels.Subject(id: "subj-phys", name: "Physics", color: nil),
-            AuthModels.Subject(id: "subj-chem", name: "Chemistry", color: nil),
-        ],
-        onboardingComplete: true, tourSeen: true
-    )
     init(unavailable: Bool) { self.unavailable = unavailable }
     func login(firebaseIDToken: String) async throws -> AuthModels.LoginResponse {
         if unavailable { throw AuthFailure.http(503) }
-        return .init(jwtToken: "offline-preview-access", refreshToken: "offline-preview-refresh", user: user)
+        return .init(jwtToken: "offline-preview-access", refreshToken: "offline-preview-refresh", user: PreviewStore.shared.user)
     }
-    func verify(accessToken: String) async throws -> AuthModels.UserInfo { user }
+    func verify(accessToken: String) async throws -> AuthModels.UserInfo { PreviewStore.shared.user }
     func refresh(refreshToken: String) async throws -> AuthModels.RefreshTokenResponse {
-        .init(jwtToken: "offline-preview-access", refreshToken: "offline-preview-refresh", user: user)
+        .init(jwtToken: "offline-preview-access", refreshToken: "offline-preview-refresh", user: PreviewStore.shared.user)
     }
     func logout(refreshToken: String) async throws {}
 }

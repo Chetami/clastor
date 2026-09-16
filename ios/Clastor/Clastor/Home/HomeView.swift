@@ -56,29 +56,56 @@ struct HomeView: View {
 
     private func statsSection(_ summary: HomeModels.DashboardSummaryResponse) -> some View {
         Section {
-            HStack(spacing: 12) {
-                statTile(
-                    label: "Income",
-                    value: HomeDerivations.formatCurrencyWhole(summary.income, currency: currency),
-                    delta: HomeDerivations.deltaPercent(current: summary.income, previous: summary.previousIncome),
-                    sub: "\(previousLabel): \(HomeDerivations.formatCurrencyWhole(summary.previousIncome, currency: currency))"
-                )
-                statTile(
-                    label: "Hours",
-                    value: HomeDerivations.formatHours(summary.hoursWorked),
-                    delta: HomeDerivations.deltaPercent(current: summary.hoursWorked, previous: summary.previousHoursWorked),
-                    sub: "\(previousLabel): \(HomeDerivations.formatHours(summary.previousHoursWorked))"
-                )
-                statTile(
-                    label: "Lessons",
-                    value: "\(summary.lessonsTaught)",
-                    delta: HomeDerivations.deltaPercent(current: Double(summary.lessonsTaught), previous: Double(summary.previousLessonsTaught)),
-                    sub: "\(previousLabel): \(summary.previousLessonsTaught)"
-                )
+            // 2×2 grid like the web's mobile layout: Income, Hours, Lessons,
+            // plus the money-owed tile surfaced from the same summary fetch.
+            VStack(spacing: 12) {
+                HStack(spacing: 12) {
+                    statTile(
+                        label: "Income",
+                        value: HomeDerivations.formatCurrencyWhole(summary.income, currency: currency),
+                        delta: HomeDerivations.deltaPercent(current: summary.income, previous: summary.previousIncome),
+                        sub: "\(previousLabel): \(HomeDerivations.formatCurrencyWhole(summary.previousIncome, currency: currency))",
+                        subColor: nil
+                    )
+                    statTile(
+                        label: "Hours",
+                        value: HomeDerivations.formatHours(summary.hoursWorked),
+                        delta: HomeDerivations.deltaPercent(current: summary.hoursWorked, previous: summary.previousHoursWorked),
+                        sub: "\(previousLabel): \(HomeDerivations.formatHours(summary.previousHoursWorked))",
+                        subColor: nil
+                    )
+                }
+                HStack(spacing: 12) {
+                    statTile(
+                        label: "Lessons",
+                        value: "\(summary.lessonsTaught)",
+                        delta: HomeDerivations.deltaPercent(current: Double(summary.lessonsTaught), previous: Double(summary.previousLessonsTaught)),
+                        sub: "\(previousLabel): \(summary.previousLessonsTaught)",
+                        subColor: nil
+                    )
+                    statTile(
+                        label: "Owed",
+                        value: HomeDerivations.formatCurrencyWhole(summary.outstandingAmount, currency: currency),
+                        delta: nil,
+                        sub: owedSubLine(summary),
+                        subColor: summary.overdueAmount > 0 ? .red : nil
+                    )
+                }
             }
             .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
             .accessibilityIdentifier("home.stats")
         }
+    }
+
+    /// Sub-line for the owed tile: overdue warning, unbilled hint, or settled.
+    private func owedSubLine(_ summary: HomeModels.DashboardSummaryResponse) -> String {
+        if summary.overdueAmount > 0 {
+            return "incl. \(HomeDerivations.formatCurrencyWhole(summary.overdueAmount, currency: currency)) overdue"
+        }
+        if summary.unbilledLessons > 0 {
+            return "\(summary.unbilledLessons) lessons to invoice"
+        }
+        return "All settled"
     }
 
     @ViewBuilder private var lessonSections: some View {
@@ -184,7 +211,7 @@ struct HomeView: View {
 
     // MARK: Pieces
 
-    private func statTile(label: String, value: String, delta: Double?, sub: String) -> some View {
+    private func statTile(label: String, value: String, delta: Double?, sub: String, subColor: Color? = nil) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(label)
                 .font(.caption)
@@ -196,7 +223,7 @@ struct HomeView: View {
             deltaView(delta)
             Text(sub)
                 .font(.caption2)
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(subColor ?? Color(UIColor.tertiaryLabel))
                 .lineLimit(1)
         }
         .frame(maxWidth: .infinity, alignment: .leading)

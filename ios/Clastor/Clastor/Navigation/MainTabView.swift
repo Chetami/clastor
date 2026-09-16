@@ -39,24 +39,10 @@ struct MainTabView: View {
             }
             Tab("Profile", systemImage: "person.crop.circle") {
                 NavigationStack {
-                    BlankPage(title: "Profile")
-                        .toolbar {
-                            ToolbarItem(placement: .topBarTrailing) {
-                                Button("Sign out", action: session.signOut)
-                                    .accessibilityIdentifier("account.signOut")
-                            }
-                        }
+                    ProfileView(session: session)
                 }
             }
         }
     }
 }
 
-private struct BlankPage: View {
-    let title: String
-
-    var body: some View {
-        Color(.systemBackground)
-            .navigationTitle(title)
-    }
-}
