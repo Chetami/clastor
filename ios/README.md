@@ -78,6 +78,8 @@ without `/api`, credentials, query parameters or fragments.
 Simulator's `localhost` reaches your Mac. A physical device needs a reachable
 HTTPS development API configured in dev's local override. Only the Dev
 Info.plist permits HTTP for `localhost`; staging/production have no ATS exception.
+Physical-device builds reject a localhost API with a message explaining which
+scheme or override to use.
 
 ## Firebase initialization and verification
 
@@ -86,6 +88,18 @@ commit `Package.resolved` when dependencies change. Firebase is configured once
 through `AppDelegate`, after validating the built app's configuration.
 App-delegate swizzling is disabled following Firebase's SwiftUI setup.
 Previews do not initialize Firebase.
+
+If the console shows a refused connection to `localhost:3001/api/auth/login`,
+the app is running the local Dev configuration. On an iPhone, localhost is the
+phone itself. Choose **Clastor Staging**, select the phone and run again to use
+the hosted staging backend. On Simulator, start the backend on the Mac.
+Use the account belonging to that Firebase environment.
+
+Firebase's `App Delegate Proxy is disabled` entry confirms the intentional
+SwiftUI setting; it is informational. Keyboard layout messages mentioning
+`TUIPredictionViewCell` or `TUICandidateGradientContentLabel` originate in the
+system keyboard. Diagnose a failed request using its URL and network error;
+these keyboard messages do not explain a refused API connection.
 
 The build phase uses declared input/output paths with Xcode script sandboxing
 enabled, and does not print config contents.
@@ -107,6 +121,8 @@ the existing YAML contracts, including referenced user types:
 ```sh
 npm run build:swift-auth --workspace=interfaces
 npm run check:swift-auth --workspace=interfaces
+npm run build:swift-students --workspace=interfaces
+npm run check:swift-students --workspace=interfaces
 ```
 
 The access/refresh pair is stored as one non-synchronizing Keychain item using
@@ -127,6 +143,20 @@ Sign out immediately clears local state, invalidates pending work and signs out
 of Firebase. Server revocation is best-effort with a five-second request timeout;
 the backend's already-issued access tokens retain their documented expiry.
 The API transport rejects redirects and uses an ephemeral, uncached session.
+
+After sign-in, the tab bar shows Home, Students, Calendar, Payments and Profile,
+in that order. Home, Calendar, Payments and Profile are blank scaffolds with
+page titles; Profile retains a Sign out button. Students calls `GET /api/students`
+on the selected environment's backend using the Clastor access JWT, then shows
+only names in a native list. Pull down to reload. Loading, empty and failed
+requests have distinct states, with a retry button for failures. A 401 shares
+the session's refresh flow and retries the request once. Student DTOs are
+generated from the existing OpenAPI YAML, and student records are not persisted.
+
+To check the live connection, run Clastor Dev or Clastor Staging in Simulator,
+sign in to that environment, and open Students. Compare the names with the web
+app signed in to the same account and environment. Normal runs use the real API;
+only previews and the explicit Debug UI-test mode use offline examples.
 
 `SessionStoreTests`, `AuthAPITests` and `KeychainTokenStoreTests` cover persistence,
 token exchange, refresh races, network failures and logout. UI tests cover the

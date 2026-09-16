@@ -7,10 +7,10 @@ import Testing
 struct AuthAPITests {
     private let userJSON = #"{"uid":"test-user","email":"tutor@example.test","role":"tutor","onboardingComplete":true,"tourSeen":false,"reminderLeadTime":null,"invoiceSettings":null,"emailReviewSettings":null,"workingHours":null,"signupSurvey":null}"#
 
-    private func api() -> AuthAPI {
+    private func api(origin: String = "https://api.example.test") -> AuthAPI {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [AuthTestURLProtocol.self]
-        return AuthAPI(origin: URL(string: "https://api.example.test")!, session: URLSession(configuration: configuration))
+        return AuthAPI(origin: URL(string: origin)!, session: URLSession(configuration: configuration))
     }
 
     @Test func loginSendsOnlyFirebaseBearerToTheConfiguredOrigin() async throws {
@@ -81,8 +81,22 @@ struct AuthAPITests {
         }
     }
 
+    @Test func refusedLocalhostConnectionExplainsTheEnvironmentProblem() async {
+        AuthTestURLProtocol.handler = { _ in throw URLError(.cannotConnectToHost) }
+        await #expect(throws: AuthFailure.localServerUnavailable) {
+            _ = try await api(origin: "http://localhost:3001").login(firebaseIDToken: "test-identity")
+        }
+    }
+
+    @Test func remoteConnectionFailureKeepsTheNetworkMessage() async {
+        AuthTestURLProtocol.handler = { _ in throw URLError(.cannotConnectToHost) }
+        await #expect(throws: AuthFailure.network) {
+            _ = try await api().login(firebaseIDToken: "test-identity")
+        }
+    }
+
     @Test func redirectsAreRejectedBeforeCredentialsCanFollow() async throws {
-        let delegate = AuthRedirectBlocker()
+        let delegate = BackendRedirectBlocker()
         let url = URL(string: "https://api.example.test/api/auth/login")!
         let task = URLSession.shared.dataTask(with: url)
         let redirect = HTTPURLResponse(url: url, statusCode: 307, httpVersion: nil, headerFields: nil)!
@@ -94,6 +108,34 @@ struct AuthAPITests {
         }
         #expect(followed == nil)
         task.cancel()
+    }
+
+    @Test func studentsRequestUsesBackendJWTAndDecodesTheListContract() async throws {
+        AuthTestURLProtocol.handler = { request in
+            #expect(request.url?.absoluteString == "https://staging.example.test/api/students")
+            #expect(request.httpMethod == "GET")
+            #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer clastor-access")
+            #expect(request.httpBody == nil)
+            return (200, Data(#"{"data":[{"id":"student-1","name":"Alex Example","billingEmail":null,"billingEmailSource":"none","subjectIds":[],"expectedAmount":45,"rateType":"hourly","frequencyPerWeek":1,"status":"active","amountOwed":0,"createdAt":"2026-01-01T00:00:00Z","updatedAt":"2026-01-01T00:00:00Z"}],"total":1}"#.utf8))
+        }
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [AuthTestURLProtocol.self]
+        let students = StudentsAPI(origin: URL(string: "https://staging.example.test")!, session: URLSession(configuration: configuration))
+        let result = try await students.list(accessToken: "clastor-access")
+        #expect(result.map(\.name) == ["Alex Example"])
+        #expect(result.first?.billingEmail == nil)
+    }
+
+    @Test func emptyStudentResponseIsDistinctFromMalformedData() async throws {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [AuthTestURLProtocol.self]
+        let students = StudentsAPI(origin: URL(string: "https://api.example.test")!, session: URLSession(configuration: configuration))
+        AuthTestURLProtocol.handler = { _ in (200, Data(#"{"data":[],"total":0}"#.utf8)) }
+        #expect(try await students.list(accessToken: "access").isEmpty)
+        AuthTestURLProtocol.handler = { _ in (200, Data(#"{"unexpected":[]}"#.utf8)) }
+        await #expect(throws: AuthFailure.invalidResponse) {
+            _ = try await students.list(accessToken: "access")
+        }
     }
 }
 

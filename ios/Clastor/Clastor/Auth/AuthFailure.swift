@@ -6,6 +6,7 @@ enum AuthFailure: Error, Equatable {
     case unauthorized
     case http(Int)
     case network
+    case localServerUnavailable
     case invalidResponse
     case secureStorage
     case interruptedRefresh
@@ -21,6 +22,7 @@ enum AuthFailure: Error, Equatable {
         case .http(429): "Too many attempts. Please wait a moment and try again."
         case .http: "Clastor is temporarily unavailable. Please try again."
         case .network: "Could not connect. Check your connection and try again."
+        case .localServerUnavailable: "The local development server is unavailable. Use Clastor Staging on your iPhone, or start the backend on your Mac for Simulator."
         case .invalidResponse: "Could not read the server response. Please try again."
         case .secureStorage: "Could not access secure storage. Unlock your device and try again."
         case .interruptedRefresh: "Your session update was interrupted. Please sign in again."

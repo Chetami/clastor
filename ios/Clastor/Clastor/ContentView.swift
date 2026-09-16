@@ -4,32 +4,40 @@ struct ContentView: View {
     let session: SessionStore
 
     var body: some View {
-        NavigationStack {
-            Group {
-                switch session.phase {
-                case .signedOut, .signingIn:
-                    LoginView(session: session)
-                case .signedIn(let user):
-                    SignedInView(user: user, signOut: session.signOut)
-                case .restoring:
-                    VStack(spacing: 24) {
-                        ProgressView("Checking your session…")
-                        Button("Sign out", action: session.signOut)
-                    }
-                case .retry:
-                    ContentUnavailableView {
-                        Label("Unable to connect", systemImage: "wifi.exclamationmark")
-                    } description: {
-                        Text(session.message ?? "Please try again.")
-                    } actions: {
-                        Button("Try again") { Task { await session.checkSession() } }
-                            .buttonStyle(.borderedProminent)
-                        Button("Sign out", action: session.signOut)
-                    }
-                }
+        if case .signedIn(let user) = session.phase {
+            MainTabView(session: session)
+                .id(user.uid)
+        } else {
+            NavigationStack {
+                authenticationContent
+                    .navigationTitle(session.appName)
+                    .navigationBarTitleDisplayMode(.inline)
             }
-            .navigationTitle(session.appName)
-            .navigationBarTitleDisplayMode(.inline)
+        }
+    }
+
+    @ViewBuilder
+    private var authenticationContent: some View {
+        switch session.phase {
+        case .signedOut, .signingIn:
+            LoginView(session: session)
+        case .restoring:
+            VStack(spacing: 24) {
+                ProgressView("Checking your session…")
+                Button("Sign out", action: session.signOut)
+            }
+        case .retry:
+            ContentUnavailableView {
+                Label("Unable to connect", systemImage: "wifi.exclamationmark")
+            } description: {
+                Text(session.message ?? "Please try again.")
+            } actions: {
+                Button("Try again") { Task { await session.checkSession() } }
+                    .buttonStyle(.borderedProminent)
+                Button("Sign out", action: session.signOut)
+            }
+        case .signedIn:
+            EmptyView()
         }
     }
 }
@@ -95,31 +103,6 @@ private struct LoginView: View {
         let submittedPassword = password
         password = ""
         Task { await session.signIn(email: email, password: submittedPassword) }
-    }
-}
-
-private struct SignedInView: View {
-    let user: AuthModels.UserInfo
-    let signOut: () -> Void
-
-    var body: some View {
-        Form {
-            Section("Signed in") {
-                if let name = user.name, !name.isEmpty {
-                    LabeledContent("Name", value: name)
-                }
-                LabeledContent("Email", value: user.email)
-                    .accessibilityIdentifier("account.email")
-                LabeledContent("Role", value: user.role == "system_admin" ? "Administrator" : user.role.capitalized)
-                if let verified = user.emailVerified {
-                    LabeledContent("Email verified", value: verified ? "Yes" : "No")
-                }
-            }
-            Section {
-                Button("Sign out", role: .destructive, action: signOut)
-                    .accessibilityIdentifier("account.signOut")
-            }
-        }
     }
 }
 

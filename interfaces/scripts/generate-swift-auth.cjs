@@ -1,4 +1,4 @@
-// Generate the native auth DTOs from the same YAML contracts as TypeScript.
+// Generate native DTOs from the same YAML contracts as TypeScript.
 // Deliberately reject unsupported schemas instead of silently changing a type.
 const fs = require('node:fs');
 const path = require('node:path');
@@ -6,11 +6,14 @@ const yaml = require('js-yaml');
 
 const root = path.resolve(__dirname, '..');
 const entry = path.join(root, 'src/openapi.yaml');
-const output = path.resolve(root, '../ios/Clastor/Clastor/Auth/Generated/AuthModels.swift');
+const students = process.argv.includes('--students');
+const namespace = students ? 'StudentModels' : 'AuthModels';
+const command = students ? 'swift-students' : 'swift-auth';
+const output = path.resolve(root, `../ios/Clastor/Clastor/${students ? 'Students' : 'Auth'}/Generated/${namespace}.swift`);
 const spec = yaml.load(fs.readFileSync(entry, 'utf8'));
 const schemas = new Map();
 const names = new Map();
-const roots = ['LoginResponse', 'RefreshTokenResponse', 'VerifyTokenResponse', 'RefreshTokenRequest', 'ApiError'];
+const roots = students ? ['StudentListResponse'] : ['LoginResponse', 'RefreshTokenResponse', 'VerifyTokenResponse', 'RefreshTokenRequest', 'ApiError'];
 const identifier = value => {
   if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(value)) throw new Error(`Unsupported Swift identifier: ${value}`);
   return '`' + value + '`';
@@ -64,11 +67,11 @@ for (const { name, file, schema } of schemas.values()) {
   declarations.push(`    // ${source}\n    struct ${identifier(name)}: Codable, Equatable, Sendable {\n${properties.join('\n')}\n    }`);
 }
 const generated = '// Generated from interfaces/src/openapi.yaml. Do not edit.\n' +
-  '// Regenerate: npm run build:swift-auth --workspace=interfaces\n\n' +
-  `nonisolated enum AuthModels {\n${declarations.join('\n\n')}\n}\n`;
+  `// Regenerate: npm run build:${command} --workspace=interfaces\n\n` +
+  `nonisolated enum ${namespace} {\n${declarations.join('\n\n')}\n}\n`;
 if (process.argv.includes('--check')) {
   if (!fs.existsSync(output) || fs.readFileSync(output, 'utf8') !== generated) {
-    throw new Error('Swift auth models are stale. Run npm run build:swift-auth --workspace=interfaces');
+    throw new Error(`Swift models are stale. Run npm run build:${command} --workspace=interfaces`);
   }
 } else {
   fs.mkdirSync(path.dirname(output), { recursive: true });

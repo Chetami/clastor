@@ -177,6 +177,92 @@ struct SessionStoreTests {
         #expect(identity.signOutCount == 1)
     }
 
+    @Test func featureRequestUsesClastorToken() async throws {
+        let (session, _, _, _) = make(storage: TestTokenStore(value: SessionCredentials(accessToken: "clastor-access", refreshToken: "refresh")))
+        await session.restore()
+        let result = try await session.authenticated { token in
+            #expect(token == "clastor-access")
+            return ["Student"]
+        }
+        #expect(result == ["Student"])
+    }
+
+    @Test func concurrentFeatureRequestsShareRefreshAndRetainSignedInUI() async throws {
+        let (session, _, api, storage) = make(storage: TestTokenStore(value: SessionCredentials(accessToken: "old", refreshToken: "refresh")))
+        await session.restore()
+        api.verifyFailure = .unauthorized
+        api.pauseRefresh = true
+        let request: (String) async throws -> String = { token in
+            if token == "old" { throw AuthFailure.unauthorized }
+            return token
+        }
+        let first = Task { try await session.authenticated(request) }
+        await waitUntil { api.refreshContinuation != nil }
+        let second = Task { try await session.authenticated(request) }
+        await Task.yield()
+        #expect(session.phase == .signedIn(user))
+        api.finishRefresh()
+        #expect(try await first.value == "rotated-access")
+        #expect(try await second.value == "rotated-access")
+        #expect(api.refreshCount == 1)
+        #expect(storage.value?.refreshToken == "rotated-refresh")
+    }
+
+    @Test func secondFeatureUnauthorizedSignsOutInsteadOfLooping() async {
+        let (session, _, api, storage) = make(storage: TestTokenStore(value: SessionCredentials(accessToken: "old", refreshToken: "refresh")))
+        await session.restore()
+        api.verifyFailure = .unauthorized
+        var attempts = 0
+        await #expect(throws: AuthFailure.unauthorized) {
+            try await session.authenticated { _ -> String in
+                attempts += 1
+                throw AuthFailure.unauthorized
+            }
+        }
+        #expect(attempts == 2)
+        #expect(api.refreshCount == 1)
+        #expect(session.phase == .signedOut)
+        #expect(storage.value == nil)
+    }
+
+    @Test(arguments: [AuthFailure.network, .http(403), .http(503)])
+    func featureFailurePreservesSessionWithoutRefresh(error: AuthFailure) async {
+        let (session, _, api, storage) = make(storage: TestTokenStore(value: SessionCredentials(accessToken: "access", refreshToken: "refresh")))
+        await session.restore()
+        await #expect(throws: error) {
+            try await session.authenticated { _ -> String in throw error }
+        }
+        #expect(session.phase == .signedIn(user))
+        #expect(storage.value?.accessToken == "access")
+        #expect(api.refreshCount == 0)
+    }
+
+    @Test func lateFeatureResponseCannotReturnDataAfterLogout() async {
+        let (session, _, _, _) = make(storage: TestTokenStore(value: SessionCredentials(accessToken: "access", refreshToken: "refresh")))
+        await session.restore()
+        var continuation: CheckedContinuation<String, Never>?
+        let pending = Task {
+            try await session.authenticated { _ in
+                await withCheckedContinuation { continuation = $0 }
+            }
+        }
+        await waitUntil { continuation != nil }
+        session.signOut()
+        continuation?.resume(returning: "private student data")
+        await #expect(throws: CancellationError.self) { try await pending.value }
+    }
+
+    @Test func signedOutFeatureRequestDoesNotCallTheBackend() async {
+        let (session, _, _, _) = make()
+        await session.restore()
+        await #expect(throws: AuthFailure.unauthorized) {
+            try await session.authenticated { _ -> String in
+                Issue.record("Signed-out request reached the backend")
+                return "unexpected"
+            }
+        }
+    }
+
     private func waitUntil(_ ready: () -> Bool) async {
         for _ in 0..<1000 {
             if ready() { return }

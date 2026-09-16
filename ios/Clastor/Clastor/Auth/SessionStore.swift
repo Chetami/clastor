@@ -106,6 +106,45 @@ final class SessionStore {
         await checkSession()
     }
 
+    // Feature requests use the backend access token. A 401 shares the existing
+    // verification/rotation task, then retries once with the current token.
+    func authenticated<Value>(_ request: (String) async throws -> Value) async throws -> Value {
+        try Task.checkCancellation()
+        guard case .signedIn = phase, let stored = credentials else {
+            throw AuthFailure.unauthorized
+        }
+        let current = generation
+        do {
+            let value = try await request(stored.accessToken)
+            try requireCurrentSession(current)
+            return value
+        } catch AuthFailure.unauthorized {
+            try requireCurrentSession(current)
+            if credentials?.accessToken == stored.accessToken {
+                await checkSession()
+            }
+            try requireCurrentSession(current)
+            guard case .signedIn = phase, let refreshed = credentials else {
+                throw AuthFailure.unauthorized
+            }
+            do {
+                let value = try await request(refreshed.accessToken)
+                try requireCurrentSession(current)
+                return value
+            } catch AuthFailure.unauthorized {
+                try requireCurrentSession(current)
+                signOut()
+                message = AuthFailure.unauthorized.message
+                throw AuthFailure.unauthorized
+            }
+        }
+    }
+
+    private func requireCurrentSession(_ expectedGeneration: Int) throws {
+        try Task.checkCancellation()
+        guard expectedGeneration == generation else { throw CancellationError() }
+    }
+
     func signOut() {
         generation += 1
         verification?.cancel()
@@ -124,7 +163,9 @@ final class SessionStore {
 
     private func verifySession(generation current: Int) async {
         guard current == generation, !Task.isCancelled else { return }
-        phase = .restoring
+        // Keep the tab hierarchy and in-flight feature requests alive during
+        // foreground verification and successful token refresh.
+        if case .signedIn = phase {} else { phase = .restoring }
         message = nil
         do {
             if credentials == nil { credentials = try storage.read() }

@@ -28,6 +28,7 @@ class FirebaseBuildTests(unittest.TestCase):
             "PRODUCT_BUNDLE_IDENTIFIER": "dev.chethin.Clastor.dev",
             "EXPECTED_FIREBASE_PROJECT_ID": "test-project",
             "API_BASE_URL": "http://localhost:3001",
+            "PLATFORM_NAME": "iphonesimulator",
             "SCRIPT_INPUT_FILE_1": str(self.source),
             "SCRIPT_OUTPUT_FILE_0": str(self.output),
         }
@@ -51,6 +52,15 @@ class FirebaseBuildTests(unittest.TestCase):
 
     def test_missing_config_fails(self):
         self.assert_rejected(create=False)
+
+    def test_physical_phone_cannot_use_localhost(self):
+        self.env["PLATFORM_NAME"] = "iphoneos"
+        result = self.assert_rejected()
+        self.assertIn("Select the Clastor Staging scheme", result.stderr)
+
+    def test_physical_phone_can_use_a_reachable_dev_api(self):
+        self.env.update(PLATFORM_NAME="iphoneos", API_BASE_URL="https://dev-api.example.test")
+        self.assertEqual(self.run_phase().returncode, 0)
 
     def test_wrong_project_fails(self):
         self.config["PROJECT_ID"] = "another-project"
@@ -78,7 +88,7 @@ class FirebaseBuildTests(unittest.TestCase):
     def test_valid_staging_and_production(self):
         for environment in ["staging", "prod"]:
             with self.subTest(environment=environment):
-                self.env.update(APP_ENV=environment, API_BASE_URL="https://api.example.test",
+                self.env.update(APP_ENV=environment, API_BASE_URL="https://api.example.test", PLATFORM_NAME="iphoneos",
                                 PRODUCT_BUNDLE_IDENTIFIER="dev.chethin.Clastor" + (".staging" if environment == "staging" else ""))
                 self.config["BUNDLE_ID"] = self.env["PRODUCT_BUNDLE_IDENTIFIER"]
                 self.assertEqual(self.run_phase().returncode, 0)

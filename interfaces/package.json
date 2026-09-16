@@ -18,6 +18,8 @@
     "build:reexports": "node scripts/add-reexports.js",
     "build:swift-auth": "node scripts/generate-swift-auth.cjs",
     "check:swift-auth": "node scripts/generate-swift-auth.cjs --check",
+    "build:swift-students": "node scripts/generate-swift-auth.cjs --students",
+    "check:swift-students": "node scripts/generate-swift-auth.cjs --students --check",
     "build:flags": "tsc -p tsconfig.json",
     "build:flags:esm": "tsc -p tsconfig.esm.json",
     "postinstall": "npm run build",
