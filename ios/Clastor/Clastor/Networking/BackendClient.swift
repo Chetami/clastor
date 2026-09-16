@@ -33,8 +33,14 @@ final class BackendClient {
         catch { throw AuthFailure.invalidResponse }
     }
 
-    func send(path: String, method: String, bearer: String? = nil, body: Data? = nil, timeout: TimeInterval = 15) async throws -> Data {
-        var request = URLRequest(url: origin.appending(path: path))
+    func send(path: String, query: [URLQueryItem] = [], method: String, bearer: String? = nil, body: Data? = nil, timeout: TimeInterval = 15) async throws -> Data {
+        // URL.appending(path:) percent-encodes "?", so build query items here.
+        guard var components = URLComponents(url: origin.appending(path: path), resolvingAgainstBaseURL: false) else {
+            throw AuthFailure.invalidResponse
+        }
+        if !query.isEmpty { components.queryItems = query }
+        guard let url = components.url else { throw AuthFailure.invalidResponse }
+        var request = URLRequest(url: url)
         request.httpMethod = method
         request.httpBody = body
         request.timeoutInterval = timeout

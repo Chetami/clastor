@@ -58,6 +58,7 @@ jobs:
         run: |
           npm run check:swift-auth --workspace=interfaces
           npm run check:swift-students --workspace=interfaces
+          npm run check:swift-home --workspace=interfaces
 
       - name: Lint frontend
         run: npm run lint --workspace=frontend

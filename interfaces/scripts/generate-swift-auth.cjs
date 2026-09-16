@@ -6,14 +6,29 @@ const yaml = require('js-yaml');
 
 const root = path.resolve(__dirname, '..');
 const entry = path.join(root, 'src/openapi.yaml');
-const students = process.argv.includes('--students');
-const namespace = students ? 'StudentModels' : 'AuthModels';
-const command = students ? 'swift-students' : 'swift-auth';
-const output = path.resolve(root, `../ios/Clastor/Clastor/${students ? 'Students' : 'Auth'}/Generated/${namespace}.swift`);
+const modes = new Map([
+  ['--students', {
+    namespace: 'StudentModels',
+    command: 'swift-students',
+    folder: 'Students',
+    roots: ['StudentListResponse'],
+  }],
+  ['--home', {
+    namespace: 'HomeModels',
+    command: 'swift-home',
+    folder: 'Home',
+    roots: ['DashboardSummaryResponse', 'LessonListResponse', 'RecordAttendanceRequest'],
+  }],
+]);
+const flag = process.argv.find(argument => modes.has(argument)) ?? '';
+const mode = modes.get(flag);
+const namespace = mode.namespace;
+const command = mode.command;
+const output = path.resolve(root, `../ios/Clastor/Clastor/${mode.folder}/Generated/${namespace}.swift`);
 const spec = yaml.load(fs.readFileSync(entry, 'utf8'));
 const schemas = new Map();
 const names = new Map();
-const roots = students ? ['StudentListResponse'] : ['LoginResponse', 'RefreshTokenResponse', 'VerifyTokenResponse', 'RefreshTokenRequest', 'ApiError'];
+const roots = mode.roots;
 const identifier = value => {
   if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(value)) throw new Error(`Unsupported Swift identifier: ${value}`);
   return '`' + value + '`';

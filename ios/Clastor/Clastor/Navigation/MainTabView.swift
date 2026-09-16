@@ -6,7 +6,7 @@ struct MainTabView: View {
     var body: some View {
         TabView {
             Tab("Home", systemImage: "house") {
-                NavigationStack { BlankPage(title: "Home") }
+                NavigationStack { HomeView(session: session) }
             }
             Tab("Students", systemImage: "person.2") {
                 NavigationStack { StudentsView(session: session) }
