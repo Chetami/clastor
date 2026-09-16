@@ -183,6 +183,8 @@ npm run build:all
 
 Deployment and session migration details are in [Authentication hardening](docs/auth-hardening-rollout.md).
 
+Native iOS schemes, Firebase environments, and local setup are documented in [iOS setup](ios/README.md).
+
 ## API Documentation
 
 The backend serves interactive API documentation:

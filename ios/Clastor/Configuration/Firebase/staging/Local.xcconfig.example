@@ -1,0 +1,3 @@
+// Optional overrides. Save as Local.xcconfig; it is ignored by Git.
+API_BASE_URL = https:/$()/clastor-backend.xamify.com.au
+EXPECTED_FIREBASE_PROJECT_ID = clastor-staging

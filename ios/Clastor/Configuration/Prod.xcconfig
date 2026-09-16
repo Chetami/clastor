@@ -1,0 +1,8 @@
+#include "App.xcconfig"
+APP_ENV = prod
+APP_DISPLAY_NAME = Clastor
+PRODUCT_BUNDLE_IDENTIFIER = dev.chethin.Clastor
+// Supply production's own values in Firebase/prod/Local.xcconfig.
+EXPECTED_FIREBASE_PROJECT_ID =
+API_BASE_URL =
+#include? "Firebase/prod/Local.xcconfig"

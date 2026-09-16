@@ -1,0 +1,7 @@
+#include "App.xcconfig"
+APP_ENV = staging
+APP_DISPLAY_NAME = Clastor Staging
+PRODUCT_BUNDLE_IDENTIFIER = dev.chethin.Clastor.staging
+EXPECTED_FIREBASE_PROJECT_ID = clastor-staging
+API_BASE_URL = https:/$()/clastor-backend.xamify.com.au
+#include? "Firebase/staging/Local.xcconfig"

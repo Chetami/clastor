@@ -1,0 +1,9 @@
+#include "App.xcconfig"
+APP_ENV = dev
+APP_DISPLAY_NAME = Clastor Dev
+PRODUCT_BUNDLE_IDENTIFIER = dev.chethin.Clastor.dev
+EXPECTED_FIREBASE_PROJECT_ID = xamify-tms
+// The empty expansion prevents xcconfig from treating // as a comment.
+API_BASE_URL = http:/$()/localhost:3001
+INFOPLIST_FILE = Configuration/Dev-Info.plist
+#include? "Firebase/dev/Local.xcconfig"

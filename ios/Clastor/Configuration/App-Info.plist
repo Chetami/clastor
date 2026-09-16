@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>AppEnvironment</key>
+    <string>$(APP_ENV)</string>
+    <key>APIBaseURL</key>
+    <string>$(API_BASE_URL)</string>
+    <key>ExpectedFirebaseProjectID</key>
+    <string>$(EXPECTED_FIREBASE_PROJECT_ID)</string>
+    <key>FirebaseAppDelegateProxyEnabled</key>
+    <false/>
+</dict>
+</plist>
