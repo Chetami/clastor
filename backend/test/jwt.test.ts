@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
 import type { JwtPayload } from "@examify-tms/interfaces";
 import {
   generateToken,
@@ -227,5 +228,69 @@ describe("jwt utils", () => {
       const bad = jwt.sign({ lid: "lesson_1", v: "3" }, process.env.JWT_SECRET!);
       expect(verifyRsvpToken(bad)).toBeNull();
     });
+  });
+});
+
+describe("token purpose isolation", () => {
+  it.each(["access", "refresh"] as const)("validates the complete %s token envelope", (purpose) => {
+    const token = purpose === "access"
+      ? generateToken(UID, EMAIL, "tutor")
+      : generateRefreshToken(UID, "family", "jti");
+    const claims = jwt.decode(token) as jwt.JwtPayload;
+    const root = purpose === "access" ? process.env.JWT_SECRET! : process.env.REFRESH_TOKEN_SECRET!;
+    const key = crypto.createHmac("sha256", root).update(`clastor:${purpose}:v1`).digest();
+    const rejects = (candidate: string) => {
+      if (purpose === "access") expect(() => verifyToken(candidate)).toThrow();
+      else expect(verifyRefreshToken(candidate)).toBeNull();
+    };
+    for (const patch of [
+      { iss: "another-issuer" }, { aud: "another-audience" }, { purpose: "other" },
+      { exp: claims.iat! - 1 }, { iat: claims.exp! + 1 },
+      { exp: claims.iat! + 31 * 24 * 60 * 60 }, { auth_time: claims.iat! + 1 },
+      { uid: "" },
+    ]) rejects(jwt.sign({ ...claims, ...patch }, key, { algorithm: "HS256" }));
+    for (const field of ["exp", "auth_time", "uid", ...(purpose === "access" ? ["email", "role"] : ["familyId", "jti"])]) {
+      const incomplete = { ...claims };
+      delete incomplete[field];
+      rejects(jwt.sign(incomplete, key, { algorithm: "HS256" }));
+    }
+    rejects(jwt.sign(claims, key, { algorithm: "HS256", noTimestamp: true }));
+    rejects(jwt.sign(claims, key, { algorithm: "HS384" }));
+  });
+  const tokenCases = () => [
+    ["access", generateToken(UID, EMAIL, "tutor"), (token: string) => verifyToken(token)],
+    ["refresh", generateRefreshToken(UID, "family", "jti"), verifyRefreshToken],
+    ["connect", signStateToken(UID), verifyStateToken],
+    ["login", signLoginStateToken({ returnTo: null, timezone: null, survey: null }), verifyLoginStateToken],
+    ["rsvp", signRsvpToken("lesson", 1), verifyRsvpToken],
+  ] as const;
+  it("rejects every token in every other verifier", () => {
+    for (const [source, token] of tokenCases()) {
+      for (const [target, , verify] of tokenCases()) {
+        if (source === target) expect(verify(token)).toBeTruthy();
+        else if (target === "access") expect(() => verify(token)).toThrow();
+        else expect(verify(token)).toBeNull();
+      }
+    }
+  });
+  it("rejects legacy access, refresh and OAuth credentials", () => {
+    const access = jwt.sign({ uid: UID, email: EMAIL, role: "tutor" }, process.env.JWT_SECRET!, { expiresIn: "15m" });
+    const state = jwt.sign({ uid: UID }, process.env.JWT_SECRET!, { expiresIn: "10m" });
+    const refresh = jwt.sign({ uid: UID, familyId: "family", jti: "id" }, process.env.REFRESH_TOKEN_SECRET!, { expiresIn: "30d" });
+    expect(() => verifyToken(access)).toThrow();
+    expect(() => verifyToken(state)).toThrow();
+    expect(verifyStateToken(state)).toBeNull();
+    expect(verifyRefreshToken(refresh)).toBeNull();
+  });
+  it("preserves the original lifetime of already-emailed RSVP links only", () => {
+    const legacy = jwt.sign({ lid: "lesson", v: 1 }, process.env.JWT_SECRET!, { expiresIn: "30d" });
+    expect(verifyRsvpToken(legacy)).toEqual({ lessonId: "lesson", version: 1 });
+    expect(() => verifyToken(legacy)).toThrow();
+    expect(verifyRsvpToken(jwt.sign({ lid: "lesson", v: 1, uid: UID }, process.env.JWT_SECRET!, { expiresIn: "30d" }))).toBeNull();
+  });
+  it("rejects malformed access claims even when signed by the intended signer", () => {
+    expect(() => verifyToken(generateToken("", EMAIL, "tutor"))).toThrow();
+    expect(() => verifyToken(generateToken(UID, EMAIL, "owner" as never))).toThrow();
+    expect(() => verifyToken(generateToken(UID, EMAIL, "tutor", -1))).toThrow();
   });
 });

@@ -5,6 +5,10 @@ required:
   - role
   - iat
   - exp
+  - auth_time
+  - purpose
+  - iss
+  - aud
 properties:
   uid:
     type: string
@@ -17,13 +21,25 @@ properties:
     example: admin@example.com
   role:
     $ref: '../common/Role.yaml'
+  auth_time:
+    type: integer
+    description: Original identity authentication time; preserved across refreshes
+  purpose:
+    type: string
+    enum: [access]
+  iss:
+    type: string
+    enum: [clastor]
+  aud:
+    type: string
+    enum: ['clastor:access']
   iat:
     type: integer
     description: Issued at timestamp (Unix epoch)
     example: 1718780400
   exp:
     type: integer
-    description: Expiration timestamp (Unix epoch, 1 hour after iat)
+    description: Expiration timestamp (Unix epoch, 15 minutes after iat)
     example: 1718784000
 description: |-
   JWT Payload interface

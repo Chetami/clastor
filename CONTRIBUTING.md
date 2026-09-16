@@ -89,3 +89,30 @@ CI (`.github/workflows/ci.yml`) runs lint, tests, and builds for every PR to
 
 By contributing, you agree that your contributions will be licensed under the
 [AGPL-3.0](LICENSE) license that covers this project.
+
+## Secret prevention
+
+Keep backend service-account files and signing keys outside the checkout. Client
+Firebase configuration identifies an app; it is not an administrative secret,
+but local iOS configuration files are ignored to keep environments separate.
+Never place backend secrets in client environment variables or app resources.
+
+Install [Gitleaks](https://github.com/gitleaks/gitleaks) (CI uses 8.30.1; on macOS,
+`brew install gitleaks`) and enable the tracked pre-commit hook:
+
+```bash
+git config --local core.hooksPath .githooks
+```
+
+If you already have a local hook setup, integrate the following command there
+instead of replacing it:
+
+```bash
+gitleaks git --staged --redact=100 --no-banner
+```
+
+The `Secret scan` workflow scans reachable Git history on pull requests and main
+pushes, including fork PRs without production credentials. It fails on findings
+and redacts detected values. A clean scan is a guardrail, not proof that all
+secrets are absent. Rotate an exposed credential immediately and follow
+[SECURITY.md](SECURITY.md); deleting or ignoring a file does not revoke a secret.

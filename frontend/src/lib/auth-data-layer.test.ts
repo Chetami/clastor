@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { server } from "@/test/server";
 import { http, HttpResponse } from "msw";
-import { api, useAuthStore, TOKEN_KEY, REFRESH_TOKEN_KEY } from "@examify-tms/shared";
+import { api, queryClient, useAuthStore, TOKEN_KEY, REFRESH_TOKEN_KEY } from "@examify-tms/shared";
 import type { UserInfo } from "@examify-tms/interfaces";
 
 // Cross-tab sync is installed by initShared(); we import it lazily in the test
@@ -90,7 +90,7 @@ describe("api client: transparent refresh on 401 (Fix C)", () => {
       ),
     );
 
-    await expect(api.get("/api/test/protected")).rejects.toThrow(/Session expired/);
+    await expect(api.get("/api/test/protected")).rejects.toMatchObject({ status: 401 });
 
     expect(useAuthStore.getState().user).toBeNull();
     expect(useAuthStore.getState().token).toBeNull();
@@ -156,6 +156,31 @@ describe("cross-tab token sync via the storage event (Fix D)", () => {
     expect(useAuthStore.getState().user).toBeNull();
     expect(useAuthStore.getState().token).toBeNull();
     expect(useAuthStore.getState().refreshToken).toBeNull();
+  });
+
+  it("discards cached identity and pending responses when another tab changes accounts", async () => {
+    useAuthStore.getState().setAuth(OLD_USER, "old-access", "old-refresh");
+    queryClient.setQueryData(["private-account-data"], { uid: OLD_USER.uid });
+    let release!: () => void;
+    let started!: () => void;
+    const ready = new Promise<void>((resolve) => { started = resolve; });
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    server.use(http.get("*/api/test/old-account", async () => {
+      started();
+      await gate;
+      return HttpResponse.json({ uid: OLD_USER.uid });
+    }));
+    const pending = api.get("/api/test/old-account");
+    await ready;
+    localStorage.setItem(TOKEN_KEY, "other-access");
+    localStorage.setItem(REFRESH_TOKEN_KEY, "other-refresh");
+    dispatchStorage(TOKEN_KEY, "other-access");
+    expect(useAuthStore.getState().user).toBeNull();
+    expect(queryClient.getQueryData(["private-account-data"])).toBeUndefined();
+    const assertion = expect(pending).rejects.toMatchObject({ status: 409 });
+    release();
+    await assertion;
+    expect(useAuthStore.getState().token).toBe("other-access");
   });
 
   it("ignores storage events for unrelated keys", () => {

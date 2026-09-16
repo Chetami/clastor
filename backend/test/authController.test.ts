@@ -1,4 +1,5 @@
 import { describe, expect, it, beforeEach, vi } from "vitest";
+import { NotFoundError, ServiceUnavailableError, UnauthorizedError } from "../src/utils/AppError";
 import type { Request, Response } from "express";
 import type { User, UserInfo } from "@examify-tms/interfaces";
 
@@ -16,6 +17,7 @@ const { verifyFirebaseToken, getEmailVerified, sendEmailVerificationEmail, sendP
 
 const userService = vi.hoisted(() => ({
   getUserFromFirestore: vi.fn(),
+  findUserInFirestore: vi.fn(),
   createUserInFirestore: vi.fn(),
   updateLastActive: vi.fn(),
   toUserInfo: vi.fn(),
@@ -50,7 +52,10 @@ import {
 
 // --- Fixtures -------------------------------------------------------------
 
+const AUTH_TIME = Math.floor(Date.now() / 1000) - 60;
 const firebaseDecoded = {
+  auth_time: AUTH_TIME,
+  firebase: { sign_in_provider: "google.com" },
   uid: "fb-uid-1",
   email: "tutor@example.com",
   name: "Google Name",
@@ -144,7 +149,7 @@ describe("login controller", () => {
     expect(res.statusCode).toBe(200);
     expect(res.body).toEqual({ jwtToken: "jwt-1", refreshToken: "refresh-1", user: userInfo });
     expect(verifyFirebaseToken).toHaveBeenCalledWith("firebase-id-token");
-    expect(tokenService.issueNewTokenPair).toHaveBeenCalledWith(dbUser);
+    expect(tokenService.issueNewTokenPair).toHaveBeenCalledWith(dbUser, AUTH_TIME);
   });
 
   it("returns 401 when the Firestore document does not exist", async () => {
@@ -152,13 +157,13 @@ describe("login controller", () => {
     // registerRequest routed here (/api/auth/login) instead of /api/auth/register,
     // and login throws for a brand-new user with no Firestore doc.
     verifyFirebaseToken.mockResolvedValue(firebaseDecoded);
-    userService.getUserFromFirestore.mockRejectedValue(new Error("User not found in Firestore"));
+    userService.getUserFromFirestore.mockRejectedValue(new NotFoundError("User not found in Firestore"));
 
     const res = mockRes();
     await login(mockReq(), res);
 
     expect(res.statusCode).toBe(401);
-    expect((res.body as { message: string }).message).toMatch(/User not found/);
+    expect((res.body as { message: string }).message).toMatch(/Account not found/);
     expect(tokenService.issueNewTokenPair).not.toHaveBeenCalled();
   });
 
@@ -171,7 +176,7 @@ describe("login controller", () => {
   });
 
   it("returns 401 when Firebase token verification fails", async () => {
-    verifyFirebaseToken.mockRejectedValue(new Error("Invalid Firebase token"));
+    verifyFirebaseToken.mockRejectedValue(new UnauthorizedError("Invalid Firebase token"));
 
     const res = mockRes();
     await login(mockReq(), res);
@@ -186,7 +191,7 @@ describe("register controller", () => {
     // The fix: sign-up now routes here. The controller must CREATE the user
     // (login would throw "User not found" instead).
     verifyFirebaseToken.mockResolvedValue(firebaseDecoded);
-    userService.getUserFromFirestore.mockResolvedValue(null); // no existing doc
+    userService.findUserInFirestore.mockResolvedValue(null); // no existing doc
     userService.createUserInFirestore.mockResolvedValue(dbUser);
 
     const res = mockRes();
@@ -211,7 +216,7 @@ describe("register controller", () => {
       "Australia/Sydney",
       null,
     );
-    expect(tokenService.issueNewTokenPair).toHaveBeenCalledWith(dbUser);
+    expect(tokenService.issueNewTokenPair).toHaveBeenCalledWith(dbUser, AUTH_TIME);
   });
 
   it("sends the branded verification email after creating the account", async () => {
@@ -219,7 +224,7 @@ describe("register controller", () => {
       ...firebaseDecoded,
       email_verified: false,
     });
-    userService.getUserFromFirestore.mockResolvedValue(null);
+    userService.findUserInFirestore.mockResolvedValue(null);
     userService.createUserInFirestore.mockResolvedValue(dbUser);
 
     const res = mockRes();
@@ -240,7 +245,7 @@ describe("register controller", () => {
       ...firebaseDecoded,
       email_verified: true,
     });
-    userService.getUserFromFirestore.mockResolvedValue(null);
+    userService.findUserInFirestore.mockResolvedValue(null);
     userService.createUserInFirestore.mockResolvedValue(dbUser);
 
     const res = mockRes();
@@ -255,7 +260,7 @@ describe("register controller", () => {
 
   it("does not fail registration when the verification email can't be sent", async () => {
     verifyFirebaseToken.mockResolvedValue(firebaseDecoded);
-    userService.getUserFromFirestore.mockResolvedValue(null);
+    userService.findUserInFirestore.mockResolvedValue(null);
     userService.createUserInFirestore.mockResolvedValue(dbUser);
     sendEmailVerificationEmail.mockRejectedValue(
       new Error("SMTP not configured"),
@@ -268,12 +273,12 @@ describe("register controller", () => {
     );
 
     expect(res.statusCode).toBe(200);
-    expect(tokenService.issueNewTokenPair).toHaveBeenCalledWith(dbUser);
+    expect(tokenService.issueNewTokenPair).toHaveBeenCalledWith(dbUser, AUTH_TIME);
   });
 
-  it("returns 409 when the user already exists", async () => {
+  it("returns the existing account on a registration retry without overwriting it", async () => {
     verifyFirebaseToken.mockResolvedValue(firebaseDecoded);
-    userService.getUserFromFirestore.mockResolvedValue(dbUser);
+    userService.findUserInFirestore.mockResolvedValue(dbUser);
 
     const res = mockRes();
     await register(
@@ -281,10 +286,10 @@ describe("register controller", () => {
       res,
     );
 
-    expect(res.statusCode).toBe(409);
-    expect((res.body as { message: string }).message).toMatch(/already exists/);
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toEqual({ ...tokenPair, user: userInfo });
     expect(userService.createUserInFirestore).not.toHaveBeenCalled();
-    expect(tokenService.issueNewTokenPair).not.toHaveBeenCalled();
+    expect(tokenService.issueNewTokenPair).toHaveBeenCalledWith(dbUser, AUTH_TIME);
   });
 
   it("returns 401 when no Authorization header is provided", async () => {
@@ -296,7 +301,7 @@ describe("register controller", () => {
 
   it("trims the name before storing", async () => {
     verifyFirebaseToken.mockResolvedValue(firebaseDecoded);
-    userService.getUserFromFirestore.mockResolvedValue(null);
+    userService.findUserInFirestore.mockResolvedValue(null);
     userService.createUserInFirestore.mockResolvedValue(dbUser);
 
     const res = mockRes();
@@ -322,7 +327,7 @@ describe("register controller", () => {
 describe("googleAuth controller", () => {
   it("creates a new user from the Google profile on first sign-in", async () => {
     verifyFirebaseToken.mockResolvedValue(firebaseDecoded);
-    userService.getUserFromFirestore.mockResolvedValue(null); // not found -> create
+    userService.findUserInFirestore.mockResolvedValue(null); // not found -> create
     userService.createUserInFirestore.mockResolvedValue(dbUser);
 
     const res = mockRes();
@@ -346,19 +351,19 @@ describe("googleAuth controller", () => {
       "Australia/Sydney",
       null,
     );
-    expect(tokenService.issueNewTokenPair).toHaveBeenCalledWith(dbUser);
+    expect(tokenService.issueNewTokenPair).toHaveBeenCalledWith(dbUser, AUTH_TIME);
   });
 
   it("logs in an existing Google user without creating a doc", async () => {
     verifyFirebaseToken.mockResolvedValue(firebaseDecoded);
-    userService.getUserFromFirestore.mockResolvedValue(dbUser);
+    userService.findUserInFirestore.mockResolvedValue(dbUser);
 
     const res = mockRes();
     await googleAuth(mockReq({ body: {} }), res);
 
     expect(res.statusCode).toBe(200);
     expect(userService.createUserInFirestore).not.toHaveBeenCalled();
-    expect(tokenService.issueNewTokenPair).toHaveBeenCalledWith(dbUser);
+    expect(tokenService.issueNewTokenPair).toHaveBeenCalledWith(dbUser, AUTH_TIME);
     // Not a first sign-in — clients must not run signup-time flows (e.g. the
     // calendar consent prompt).
     expect((res.body as { isNewUser?: boolean }).isNewUser).toBe(false);
@@ -366,7 +371,7 @@ describe("googleAuth controller", () => {
 
   it("falls back to the email local-part when the profile has no name", async () => {
     verifyFirebaseToken.mockResolvedValue({ ...firebaseDecoded, name: undefined });
-    userService.getUserFromFirestore.mockResolvedValue(null);
+    userService.findUserInFirestore.mockResolvedValue(null);
     userService.createUserInFirestore.mockResolvedValue(dbUser);
 
     const res = mockRes();
@@ -400,21 +405,21 @@ describe("verifyToken controller", () => {
     getEmailVerified.mockResolvedValue(true);
 
     const res = mockRes();
-    await verifyToken(mockReq({ user: { uid: "fb-uid-1" } } as never), res);
+    await verifyToken(mockReq({ user: { uid: "fb-uid-1", auth_time: AUTH_TIME } } as never), res);
 
     expect(res.statusCode).toBe(200);
-    expect(getEmailVerified).toHaveBeenCalledWith("fb-uid-1");
+    expect(getEmailVerified).toHaveBeenCalledWith("fb-uid-1", AUTH_TIME);
     expect(userService.toUserInfo).toHaveBeenCalledWith(dbUser, true);
     expect(res.body).toEqual({ user: userInfo });
   });
 
-  it("returns 404 when the Firestore document is missing", async () => {
-    userService.getUserFromFirestore.mockRejectedValue(new Error("User not found"));
+  it("returns 401 when the Firestore document is missing", async () => {
+    userService.getUserFromFirestore.mockRejectedValue(new NotFoundError("User not found"));
 
     const res = mockRes();
-    await verifyToken(mockReq({ user: { uid: "fb-uid-1" } } as never), res);
+    await verifyToken(mockReq({ user: { uid: "fb-uid-1", auth_time: AUTH_TIME } } as never), res);
 
-    expect(res.statusCode).toBe(404);
+    expect(res.statusCode).toBe(401);
   });
 });
 
@@ -424,7 +429,7 @@ describe("resendVerification controller", () => {
     sendEmailVerificationEmail.mockResolvedValue(true);
 
     const res = mockRes();
-    await resendVerification(mockReq({ user: { uid: "fb-uid-1" } } as never), res);
+    await resendVerification(mockReq({ user: { uid: "fb-uid-1", auth_time: AUTH_TIME } } as never), res);
 
     expect(res.statusCode).toBe(200);
     expect(sendEmailVerificationEmail).toHaveBeenCalledWith("fb-uid-1", "tutor@example.com");
@@ -436,7 +441,7 @@ describe("resendVerification controller", () => {
     sendEmailVerificationEmail.mockResolvedValue(false);
 
     const res = mockRes();
-    await resendVerification(mockReq({ user: { uid: "fb-uid-1" } } as never), res);
+    await resendVerification(mockReq({ user: { uid: "fb-uid-1", auth_time: AUTH_TIME } } as never), res);
 
     expect(res.statusCode).toBe(200);
     expect(res.body).toEqual({ sent: false, message: "Your email is already verified" });
@@ -513,7 +518,7 @@ describe("refresh controller", () => {
   });
 
   it("returns 401 when rotation throws (invalid/expired/reused)", async () => {
-    tokenService.rotateRefreshToken.mockRejectedValue(new Error("Refresh token reuse detected"));
+    tokenService.rotateRefreshToken.mockRejectedValue(new UnauthorizedError("Refresh token reuse detected"));
 
     const res = mockRes();
     await refresh(
@@ -548,5 +553,31 @@ describe("logout controller", () => {
 
     expect(res.statusCode).toBe(200);
     expect(tokenService.revokeRefreshToken).toHaveBeenCalledWith(undefined);
+  });
+});
+
+
+describe("auth outage and provider boundaries", () => {
+  it("returns a retryable status and never provisions on a database outage", async () => {
+    verifyFirebaseToken.mockResolvedValue(firebaseDecoded);
+    userService.findUserInFirestore.mockRejectedValueOnce(new ServiceUnavailableError("Try again"));
+    const res = mockRes();
+    await register(mockReq({ body: { name: "Tutor" } }), res);
+    expect(res.statusCode).toBe(503);
+    expect(userService.createUserInFirestore).not.toHaveBeenCalled();
+  });
+  it("does not report an unexpected refresh storage fault as bad credentials", async () => {
+    tokenService.rotateRefreshToken.mockRejectedValueOnce(new Error("internal credentials must not leak"));
+    const res = mockRes();
+    await refresh(mockReq({ body: { refreshToken: "test-refresh" } }), res);
+    expect(res.statusCode).toBe(500);
+    expect(JSON.stringify(res.body)).not.toContain("internal credentials");
+  });
+  it("rejects a password credential on the Google exchange route", async () => {
+    verifyFirebaseToken.mockResolvedValue({ ...firebaseDecoded, firebase: { sign_in_provider: "password" } });
+    const res = mockRes();
+    await googleAuth(mockReq(), res);
+    expect(res.statusCode).toBe(401);
+    expect(userService.findUserInFirestore).not.toHaveBeenCalled();
   });
 });

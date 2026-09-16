@@ -1,3 +1,4 @@
+import { queryClient } from "@/lib/query-client";
 import {
   configureShared,
   useAuthStore,
@@ -40,9 +41,14 @@ function installCrossTabSync(): void {
     if (!token && !refreshToken) {
       // Another tab signed out — drop the local session too.
       useAuthStore.getState().clearAuth();
+      queryClient.clear();
     } else {
-      // setState (not setTokens) so we don't write back to storage and echo.
-      useAuthStore.setState({ token, refreshToken });
+      const current = useAuthStore.getState();
+      if (current.token === token && current.refreshToken === refreshToken) return;
+      // Another tab may have switched accounts. Invalidate pending responses,
+      // clear cached identity/data and let AuthBoot verify the new session.
+      useAuthStore.setState({ token, refreshToken, user: null, sessionVersion: current.sessionVersion + 1 });
+      queryClient.clear();
     }
   });
 }

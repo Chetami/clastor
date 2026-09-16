@@ -17,7 +17,6 @@ import type {
   RefreshTokenResponse,
   SignupSurvey,
 } from "@examify-tms/interfaces";
-import type { User as FirebaseUser } from "firebase/auth";
 
 // Re-export the platform-agnostic auth requests so existing imports
 // (`@/features/auth/api` barrel) keep resolving without touching call sites.
@@ -28,6 +27,8 @@ const firebaseAuthErrorMap: Record<string, string> = {
   "auth/weak-password": "Password must be at least 6 characters",
   "auth/invalid-email": "Invalid email address",
   "auth/invalid-credential": "Invalid email or password",
+  "auth/wrong-password": "Invalid email or password",
+  "auth/user-not-found": "Invalid email or password",
   "auth/network-request-failed": "Network error. Please check your connection and try again.",
   "auth/too-many-requests": "Too many attempts. Please try again later.",
   "auth/popup-closed-by-user": "Sign-in popup was closed before completing.",
@@ -84,47 +85,35 @@ export async function registerRequest(
   password: string,
   signupSurvey?: SignupSurvey,
 ): Promise<LoginResponse> {
-  let firebaseUserCredential: { user: FirebaseUser } | null = null;
-
   try {
     const firebaseAuth = getFirebaseAuth();
-    firebaseUserCredential = await createUserWithEmailAndPassword(
-      firebaseAuth,
-      email,
-      password,
-    );
-
-    const firebaseToken = await firebaseUserCredential.user.getIdToken();
-    // Route through /api/auth/register (not /api/auth/login) so the backend
-    // CREATES the Firestore document for this brand-new Firebase user. The
-    // login endpoint requires the doc to already exist and would 401. The
-    // backend also sends the branded verification email as part of register.
-    return registerFirebaseToken(firebaseToken, {
-      name,
-      timezone: detectBrowserTimezone(),
-      signupSurvey: signupSurvey ?? null,
+    let credential;
+    try {
+      credential = await createUserWithEmailAndPassword(firebaseAuth, email, password);
+    } catch (error) {
+      if ((error as { code?: string }).code !== "auth/email-already-in-use") throw error;
+      // A previous signup may have created Firebase but lost the API response.
+      // Prove ownership with the submitted password before resuming provisioning.
+      credential = await signInWithEmailAndPassword(firebaseAuth, email, password);
+    }
+    const firebaseToken = await credential.user.getIdToken();
+    return await registerFirebaseToken(firebaseToken, {
+      name, timezone: detectBrowserTimezone(), signupSurvey: signupSurvey ?? null,
     });
   } catch (error) {
-    const code = (error as { code?: string }).code ?? "";
-
-    if (firebaseUserCredential && !code.startsWith("auth/")) {
-      try {
-        await firebaseUserCredential.user.delete();
-      } catch {
-        // best-effort rollback
-      }
-    }
-
-    if (code.startsWith("auth/")) {
-      throw mapFirebaseError(error);
-    }
-
+    if ((error as { code?: string }).code?.startsWith("auth/")) throw mapFirebaseError(error);
+    // Never delete an account after an ambiguous provisioning failure.
     throw error;
   }
 }
 
 export async function logoutRequest(refreshToken?: string | null): Promise<void> {
-  // Best-effort server-side revocation; never block logout on it.
+  try {
+    await firebaseSignOut(getFirebaseAuth());
+  } catch {
+    // Clastor credentials are already cleared; still attempt server revocation.
+  }
+  // Best-effort server-side revocation; local sign-out has already completed.
   if (refreshToken) {
     try {
       await revokeRefreshToken(refreshToken);
@@ -133,8 +122,6 @@ export async function logoutRequest(refreshToken?: string | null): Promise<void>
     }
   }
 
-  const firebaseAuth = getFirebaseAuth();
-  await firebaseSignOut(firebaseAuth);
 }
 
 /**
