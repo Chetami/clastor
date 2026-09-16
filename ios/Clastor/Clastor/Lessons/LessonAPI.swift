@@ -53,7 +53,7 @@ final class LessonAPI: LessonServing {
     static func live() -> any LessonServing {
         #if DEBUG
         if AuthPreviewSupport.isUITesting || AuthPreviewSupport.isPreview {
-            return AuthPreviewSupport.lessonAPI()
+            return LessonPreviewSupport.api()
         }
         #endif
         guard let configuration = try? AppConfiguration.load() else {

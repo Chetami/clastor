@@ -34,7 +34,9 @@ struct StudentDebtResponse: Codable, Equatable, Sendable {
 
 @MainActor
 protocol InvoiceServing {
-    func list(status: String?, search: String?, accessToken: String) async throws -> [PaymentModels.InvoiceResponse]
+    /// status "all" (or nil) omits the filter. Pass `limit` to enable
+    /// cursor-paginated mode; the response carries the next-page cursor.
+    func list(status: String?, search: String?, limit: Int?, cursor: String?, accessToken: String) async throws -> PaymentModels.InvoiceListResponse
     func invoice(id: String, accessToken: String) async throws -> PaymentModels.InvoiceResponse
     func events(id: String, accessToken: String) async throws -> [PaymentModels.InvoiceEventResponse]
     func create(_ body: CreateInvoiceBody, accessToken: String) async throws -> PaymentModels.InvoiceResponse
@@ -57,7 +59,7 @@ final class InvoiceAPI: InvoiceServing {
     static func live() -> any InvoiceServing {
         #if DEBUG
         if AuthPreviewSupport.isUITesting || AuthPreviewSupport.isPreview {
-            return AuthPreviewSupport.invoiceAPI()
+            return InvoicePreviewSupport.api()
         }
         #endif
         guard let configuration = try? AppConfiguration.load() else {
@@ -66,14 +68,15 @@ final class InvoiceAPI: InvoiceServing {
         return InvoiceAPI(origin: configuration.apiBaseURL)
     }
 
-    func list(status: String?, search: String?, accessToken: String) async throws -> [PaymentModels.InvoiceResponse] {
+    func list(status: String?, search: String?, limit: Int?, cursor: String?, accessToken: String) async throws -> PaymentModels.InvoiceListResponse {
         var query: [URLQueryItem] = []
         if let status, status != "all" { query.append(URLQueryItem(name: "status", value: status)) }
         if let search, !search.isEmpty { query.append(URLQueryItem(name: "search", value: search)) }
-        let response: PaymentModels.InvoiceListResponse = try client.decode(
+        if let limit { query.append(URLQueryItem(name: "limit", value: String(limit))) }
+        if let cursor, !cursor.isEmpty { query.append(URLQueryItem(name: "cursor", value: cursor)) }
+        return try client.decode(
             await client.send(path: "api/payments", query: query, method: "GET", bearer: accessToken)
         )
-        return response.data
     }
 
     func invoice(id: String, accessToken: String) async throws -> PaymentModels.InvoiceResponse {

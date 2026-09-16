@@ -6,16 +6,14 @@ struct StudentDetailView: View {
     let session: SessionStore
     let studentID: String
 
+    @Environment(LessonStore.self) private var lessonStore
+    @Environment(InvoiceStore.self) private var invoiceStore
     @State private var studentsAPI: any StudentsServing = StudentsAPI.live()
-    @State private var lessonAPI: any LessonServing = LessonAPI.live()
-    @State private var invoiceAPI: any InvoiceServing = InvoiceAPI.live()
+    @State private var loadState = LoadState()
     @State private var student: StudentModels.StudentResponse?
     @State private var lessons: [LessonModels.LessonResponse] = []
     @State private var debt: Double?
     @State private var openInvoices: [PaymentModels.InvoiceResponse] = []
-    @State private var isLoading = false
-    @State private var hasLoaded = false
-    @State private var message: String?
     @State private var showEdit = false
     @State private var notesDraft = ""
     @State private var notesInitialized = false
@@ -37,31 +35,20 @@ struct StudentDetailView: View {
                     .disabled(student == nil)
             }
         }
-        .overlay {
-            if isLoading && student == nil {
-                ProgressView("Loading…")
-            } else if let message, student == nil {
-                ContentUnavailableView {
-                    Label("Student not found", systemImage: "exclamationmark.triangle")
-                } description: {
-                    Text(message)
-                } actions: {
-                    Button("Try again") { Task { await load() } }
-                        .buttonStyle(.borderedProminent)
-                }
-            }
+        .loadStateOverlay(loadState, hasContent: student != nil, errorTitle: "Student not found") {
+            Task { await load() }
         }
         .task {
             if student == nil { await load() }
         }
-        .refreshable { await load(isFatal: false) }
+        .refreshable { await load(fatal: false) }
         .onChange(of: showEdit) {
-            if !showEdit { Task { await load(isFatal: false) } }
+            if !showEdit { Task { await load(fatal: false) } }
         }
         .sheet(isPresented: $showEdit) {
             if let student {
                 StudentFormView(session: session, existing: student) {
-                    Task { await load(isFatal: false) }
+                    Task { await load(fatal: false) }
                 }
             }
         }
@@ -264,26 +251,16 @@ struct StudentDetailView: View {
     // MARK: Data
 
     @MainActor
-    private func load(isFatal: Bool = true) async {
-        guard !isLoading else { return }
-        isLoading = true
-        if isFatal { message = nil }
-        defer { isLoading = false }
-        do {
+    private func load(fatal: Bool = true) async {
+        await loadState.run(fatal: fatal) {
             let loadedStudent = try await session.authenticated { token in
                 try await studentsAPI.student(id: studentID, accessToken: token)
             }
             try Task.checkCancellation()
             let studentId = loadedStudent.id
-            async let lessonsResult = session.authenticated { token in
-                try await lessonAPI.list(filters: LessonListFilters(studentId: studentId), accessToken: token)
-            }
-            async let debtResult = session.authenticated { token in
-                try await invoiceAPI.studentDebt(studentId: studentId, accessToken: token)
-            }
-            async let invoicesResult = session.authenticated { token in
-                try await invoiceAPI.studentInvoices(studentId: studentId, accessToken: token)
-            }
+            async let lessonsResult = lessonStore.loadStudentLessons(studentId: studentId, session)
+            async let debtResult = invoiceStore.loadStudentDebt(studentId: studentId, session)
+            async let invoicesResult = invoiceStore.loadStudentInvoices(studentId: studentId, session)
             let (loadedLessons, loadedDebt, loadedInvoices) = try await (lessonsResult, debtResult, invoicesResult)
             try Task.checkCancellation()
             student = loadedStudent
@@ -293,13 +270,6 @@ struct StudentDetailView: View {
             if !notesInitialized {
                 notesDraft = loadedStudent.notes ?? ""
                 notesInitialized = true
-            }
-            hasLoaded = true
-        } catch is CancellationError {
-        } catch AuthFailure.cancelled {
-        } catch {
-            if isFatal {
-                message = AuthFailure.message(for: error)
             }
         }
     }

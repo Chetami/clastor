@@ -6,12 +6,11 @@ struct InvoiceDetailView: View {
     let session: SessionStore
     let invoiceID: String
 
+    @Environment(InvoiceStore.self) private var invoiceStore
     @State private var api: any InvoiceServing = InvoiceAPI.live()
+    @State private var loadState = LoadState()
     @State private var invoice: PaymentModels.InvoiceResponse?
     @State private var events: [PaymentModels.InvoiceEventResponse] = []
-    @State private var isLoading = false
-    @State private var hasLoaded = false
-    @State private var message: String?
     @State private var showSend = false
     @State private var showMarkPaid = false
     @State private var showVoid = false
@@ -36,40 +35,23 @@ struct InvoiceDetailView: View {
         }
         .navigationTitle(invoice?.invoiceNumber ?? "Invoice")
         .navigationBarTitleDisplayMode(.inline)
-        .overlay {
-            if isLoading && invoice == nil {
-                ProgressView("Loading…")
-            } else if let message, invoice == nil {
-                ContentUnavailableView {
-                    Label("Could not load invoice", systemImage: "exclamationmark.triangle")
-                } description: {
-                    Text(message)
-                } actions: {
-                    Button("Try again") { Task { await load() } }
-                        .buttonStyle(.borderedProminent)
-                }
-            } else if hasLoaded, invoice == nil {
-                ContentUnavailableView("Invoice not found", systemImage: "doc.text.magnifyingglass")
-            }
+        .loadStateOverlay(loadState, hasContent: invoice != nil, errorTitle: "Could not load invoice") {
+            Task { await load() }
         }
         .task {
             if invoice == nil { await load() }
         }
-        .refreshable { await load(isFatal: false) }
+        .refreshable { await load(fatal: false) }
         .sheet(isPresented: $showSend) {
             if let invoice {
                 EmailComposeSheet(
                     title: invoice.sentAt == nil ? "Send invoice" : "Resend invoice",
                     sendLabel: "Send email",
                     fetchPreview: { message in
-                        try await self.session.authenticated { token in
-                            try await api.sendPreview(id: invoice.id, message: message, accessToken: token)
-                        }
+                        try await invoiceStore.sendPreview(id: invoice.id, message: message, session)
                     },
                     send: { message in
-                        let updated = try await self.session.authenticated { token in
-                            try await api.send(id: invoice.id, message: message, accessToken: token)
-                        }
+                        let updated = try await invoiceStore.send(id: invoice.id, message: message, session)
                         self.invoice = updated
                     },
                     onSent: {}
@@ -281,12 +263,8 @@ struct InvoiceDetailView: View {
     // MARK: Data
 
     @MainActor
-    private func load(isFatal: Bool = true) async {
-        guard !isLoading else { return }
-        isLoading = true
-        if isFatal { message = nil }
-        defer { isLoading = false }
-        do {
+    private func load(fatal: Bool = true) async {
+        await loadState.run(fatal: fatal) {
             async let invoiceResult = session.authenticated { token in
                 try await api.invoice(id: invoiceID, accessToken: token)
             }
@@ -297,13 +275,6 @@ struct InvoiceDetailView: View {
             try Task.checkCancellation()
             invoice = loadedInvoice
             events = loadedEvents
-            hasLoaded = true
-        } catch is CancellationError {
-        } catch AuthFailure.cancelled {
-        } catch {
-            if isFatal {
-                message = AuthFailure.message(for: error)
-            }
         }
     }
 
@@ -313,10 +284,8 @@ struct InvoiceDetailView: View {
         isWorking = true
         defer { isWorking = false }
         do {
-            invoice = try await session.authenticated { token in
-                try await api.markPaid(id: invoiceID, accessToken: token)
-            }
-            await load(isFatal: false)
+            invoice = try await invoiceStore.markPaid(id: invoiceID, session)
+            await load(fatal: false)
         } catch {
             fail(error)
         }
@@ -328,10 +297,8 @@ struct InvoiceDetailView: View {
         isWorking = true
         defer { isWorking = false }
         do {
-            invoice = try await session.authenticated { token in
-                try await api.void(id: invoiceID, accessToken: token)
-            }
-            await load(isFatal: false)
+            invoice = try await invoiceStore.void(id: invoiceID, session)
+            await load(fatal: false)
         } catch {
             fail(error)
         }

@@ -19,7 +19,7 @@ final class StudentsAPI: StudentsServing {
     static func live() -> any StudentsServing {
         #if DEBUG
         if AuthPreviewSupport.isUITesting || AuthPreviewSupport.isPreview {
-            return AuthPreviewSupport.studentsAPI()
+            return StudentsPreviewSupport.api()
         }
         #endif
         guard let configuration = try? AppConfiguration.load() else {

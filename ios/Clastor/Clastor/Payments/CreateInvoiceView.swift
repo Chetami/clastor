@@ -9,9 +9,9 @@ struct CreateInvoiceView: View {
     var onCreated: (() -> Void)?
 
     @Environment(\.dismiss) private var dismiss
-    @State private var invoiceAPI: any InvoiceServing = InvoiceAPI.live()
-    @State private var lessonAPI: any LessonServing = LessonAPI.live()
-    @State private var studentsAPI: any StudentsServing = StudentsAPI.live()
+    @Environment(StudentStore.self) private var studentStore
+    @Environment(LessonStore.self) private var lessonStore
+    @Environment(InvoiceStore.self) private var invoiceStore
 
     @State private var students: [StudentModels.StudentResponse] = []
     @State private var studentID = ""
@@ -31,7 +31,7 @@ struct CreateInvoiceView: View {
     @State private var sendTarget: PaymentModels.InvoiceResponse?
 
     private var selectedStudent: StudentModels.StudentResponse? {
-        students.first { $0.id == studentID }
+        studentStore.students.first { $0.id == studentID } ?? students.first { $0.id == studentID }
     }
 
     var body: some View {
@@ -90,14 +90,10 @@ struct CreateInvoiceView: View {
                     title: "Send invoice",
                     sendLabel: "Send email",
                     fetchPreview: { message in
-                        try await self.session.authenticated { token in
-                            try await invoiceAPI.sendPreview(id: invoice.id, message: message, accessToken: token)
-                        }
+                        try await invoiceStore.sendPreview(id: invoice.id, message: message, session)
                     },
                     send: { message in
-                        _ = try await self.session.authenticated { token in
-                            try await invoiceAPI.send(id: invoice.id, message: message, accessToken: token)
-                        }
+                        _ = try await invoiceStore.send(id: invoice.id, message: message, session)
                     },
                     onSent: {
                         onCreated?()
@@ -299,13 +295,8 @@ struct CreateInvoiceView: View {
             }
             await loadLessons()
         } else {
-            do {
-                students = try await session.authenticated { token in
-                    try await studentsAPI.list(accessToken: token)
-                }
-            } catch {
-                // Picker stays empty; retry by reopening.
-            }
+            // Shared cache — usually already warm from other screens.
+            await studentStore.loadIfNeeded(session)
         }
     }
 
@@ -316,9 +307,7 @@ struct CreateInvoiceView: View {
         defer { isLoadingLessons = false }
         do {
             let studentID = self.studentID
-            unpaidLessons = try await session.authenticated { token in
-                try await lessonAPI.list(filters: LessonListFilters(studentId: studentID, unpaid: true), accessToken: token)
-            }
+            unpaidLessons = try await lessonStore.loadUnpaid(studentId: studentID, session)
             if !lessonsLoaded, let preselectedLessonID {
                 selectedLessonIDs = [preselectedLessonID]
             }
@@ -342,18 +331,17 @@ struct CreateInvoiceView: View {
             calendar.timeZone = .current
             let due = calendar.dateInterval(of: .day, for: dueDate)?.start ?? dueDate
             let override = billingEmailOverride.trimmingCharacters(in: .whitespaces)
-            let created = try await session.authenticated { token in
-                try await invoiceAPI.create(
-                    CreateInvoiceBody(
-                        studentId: student.id,
-                        lineItems: items,
-                        billingEmail: override.isEmpty ? nil : override,
-                        dueDate: ISO8601DateFormatter().string(from: due),
-                        paymentMethod: paymentMethod,
-                        status: status,
-                        notes: notes.isEmpty ? nil : notes),
-                    accessToken: token)
-            }
+            let created = try await invoiceStore.create(
+                CreateInvoiceBody(
+                    studentId: student.id,
+                    lineItems: items,
+                    billingEmail: override.isEmpty ? nil : override,
+                    dueDate: ISO8601DateFormatter().string(from: due),
+                    paymentMethod: paymentMethod,
+                    status: status,
+                    notes: notes.isEmpty ? nil : notes),
+                session)
+            lessonStore.applyInvoiceCreated(lessonIds: items.map(\.lessonId), invoiceId: created.id)
             if send {
                 sendTarget = created
             } else {

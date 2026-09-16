@@ -3,19 +3,19 @@ import SwiftUI
 struct HomeView: View {
     let session: SessionStore
 
+    @Environment(StudentStore.self) private var studentStore
+    @Environment(LessonStore.self) private var lessonStore
     @State private var summaryAPI: any HomeServing = HomeAPI.live()
-    @State private var lessonAPI: any LessonServing = LessonAPI.live()
-    @State private var studentsAPI: any StudentsServing = StudentsAPI.live()
+    @State private var loadState = LoadState()
     @State private var period = "week"
     @State private var summary: HomeModels.DashboardSummaryResponse?
-    @State private var lessons: [LessonModels.LessonResponse] = []
-    @State private var studentNames: [String: String] = [:]
-    @State private var isLoading = false
-    @State private var hasLoaded = false
-    @State private var message: String?
     @State private var markingLessonID: String?
     @State private var markFailed = false
     @State private var markFailureMessage: String?
+
+    private var lessons: [LessonModels.LessonResponse] {
+        lessonStore.allLessons
+    }
 
     var body: some View {
         List {
@@ -35,23 +35,11 @@ struct HomeView: View {
         }
         .navigationTitle("Home")
         .accessibilityIdentifier("home.list")
-        .overlay {
-            if isLoading && !hasLoaded {
-                ProgressView("Loading…")
-            } else if let message {
-                ContentUnavailableView {
-                    Label("Could not load", systemImage: "exclamationmark.triangle")
-                } description: {
-                    Text(message)
-                } actions: {
-                    Button("Try again") { Task { await load() } }
-                        .buttonStyle(.borderedProminent)
-                }
-                .accessibilityIdentifier("home.error")
-            }
+        .loadStateOverlay(loadState, hasContent: summary != nil, errorTitle: "Could not load") {
+            Task { await load() }
         }
         .task {
-            if !hasLoaded { await load() }
+            if !loadState.isLoaded { await load() }
         }
         .refreshable { await load() }
         .onChange(of: period) {
@@ -111,42 +99,42 @@ struct HomeView: View {
 
     private func currentLessonRow(_ lesson: LessonModels.LessonResponse) -> some View {
         NavigationLink(value: LessonRoute(id: lesson.id)) {
-        HStack(alignment: .center) {
-            VStack(alignment: .leading, spacing: 4) {
-                Label("Live now", systemImage: "record.circle")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.red)
-                Text(lessonTitle(lesson))
-                    .font(.subheadline.weight(.medium))
-                Text(HomeDerivations.lessonTimeRange(lesson))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+            HStack(alignment: .center) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Label("Live now", systemImage: "record.circle")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.red)
+                    Text(lessonTitle(lesson))
+                        .font(.subheadline.weight(.medium))
+                    Text(HomeDerivations.lessonTimeRange(lesson))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                joinButton(lesson)
             }
-            Spacer()
-            joinButton(lesson)
-        }
         }
     }
 
     private func nextLessonRow(_ lesson: LessonModels.LessonResponse) -> some View {
         NavigationLink(value: LessonRoute(id: lesson.id)) {
-        HStack(alignment: .center) {
-            VStack(alignment: .leading, spacing: 4) {
-                if let start = HomeDerivations.date(lesson.startDateTime) {
-                    TimelineView(.periodic(from: .now, by: 30)) { context in
-                        Text(HomeDerivations.timeUntil(start, now: context.date))
-                            .font(.title3.weight(.semibold))
+            HStack(alignment: .center) {
+                VStack(alignment: .leading, spacing: 4) {
+                    if let start = HomeDerivations.date(lesson.startDateTime) {
+                        TimelineView(.periodic(from: .now, by: 30)) { context in
+                            Text(HomeDerivations.timeUntil(start, now: context.date))
+                                .font(.title3.weight(.semibold))
+                        }
                     }
+                    Text("\(dayLabel(lesson)) · \(HomeDerivations.lessonTimeRange(lesson))")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Text(lessonTitle(lesson))
+                        .font(.subheadline.weight(.medium))
                 }
-                Text("\(dayLabel(lesson)) · \(HomeDerivations.lessonTimeRange(lesson))")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Text(lessonTitle(lesson))
-                    .font(.subheadline.weight(.medium))
+                Spacer()
+                joinButton(lesson)
             }
-            Spacer()
-            joinButton(lesson)
-        }
         }
     }
 
@@ -169,28 +157,28 @@ struct HomeView: View {
 
     private func attendanceRow(_ lesson: LessonModels.LessonResponse) -> some View {
         NavigationLink(value: LessonRoute(id: lesson.id)) {
-        HStack {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(studentName(lesson))
-                Text("\(lesson.subject ?? "Lesson") · \(dayLabel(lesson)) · \(HomeDerivations.lessonTimeRange(lesson))")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            Spacer()
-            if markingLessonID == lesson.id {
-                ProgressView()
-            } else {
-                Menu {
-                    Button("Present") { Task { await mark(lesson, status: "present") } }
-                    Button("Late") { Task { await mark(lesson, status: "present_late") } }
-                    Button("Absent") { Task { await mark(lesson, status: "absent_no_makeup") } }
-                } label: {
-                    Text("Mark")
-                        .font(.callout.weight(.medium))
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(studentName(lesson))
+                    Text("\(lesson.subject ?? "Lesson") · \(dayLabel(lesson)) · \(HomeDerivations.lessonTimeRange(lesson))")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
-                .accessibilityIdentifier("home.mark.\(lesson.id)")
+                Spacer()
+                if markingLessonID == lesson.id {
+                    ProgressView()
+                } else {
+                    Menu {
+                        Button("Present") { Task { await mark(lesson, status: "present") } }
+                        Button("Late") { Task { await mark(lesson, status: "present_late") } }
+                        Button("Absent") { Task { await mark(lesson, status: "absent_no_makeup") } }
+                    } label: {
+                        Text("Mark")
+                            .font(.callout.weight(.medium))
+                    }
+                    .accessibilityIdentifier("home.mark.\(lesson.id)")
+                }
             }
-        }
         }
     }
 
@@ -246,7 +234,7 @@ struct HomeView: View {
     }
 
     private func studentName(_ lesson: LessonModels.LessonResponse) -> String {
-        studentNames[lesson.studentId] ?? "Student"
+        studentStore.namesByID[lesson.studentId] ?? "Student"
     }
 
     private func lessonTitle(_ lesson: LessonModels.LessonResponse) -> String {
@@ -262,35 +250,14 @@ struct HomeView: View {
 
     @MainActor
     private func load() async {
-        guard !isLoading else { return }
-        isLoading = true
-        message = nil
-        defer { isLoading = false }
-        do {
+        await loadState.run {
             async let summaryResult = session.authenticated { token in
                 try await summaryAPI.summary(period: period, accessToken: token)
             }
-            async let lessonsResult = session.authenticated { token in
-                try await lessonAPI.list(filters: LessonListFilters(), accessToken: token)
-            }
-            async let studentsResult = session.authenticated { token in
-                try await studentsAPI.list(accessToken: token)
-            }
-            let (loadedSummary, loadedLessons, loadedStudents) = try await (summaryResult, lessonsResult, studentsResult)
-            try Task.checkCancellation()
+            async let lessonsResult = lessonStore.loadAllIfNeeded(session)
+            async let studentsResult = studentStore.loadIfNeeded(session)
+            let (loadedSummary, _, _) = try await (summaryResult, lessonsResult, studentsResult)
             summary = loadedSummary
-            lessons = loadedLessons
-            studentNames = Dictionary(loadedStudents.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
-            hasLoaded = true
-        } catch is CancellationError {
-            // Leaving the tab or signing out must not publish a late response.
-        } catch AuthFailure.cancelled {
-        } catch {
-            summary = nil
-            lessons = []
-            studentNames = [:]
-            hasLoaded = false
-            message = AuthFailure.message(for: error)
         }
     }
 
@@ -309,17 +276,10 @@ struct HomeView: View {
         markingLessonID = lesson.id
         defer { markingLessonID = nil }
         do {
-            let updated = try await session.authenticated { token in
-                try await lessonAPI.recordAttendance(id: lesson.id, status: status, accessToken: token)
-            }
-            if let index = lessons.firstIndex(where: { $0.id == updated.id }) {
-                lessons[index] = updated
-            }
-            if let loaded = try? await session.authenticated({ token in
-                try await summaryAPI.summary(period: period, accessToken: token)
-            }) {
-                summary = loaded
-            }
+            // The store applies the update to its caches; observation
+            // re-renders the todo list without manual patching here.
+            _ = try await lessonStore.recordAttendance(id: lesson.id, status: status, session)
+            await loadSummary()
         } catch is CancellationError {
         } catch AuthFailure.cancelled {
         } catch {

@@ -16,7 +16,7 @@ final class HomeAPI: HomeServing {
     static func live() -> any HomeServing {
         #if DEBUG
         if AuthPreviewSupport.isUITesting || AuthPreviewSupport.isPreview {
-            return AuthPreviewSupport.homeAPI()
+            return HomePreviewSupport.api()
         }
         #endif
         guard let configuration = try? AppConfiguration.load() else {

@@ -1,18 +1,14 @@
 import SwiftUI
 
 /// Week agenda view — the mobile counterpart of the web's schedule calendar.
-/// Monday-anchored week window; tapping a lesson pushes LessonDetailView.
+/// Monday-anchored week window served by the shared LessonStore; tapping a
+/// lesson pushes LessonDetailView, whose mutations apply back into the cache.
 struct CalendarView: View {
     let session: SessionStore
 
-    @State private var lessonAPI: any LessonServing = LessonAPI.live()
-    @State private var studentsAPI: any StudentsServing = StudentsAPI.live()
+    @Environment(LessonStore.self) private var lessonStore
+    @Environment(StudentStore.self) private var studentStore
     @State private var weekStart: Date
-    @State private var lessons: [LessonModels.LessonResponse] = []
-    @State private var studentNames: [String: String] = [:]
-    @State private var isLoading = false
-    @State private var hasLoaded = false
-    @State private var message: String?
     @State private var showCreate = false
 
     private var calendar: Calendar {
@@ -42,7 +38,7 @@ struct CalendarView: View {
             if let days = groupedDays, !days.isEmpty {
                 ForEach(days, id: \.date) { day in
                     Section {
-                        ForEach(day.lessons, id: \.id) { lesson in
+                        ForEach(day.lessons) { lesson in
                             NavigationLink(value: LessonRoute(id: lesson.id)) {
                                 lessonRow(lesson)
                             }
@@ -66,41 +62,40 @@ struct CalendarView: View {
             }
         }
         .overlay {
-            if isLoading && !hasLoaded {
-                ProgressView("Loading…")
-            } else if let message {
-                ContentUnavailableView {
-                    Label("Could not load schedule", systemImage: "exclamationmark.triangle")
-                } description: {
-                    Text(message)
-                } actions: {
-                    Button("Try again") { Task { await load() } }
-                        .buttonStyle(.borderedProminent)
+            if lessonStore.windowLessons.isEmpty {
+                if let message = lessonStore.windowFailureMessage {
+                    ContentUnavailableView {
+                        Label("Could not load schedule", systemImage: "exclamationmark.triangle")
+                    } description: {
+                        Text(message)
+                    } actions: {
+                        Button("Try again") { Task { await load(force: true) } }
+                            .buttonStyle(.borderedProminent)
+                    }
+                } else if lessonStore.windowLoaded {
+                    ContentUnavailableView("No lessons this week", systemImage: "calendar",
+                                            description: Text("Tap + to schedule one."))
                 }
-            } else if hasLoaded, lessons.isEmpty {
-                ContentUnavailableView("No lessons this week", systemImage: "calendar",
-                                        description: Text("Tap + to schedule one."))
             }
         }
         .task {
-            if !hasLoaded { await load() }
+            await load()
         }
-        .refreshable { await load() }
+        .refreshable { await load(force: true) }
         .onChange(of: weekStart) {
             Task { await load() }
         }
-        .onChange(of: showCreate) {
-            // Refresh quietly after the create sheet closes.
-            if !showCreate { Task { await load(isFatal: false) } }
-        }
         .sheet(isPresented: $showCreate) {
-            LessonFormView(session: session) {
-                Task { await load(isFatal: false) }
-            }
+            LessonFormView(session: session) {}
         }
     }
 
     // MARK: Pieces
+
+    @MainActor
+    private func load(force: Bool = false) async {
+        await lessonStore.loadWindow(from: weekStart, to: weekEnd, session, force: force)
+    }
 
     private var weekNavigator: some View {
         HStack {
@@ -172,7 +167,7 @@ struct CalendarView: View {
     }
 
     private func rowTitle(_ lesson: LessonModels.LessonResponse) -> String {
-        let student = studentNames[lesson.studentId] ?? "Lesson"
+        let student = studentStore.namesByID[lesson.studentId] ?? "Lesson"
         if let subject = lesson.subject {
             return "\(subject) — \(student)"
         }
@@ -187,7 +182,7 @@ struct CalendarView: View {
     /// Days with at least one non-cancelled lesson, ascending.
     private var groupedDays: [DayGroup]? {
         var byDay: [Date: [LessonModels.LessonResponse]] = [:]
-        for lesson in lessons {
+        for lesson in lessonStore.windowLessons {
             guard !(lesson.isCancelled ?? false),
                   let start = HomeDerivations.date(lesson.startDateTime)
             else { continue }
@@ -199,41 +194,6 @@ struct CalendarView: View {
                 (HomeDerivations.date($0.startDateTime) ?? .distantPast) <
                 (HomeDerivations.date($1.startDateTime) ?? .distantPast)
             })
-        }
-    }
-
-    // MARK: Data
-
-    @MainActor
-    private func load(isFatal: Bool = true) async {
-        guard !isLoading else { return }
-        isLoading = true
-        if isFatal { message = nil }
-        defer { isLoading = false }
-        do {
-            let from = weekStart
-            let to = weekEnd
-            async let lessonsResult = session.authenticated { token in
-                try await lessonAPI.list(filters: LessonListFilters(from: from, to: to), accessToken: token)
-            }
-            async let studentsResult = studentNames.isEmpty
-                ? session.authenticated { token in try await studentsAPI.list(accessToken: token) }
-                : nil
-            let (loadedLessons, loadedStudents) = try await (lessonsResult, studentsResult)
-            try Task.checkCancellation()
-            lessons = loadedLessons
-            if let loadedStudents {
-                studentNames = Dictionary(loadedStudents.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
-            }
-            hasLoaded = true
-        } catch is CancellationError {
-        } catch AuthFailure.cancelled {
-        } catch {
-            if isFatal {
-                lessons = []
-                hasLoaded = false
-                message = AuthFailure.message(for: error)
-            }
         }
     }
 }

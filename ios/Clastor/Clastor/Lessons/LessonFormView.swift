@@ -8,8 +8,8 @@ struct LessonFormView: View {
     let onCreated: () -> Void
 
     @Environment(\.dismiss) private var dismiss
-    @State private var lessonAPI: any LessonServing = LessonAPI.live()
-    @State private var studentsAPI: any StudentsServing = StudentsAPI.live()
+    @Environment(LessonStore.self) private var lessonStore
+    @Environment(StudentStore.self) private var studentStore
 
     @State private var students: [StudentModels.StudentResponse] = []
     @State private var studentsLoaded = false
@@ -183,17 +183,12 @@ struct LessonFormView: View {
     @MainActor
     private func loadStudents() async {
         guard !studentsLoaded else { return }
-        do {
-            students = try await session.authenticated { token in
-                try await studentsAPI.list(accessToken: token)
-            }
-            if studentID.isEmpty, students.count == 1 {
-                studentID = students[0].id
-            }
-            studentsLoaded = true
-        } catch {
-            // The picker stays empty; the user can retry by reopening.
+        await studentStore.loadIfNeeded(session)
+        students = studentStore.students
+        if studentID.isEmpty, students.count == 1 {
+            studentID = students[0].id
         }
+        studentsLoaded = true
     }
 
     private func subjectOptions(for student: StudentModels.StudentResponse) -> [String] {
@@ -239,18 +234,16 @@ struct LessonFormView: View {
         do {
             let timezone = student.timezone ?? TimeZone.current.identifier
             if repeatMode == "none" {
-                let created = try await session.authenticated { token in
-                    try await lessonAPI.create(
-                        LessonModels.CreateLessonRequest(
-                            studentId: student.id,
-                            subject: subject.isEmpty ? nil : subject,
-                            startDateTime: ISO8601DateFormatter().string(from: start),
-                            durationMinutes: durationMinutes,
-                            location: resolvedLocation,
-                            notes: notes.isEmpty ? nil : notes,
-                            remindersEnabled: true),
-                        accessToken: token)
-                }
+                let created = try await lessonStore.create(
+                    LessonModels.CreateLessonRequest(
+                        studentId: student.id,
+                        subject: subject.isEmpty ? nil : subject,
+                        startDateTime: ISO8601DateFormatter().string(from: start),
+                        durationMinutes: durationMinutes,
+                        location: resolvedLocation,
+                        notes: notes.isEmpty ? nil : notes,
+                        remindersEnabled: true),
+                    session)
                 if locationMode == "meet" {
                     await attachMeetLink(to: created)
                 }
@@ -263,23 +256,21 @@ struct LessonFormView: View {
                 timeFormatter.locale = Locale(identifier: "en_AU_POSIX")
                 timeFormatter.dateFormat = "HH:mm"
                 timeFormatter.timeZone = TimeZone.current
-                _ = try await session.authenticated { token in
-                    try await lessonAPI.createRecurring(
-                        LessonModels.CreateRecurringLessonRequest(
-                            studentId: student.id,
-                            subject: subject.isEmpty ? nil : subject,
-                            durationMinutes: durationMinutes,
-                            location: resolvedLocation,
-                            notes: notes.isEmpty ? nil : notes,
-                            intervalWeeks: repeatMode == "biweekly" ? 2 : (repeatMode == "monthly" ? 4 : 1),
-                            slots: slots.map { LessonModels.LessonSlot(dayOfWeek: $0.day, timeOfDay: timeFormatter.string(from: $0.time)) },
-                            timezone: timezone,
-                            startDate: dayFormatter.string(from: startDate),
-                            until: endsMode == "until" ? dayFormatter.string(from: endDate) : nil,
-                            count: endsMode == "count" ? occurrenceCount : nil,
-                            remindersEnabled: true),
-                        accessToken: token)
-                }
+                _ = try await lessonStore.createRecurring(
+                    LessonModels.CreateRecurringLessonRequest(
+                        studentId: student.id,
+                        subject: subject.isEmpty ? nil : subject,
+                        durationMinutes: durationMinutes,
+                        location: resolvedLocation,
+                        notes: notes.isEmpty ? nil : notes,
+                        intervalWeeks: repeatMode == "biweekly" ? 2 : (repeatMode == "monthly" ? 4 : 1),
+                        slots: slots.map { LessonModels.LessonSlot(dayOfWeek: $0.day, timeOfDay: timeFormatter.string(from: $0.time)) },
+                        timezone: timezone,
+                        startDate: dayFormatter.string(from: startDate),
+                        until: endsMode == "until" ? dayFormatter.string(from: endDate) : nil,
+                        count: endsMode == "count" ? occurrenceCount : nil,
+                        remindersEnabled: true),
+                    session)
             }
             onCreated()
             dismiss()
@@ -295,18 +286,7 @@ struct LessonFormView: View {
     /// warning toast on failure; here the lesson still exists without a link).
     @MainActor
     private func attachMeetLink(to lesson: LessonModels.LessonResponse) async {
-        guard let generated = try? await session.authenticated({ token in
-            try await lessonAPI.generateMeetLink(
-                LessonModels.GenerateMeetLinkRequest(
-                    lessonId: lesson.id,
-                    startDateTime: lesson.startDateTime,
-                    durationMinutes: lesson.durationMinutes),
-                accessToken: token)
-        }) else { return }
-        _ = try? await session.authenticated { token in
-            try await lessonAPI.update(id: lesson.id,
-                                       LessonModels.UpdateLessonRequest(location: "Google Meet", meetLink: generated.meetingLink),
-                                       accessToken: token)
-        }
+        // Best effort — a failure just leaves the lesson without a link.
+        _ = try? await lessonStore.generateMeetLink(for: lesson, session)
     }
 }

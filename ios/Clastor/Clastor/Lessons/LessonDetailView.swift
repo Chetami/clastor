@@ -4,13 +4,12 @@ struct LessonDetailView: View {
     let session: SessionStore
     let lessonID: String
 
+    @Environment(LessonStore.self) private var lessonStore
     @State private var api: any LessonServing = LessonAPI.live()
     @State private var studentsAPI: any StudentsServing = StudentsAPI.live()
+    @State private var loadState = LoadState()
     @State private var lesson: LessonModels.LessonResponse?
     @State private var student: StudentModels.StudentResponse?
-    @State private var isLoading = false
-    @State private var hasLoaded = false
-    @State private var message: String?
 
     // Notes editor
     @State private var notesDraft = ""
@@ -39,29 +38,16 @@ struct LessonDetailView: View {
         }
         .navigationTitle(lesson?.subject ?? "Lesson")
         .navigationBarTitleDisplayMode(.inline)
-        .overlay {
-            if isLoading && lesson == nil {
-                ProgressView("Loading…")
-            } else if let message, lesson == nil {
-                ContentUnavailableView {
-                    Label("Could not load lesson", systemImage: "exclamationmark.triangle")
-                } description: {
-                    Text(message)
-                } actions: {
-                    Button("Try again") { Task { await load() } }
-                        .buttonStyle(.borderedProminent)
-                }
-            } else if hasLoaded, lesson == nil {
-                ContentUnavailableView("Lesson not found", systemImage: "calendar.badge.exclamationmark")
-            }
+        .loadStateOverlay(loadState, hasContent: lesson != nil, errorTitle: "Could not load lesson") {
+            Task { await load() }
         }
         .task {
             if lesson == nil { await load() }
         }
-        .refreshable { await load() }
+        .refreshable { await load(fatal: false) }
         .onChange(of: showCreateInvoice) {
             // Reflect invoiceId set by the create-invoice sheet.
-            if !showCreateInvoice { Task { await load(isFatal: false) } }
+            if !showCreateInvoice { Task { await load(fatal: false) } }
         }
         .sheet(isPresented: $showNotify) {
             if let lesson {
@@ -69,14 +55,10 @@ struct LessonDetailView: View {
                     title: "Notify \(student?.name ?? "student")",
                     sendLabel: "Send email",
                     fetchPreview: { message in
-                        try await self.session.authenticated { token in
-                            try await api.notifyStudentPreview(id: lesson.id, message: message, accessToken: token)
-                        }
+                        try await lessonStore.notifyStudentPreview(id: lesson.id, message: message, session)
                     },
                     send: { message in
-                        let updated = try await self.session.authenticated { token in
-                            try await api.notifyStudent(id: lesson.id, message: message, accessToken: token)
-                        }
+                        let updated = try await lessonStore.notifyStudent(id: lesson.id, message: message, session)
                         self.lesson = updated
                     },
                     onSent: {}
@@ -87,6 +69,7 @@ struct LessonDetailView: View {
             if let lesson {
                 RescheduleSheet(session: session, lesson: lesson) { updated in
                     self.lesson = updated
+                    lessonStore.apply(updated)
                 }
             }
         }
@@ -94,6 +77,7 @@ struct LessonDetailView: View {
             if let lesson {
                 CancelLessonSheet(session: session, lesson: lesson) { updated in
                     self.lesson = updated
+                    lessonStore.apply(updated)
                 }
             }
         }
@@ -360,12 +344,8 @@ struct LessonDetailView: View {
     // MARK: Actions
 
     @MainActor
-    private func load(isFatal: Bool = true) async {
-        guard !isLoading else { return }
-        isLoading = true
-        if isFatal { message = nil }
-        defer { isLoading = false }
-        do {
+    private func load(fatal: Bool = true) async {
+        await loadState.run(fatal: fatal) {
             let loadedLesson = try await session.authenticated { token in
                 try await api.lesson(id: lessonID, accessToken: token)
             }
@@ -381,13 +361,6 @@ struct LessonDetailView: View {
                 notesInitialized = true
             }
             todos = loadedLesson.todos ?? []
-            hasLoaded = true
-        } catch is CancellationError {
-        } catch AuthFailure.cancelled {
-        } catch {
-            if isFatal {
-                message = AuthFailure.message(for: error)
-            }
         }
     }
 
@@ -413,11 +386,10 @@ struct LessonDetailView: View {
     @MainActor
     private func updateSubject(_ subject: String?, on lesson: LessonModels.LessonResponse) async {
         do {
-            let updated = try await session.authenticated { token in
-                try await api.update(id: lesson.id,
-                                     LessonModels.UpdateLessonRequest(subject: subject),
-                                     accessToken: token)
-            }
+            let updated = try await lessonStore.update(
+                id: lesson.id,
+                LessonModels.UpdateLessonRequest(subject: subject),
+                session)
             self.lesson = updated
         } catch {
             fail(error)
@@ -435,11 +407,10 @@ struct LessonDetailView: View {
         defer { isSavingNotes = false }
         do {
             let notes = notesDraft.trimmingCharacters(in: .whitespacesAndNewlines)
-            let updated = try await session.authenticated { token in
-                try await api.update(id: lesson.id,
-                                     LessonModels.UpdateLessonRequest(notes: notes.isEmpty ? nil : notes),
-                                     accessToken: token)
-            }
+            let updated = try await lessonStore.update(
+                id: lesson.id,
+                LessonModels.UpdateLessonRequest(notes: notes.isEmpty ? nil : notes),
+                session)
             self.lesson = updated
         } catch {
             fail(error)
@@ -466,11 +437,10 @@ struct LessonDetailView: View {
         isSavingTodos = true
         defer { isSavingTodos = false }
         do {
-            let updated = try await session.authenticated { token in
-                try await api.update(id: lesson.id,
-                                     LessonModels.UpdateLessonRequest(todos: todos),
-                                     accessToken: token)
-            }
+            let updated = try await lessonStore.update(
+                id: lesson.id,
+                LessonModels.UpdateLessonRequest(todos: todos),
+                session)
             self.lesson = updated
         } catch {
             fail(error)
@@ -480,9 +450,7 @@ struct LessonDetailView: View {
     @MainActor
     private func record(_ status: String, on lesson: LessonModels.LessonResponse) async {
         do {
-            let updated = try await session.authenticated { token in
-                try await api.recordAttendance(id: lesson.id, status: status, accessToken: token)
-            }
+            let updated = try await lessonStore.recordAttendance(id: lesson.id, status: status, session)
             self.lesson = updated
         } catch {
             fail(error)
@@ -495,19 +463,7 @@ struct LessonDetailView: View {
         generatingMeet = true
         defer { generatingMeet = false }
         do {
-            let generated = try await session.authenticated { token in
-                try await api.generateMeetLink(
-                    LessonModels.GenerateMeetLinkRequest(
-                        lessonId: lesson.id,
-                        startDateTime: lesson.startDateTime,
-                        durationMinutes: lesson.durationMinutes),
-                    accessToken: token)
-            }
-            let updated = try await session.authenticated { token in
-                try await api.update(id: lesson.id,
-                                     LessonModels.UpdateLessonRequest(location: "Google Meet", meetLink: generated.meetingLink),
-                                     accessToken: token)
-            }
+            let updated = try await lessonStore.generateMeetLink(for: lesson, session)
             self.lesson = updated
         } catch {
             fail(error)

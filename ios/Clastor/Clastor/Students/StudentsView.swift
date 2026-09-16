@@ -5,14 +5,14 @@ import SwiftUI
 struct StudentsView: View {
     let session: SessionStore
 
-    @State private var api: any StudentsServing = StudentsAPI.live()
-    @State private var students: [StudentModels.StudentResponse] = []
-    @State private var isLoading = false
-    @State private var hasLoaded = false
-    @State private var message: String?
+    @Environment(StudentStore.self) private var store
     @State private var search = ""
     @State private var statusFilter = "active"
     @State private var showCreate = false
+
+    private var students: [StudentModels.StudentResponse] {
+        store.students
+    }
 
     var body: some View {
         List {
@@ -49,37 +49,37 @@ struct StudentsView: View {
             }
         }
         .overlay {
-            if isLoading && students.isEmpty {
-                ProgressView("Loading students…")
-            } else if let message {
-                ContentUnavailableView {
-                    Label("Could not load students", systemImage: "exclamationmark.triangle")
-                } description: {
-                    Text(message)
-                } actions: {
-                    Button("Try again") { Task { await load() } }
-                        .buttonStyle(.borderedProminent)
+            if store.isLoaded == false || store.students.isEmpty {
+                if let message = store.failureMessage {
+                    ContentUnavailableView {
+                        Label("Could not load students", systemImage: "exclamationmark.triangle")
+                    } description: {
+                        Text(message)
+                    } actions: {
+                        Button("Try again") { Task { await store.loadIfNeeded(session, force: true) } }
+                            .buttonStyle(.borderedProminent)
+                    }
+                    .accessibilityIdentifier("students.error")
+                } else if store.isLoaded, store.students.isEmpty {
+                    ContentUnavailableView("No students", systemImage: "person.2",
+                                            description: Text("There are no students to show for this account."))
+                        .accessibilityIdentifier("students.empty")
+                } else if store.isLoaded, filteredStudents.isEmpty {
+                    ContentUnavailableView("No matches", systemImage: "magnifyingglass",
+                                            description: Text("No students match your search."))
+                } else if !store.isLoaded {
+                    ProgressView("Loading students…")
                 }
-                .accessibilityIdentifier("students.error")
-            } else if hasLoaded, students.isEmpty {
-                ContentUnavailableView("No students", systemImage: "person.2",
-                                        description: Text("There are no students to show for this account."))
-                    .accessibilityIdentifier("students.empty")
-            } else if hasLoaded, filteredStudents.isEmpty {
-                ContentUnavailableView("No matches", systemImage: "magnifyingglass",
-                                        description: Text("No students match your search."))
             }
         }
         .task {
-            if !hasLoaded { await load() }
+            await store.loadIfNeeded(session)
         }
-        .refreshable { await load() }
-        .onChange(of: showCreate) {
-            if !showCreate { Task { await load(isFatal: false) } }
-        }
+        .refreshable { await store.loadIfNeeded(session, force: true) }
         .sheet(isPresented: $showCreate) {
             StudentFormView(session: session) {
-                Task { await load(isFatal: false) }
+                // The form creates via its own API; refresh the shared cache.
+                Task { await store.loadIfNeeded(session, force: true) }
             }
         }
     }
@@ -110,28 +110,6 @@ struct StudentsView: View {
         return "AUD"
     }
 
-    @MainActor
-    private func load(isFatal: Bool = true) async {
-        guard !isLoading else { return }
-        isLoading = true
-        if isFatal { message = nil }
-        defer { isLoading = false }
-        do {
-            students = try await session.authenticated { token in
-                try await api.list(accessToken: token)
-            }
-            hasLoaded = true
-        } catch is CancellationError {
-            // Leaving a tab or signing out must not publish a late response.
-        } catch AuthFailure.cancelled {
-        } catch {
-            if isFatal {
-                students = []
-                hasLoaded = false
-                message = AuthFailure.message(for: error)
-            }
-        }
-    }
 }
 
 /// List row: avatar initials, name + status, subjects line, rate + frequency.
