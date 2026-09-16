@@ -26,18 +26,6 @@ nonisolated enum HomeModels {
         var `yesterday`: `DashboardDayBreakdown`
     }
 
-    // src/schemas/lessons/res/LessonListResponse.yaml
-    struct `LessonListResponse`: Codable, Equatable, Sendable {
-        var `data`: [`LessonResponse`]
-        var `nextCursor`: String? = nil
-        var `hasMore`: Bool
-    }
-
-    // src/schemas/lessons/req/RecordAttendanceRequest.yaml
-    struct `RecordAttendanceRequest`: Codable, Equatable, Sendable {
-        var `attendanceStatus`: `AttendanceStatus`
-    }
-
     // src/schemas/dashboard/DashboardPeriod.yaml
     typealias `DashboardPeriod` = String
 
@@ -54,47 +42,4 @@ nonisolated enum HomeModels {
         var `hours`: Double
         var `lessonCount`: Int
     }
-
-    // src/schemas/lessons/res/LessonResponse.yaml
-    struct `LessonResponse`: Codable, Equatable, Sendable {
-        var `id`: String
-        var `studentId`: String
-        var `subject`: String? = nil
-        var `startDateTime`: String
-        var `durationMinutes`: Int
-        var `location`: String? = nil
-        var `meetLink`: String? = nil
-        var `notes`: String? = nil
-        var `todos`: [`LessonTodo`]? = nil
-        var `acceptanceStatus`: `LessonAcceptance`
-        var `attendanceStatus`: `AttendanceStatus`
-        var `seriesId`: String? = nil
-        var `isCancelled`: Bool? = nil
-        var `isException`: Bool? = nil
-        var `remindersEnabled`: Bool
-        var `lastStudentNotifiedAt`: String? = nil
-        var `studentNotifiedCount`: Int? = nil
-        var `isPaid`: Bool
-        var `invoiceId`: String? = nil
-        var `googleCalendarEventId`: String? = nil
-        var `googleCalendarSyncedAt`: String? = nil
-        var `createdAt`: String
-        var `updatedAt`: String
-        var `tutorId`: String? = nil
-        var `tutorName`: String? = nil
-        var `tutorEmail`: String? = nil
-    }
-
-    // src/schemas/lessons/AttendanceStatus.yaml
-    typealias `AttendanceStatus` = String
-
-    // src/schemas/lessons/LessonTodo.yaml
-    struct `LessonTodo`: Codable, Equatable, Sendable {
-        var `id`: String
-        var `text`: String
-        var `done`: Bool
-    }
-
-    // src/schemas/lessons/LessonAcceptance.yaml
-    typealias `LessonAcceptance` = String
 }

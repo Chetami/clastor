@@ -10,8 +10,8 @@ struct HomeDerivationsTests {
         durationMinutes: Int = 60,
         attendanceStatus: String = "unrecorded",
         cancelled: Bool = false
-    ) -> HomeModels.LessonResponse {
-        HomeModels.LessonResponse(
+    ) -> LessonModels.LessonResponse {
+        LessonModels.LessonResponse(
             id: id,
             studentId: "student",
             startDateTime: ISO8601DateFormatter().string(from: Date().addingTimeInterval(minutesFromNow * 60)),
@@ -111,7 +111,7 @@ struct HomeDerivationsTests {
     @Test func relativeDayLabelIdentifiesTodayAndTomorrow() {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "Australia/Perth")!
-        let start = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: Date().addingTimeInterval(86400)))!
+        let start = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: Date()))!
         #expect(HomeDerivations.relativeDayLabel(Date(), calendar: calendar) == "Today")
         #expect(HomeDerivations.relativeDayLabel(start, calendar: calendar) == "Tomorrow")
     }

@@ -14,24 +14,24 @@ enum HomeDerivations {
         fractionalISO.date(from: isoString) ?? ISO8601DateFormatter().date(from: isoString)
     }
 
-    static func endDate(of lesson: HomeModels.LessonResponse, start: Date) -> Date {
+    static func endDate(of lesson: LessonModels.LessonResponse, start: Date) -> Date {
         start.addingTimeInterval(TimeInterval(lesson.durationMinutes) * 60)
     }
 
-    static func isLive(_ lesson: HomeModels.LessonResponse, now: Date) -> Bool {
+    static func isLive(_ lesson: LessonModels.LessonResponse, now: Date) -> Bool {
         guard !(lesson.isCancelled ?? false), let start = date(lesson.startDateTime) else { return false }
         return now >= start && now <= endDate(of: lesson, start: start)
     }
 
     static func findCurrentLesson(
-        _ lessons: [HomeModels.LessonResponse], now: Date = .init()
-    ) -> HomeModels.LessonResponse? {
+        _ lessons: [LessonModels.LessonResponse], now: Date = .init()
+    ) -> LessonModels.LessonResponse? {
         lessons.first { isLive($0, now: now) }
     }
 
     static func nextLesson(
-        _ lessons: [HomeModels.LessonResponse], now: Date = .init()
-    ) -> HomeModels.LessonResponse? {
+        _ lessons: [LessonModels.LessonResponse], now: Date = .init()
+    ) -> LessonModels.LessonResponse? {
         upcoming(lessons, now: now).first
     }
 
@@ -39,10 +39,10 @@ enum HomeDerivations {
     /// upcomingLessons: an in-progress lesson already started, so it is not
     /// "upcoming" — the dashboard shows it as the current lesson instead.
     static func upcoming(
-        _ lessons: [HomeModels.LessonResponse], now: Date
-    ) -> [HomeModels.LessonResponse] {
+        _ lessons: [LessonModels.LessonResponse], now: Date
+    ) -> [LessonModels.LessonResponse] {
         lessons
-            .compactMap { lesson -> (HomeModels.LessonResponse, Date)? in
+            .compactMap { lesson -> (LessonModels.LessonResponse, Date)? in
                 guard !(lesson.isCancelled ?? false),
                       let start = date(lesson.startDateTime),
                       start >= now
@@ -56,10 +56,10 @@ enum HomeDerivations {
     /// Past, non-cancelled lessons whose attendance is still unrecorded,
     /// most-recent first so freshly-finished lessons surface.
     static func todoLessons(
-        _ lessons: [HomeModels.LessonResponse], now: Date = .init()
-    ) -> [HomeModels.LessonResponse] {
+        _ lessons: [LessonModels.LessonResponse], now: Date = .init()
+    ) -> [LessonModels.LessonResponse] {
         lessons
-            .compactMap { lesson -> (HomeModels.LessonResponse, Date)? in
+            .compactMap { lesson -> (LessonModels.LessonResponse, Date)? in
                 guard !(lesson.isCancelled ?? false),
                       lesson.attendanceStatus == "unrecorded",
                       let start = date(lesson.startDateTime),
@@ -94,18 +94,18 @@ enum HomeDerivations {
         if calendar.isDateInToday(date) { return "Today" }
         if calendar.isDateInTomorrow(date) { return "Tomorrow" }
         let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_AU_POSIX")
+        formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.dateFormat = "EEE d MMM"
         return formatter.string(from: date)
     }
 
     /// "09:00 – 10:00" style range in the given (defaults to local) timezone.
     static func lessonTimeRange(
-        _ lesson: HomeModels.LessonResponse, timeZone: TimeZone = .current
+        _ lesson: LessonModels.LessonResponse, timeZone: TimeZone = .current
     ) -> String {
         guard let start = date(lesson.startDateTime) else { return "" }
         let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_AU_POSIX")
+        formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.dateFormat = "HH:mm"
         formatter.timeZone = timeZone
         return "\(formatter.string(from: start)) – \(formatter.string(from: endDate(of: lesson, start: start)))"

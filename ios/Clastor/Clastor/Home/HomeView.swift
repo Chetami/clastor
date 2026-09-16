@@ -3,11 +3,12 @@ import SwiftUI
 struct HomeView: View {
     let session: SessionStore
 
-    @State private var api: any HomeServing = HomeAPI.live()
+    @State private var summaryAPI: any HomeServing = HomeAPI.live()
+    @State private var lessonAPI: any LessonServing = LessonAPI.live()
     @State private var studentsAPI: any StudentsServing = StudentsAPI.live()
     @State private var period = "week"
     @State private var summary: HomeModels.DashboardSummaryResponse?
-    @State private var lessons: [HomeModels.LessonResponse] = []
+    @State private var lessons: [LessonModels.LessonResponse] = []
     @State private var studentNames: [String: String] = [:]
     @State private var isLoading = false
     @State private var hasLoaded = false
@@ -108,7 +109,8 @@ struct HomeView: View {
         }
     }
 
-    private func currentLessonRow(_ lesson: HomeModels.LessonResponse) -> some View {
+    private func currentLessonRow(_ lesson: LessonModels.LessonResponse) -> some View {
+        NavigationLink(value: LessonRoute(id: lesson.id)) {
         HStack(alignment: .center) {
             VStack(alignment: .leading, spacing: 4) {
                 Label("Live now", systemImage: "record.circle")
@@ -123,9 +125,11 @@ struct HomeView: View {
             Spacer()
             joinButton(lesson)
         }
+        }
     }
 
-    private func nextLessonRow(_ lesson: HomeModels.LessonResponse) -> some View {
+    private func nextLessonRow(_ lesson: LessonModels.LessonResponse) -> some View {
+        NavigationLink(value: LessonRoute(id: lesson.id)) {
         HStack(alignment: .center) {
             VStack(alignment: .leading, spacing: 4) {
                 if let start = HomeDerivations.date(lesson.startDateTime) {
@@ -142,6 +146,7 @@ struct HomeView: View {
             }
             Spacer()
             joinButton(lesson)
+        }
         }
     }
 
@@ -162,7 +167,8 @@ struct HomeView: View {
         }
     }
 
-    private func attendanceRow(_ lesson: HomeModels.LessonResponse) -> some View {
+    private func attendanceRow(_ lesson: LessonModels.LessonResponse) -> some View {
+        NavigationLink(value: LessonRoute(id: lesson.id)) {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
                 Text(studentName(lesson))
@@ -184,6 +190,7 @@ struct HomeView: View {
                 }
                 .accessibilityIdentifier("home.mark.\(lesson.id)")
             }
+        }
         }
     }
 
@@ -219,7 +226,7 @@ struct HomeView: View {
         }
     }
 
-    @ViewBuilder private func joinButton(_ lesson: HomeModels.LessonResponse) -> some View {
+    @ViewBuilder private func joinButton(_ lesson: LessonModels.LessonResponse) -> some View {
         if let meetLink = lesson.meetLink, let url = URL(string: meetLink) {
             Link("Join", destination: url)
                 .buttonStyle(.borderedProminent)
@@ -238,15 +245,15 @@ struct HomeView: View {
         HomeDerivations.previousPeriodLabel(period)
     }
 
-    private func studentName(_ lesson: HomeModels.LessonResponse) -> String {
+    private func studentName(_ lesson: LessonModels.LessonResponse) -> String {
         studentNames[lesson.studentId] ?? "Student"
     }
 
-    private func lessonTitle(_ lesson: HomeModels.LessonResponse) -> String {
+    private func lessonTitle(_ lesson: LessonModels.LessonResponse) -> String {
         "\(studentName(lesson)) · \(lesson.subject ?? "Lesson")"
     }
 
-    private func dayLabel(_ lesson: HomeModels.LessonResponse) -> String {
+    private func dayLabel(_ lesson: LessonModels.LessonResponse) -> String {
         guard let start = HomeDerivations.date(lesson.startDateTime) else { return "" }
         return HomeDerivations.relativeDayLabel(start)
     }
@@ -261,10 +268,10 @@ struct HomeView: View {
         defer { isLoading = false }
         do {
             async let summaryResult = session.authenticated { token in
-                try await api.summary(period: period, accessToken: token)
+                try await summaryAPI.summary(period: period, accessToken: token)
             }
             async let lessonsResult = session.authenticated { token in
-                try await api.lessons(accessToken: token)
+                try await lessonAPI.list(filters: LessonListFilters(), accessToken: token)
             }
             async let studentsResult = session.authenticated { token in
                 try await studentsAPI.list(accessToken: token)
@@ -291,25 +298,25 @@ struct HomeView: View {
     private func loadSummary() async {
         // Keep showing the previous data if a period switch fails to load.
         guard let loaded = try? await session.authenticated({ token in
-            try await api.summary(period: period, accessToken: token)
+            try await summaryAPI.summary(period: period, accessToken: token)
         }) else { return }
         summary = loaded
     }
 
     @MainActor
-    private func mark(_ lesson: HomeModels.LessonResponse, status: String) async {
+    private func mark(_ lesson: LessonModels.LessonResponse, status: String) async {
         guard markingLessonID == nil else { return }
         markingLessonID = lesson.id
         defer { markingLessonID = nil }
         do {
             let updated = try await session.authenticated { token in
-                try await api.recordAttendance(id: lesson.id, status: status, accessToken: token)
+                try await lessonAPI.recordAttendance(id: lesson.id, status: status, accessToken: token)
             }
             if let index = lessons.firstIndex(where: { $0.id == updated.id }) {
                 lessons[index] = updated
             }
             if let loaded = try? await session.authenticated({ token in
-                try await api.summary(period: period, accessToken: token)
+                try await summaryAPI.summary(period: period, accessToken: token)
             }) {
                 summary = loaded
             }

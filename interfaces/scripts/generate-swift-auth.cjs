@@ -7,17 +7,52 @@ const yaml = require('js-yaml');
 const root = path.resolve(__dirname, '..');
 const entry = path.join(root, 'src/openapi.yaml');
 const modes = new Map([
+  ['', {
+    namespace: 'AuthModels',
+    command: 'swift-auth',
+    folder: 'Auth',
+    roots: ['LoginResponse', 'RefreshTokenResponse', 'VerifyTokenResponse', 'RefreshTokenRequest', 'ApiError'],
+  }],
   ['--students', {
     namespace: 'StudentModels',
     command: 'swift-students',
     folder: 'Students',
-    roots: ['StudentListResponse'],
+    roots: ['StudentListResponse', 'CreateStudentRequest', 'UpdateStudentRequest'],
   }],
   ['--home', {
     namespace: 'HomeModels',
     command: 'swift-home',
     folder: 'Home',
-    roots: ['DashboardSummaryResponse', 'LessonListResponse', 'RecordAttendanceRequest'],
+    roots: ['DashboardSummaryResponse'],
+  }],
+  ['--lessons', {
+    namespace: 'LessonModels',
+    command: 'swift-lessons',
+    folder: 'Lessons',
+    roots: [
+      'LessonListResponse',
+      'LessonSeriesResponse',
+      'CreateRecurringLessonResponse',
+      'CreateLessonRequest',
+      'CreateRecurringLessonRequest',
+      'UpdateLessonRequest',
+      'RescheduleLessonRequest',
+      'CancelLessonRequest',
+      'NotifyStudentRequest',
+      'RecordAttendanceRequest',
+      'GenerateMeetLinkRequest',
+      'GenerateMeetLinkResponse',
+      'GenerateSeriesMeetLinkResponse',
+      'EmailPreviewResponse',
+    ],
+  }],
+  ['--payments', {
+    // CreateInvoiceRequest is hand-written in InvoiceAPI.swift: its YAML uses
+    // inline line-item objects this generator intentionally rejects.
+    namespace: 'PaymentModels',
+    command: 'swift-payments',
+    folder: 'Payments',
+    roots: ['InvoiceListResponse', 'InvoiceEventListResponse', 'MarkPaidRequest'],
   }],
 ]);
 const flag = process.argv.find(argument => modes.has(argument)) ?? '';
