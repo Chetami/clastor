@@ -8,7 +8,13 @@ components:
     BearerAuth:
       type: http
       scheme: bearer
+      bearerFormat: Clastor access JWT
+      description: Clastor access token for protected API routes
+    FirebaseBearerAuth:
+      type: http
+      scheme: bearer
       bearerFormat: Firebase ID Token
+      description: Firebase credential exchange on login, register and native Google routes
   schemas:
     ApiError:
       $ref: './schemas/common/ApiError.yaml'
@@ -24,6 +30,8 @@ components:
     # Auth Request Schemas
     LoginRequest:
       $ref: './schemas/auth/req/LoginRequest.yaml'
+    GoogleAuthRequest:
+      $ref: './schemas/auth/req/GoogleAuthRequest.yaml'
     RegisterRequest:
       $ref: './schemas/auth/req/RegisterRequest.yaml'
     JoinWaitlistRequest:

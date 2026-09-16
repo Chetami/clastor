@@ -1,12 +1,5 @@
 type: object
-required:
-  - firebaseToken
-properties:
-  firebaseToken:
-    type: string
-    description: Firebase ID token from client authentication
-    example: eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
-description: |-
-  Login request body
-  The Firebase token can also be sent in Authorization header instead
-  Sent from frontend to backend /api/auth/login endpoint
+additionalProperties: false
+description: >-
+  No login body is required. Send the Firebase ID token in the
+  Authorization header as Bearer <Firebase ID token> to POST /api/auth/login.

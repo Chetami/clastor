@@ -248,3 +248,28 @@ describe("logoutRequest", () => {
     await expect(logoutRequest(null)).resolves.toBeUndefined();
   });
 });
+
+describe("registration recovery", () => {
+  it("keeps the Firebase account when provisioning fails", async () => {
+    server.use(http.post("*/api/auth/register", () => HttpResponse.json({ message: "unavailable" }, { status: 503 })));
+    await expect(registerRequest("Tutor", "tutor@example.com", "password")).rejects.toThrow();
+    expect(firebaseUser.delete).not.toHaveBeenCalled();
+  });
+  it("reauthenticates an existing Firebase account before resuming signup", async () => {
+    firebaseAuthModule.createUserWithEmailAndPassword.mockRejectedValueOnce({ code: "auth/email-already-in-use" });
+    firebaseAuthModule.signInWithEmailAndPassword.mockResolvedValueOnce({ user: firebaseUser });
+    const requests: CapturedRequest[] = [];
+    server.use(captureEndpoint("register", requests));
+    await registerRequest("Tutor", "tutor@example.com", "password");
+    expect(firebaseAuthModule.signInWithEmailAndPassword).toHaveBeenCalledWith(expect.anything(), "tutor@example.com", "password");
+    expect(requests).toHaveLength(1);
+  });
+  it("does not provision an existing account without its password", async () => {
+    firebaseAuthModule.createUserWithEmailAndPassword.mockRejectedValueOnce({ code: "auth/email-already-in-use" });
+    firebaseAuthModule.signInWithEmailAndPassword.mockRejectedValueOnce({ code: "auth/invalid-credential" });
+    const requests: CapturedRequest[] = [];
+    server.use(captureEndpoint("register", requests));
+    await expect(registerRequest("Tutor", "tutor@example.com", "wrong")).rejects.toThrow("Invalid email or password");
+    expect(requests).toHaveLength(0);
+  });
+});

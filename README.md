@@ -181,6 +181,8 @@ npm run build:all
 5. Protected routes use the `authenticateJWT` middleware (plus per-route
    role/permission checks)
 
+Deployment and session migration details are in [Authentication hardening](docs/auth-hardening-rollout.md).
+
 ## API Documentation
 
 The backend serves interactive API documentation:

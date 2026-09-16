@@ -4,10 +4,13 @@ required:
 properties:
   name:
     type: string
+    minLength: 1
+    maxLength: 100
     description: User's display name
     example: John Doe
   timezone:
     type: string
+    maxLength: 64
     nullable: true
     description: >-
       IANA timezone identifier the tutor is in (e.g. Australia/Sydney),

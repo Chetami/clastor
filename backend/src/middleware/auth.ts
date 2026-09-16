@@ -1,7 +1,8 @@
 import { Request, Response, NextFunction } from "express";
 import { verifyToken, extractToken } from "../utils/jwt";
 import { JwtPayload, Role, ApiError } from "@examify-tms/interfaces";
-import { getFirebaseAuth } from "../config/firebase";
+import { getEmailVerified } from "../services/authService";
+import { respondToAuthError } from "../utils/authError";
 
 /**
  * Extend Express Request to include user information
@@ -80,8 +81,8 @@ export async function requireVerifiedEmail(
   }
 
   try {
-    const authUser = await getFirebaseAuth().getUser(req.user.uid);
-    if (!authUser.emailVerified) {
+    const emailVerified = await getEmailVerified(req.user.uid, req.user.auth_time);
+    if (!emailVerified) {
       res.status(403).json({
         message: "Please verify your email before performing this action.",
         code: "EMAIL_NOT_VERIFIED",
@@ -89,9 +90,8 @@ export async function requireVerifiedEmail(
       return;
     }
     next();
-  } catch {
-    // Firebase lookup failed — fail closed rather than letting an
-    // unverifiable user through the gate.
-    res.status(401).json({ message: "Could not verify account status" });
+  } catch (error) {
+    // Fail closed while distinguishing an outage from a revoked account.
+    respondToAuthError(res, error);
   }
 }

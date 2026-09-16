@@ -1,0 +1,7 @@
+#!/bin/sh
+# Enable locally with: git config --local core.hooksPath .githooks
+if ! command -v gitleaks >/dev/null 2>&1; then
+  echo "Install Gitleaks before committing (see CONTRIBUTING.md)." >&2
+  exit 1
+fi
+exec gitleaks git --staged --redact=100 --no-banner

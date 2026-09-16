@@ -53,12 +53,12 @@ function AuthBoot({ children }: { children: ReactNode }) {
   const clearAuth = useAuthStore((s) => s.clearAuth);
 
   // Only destroy the persisted session for definitive auth failures
-  // (401/403 the refresh path couldn't recover from — the interceptor has
+  // (401 the refresh path couldn't recover from — the interceptor has
   // usually already cleared the store). A network error or backend 5xx at
   // boot must NOT log the user out.
   const sessionInvalid =
     isError && (error instanceof ApiRequestError)
-      ? error.status === 401 || error.status === 403
+      ? error.status === 401
       : false;
 
   useEffect(() => {

@@ -1,0 +1,12 @@
+type: object
+properties:
+  timezone:
+    type: string
+    maxLength: 64
+    nullable: true
+    description: Optional IANA timezone identifier
+  signupSurvey:
+    $ref: '../../users/SignupSurvey.yaml'
+description: >-
+  Optional metadata for POST /api/auth/google. Authorization must contain
+  a Firebase ID token whose sign-in provider is google.com.

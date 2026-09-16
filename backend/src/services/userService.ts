@@ -12,7 +12,7 @@ import {
   SignupSurvey,
 } from "@examify-tms/interfaces";
 import { generateToken } from "../utils/jwt";
-import { BadRequestError } from "../utils/AppError";
+import { AppError, BadRequestError, NotFoundError, ServiceUnavailableError } from "../utils/AppError";
 import { parse, isValid } from "date-fns";
 import admin from "firebase-admin";
 import crypto from "crypto";
@@ -332,7 +332,7 @@ export async function getUserFromFirestore(uid: string): Promise<User> {
     const userDoc = await firestore.collection("users").doc(uid).get();
 
     if (!userDoc.exists) {
-      throw new Error("User not found in Firestore");
+      throw new NotFoundError("User not found");
     }
 
     const userData = userDoc.data();
@@ -363,8 +363,18 @@ export async function getUserFromFirestore(uid: string): Promise<User> {
       lastActive: userData!.lastActive?.toDate(),
     };
   } catch (error) {
-    console.error("Failed to get user from Firestore:", error);
-    throw new Error("User not found");
+    if (error instanceof AppError) throw error;
+    throw new ServiceUnavailableError("Could not load account. Please try again.");
+  }
+}
+
+/** Database outages must never be interpreted as an unregistered identity. */
+export async function findUserInFirestore(uid: string): Promise<User | null> {
+  try {
+    return await getUserFromFirestore(uid);
+  } catch (error) {
+    if (error instanceof NotFoundError) return null;
+    throw error;
   }
 }
 
@@ -790,7 +800,14 @@ export async function createUserInFirestore(
     if (normalizedTimezone) userData.timezone = normalizedTimezone;
     if (normalizedSurvey) userData.signupSurvey = normalizedSurvey;
 
-    await firestore.collection('users').doc(id).set(userData);
+    // Atomic create prevents concurrent/retried signup from overwriting a
+    // profile (including an administrator's role and existing settings).
+    try {
+      await firestore.collection("users").doc(id).create(userData);
+    } catch (error) {
+      if ((error as { code?: number }).code === 6) return getUserFromFirestore(id);
+      throw error;
+    }
 
     // Return User object with Date objects (matching getUserFromFirestore pattern)
     return {
@@ -814,8 +831,8 @@ export async function createUserInFirestore(
       lastActive: now.toDate() as any,
     };
   } catch (error) {
-    console.error("Failed to create user in Firestore:", error);
-    throw new Error("Failed to create user in Firestore");
+    if (error instanceof AppError) throw error;
+    throw new ServiceUnavailableError("Could not create account. Please try again.");
   }
 }
 
@@ -824,8 +841,8 @@ export async function createUserInFirestore(
  * @param user - User object
  * @returns JWT token string
  */
-export function generateJWTForUser(user: User): string {
-  return generateToken(user.id, user.email, user.role);
+export function generateJWTForUser(user: User, authTime: number): string {
+  return generateToken(user.id, user.email, user.role, authTime);
 }
 
 export interface GoogleConnection {

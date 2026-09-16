@@ -1,139 +1,123 @@
-import axios, {
-  AxiosError,
-  type InternalAxiosRequestConfig,
-} from "axios";
+import axios, { AxiosError, type InternalAxiosRequestConfig } from "axios";
 import type { ApiError, RefreshTokenResponse } from "@examify-tms/interfaces";
 import { TOKEN_KEY, REFRESH_TOKEN_KEY } from "../config/tokens";
 import { getStorage, getApiBaseUrl, notifySessionExpired } from "../runtime";
 import { useAuthStore } from "../store/auth-store";
+import { queryClient } from "./query-client";
 
-/**
- * Shared axios instance. The base URL is resolved lazily inside the request
- * interceptor (from the runtime config) rather than at construction, so this
- * module is safe to import before `configureShared()` has run.
- */
-export const api = axios.create({
-  headers: {
-    "Content-Type": "application/json",
-  },
-});
-
-// Marks a request so the 401-response interceptor won't try to refresh on it.
-// Used by the /refresh call itself (to avoid an infinite refresh loop) AND by
-// the Firebase-token exchange calls (/login, /google, /register): those carry
-// a Firebase ID token in Authorization, NOT an app JWT, so a 401 from them is a
-// real auth failure — refreshing + retrying would swap the Firebase token for
-// an app JWT and produce misleading errors. Tagging them skips that path and
-// surfaces the backend's actual 401 message to the caller.
+export const api = axios.create({ headers: { "Content-Type": "application/json" } });
+// Firebase-token exchange and public auth endpoints must never retry with an app JWT.
 export const SKIP_AUTH_REFRESH = "X-Skip-Auth-Refresh";
 
-/**
- * Error thrown for failed API requests, carrying the HTTP status so callers
- * can distinguish definitive failures (401/403/404…) from transient ones
- * (network errors, 5xx) without string-matching messages.
- */
 export class ApiRequestError extends Error {
-  readonly status?: number;
-
-  constructor(message: string, status?: number) {
+  constructor(message: string, readonly status?: number, readonly code?: string) {
     super(message);
     this.name = "ApiRequestError";
-    this.status = status;
   }
 }
+class SessionChangedError extends ApiRequestError {
+  constructor() { super("The active session changed. Please try again.", 409); }
+}
+type AuthConfig = InternalAxiosRequestConfig & {
+  _retried?: boolean;
+  _sessionVersion?: number;
+};
 
-api.interceptors.request.use((config) => {
-  if (!config.baseURL) {
-    config.baseURL = getApiBaseUrl();
-  }
-  if (config.headers.has("Authorization")) {
-    return config;
-  }
+function requestError(error: unknown): Error {
+  if (!axios.isAxiosError(error)) return error instanceof Error ? error : new Error("Request failed");
+  const body = error.response?.data as ApiError | undefined;
+  return new ApiRequestError(
+    typeof body?.message === "string" ? body.message : "Could not reach the server. Please try again.",
+    error.response?.status, body?.code,
+  );
+}
 
+api.interceptors.request.use((config: AuthConfig) => {
+  if (!config.baseURL) config.baseURL = getApiBaseUrl();
+  if (config._sessionVersion !== undefined &&
+      config._sessionVersion !== useAuthStore.getState().sessionVersion) throw new SessionChangedError();
+  if (!config.headers.get(SKIP_AUTH_REFRESH) && config._sessionVersion === undefined) {
+    config._sessionVersion = useAuthStore.getState().sessionVersion;
+  }
+  if (config.headers.has("Authorization")) return config;
   const token = getStorage().getItem(TOKEN_KEY);
-  if (token) {
+  if (token && !config.headers.get(SKIP_AUTH_REFRESH)) {
     config.headers.Authorization = `Bearer ${token}`;
+    config._sessionVersion = useAuthStore.getState().sessionVersion;
   }
-
   return config;
 });
 
-type RetryableConfig = InternalAxiosRequestConfig & { _retried?: boolean };
-
-// Singleton in-flight refresh promise so N concurrent 401s share a single
-// /refresh call instead of racing each other.
-let refreshPromise: Promise<string> | null = null;
+let refreshFlight: {
+  token: string;
+  version: number;
+  promise: Promise<string>;
+} | null = null;
 
 async function refreshAccessToken(): Promise<string> {
-  if (refreshPromise) return refreshPromise;
+  const token = getStorage().getItem(REFRESH_TOKEN_KEY);
+  const version = useAuthStore.getState().sessionVersion;
+  if (!token) throw new ApiRequestError("Session expired. Please log in again.", 401);
+  if (refreshFlight?.token === token && refreshFlight.version === version) return refreshFlight.promise;
 
-  refreshPromise = (async () => {
-    const refreshToken = getStorage().getItem(REFRESH_TOKEN_KEY);
-    if (!refreshToken) throw new Error("No refresh token");
-
-    // Use a raw axios call (not `api`) so the request interceptor doesn't
-    // attach the expired access token and we sidestep any recursion.
-    const res = await axios.post<RefreshTokenResponse>(
-      `${getApiBaseUrl()}/api/auth/refresh`,
-      { refreshToken },
-      { headers: { "Content-Type": "application/json", [SKIP_AUTH_REFRESH]: "true" } },
-    );
-
-    const { jwtToken, refreshToken: newRefreshToken, user } = res.data;
-    // Keep the in-memory identity in sync with the server's view of the user
-    // (role/onboarding/profile can change between refreshes; without this the
-    // client would keep a stale UserInfo until the next /verify).
-    if (user) useAuthStore.getState().setUser(user);
-    useAuthStore.getState().setTokens(jwtToken, newRefreshToken);
-    return jwtToken;
-  })().finally(() => {
-    refreshPromise = null;
-  });
-
-  return refreshPromise;
+  const flight = { token, version, promise: null as unknown as Promise<string> };
+  flight.promise = (async () => {
+    try {
+      const response = await axios.post<RefreshTokenResponse>(
+        `${getApiBaseUrl()}/api/auth/refresh`, { refreshToken: token },
+        { headers: { "Content-Type": "application/json" }, timeout: 15_000 },
+      );
+      if (version !== useAuthStore.getState().sessionVersion ||
+          getStorage().getItem(REFRESH_TOKEN_KEY) !== token) throw new SessionChangedError();
+      const { jwtToken, refreshToken, user } = response.data;
+      useAuthStore.getState().setTokens(jwtToken, refreshToken);
+      useAuthStore.getState().setUser(user);
+      return jwtToken;
+    } catch (error) {
+      if (version !== useAuthStore.getState().sessionVersion ||
+          getStorage().getItem(REFRESH_TOKEN_KEY) !== token) throw new SessionChangedError();
+      throw requestError(error);
+    } finally {
+      if (refreshFlight === flight) refreshFlight = null;
+    }
+  })();
+  refreshFlight = flight;
+  return flight.promise;
 }
 
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    const config = response.config as AuthConfig;
+    if (config._sessionVersion !== undefined &&
+        config._sessionVersion !== useAuthStore.getState().sessionVersion) throw new SessionChangedError();
+    return response;
+  },
   async (error) => {
-    const original = error?.config as RetryableConfig | undefined;
-    const status = error?.response?.status;
-    const skipRefresh = original?.headers?.get?.(SKIP_AUTH_REFRESH);
-
-    // On a 401, transparently refresh once and retry the original request —
-    // unless it's the refresh call itself, or we've already retried it.
-    if (
-      error instanceof AxiosError &&
-      status === 401 &&
-      original &&
-      !original._retried &&
-      !skipRefresh
-    ) {
+    const original = error?.config as AuthConfig | undefined;
+    if (original?._sessionVersion !== undefined &&
+        original._sessionVersion !== useAuthStore.getState().sessionVersion) throw new SessionChangedError();
+    if (error instanceof AxiosError && error.response?.status === 401 && original &&
+        !original._retried && !original.headers.get(SKIP_AUTH_REFRESH)) {
+      const version = useAuthStore.getState().sessionVersion;
       try {
-        const newToken = await refreshAccessToken();
+        // A late 401 may belong to the token another request already refreshed.
+        const current = getStorage().getItem(TOKEN_KEY);
+        const accessToken = current && original.headers.get("Authorization") !== `Bearer ${current}`
+          ? current : await refreshAccessToken();
         original._retried = true;
-        original.headers.Authorization = `Bearer ${newToken}`;
+        original.headers.Authorization = `Bearer ${accessToken}`;
         return api(original);
-      } catch {
-        // Refresh failed (expired/revoked refresh token) — force re-login.
-        useAuthStore.getState().clearAuth();
-        notifySessionExpired();
-        // Tagged as a 401 so boot logic can tell definitive auth failures
-        // apart from transient network/backend errors.
-        return Promise.reject(
-          new ApiRequestError("Session expired. Please log in again.", 401),
-        );
+      } catch (refreshError) {
+        if (refreshError instanceof ApiRequestError && refreshError.status === 401 &&
+            version === useAuthStore.getState().sessionVersion) {
+          useAuthStore.getState().clearAuth();
+          queryClient.clear();
+          notifySessionExpired();
+        }
+        // Offline, 429 and 5xx leave the credential intact for an explicit retry.
+        throw refreshError;
       }
     }
-
-    if (axios.isAxiosError(error)) {
-      const apiError: ApiError = error.response?.data ?? {
-        message: "An unexpected error occurred",
-      };
-      return Promise.reject(
-        new ApiRequestError(apiError.message, error.response?.status),
-      );
-    }
-    return Promise.reject(error);
+    throw requestError(error);
   },
 );

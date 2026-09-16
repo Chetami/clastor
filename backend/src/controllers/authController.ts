@@ -1,11 +1,12 @@
 import { Request, Response } from "express";
 import { verifyFirebaseToken, getEmailVerified, sendEmailVerificationEmail, sendPasswordResetEmail } from "../services/authService";
-import { getUserFromFirestore, updateLastActive, createUserInFirestore, toUserInfo } from "../services/userService";
+import { getUserFromFirestore, findUserInFirestore, updateLastActive, createUserInFirestore, toUserInfo } from "../services/userService";
 import { addToWaitlist } from "../services/waitlistService";
 import { issueNewTokenPair, rotateRefreshToken, revokeRefreshToken } from "../services/tokenService";
 import { LoginResponse, UserInfo, ApiError } from "@examify-tms/interfaces";
-import { RegisterRequest, RefreshTokenResponse, JoinWaitlistRequest, JoinWaitlistResponse, ForgotPasswordRequest, ForgotPasswordResponse } from "@examify-tms/interfaces";
-import { AppError } from "../utils/AppError";
+import { RegisterRequest, GoogleAuthRequest, RefreshTokenResponse, JoinWaitlistRequest, JoinWaitlistResponse, ForgotPasswordRequest, ForgotPasswordResponse } from "@examify-tms/interfaces";
+import { AppError, UnauthorizedError } from "../utils/AppError";
+import { respondToAuthError } from "../utils/authError";
 
 /**
  * Login controller
@@ -28,7 +29,7 @@ export async function login(req: Request, res: Response<LoginResponse | ApiError
     const user = await getUserFromFirestore(decodedFirebase.uid);
 
     // Generate access + refresh token pair
-    const { jwtToken, refreshToken } = await issueNewTokenPair(user);
+    const { jwtToken, refreshToken } = await issueNewTokenPair(user, decodedFirebase.auth_time);
 
     // Update last active timestamp
     await updateLastActive(user.id);
@@ -41,9 +42,7 @@ export async function login(req: Request, res: Response<LoginResponse | ApiError
       user: userInfo,
     });
   } catch (error) {
-    console.error("Login failed:", error);
-    const message = error instanceof Error ? error.message : "Login failed";
-    return res.status(401).json({ message });
+    respondToAuthError(res, error);
   }
 }
 
@@ -63,7 +62,7 @@ export async function verifyToken(req: Request, res: Response<{ user: UserInfo }
 
     // Verification status lives in Firebase Auth, not Firestore — read it live
     // so the client sees the current state on every session bootstrap.
-    const emailVerified = await getEmailVerified(req.user.uid);
+    const emailVerified = await getEmailVerified(req.user.uid, req.user.auth_time);
 
     const userInfo: UserInfo = toUserInfo(user, emailVerified);
 
@@ -71,8 +70,7 @@ export async function verifyToken(req: Request, res: Response<{ user: UserInfo }
       user: userInfo,
     });
   } catch (error) {
-    console.error("Token verification failed:", error);
-    return res.status(404).json({ message: "User not found" });
+    respondToAuthError(res, error);
   }
 }
 
@@ -83,7 +81,7 @@ export async function verifyToken(req: Request, res: Response<{ user: UserInfo }
  * document using profile data from the decoded token, then issues a custom JWT.
  */
 export async function googleAuth(
-  req: Request,
+  req: Request<{}, {}, GoogleAuthRequest>,
   res: Response<LoginResponse | ApiError>
 ): Promise<void> {
   try {
@@ -96,7 +94,11 @@ export async function googleAuth(
     const firebaseToken = authHeader.substring(7);
     const decodedFirebase = await verifyFirebaseToken(firebaseToken);
 
-    const existingUser = await getUserFromFirestore(decodedFirebase.uid).catch(() => null);
+    if (decodedFirebase.firebase?.sign_in_provider !== "google.com") {
+      throw new UnauthorizedError("A Google sign-in credential is required");
+    }
+
+    const existingUser = await findUserInFirestore(decodedFirebase.uid);
 
     let user;
     if (existingUser) {
@@ -119,7 +121,7 @@ export async function googleAuth(
       );
     }
 
-    const { jwtToken, refreshToken } = await issueNewTokenPair(user);
+    const { jwtToken, refreshToken } = await issueNewTokenPair(user, decodedFirebase.auth_time);
     await updateLastActive(user.id);
 
     const userInfo: UserInfo = toUserInfo(user, decodedFirebase.email_verified === true);
@@ -131,9 +133,7 @@ export async function googleAuth(
       isNewUser: !existingUser,
     });
   } catch (error) {
-    console.error('Google authentication failed:', error);
-    const message = error instanceof Error ? error.message : 'Google authentication failed';
-    res.status(401).json({ message });
+    respondToAuthError(res, error);
   }
 }
 
@@ -161,14 +161,10 @@ export async function register(
     const name = req.body.name?.trim();
 
     // 3. Check if user already exists in Firestore
-    const existingUser = await getUserFromFirestore(decodedToken.uid).catch(() => null);
-    if (existingUser) {
-      res.status(409).json({ message: 'User already exists' });
-      return;
-    }
+    const existingUser = await findUserInFirestore(decodedToken.uid);
 
-    // 4. Create Firestore document
-    const user = await createUserInFirestore(
+    // Provision once; a retry for this verified UID returns the existing account.
+    const user = existingUser ?? await createUserInFirestore(
       decodedToken.uid,
       decodedToken.email || '',
       name,
@@ -183,15 +179,15 @@ export async function register(
     // account fully exists. Failure (SMTP down, rate limit) must not fail
     // sign-up — the in-app verify-email banner offers a resend.
     try {
-      if (decodedToken.email && decodedToken.email_verified !== true) {
+      if (!existingUser && decodedToken.email && decodedToken.email_verified !== true) {
         await sendEmailVerificationEmail(decodedToken.uid, decodedToken.email);
       }
     } catch (verificationError) {
-      console.warn('Failed to send verification email at registration:', verificationError);
+      console.warn('Could not send registration verification email');
     }
 
     // 5. Generate access + refresh token pair
-    const { jwtToken, refreshToken } = await issueNewTokenPair(user);
+    const { jwtToken, refreshToken } = await issueNewTokenPair(user, decodedToken.auth_time);
 
     // 6. Update last active timestamp (consistent with login endpoint)
     await updateLastActive(user.id);
@@ -201,8 +197,7 @@ export async function register(
 
     res.status(200).json({ jwtToken, refreshToken, user: userInfo });
   } catch (error) {
-    console.error('Registration error:', error);
-    res.status(500).json({ message: 'Registration failed' });
+    respondToAuthError(res, error);
   }
 }
 
@@ -223,10 +218,7 @@ export async function refresh(
     const result = await rotateRefreshToken(presentedToken);
     res.status(200).json(result);
   } catch (error) {
-    // Invalid/expired/revoked/replayed — client must re-authenticate.
-    res
-      .status(401)
-      .json({ message: error instanceof Error ? error.message : 'Invalid refresh token' });
+    respondToAuthError(res, error);
   }
 }
 
@@ -286,7 +278,7 @@ export async function forgotPassword(
     try {
       await sendPasswordResetEmail(email);
     } catch (error) {
-      console.error("Failed to send password reset email:", error);
+      console.error("Could not send password reset email");
     }
   }
 
@@ -325,7 +317,7 @@ export async function resendVerification(
       res.status(error.statusCode).json({ message: error.message });
       return;
     }
-    console.error("Resend verification failed:", error);
+    console.error("Could not resend verification email");
     res.status(500).json({ message: "Failed to send verification email" });
   }
 }

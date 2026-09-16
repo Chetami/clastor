@@ -39,6 +39,7 @@ const userService = vi.hoisted(() => ({
   clearGoogleConnection: vi.fn(),
   createUserInFirestore: vi.fn(),
   getUserFromFirestore: vi.fn(),
+  findUserInFirestore: vi.fn(),
   // Passthrough normalizers — shape validation has its own tests in
   // userService.test.ts; here we only care that values survive the state.
   normalizeSignupSurvey: vi.fn((s: unknown) => s ?? null),
@@ -87,6 +88,7 @@ import {
 
 // --- Fixtures ---------------------------------------------------------------
 
+const AUTH_TIME = Math.floor(Date.now() / 1000) - 60;
 const FRONTEND = "http://localhost:5173";
 const GOOGLE_ID_TOKEN_PAYLOAD = {
   email: "tutor@example.com",
@@ -173,6 +175,7 @@ beforeEach(() => {
   userService.toUserInfo.mockReturnValue(userInfo);
   userService.updateLastActive.mockResolvedValue(undefined);
   userService.getUserFromFirestore.mockResolvedValue(dbUser);
+  userService.findUserInFirestore.mockResolvedValue(dbUser);
   userService.setGoogleConnection.mockResolvedValue(undefined);
   userService.createUserInFirestore.mockResolvedValue(dbUser);
   firebaseAuth.getUserByEmail.mockResolvedValue({ uid: "uid-1" });
@@ -364,6 +367,7 @@ describe("googleAuthCallback (login mode)", () => {
     expect(loginCodes.createGoogleLoginCode).toHaveBeenCalledWith({
       uid: "uid-1",
       isNewUser: false,
+      authTime: expect.any(Number),
     });
   });
 
@@ -386,7 +390,7 @@ describe("googleAuthCallback (login mode)", () => {
       code: "auth/user-not-found",
     });
     firebaseAuth.createUser.mockResolvedValue({ uid: "uid-new" });
-    userService.getUserFromFirestore.mockRejectedValue(new Error("not found"));
+    userService.findUserInFirestore.mockResolvedValue(null);
     userService.createUserInFirestore.mockResolvedValue({
       ...dbUser,
       id: "uid-new",
@@ -417,6 +421,7 @@ describe("googleAuthCallback (login mode)", () => {
     expect(loginCodes.createGoogleLoginCode).toHaveBeenCalledWith({
       uid: "uid-new",
       isNewUser: true,
+      authTime: expect.any(Number),
     });
   });
 
@@ -428,7 +433,7 @@ describe("googleAuthCallback (login mode)", () => {
     firebaseAuth.createUser.mockRejectedValue({
       code: "auth/email-already-exists",
     });
-    userService.getUserFromFirestore.mockResolvedValue({
+    userService.findUserInFirestore.mockResolvedValue({
       ...dbUser,
       id: "uid-winner",
     });
@@ -439,6 +444,7 @@ describe("googleAuthCallback (login mode)", () => {
     expect(loginCodes.createGoogleLoginCode).toHaveBeenCalledWith({
       uid: "uid-winner",
       isNewUser: false,
+      authTime: expect.any(Number),
     });
   });
 
@@ -485,7 +491,7 @@ describe("googleAuthCallback (login mode)", () => {
 
     const state = verifyLoginStateToken(url.searchParams.get("state")!);
     expect(state).not.toBeNull();
-    expect(state!.retry).toEqual({ uid: "uid-1", isNewUser: false });
+    expect(state!.retry).toEqual({ uid: "uid-1", isNewUser: false, authTime: expect.any(Number) });
 
     // Nothing connected or issued yet — the retry pass finishes the login.
     expect(userService.setGoogleConnection).not.toHaveBeenCalled();
@@ -503,7 +509,7 @@ describe("googleAuthCallback (login mode)", () => {
             returnTo: "/dashboard",
             timezone: "Australia/Sydney",
             survey: null,
-            retry: { uid: "uid-1", isNewUser: true },
+            retry: { uid: "uid-1", isNewUser: true, authTime: AUTH_TIME },
           }),
         }),
       ),
@@ -521,6 +527,7 @@ describe("googleAuthCallback (login mode)", () => {
     expect(loginCodes.createGoogleLoginCode).toHaveBeenCalledWith({
       uid: "uid-1",
       isNewUser: true,
+      authTime: expect.any(Number),
     });
   });
 
@@ -538,7 +545,7 @@ describe("googleAuthCallback (login mode)", () => {
             returnTo: "/dashboard",
             timezone: null,
             survey: null,
-            retry: { uid: "uid-1", isNewUser: true },
+            retry: { uid: "uid-1", isNewUser: true, authTime: AUTH_TIME },
           }),
         }),
       ),
@@ -551,6 +558,7 @@ describe("googleAuthCallback (login mode)", () => {
     expect(loginCodes.createGoogleLoginCode).toHaveBeenCalledWith({
       uid: "uid-1",
       isNewUser: true,
+      authTime: expect.any(Number),
     });
   });
 
@@ -566,7 +574,7 @@ describe("googleAuthCallback (login mode)", () => {
             returnTo: "/dashboard",
             timezone: null,
             survey: null,
-            retry: { uid: "uid-1", isNewUser: false },
+            retry: { uid: "uid-1", isNewUser: false, authTime: AUTH_TIME },
           }),
         }),
       ),
@@ -692,8 +700,7 @@ describe("googleAuthCallback (connect mode)", () => {
 describe("exchangeGoogleLoginCode", () => {
   it("swaps a valid one-time code for the token pair + isNewUser", async () => {
     loginCodes.consumeGoogleLoginCode.mockResolvedValue({
-      uid: "uid-1",
-      isNewUser: true,
+      uid: "uid-1", isNewUser: true, authTime: AUTH_TIME,
     });
 
     const res = mockRes();
@@ -707,7 +714,7 @@ describe("exchangeGoogleLoginCode", () => {
       isNewUser: true,
     });
     expect(loginCodes.consumeGoogleLoginCode).toHaveBeenCalledWith("otc-1");
-    expect(tokenService.issueNewTokenPair).toHaveBeenCalledWith(dbUser);
+    expect(tokenService.issueNewTokenPair).toHaveBeenCalledWith(dbUser, AUTH_TIME);
   });
 
   it("returns 401 for an unknown, used, or expired code", async () => {
