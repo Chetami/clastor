@@ -37,7 +37,8 @@ struct LessonDetailView: View {
             }
         }
         .navigationTitle(lesson?.subject ?? "Lesson")
-        .navigationBarTitleDisplayMode(.inline)
+        .clastorScreen()
+.navigationBarTitleDisplayMode(.inline)
         .loadStateOverlay(loadState, hasContent: lesson != nil, errorTitle: "Could not load lesson") {
             Task { await load() }
         }

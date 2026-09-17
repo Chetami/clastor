@@ -3,6 +3,9 @@ import SwiftUI
 struct MainTabView: View {
     let session: SessionStore
 
+    @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
+    @State private var showOnboarding = false
+
     var body: some View {
         TabView {
             Tab("Home", systemImage: "house") {
@@ -42,6 +45,13 @@ struct MainTabView: View {
                     ProfileView(session: session)
                 }
             }
+        }
+        .sheet(isPresented: $showOnboarding) {
+            OnboardingView()
+        }
+        .onAppear {
+            // SCAFFOLD: onboarding tour placeholder, shown once per install.
+            if !hasSeenOnboarding { showOnboarding = true }
         }
     }
 }

@@ -10,10 +10,10 @@ struct BadgeView: View {
     private var color: Color {
         switch tone {
         case .sky: return .blue
-        case .amber: return .orange
+        case .amber: return Color.accentColor
         case .emerald: return .green
         case .rose: return .red
-        case .muted: return .secondary
+        case .muted: return ClastorTheme.mutedInk
         }
     }
 

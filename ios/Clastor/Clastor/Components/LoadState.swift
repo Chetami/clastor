@@ -53,7 +53,7 @@ extension View {
     ) -> some View {
         overlay {
             if state.showsInitialProgress && !hasContent {
-                ProgressView("Loading…")
+                ClastorLoading(text: "Loading…")
             } else if let failure = state.failureMessage, !hasContent {
                 ContentUnavailableView {
                     Label(errorTitle, systemImage: "exclamationmark.triangle")

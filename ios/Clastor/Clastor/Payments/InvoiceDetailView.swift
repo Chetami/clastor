@@ -34,7 +34,8 @@ struct InvoiceDetailView: View {
             }
         }
         .navigationTitle(invoice?.invoiceNumber ?? "Invoice")
-        .navigationBarTitleDisplayMode(.inline)
+        .clastorScreen()
+.navigationBarTitleDisplayMode(.inline)
         .loadStateOverlay(loadState, hasContent: invoice != nil, errorTitle: "Could not load invoice") {
             Task { await load() }
         }

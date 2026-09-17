@@ -17,17 +17,9 @@ struct PaymentsView: View {
     var body: some View {
         List {
             Section {
-                Picker("Status", selection: Binding(
-                    get: { store.statusFilter },
-                    set: { status in Task { await store.setFilter(status, session) } }
-                )) {
-                    ForEach(Self.filters, id: \.value) { filter in
-                        Text(filter.label).tag(filter.value)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .listRowBackground(Color.clear)
-                .accessibilityIdentifier("payments.filter")
+                filterChips
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets(top: 4, leading: 20, bottom: 4, trailing: 20))
             }
             ForEach(store.invoices) { invoice in
                 NavigationLink(value: InvoiceRoute(id: invoice.id)) {
@@ -50,6 +42,7 @@ struct PaymentsView: View {
             }
         }
         .navigationTitle("Payments")
+        .clastorScreen()
         .accessibilityIdentifier("payments.list")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -63,7 +56,7 @@ struct PaymentsView: View {
         }
         .overlay {
             if store.isListLoading && store.invoices.isEmpty {
-                ProgressView("Loading…")
+                ClastorLoading(text: "Loading invoices…")
             } else if let message = store.failureMessage, store.invoices.isEmpty {
                 ContentUnavailableView {
                     Label("Could not load invoices", systemImage: "exclamationmark.triangle")
@@ -84,6 +77,37 @@ struct PaymentsView: View {
         .refreshable { await store.refresh(session) }
         .sheet(isPresented: $showCreate) {
             CreateInvoiceView(session: session)
+        }
+    }
+
+    /// Native filter-chip strip (scrollable — six filters don't fit a
+    /// segmented control).
+    private var filterChips: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(Self.filters, id: \.value) { filter in
+                    let isSelected = store.statusFilter == filter.value
+                    Button {
+                        Task { await store.setFilter(filter.value, session) }
+                    } label: {
+                        Text(filter.label)
+                            .font(.footnote.weight(isSelected ? .semibold : .regular))
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 7)
+                            .foregroundStyle(isSelected ? .white : ClastorTheme.ink)
+                            .background {
+                                if isSelected {
+                                    Capsule().fill(Color.accentColor)
+                                } else {
+                                    Capsule().fill(ClastorTheme.card)
+                                    Capsule().strokeBorder(ClastorTheme.border, lineWidth: 1)
+                                }
+                            }
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("payments.filter.\(filter.value)")
+                }
+            }
         }
     }
 

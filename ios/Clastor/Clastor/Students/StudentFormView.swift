@@ -122,7 +122,8 @@ struct StudentFormView: View {
                 }
             }
             .navigationTitle(existing == nil ? "New student" : "Edit student")
-            .navigationBarTitleDisplayMode(.inline)
+            .clastorScreen()
+.navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }

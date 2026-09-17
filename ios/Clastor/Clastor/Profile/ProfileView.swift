@@ -40,6 +40,7 @@ struct ProfileView: View {
 
     var body: some View {
         Form {
+            profileHeader
             accountSection
             subjectsSection
             Section {
@@ -48,6 +49,7 @@ struct ProfileView: View {
             }
         }
         .navigationTitle("Profile")
+        .clastorScreen()
         .toolbar {
             if accountIsDirty {
                 ToolbarItem(placement: .confirmationAction) {
@@ -90,6 +92,43 @@ struct ProfileView: View {
         }
     }
 
+    // MARK: Header
+
+    /// Native settings-style header: avatar initials, name, email + status.
+    private var profileHeader: some View {
+        Section {
+            HStack(spacing: 14) {
+                Text(avatarInitials)
+                    .font(.title2.weight(.semibold))
+                    .frame(width: 56, height: 56)
+                    .background(Color.accentColor.opacity(0.15), in: Circle())
+                    .foregroundStyle(Color.accentColor)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(user?.name ?? "Your account")
+                        .font(.headline)
+                    if let user {
+                        Text(user.email)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                        Label(user.emailVerified == true ? "Verified" : "Not verified",
+                              systemImage: user.emailVerified == true ? "checkmark.seal.fill" : "exclamationmark.triangle.fill")
+                            .font(.caption2)
+                            .foregroundStyle(user.emailVerified == true ? .green : .orange)
+                    }
+                }
+            }
+            .listRowBackground(Color.clear)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.vertical, 4)
+        }
+    }
+
+    private var avatarInitials: String {
+        guard let name = user?.name, !name.isEmpty else { return "–" }
+        let parts = name.split(separator: " ").prefix(2)
+        return parts.compactMap { $0.first }.map(String.init).joined()
+    }
+
     // MARK: Account
 
     private var accountSection: some View {
@@ -97,17 +136,6 @@ struct ProfileView: View {
             LabeledContent("Name") {
                 TextField("Name", text: $nameDraft)
                     .multilineTextAlignment(.trailing)
-            }
-            if let user {
-                LabeledContent("Email") {
-                    VStack(alignment: .trailing, spacing: 2) {
-                        Text(user.email)
-                        Label(user.emailVerified == true ? "Verified" : "Not verified",
-                              systemImage: user.emailVerified == true ? "checkmark.seal.fill" : "exclamationmark.triangle.fill")
-                            .font(.caption)
-                            .foregroundStyle(user.emailVerified == true ? .green : .orange)
-                    }
-                }
             }
             Picker("Currency", selection: $currencyDraft) {
                 ForEach(Self.currencyOptions, id: \.code) { option in
@@ -324,6 +352,7 @@ struct TimezonePickerView: View {
         }
         .searchable(text: $search)
         .navigationTitle("Timezone")
-        .navigationBarTitleDisplayMode(.inline)
+        .clastorScreen()
+.navigationBarTitleDisplayMode(.inline)
     }
 }

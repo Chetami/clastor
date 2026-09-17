@@ -56,7 +56,8 @@ struct CreateInvoiceView: View {
                 }
             }
             .navigationTitle("New invoice")
-            .navigationBarTitleDisplayMode(.inline)
+            .clastorScreen()
+.navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }

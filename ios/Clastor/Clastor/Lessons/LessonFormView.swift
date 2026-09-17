@@ -62,7 +62,8 @@ struct LessonFormView: View {
                 }
             }
             .navigationTitle("New lesson")
-            .navigationBarTitleDisplayMode(.inline)
+            .clastorScreen()
+.navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }

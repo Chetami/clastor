@@ -21,5 +21,14 @@
             </dict>
         </dict>
     </dict>
+    <key>UILaunchScreen</key>
+    <dict>
+        <key>UIColorName</key>
+        <string>LaunchBackground</string>
+    </dict>
+    <key>UIAppFonts</key>
+    <array>
+        <string>DeliusSwashCaps-Regular.ttf</string>
+    </array>
 </dict>
 </plist>

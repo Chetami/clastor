@@ -12,29 +12,50 @@ struct HomeView: View {
     @State private var markingLessonID: String?
     @State private var markFailed = false
     @State private var markFailureMessage: String?
+    @State private var markSuccessCount = 0
+
+    /// The one true padding: every edge of this screen sits on the same grid.
+    private static let pad: CGFloat = 20
+    private static let gap: CGFloat = 12
 
     private var lessons: [LessonModels.LessonResponse] {
         lessonStore.allLessons
     }
 
     var body: some View {
-        List {
-            Picker("Period", selection: $period) {
-                Text("Week").tag("week")
-                Text("Month").tag("month")
-            }
-            .pickerStyle(.segmented)
-            .listRowBackground(Color.clear)
-            .accessibilityIdentifier("home.periodPicker")
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: Self.gap) {
+                greetingHeader
+                    .padding(.bottom, 4)
 
-            if let summary {
-                statsSection(summary)
+                if let summary {
+                    incomeCard(summary)
+                    statCards(summary)
+                    owedCard(summary)
+                }
+
+                lessonSections
+                attendanceSection
+
+                ComingSoonView(icon: "chart.xyaxis.line", title: "Attendance trends")
+                    .padding(.top, 4)
             }
-            lessonSections
-            attendanceSection
+            .padding(.horizontal, Self.pad)
+            .padding(.top, 8)
+            .padding(.bottom, 24)
         }
-        .navigationTitle("Home")
+        .scrollBounceBehavior(.basedOnSize)
+        // No nav title — the greeting header is the title; the bar carries
+        // only the period switcher.
+        .toolbarBackground(.hidden, for: .navigationBar)
+        .background(ClastorTheme.background)
         .accessibilityIdentifier("home.list")
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                periodMenu
+            }
+        }
+        .sensoryFeedback(.success, trigger: markSuccessCount)
         .loadStateOverlay(loadState, hasContent: summary != nil, errorTitle: "Could not load") {
             Task { await load() }
         }
@@ -52,52 +73,137 @@ struct HomeView: View {
         }
     }
 
-    // MARK: Sections
+    // MARK: Header
 
-    private func statsSection(_ summary: HomeModels.DashboardSummaryResponse) -> some View {
-        Section {
-            // 2×2 grid like the web's mobile layout: Income, Hours, Lessons,
-            // plus the money-owed tile surfaced from the same summary fetch.
-            VStack(spacing: 12) {
-                HStack(spacing: 12) {
-                    statTile(
-                        label: "Income",
-                        value: HomeDerivations.formatCurrencyWhole(summary.income, currency: currency),
-                        delta: HomeDerivations.deltaPercent(current: summary.income, previous: summary.previousIncome),
-                        sub: "\(previousLabel): \(HomeDerivations.formatCurrencyWhole(summary.previousIncome, currency: currency))",
-                        subColor: nil
-                    )
-                    statTile(
-                        label: "Hours",
-                        value: HomeDerivations.formatHours(summary.hoursWorked),
-                        delta: HomeDerivations.deltaPercent(current: summary.hoursWorked, previous: summary.previousHoursWorked),
-                        sub: "\(previousLabel): \(HomeDerivations.formatHours(summary.previousHoursWorked))",
-                        subColor: nil
-                    )
-                }
-                HStack(spacing: 12) {
-                    statTile(
-                        label: "Lessons",
-                        value: "\(summary.lessonsTaught)",
-                        delta: HomeDerivations.deltaPercent(current: Double(summary.lessonsTaught), previous: Double(summary.previousLessonsTaught)),
-                        sub: "\(previousLabel): \(summary.previousLessonsTaught)",
-                        subColor: nil
-                    )
-                    statTile(
-                        label: "Owed",
-                        value: HomeDerivations.formatCurrencyWhole(summary.outstandingAmount, currency: currency),
-                        delta: nil,
-                        sub: owedSubLine(summary),
-                        subColor: summary.overdueAmount > 0 ? .red : nil
-                    )
-                }
-            }
-            .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
-            .accessibilityIdentifier("home.stats")
+    private var greetingHeader: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(greetingText)
+                .font(.title2.weight(.semibold))
+                .foregroundStyle(ClastorTheme.ink)
+            Text(greetingDate)
+                .font(.subheadline)
+                .foregroundStyle(ClastorTheme.mutedInk)
         }
     }
 
-    /// Sub-line for the owed tile: overdue warning, unbilled hint, or settled.
+    private var greetingText: String {
+        let hour = Calendar.current.component(.hour, from: Date())
+        let part = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening"
+        if case .signedIn(let user) = session.phase,
+           let name = user.name?.split(separator: " ").first {
+            return "\(part), \(name)"
+        }
+        return part
+    }
+
+    private var greetingDate: String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_AU_POSIX")
+        formatter.dateFormat = "EEEE d MMMM"
+        return formatter.string(from: Date())
+    }
+
+    private var periodMenu: some View {
+        Menu {
+            Picker("Period", selection: $period) {
+                Text("This week").tag("week")
+                Text("This month").tag("month")
+            }
+        } label: {
+            Label(period == "week" ? "Week" : "Month", systemImage: "chevron.up.chevron.down")
+                .font(.subheadline.weight(.medium))
+        }
+        .accessibilityIdentifier("home.periodPicker")
+    }
+
+    // MARK: Stat cards
+
+    /// Hero income card — label, big number, delta, then the chart with room
+    /// to breathe (the series the backend already serves, previously hidden).
+    private func incomeCard(_ summary: HomeModels.DashboardSummaryResponse) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Income · \(period == "week" ? "this week" : "this month")")
+                    .font(.footnote.weight(.medium))
+                    .foregroundStyle(ClastorTheme.mutedInk)
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(HomeDerivations.formatCurrencyWhole(summary.income, currency: currency))
+                        .font(.title.bold())
+                        .foregroundStyle(ClastorTheme.ink)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                    deltaChip(HomeDerivations.deltaPercent(
+                        current: summary.income,
+                        previous: summary.previousIncome))
+                }
+            }
+            MiniBarChart(
+                current: summary.incomeSeries.map(\.value),
+                previous: summary.previousIncomeSeries.map(\.value))
+        }
+        .clastorCard()
+        .accessibilityIdentifier("home.incomeCard")
+    }
+
+    private func statCards(_ summary: HomeModels.DashboardSummaryResponse) -> some View {
+        HStack(alignment: .top, spacing: Self.gap) {
+            compactStat(
+                label: "Hours",
+                value: HomeDerivations.formatHours(summary.hoursWorked),
+                delta: HomeDerivations.deltaPercent(current: summary.hoursWorked, previous: summary.previousHoursWorked),
+                chart: summary.hoursSeries.map(\.value))
+            compactStat(
+                label: "Lessons",
+                value: "\(summary.lessonsTaught)",
+                delta: HomeDerivations.deltaPercent(
+                    current: Double(summary.lessonsTaught),
+                    previous: Double(summary.previousLessonsTaught)),
+                chart: nil)
+        }
+        .accessibilityIdentifier("home.stats")
+    }
+
+    private func compactStat(label: String, value: String, delta: Double?, chart: [Double]?) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(label)
+                .font(.footnote.weight(.medium))
+                .foregroundStyle(ClastorTheme.mutedInk)
+            Text(value)
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(ClastorTheme.ink)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+            if let chart, !chart.isEmpty {
+                MiniBarChart(current: chart, tint: ClastorTheme.mutedInk, height: 32)
+            } else {
+                deltaChip(delta)
+            }
+        }
+        .frame(maxWidth: .infinity, minHeight: 118, alignment: .topLeading)
+        .clastorCard()
+    }
+
+    private func owedCard(_ summary: HomeModels.DashboardSummaryResponse) -> some View {
+        HStack(alignment: .center, spacing: 12) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Owed to you")
+                    .font(.footnote.weight(.medium))
+                    .foregroundStyle(ClastorTheme.mutedInk)
+                Text(HomeDerivations.formatCurrencyWhole(summary.outstandingAmount, currency: currency))
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(summary.overdueAmount > 0 ? .red : ClastorTheme.ink)
+            }
+            Spacer()
+            Text(owedSubLine(summary))
+                .font(.footnote)
+                .foregroundStyle(summary.overdueAmount > 0 ? .red : ClastorTheme.mutedInk)
+                .multilineTextAlignment(.trailing)
+        }
+        .clastorCard()
+        .accessibilityIdentifier("home.owedCard")
+    }
+
+    /// Sub-line for the owed card: overdue warning, unbilled hint, or settled.
     private func owedSubLine(_ summary: HomeModels.DashboardSummaryResponse) -> String {
         if summary.overdueAmount > 0 {
             return "incl. \(HomeDerivations.formatCurrencyWhole(summary.overdueAmount, currency: currency)) overdue"
@@ -108,31 +214,71 @@ struct HomeView: View {
         return "All settled"
     }
 
+    // MARK: Lesson & todo sections
+
     @ViewBuilder private var lessonSections: some View {
         let now = Date()
         if let current = HomeDerivations.findCurrentLesson(lessons, now: now) {
-            Section {
+            sectionCard(title: "Happening now") {
                 currentLessonRow(current)
-                    .accessibilityIdentifier("home.currentLesson")
             }
+            .accessibilityIdentifier("home.currentLesson")
         }
         if let next = HomeDerivations.nextLesson(lessons, now: now) {
-            Section("Next lesson") {
+            sectionCard(title: "Next lesson") {
                 nextLessonRow(next)
-                    .accessibilityIdentifier("home.nextLesson")
+            }
+            .accessibilityIdentifier("home.nextLesson")
+        }
+    }
+
+    private var attendanceSection: some View {
+        let todos = HomeDerivations.todoLessons(lessons)
+        return sectionCard(title: "Things to do") {
+            if todos.isEmpty {
+                Label("All caught up", systemImage: "checkmark.circle.fill")
+                    .font(.subheadline)
+                    .foregroundStyle(.green)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .accessibilityIdentifier("home.caughtUp")
+            } else {
+                attendanceRows(todos)
             }
         }
     }
 
+    /// Card + small-caps section title, sitting on the same 20pt grid.
+    private func sectionCard<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(title.uppercased())
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(ClastorTheme.mutedInk)
+                .padding(.bottom, 4)
+            VStack(alignment: .leading, spacing: 0) {
+                content()
+            }
+            .clastorCard()
+        }
+    }
+
+    /// Hairline divider between grouped rows, inset to align with content.
+    private func rowDivider() -> some View {
+        Rectangle()
+            .fill(ClastorTheme.border)
+            .frame(height: 0.5)
+            .padding(.vertical, 10)
+    }
+
     private func currentLessonRow(_ lesson: LessonModels.LessonResponse) -> some View {
         NavigationLink(value: LessonRoute(id: lesson.id)) {
-            HStack(alignment: .center) {
+            HStack(alignment: .center, spacing: 12) {
                 VStack(alignment: .leading, spacing: 4) {
                     Label("Live now", systemImage: "record.circle")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.red)
                     Text(lessonTitle(lesson))
                         .font(.subheadline.weight(.medium))
+                        .foregroundStyle(ClastorTheme.ink)
                     Text(HomeDerivations.lessonTimeRange(lesson))
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -141,16 +287,18 @@ struct HomeView: View {
                 joinButton(lesson)
             }
         }
+        .buttonStyle(.plain)
     }
 
     private func nextLessonRow(_ lesson: LessonModels.LessonResponse) -> some View {
         NavigationLink(value: LessonRoute(id: lesson.id)) {
-            HStack(alignment: .center) {
+            HStack(alignment: .center, spacing: 12) {
                 VStack(alignment: .leading, spacing: 4) {
                     if let start = HomeDerivations.date(lesson.startDateTime) {
                         TimelineView(.periodic(from: .now, by: 30)) { context in
                             Text(HomeDerivations.timeUntil(start, now: context.date))
                                 .font(.title3.weight(.semibold))
+                                .foregroundStyle(ClastorTheme.ink)
                         }
                     }
                     Text("\(dayLabel(lesson)) · \(HomeDerivations.lessonTimeRange(lesson))")
@@ -158,35 +306,29 @@ struct HomeView: View {
                         .foregroundStyle(.secondary)
                     Text(lessonTitle(lesson))
                         .font(.subheadline.weight(.medium))
+                        .foregroundStyle(ClastorTheme.ink)
                 }
                 Spacer()
                 joinButton(lesson)
             }
         }
+        .buttonStyle(.plain)
     }
 
-    private var attendanceSection: some View {
-        Section {
-            let todos = HomeDerivations.todoLessons(lessons)
-            if todos.isEmpty {
-                Label("All caught up", systemImage: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
-                    .accessibilityIdentifier("home.caughtUp")
-            } else {
-                ForEach(todos, id: \.id) { lesson in
-                    attendanceRow(lesson)
-                }
-            }
-        } header: {
-            Text("Things to do")
+    @ViewBuilder private func attendanceRows(_ todos: [LessonModels.LessonResponse]) -> some View {
+        ForEach(Array(todos.enumerated()), id: \.element.id) { index, lesson in
+            if index > 0 { rowDivider() }
+            attendanceRow(lesson)
         }
     }
 
     private func attendanceRow(_ lesson: LessonModels.LessonResponse) -> some View {
         NavigationLink(value: LessonRoute(id: lesson.id)) {
-            HStack {
+            HStack(alignment: .center, spacing: 12) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(studentName(lesson))
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(ClastorTheme.ink)
                     Text("\(lesson.subject ?? "Lesson") · \(dayLabel(lesson)) · \(HomeDerivations.lessonTimeRange(lesson))")
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -202,42 +344,31 @@ struct HomeView: View {
                     } label: {
                         Text("Mark")
                             .font(.callout.weight(.medium))
+                            .foregroundStyle(Color.accentColor)
                     }
                     .accessibilityIdentifier("home.mark.\(lesson.id)")
                 }
             }
         }
+        .buttonStyle(.plain)
     }
 
     // MARK: Pieces
 
-    private func statTile(label: String, value: String, delta: Double?, sub: String, subColor: Color? = nil) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(label)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            Text(value)
-                .font(.headline)
-                .lineLimit(1)
-                .minimumScaleFactor(0.6)
-            deltaView(delta)
-            Text(sub)
-                .font(.caption2)
-                .foregroundStyle(subColor ?? Color(UIColor.tertiaryLabel))
-                .lineLimit(1)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    @ViewBuilder private func deltaView(_ delta: Double?) -> some View {
+    @ViewBuilder private func deltaChip(_ delta: Double?) -> some View {
         if let delta {
             let rounded = Int(delta.rounded())
             HStack(spacing: 2) {
                 Image(systemName: delta > 0 ? "arrow.up.right" : delta < 0 ? "arrow.down.right" : "minus")
                 Text("\(abs(rounded))%")
             }
-            .font(.caption2.weight(.medium))
-            .foregroundStyle(delta > 0 ? .green : delta < 0 ? .red : .secondary)
+            .font(.caption2.weight(.semibold))
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
+            .foregroundStyle(delta > 0 ? .green : delta < 0 ? .red : ClastorTheme.mutedInk)
+            .background(
+                (delta > 0 ? Color.green : delta < 0 ? Color.red : ClastorTheme.mutedInk).opacity(0.12),
+                in: Capsule())
         }
     }
 
@@ -254,10 +385,6 @@ struct HomeView: View {
     private var currency: String {
         if case .signedIn(let user) = session.phase { return user.currency ?? "AUD" }
         return "AUD"
-    }
-
-    private var previousLabel: String {
-        HomeDerivations.previousPeriodLabel(period)
     }
 
     private func studentName(_ lesson: LessonModels.LessonResponse) -> String {
@@ -306,6 +433,7 @@ struct HomeView: View {
             // The store applies the update to its caches; observation
             // re-renders the todo list without manual patching here.
             _ = try await lessonStore.recordAttendance(id: lesson.id, status: status, session)
+            markSuccessCount += 1
             await loadSummary()
         } catch is CancellationError {
         } catch AuthFailure.cancelled {

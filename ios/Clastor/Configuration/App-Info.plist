@@ -10,5 +10,14 @@
     <string>$(EXPECTED_FIREBASE_PROJECT_ID)</string>
     <key>FirebaseAppDelegateProxyEnabled</key>
     <false/>
+    <key>UILaunchScreen</key>
+    <dict>
+        <key>UIColorName</key>
+        <string>LaunchBackground</string>
+    </dict>
+    <key>UIAppFonts</key>
+    <array>
+        <string>DeliusSwashCaps-Regular.ttf</string>
+    </array>
 </dict>
 </plist>

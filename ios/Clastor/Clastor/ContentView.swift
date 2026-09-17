@@ -22,10 +22,13 @@ struct ContentView: View {
         case .signedOut, .signingIn:
             LoginView(session: session)
         case .restoring:
-            VStack(spacing: 24) {
-                ProgressView("Checking your session…")
-                Button("Sign out", action: session.signOut)
-            }
+            SplashScreen(text: "Checking your session…")
+                .safeAreaInset(edge: .bottom) {
+                    Button("Sign out", action: session.signOut)
+                        .font(.footnote)
+                        .foregroundStyle(ClastorTheme.mutedInk)
+                        .padding(.bottom, 24)
+                }
         case .retry:
             ContentUnavailableView {
                 Label("Unable to connect", systemImage: "wifi.exclamationmark")
@@ -51,37 +54,69 @@ private struct LoginView: View {
     private var isBusy: Bool { session.phase == .signingIn }
 
     var body: some View {
-        Form {
-            Section {
-                TextField("Email", text: $email)
-                    .keyboardType(.emailAddress)
-                    .textContentType(.username)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .focused($focus, equals: .email)
-                    .submitLabel(.next)
-                    .onSubmit { focus = .password }
-                    .accessibilityIdentifier("login.email")
-                SecureField("Password", text: $password)
-                    .textContentType(.password)
-                    .focused($focus, equals: .password)
-                    .submitLabel(.go)
-                    .onSubmit(signIn)
-                    .accessibilityIdentifier("login.password")
-            } header: {
-                Text("Sign in")
-            } footer: {
-                Text("Use your existing Clastor email and password.")
-            }
-            .disabled(isBusy)
-            if let message = session.message {
-                Section {
+        ScrollView {
+            VStack(spacing: 24) {
+                BrandMark(size: 56, subtitle: "Tutor management")
+                    .padding(.top, 48)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Welcome back")
+                        .font(ClastorTheme.display(28, relativeTo: .title2))
+                        .foregroundStyle(ClastorTheme.ink)
+                    Text("Sign in to your tutor account.")
+                        .font(.subheadline)
+                        .foregroundStyle(ClastorTheme.mutedInk)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 4)
+
+                VStack(alignment: .leading, spacing: 14) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Email")
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(ClastorTheme.mutedInk)
+                        TextField("Email", text: $email)
+                            .keyboardType(.emailAddress)
+                            .textContentType(.username)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                            .focused($focus, equals: .email)
+                            .submitLabel(.next)
+                            .onSubmit { focus = .password }
+                            .padding(12)
+                            .background(ClastorTheme.sand, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                            .accessibilityIdentifier("login.email")
+                    }
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Password")
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(ClastorTheme.mutedInk)
+                        SecureField("Password", text: $password)
+                            .textContentType(.password)
+                            .focused($focus, equals: .password)
+                            .submitLabel(.go)
+                            .onSubmit(signIn)
+                            .padding(12)
+                            .background(ClastorTheme.sand, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                            .accessibilityIdentifier("login.password")
+                    }
+                }
+                .padding(16)
+                .background(ClastorTheme.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .strokeBorder(ClastorTheme.border, lineWidth: 1)
+                )
+                .disabled(isBusy)
+
+                if let message = session.message {
                     Text(message)
+                        .font(.footnote)
                         .foregroundStyle(.red)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: .infinity)
                         .accessibilityIdentifier("login.error")
                 }
-            }
-            Section {
+
                 Button(action: signIn) {
                     HStack {
                         Spacer()
@@ -89,12 +124,19 @@ private struct LoginView: View {
                         Text(isBusy ? "Signing in…" : "Sign in")
                         Spacer()
                     }
+                    .frame(maxWidth: .infinity)
                 }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
                 .disabled(isBusy || email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || password.isEmpty)
                 .accessibilityIdentifier("login.submit")
+
+                Spacer(minLength: 24)
             }
+            .padding(.horizontal, 24)
         }
         .scrollDismissesKeyboard(.interactively)
+        .background(ClastorTheme.background.ignoresSafeArea())
     }
 
     private func signIn() {

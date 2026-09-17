@@ -16,19 +16,6 @@ struct StudentsView: View {
 
     var body: some View {
         List {
-            Section {
-                Picker("Status", selection: $statusFilter) {
-                    Text("Active").tag("active")
-                    Text("Past").tag("past")
-                    Text("All").tag("all")
-                }
-                .pickerStyle(.segmented)
-                .listRowBackground(Color.clear)
-                TextField("Search students", text: $search)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .accessibilityIdentifier("students.search")
-            }
             ForEach(filteredStudents) { student in
                 NavigationLink(value: StudentRoute(id: student.id)) {
                     StudentRow(student: student, subjects: sessionSubjects, currency: userCurrency)
@@ -37,7 +24,9 @@ struct StudentsView: View {
             }
         }
         .navigationTitle("Students")
+        .clastorScreen()
         .accessibilityIdentifier("students.list")
+        .searchable(text: $search, prompt: "Search students")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
@@ -46,6 +35,9 @@ struct StudentsView: View {
                     Image(systemName: "plus")
                 }
                 .accessibilityIdentifier("students.add")
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                statusFilterMenu
             }
         }
         .overlay {
@@ -68,7 +60,7 @@ struct StudentsView: View {
                     ContentUnavailableView("No matches", systemImage: "magnifyingglass",
                                             description: Text("No students match your search."))
                 } else if !store.isLoaded {
-                    ProgressView("Loading students…")
+                    ClastorLoading(text: "Loading students…")
                 }
             }
         }
@@ -82,6 +74,24 @@ struct StudentsView: View {
                 Task { await store.loadIfNeeded(session, force: true) }
             }
         }
+    }
+
+    /// Native status filter (Mail-style): a filter icon that highlights when
+    /// a non-default filter is active.
+    private var statusFilterMenu: some View {
+        Menu {
+            Picker("Status", selection: $statusFilter) {
+                Text("Active").tag("active")
+                Text("Past").tag("past")
+                Text("All").tag("all")
+            }
+        } label: {
+            Image(systemName: statusFilter == "active"
+                ? "line.3.horizontal.decrease.circle"
+                : "line.3.horizontal.decrease.circle.fill")
+                .foregroundStyle(statusFilter == "active" ? ClastorTheme.mutedInk : Color.accentColor)
+        }
+        .accessibilityIdentifier("students.statusFilter")
     }
 
     private var filteredStudents: [StudentModels.StudentResponse] {

@@ -60,7 +60,8 @@ struct RescheduleSheet: View {
                 }
             }
             .navigationTitle("Reschedule")
-            .navigationBarTitleDisplayMode(.inline)
+            .clastorScreen()
+.navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
@@ -188,7 +189,8 @@ struct CancelLessonSheet: View {
                 }
             }
             .navigationTitle("Cancel lesson")
-            .navigationBarTitleDisplayMode(.inline)
+            .clastorScreen()
+.navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Keep lesson") { dismiss() }

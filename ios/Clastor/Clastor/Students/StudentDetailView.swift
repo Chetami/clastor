@@ -28,7 +28,8 @@ struct StudentDetailView: View {
             }
         }
         .navigationTitle(student?.name ?? "Student")
-        .navigationBarTitleDisplayMode(.inline)
+        .clastorScreen()
+.navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button("Edit") { showEdit = true }
